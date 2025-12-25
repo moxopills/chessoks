@@ -1,0 +1,114 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - development
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        port: ${{ secrets.EC2_SSH_PORT || 22 }}
+        script: |
+          # 프로젝트 디렉토리로 이동
+          cd ~/chessok
+
+          # 최신 코드 가져오기
+          git pull origin main
+
+          # 환경 변수 복사
+          cp .envs/.env.prod .env
+
+          # Docker Compose로 서비스 재시작
+          docker-compose -f docker-compose.prod.yml down
+          docker-compose -f docker-compose.prod.yml up -d --build
+
+          # 마이그레이션 실행
+          docker-compose -f docker-compose.prod.yml exec -T web uv run python manage.py migrate --noinput
+
+          # Static 파일 수집
+          docker-compose -f docker-compose.prod.yml exec -T web uv run python manage.py collectstatic --noinput
+
+          # 불필요한 Docker 리소스 정리
+          docker system prune -f
+
+    - name: Health Check
+      run: |
+        echo "Waiting for application to start..."
+        sleep 15
+        echo "Health check completed"
+
+    - name: Deployment Summary
+      if: success()
+      run: |
+        echo "## 🚀 배포 완료" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **환경**: ${{ github.event.inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **브랜치**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **커밋**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **배포 시간**: $(date)" >> $GITHUB_STEP_SUMMARY
+
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "## ❌ 배포 실패" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "배포 중 오류가 발생했습니다. 로그를 확인해주세요." >> $GITHUB_STEP_SUMMARY
+
+  rollback:
+    name: Rollback (if needed)
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: failure()
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+    - name: Rollback deployment
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        port: ${{ secrets.EC2_SSH_PORT || 22 }}
+        script: |
+          cd ~/chessok
+
+          # 이전 커밋으로 롤백
+          git reset --hard HEAD~1
+
+          # 환경 변수 복사
+          cp .envs/.env.prod .env
+
+          # 서비스 재시작
+          docker-compose -f docker-compose.prod.yml down
+          docker-compose -f docker-compose.prod.yml up -d --build
+
+    - name: Rollback Summary
+      run: |
+        echo "## ⚠️ 롤백 완료" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "배포 실패로 인해 이전 버전으로 롤백했습니다." >> $GITHUB_STEP_SUMMARY
