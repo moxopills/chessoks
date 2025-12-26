@@ -138,8 +138,7 @@ docker-compose -f docker-compose.local.yml up -d
 ```
 
 4. 애플리케이션 접속:
-- 웹: http://localhost:8000
-- Admin: http://localhost:8000/admin (업데이트 예정)
+- 웹: www.chessok.o-r.kr
 - PostgreSQL: localhost:5432
 
 ### 로컬 개발 환경
