@@ -36,36 +36,25 @@ jobs:
         Actor: ${{ github.actor }}"
         git push origin main
 
+    - name: Setup SSH Key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
     - name: Deploy to Production Server
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USERNAME }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        port: ${{ secrets.EC2_SSH_PORT || 22 }}
-        debug: true
-        script: |
-          # 프로젝트 디렉토리로 이동
+      run: |
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
           cd ~/chessok
-
-          # 최신 코드 가져오기 (main 브랜치)
           git pull origin main
-
-          # 환경 변수 복사
           cp .envs/.env.prod .env
-
-          # Docker Compose로 서비스 재시작
           docker compose -f docker-compose.prod.yml down
           docker compose -f docker-compose.prod.yml up -d --build
-
-          # 마이그레이션 실행
           docker compose -f docker-compose.prod.yml exec -T web uv run python manage.py migrate --noinput
-
-          # Static 파일 수집
           docker compose -f docker-compose.prod.yml exec -T web uv run python manage.py collectstatic --noinput
-
-          # 불필요한 Docker 리소스 정리
           docker system prune -f
+        ENDSSH
 
     - name: Health Check
       run: |
@@ -100,26 +89,21 @@ jobs:
       name: production
 
     steps:
+    - name: Setup SSH Key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+
     - name: Rollback deployment
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.EC2_HOST }}
-        username: ${{ secrets.EC2_USERNAME }}
-        key: ${{ secrets.EC2_SSH_KEY }}
-        port: ${{ secrets.EC2_SSH_PORT || 22 }}
-        debug: true
-        script: |
+      run: |
+        ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
           cd ~/chessok
-
-          # 이전 커밋으로 롤백
           git reset --hard HEAD~1
-
-          # 환경 변수 복사
           cp .envs/.env.prod .env
-
-          # 서비스 재시작
           docker compose -f docker-compose.prod.yml down
           docker compose -f docker-compose.prod.yml up -d --build
+        ENDSSH
 
     - name: Rollback Summary
       run: |
