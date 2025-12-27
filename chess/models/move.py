@@ -1,3 +1,6 @@
+import re
+
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from .game import Game
@@ -107,6 +110,25 @@ class Move(models.Model):
 
     def __str__(self):
         return f"Move {self.move_number}: {self.san} ({self.player_color})"
+
+    def clean(self):
+        """모델 검증"""
+        super().clean()
+
+        # 체스 좌표 검증 (a1-h8)
+        square_pattern = re.compile(r"^[a-h][1-8]$")
+        if not square_pattern.match(self.from_square):
+            raise ValidationError(f"잘못된 출발 좌표: {self.from_square}")
+        if not square_pattern.match(self.to_square):
+            raise ValidationError(f"잘못된 도착 좌표: {self.to_square}")
+
+        # 체크와 체크메이트는 동시에 불가
+        if self.is_check and self.is_checkmate:
+            raise ValidationError("체크와 체크메이트는 동시에 참일 수 없습니다")
+
+        # 착수 번호 양수 검증
+        if self.move_number <= 0:
+            raise ValidationError("착수 번호는 1 이상이어야 합니다")
 
     @property
     def full_move_notation(self):

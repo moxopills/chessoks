@@ -1,5 +1,19 @@
 from django.conf import settings
+from django.contrib.auth.hashers import check_password, make_password
+from django.core.exceptions import ValidationError
 from django.db import models
+
+
+class RoomManager(models.Manager):
+    """Room 커스텀 매니저"""
+
+    def available_rooms(self):
+        """입장 가능한 방 목록"""
+        return self.filter(status="waiting", is_private=False, guest__isnull=True)
+
+    def user_rooms(self, user):
+        """유저가 속한 방 목록"""
+        return self.filter(models.Q(host=user) | models.Q(guest=user))
 
 
 class Room(models.Model):
@@ -59,6 +73,14 @@ class Room(models.Model):
     # 관전 허용 여부
     allow_spectators = models.BooleanField(default=True, help_text="관전 허용 여부")
 
+    # 관전자 목록
+    spectators = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name="spectating_rooms",
+        blank=True,
+        help_text="현재 관전 중인 사용자들",
+    )
+
     # 시간 제한 (분)
     time_limit = models.IntegerField(default=30, help_text="각 플레이어당 시간 제한 (분)")
 
@@ -67,6 +89,8 @@ class Room(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
+
+    objects = RoomManager()
 
     class Meta:
         db_table = "rooms"
@@ -77,39 +101,41 @@ class Room(models.Model):
             models.Index(fields=["status", "room_type"]),
             models.Index(fields=["host"]),
         ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(time_limit__gt=0), name="time_limit_positive"
+            ),
+        ]
 
     def __str__(self):
         if self.room_type == "quick":
             return f"빠른 대전 - {self.host.nickname}"
         return f"{self.title} - {self.host.nickname}"
 
+    def clean(self):
+        """모델 검증"""
+        super().clean()
+        if self.is_private and not self.password:
+            raise ValidationError("비공개방은 비밀번호가 필요합니다")
+        if self.time_limit <= 0:
+            raise ValidationError("시간 제한은 양수여야 합니다")
+        if self.host == self.guest:
+            raise ValidationError("호스트와 게스트가 동일할 수 없습니다")
+
+    def set_password(self, raw_password):
+        """비밀번호 해싱하여 저장"""
+        self.password = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        """비밀번호 확인"""
+        return check_password(raw_password, self.password)
+
     @property
     def is_full(self):
-        """방이 가득 찼는지 확인"""
+        """방이 가득 찼는지 확인 (읽기 전용 property)"""
         return self.guest is not None
 
     @property
     def player_count(self):
-        """현재 플레이어 수"""
+        """현재 플레이어 수 (읽기 전용 property)"""
         return 2 if self.is_full else 1
-
-    def can_join(self, user):
-        """유저가 입장 가능한지 확인"""
-        if self.is_full:
-            return False, "방이 가득 찼습니다"
-        if self.host == user:
-            return False, "이미 입장한 방입니다"
-        if self.status != "waiting":
-            return False, "게임이 이미 시작되었습니다"
-        return True, "입장 가능"
-
-    def start_game(self):
-        """게임 시작"""
-        if not self.is_full:
-            raise ValueError("플레이어가 부족합니다")
-
-        from django.utils import timezone
-
-        self.status = "playing"
-        self.started_at = timezone.now()
-        self.save()
