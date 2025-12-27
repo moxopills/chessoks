@@ -46,7 +46,7 @@ jobs:
     - name: Deploy to Production Server
       run: |
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
-          cd ~/chessok
+          cd ~/chessoks
           git pull origin main
           cp .envs/.env.prod .env
           docker compose -f docker-compose.prod.yml down
@@ -98,7 +98,7 @@ jobs:
     - name: Rollback deployment
       run: |
         ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'ENDSSH'
-          cd ~/chessok
+          cd ~/chessoks
           git reset --hard HEAD~1
           cp .envs/.env.prod .env
           docker compose -f docker-compose.prod.yml down
