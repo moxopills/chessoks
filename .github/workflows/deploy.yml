@@ -2,7 +2,7 @@ name: Deploy to EC2
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, develop ]
   workflow_dispatch:
     inputs:
       environment:
@@ -19,11 +19,26 @@ jobs:
     name: Deploy to EC2
     runs-on: ubuntu-latest
     environment:
-      name: ${{ github.event.inputs.environment || 'production' }}
+      name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'development') }}
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Set deployment variables
+      id: vars
+      run: |
+        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          echo "branch=main" >> $GITHUB_OUTPUT
+          echo "env_file=.env.prod" >> $GITHUB_OUTPUT
+          echo "compose_file=docker-compose.prod.yml" >> $GITHUB_OUTPUT
+          echo "environment=production" >> $GITHUB_OUTPUT
+        else
+          echo "branch=develop" >> $GITHUB_OUTPUT
+          echo "env_file=.env.dev" >> $GITHUB_OUTPUT
+          echo "compose_file=docker-compose.dev.yml" >> $GITHUB_OUTPUT
+          echo "environment=development" >> $GITHUB_OUTPUT
+        fi
 
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v1.0.3
@@ -37,20 +52,20 @@ jobs:
           cd ~/chessok
 
           # 최신 코드 가져오기
-          git pull origin main
+          git pull origin ${{ steps.vars.outputs.branch }}
 
           # 환경 변수 복사
-          cp .envs/.env.prod .env
+          cp .envs/${{ steps.vars.outputs.env_file }} .env
 
           # Docker Compose로 서비스 재시작
-          docker-compose -f docker-compose.prod.yml down
-          docker-compose -f docker-compose.prod.yml up -d --build
+          docker-compose -f ${{ steps.vars.outputs.compose_file }} down
+          docker-compose -f ${{ steps.vars.outputs.compose_file }} up -d --build
 
           # 마이그레이션 실행
-          docker-compose -f docker-compose.prod.yml exec -T web uv run python manage.py migrate --noinput
+          docker-compose -f ${{ steps.vars.outputs.compose_file }} exec -T web uv run python manage.py migrate --noinput
 
           # Static 파일 수집
-          docker-compose -f docker-compose.prod.yml exec -T web uv run python manage.py collectstatic --noinput
+          docker-compose -f ${{ steps.vars.outputs.compose_file }} exec -T web uv run python manage.py collectstatic --noinput
 
           # 불필요한 Docker 리소스 정리
           docker system prune -f
@@ -66,7 +81,7 @@ jobs:
       run: |
         echo "## 🚀 배포 완료" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "- **환경**: ${{ github.event.inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **환경**: ${{ steps.vars.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
         echo "- **브랜치**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
         echo "- **커밋**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
         echo "- **배포 시간**: $(date)" >> $GITHUB_STEP_SUMMARY
@@ -84,9 +99,20 @@ jobs:
     needs: deploy
     if: failure()
     environment:
-      name: ${{ github.event.inputs.environment || 'production' }}
+      name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'development') }}
 
     steps:
+    - name: Set rollback variables
+      id: rollback_vars
+      run: |
+        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          echo "env_file=.env.prod" >> $GITHUB_OUTPUT
+          echo "compose_file=docker-compose.prod.yml" >> $GITHUB_OUTPUT
+        else
+          echo "env_file=.env.dev" >> $GITHUB_OUTPUT
+          echo "compose_file=docker-compose.dev.yml" >> $GITHUB_OUTPUT
+        fi
+
     - name: Rollback deployment
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -101,11 +127,11 @@ jobs:
           git reset --hard HEAD~1
 
           # 환경 변수 복사
-          cp .envs/.env.prod .env
+          cp .envs/${{ steps.rollback_vars.outputs.env_file }} .env
 
           # 서비스 재시작
-          docker-compose -f docker-compose.prod.yml down
-          docker-compose -f docker-compose.prod.yml up -d --build
+          docker-compose -f ${{ steps.rollback_vars.outputs.compose_file }} down
+          docker-compose -f ${{ steps.rollback_vars.outputs.compose_file }} up -d --build
 
     - name: Rollback Summary
       run: |
