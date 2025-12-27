@@ -2,14 +2,12 @@
 
 Django 6.0 기반 실시간 멀티플레이 체스 게임 플랫폼
 
-> **최근 업데이트**: 2025.12.28 - 데이터베이스 모델 구현 및 CI/CD 파이프라인 구축
-
 ## 📂 빠른 시작 명령어
 
 ### 로컬 실행
 ```bash
 cp .envs/.env.local .env
-docker-compose -f docker-compose.local.yml up
+docker compose -f docker-compose.local.yml up
 # http://localhost:8000
 ```
 
@@ -17,7 +15,6 @@ docker-compose -f docker-compose.local.yml up
 ```bash
 ./scripts/format.sh      # 코드 포맷팅
 ./scripts/test.sh        # 테스트 실행
-./scripts/check-all.sh   # 전체 검사
 ```
 
 ## 📋 프로젝트 개요
@@ -84,9 +81,12 @@ Django 6.0 기반 실시간 체스 게임
 
 ## 🎯 아키텍처 특징
 
+- **Service Layer**: 비즈니스 로직과 모델 분리 (Clean Architecture)
+- **Custom Managers**: 재사용 가능한 쿼리셋
+- **Model Validation**: clean() 메서드 + DB Constraints
 - **비동기 우선**: AsyncWebsocketConsumer 사용
 - **환경 분리**: .env.local / .env.dev / .env.prod로 설정 분리
-- **Atomic 트랜잭션**: 규칙 검증과 DB 업데이트를 하나의 트랜잭션으로
+- **Atomic 트랜잭션**: @transaction.atomic으로 데이터 무결성 보장
 - **정적 파일**: WhiteNoise로 처리
 - **SSL 자동 갱신**: Let's Encrypt + Certbot (12시간마다)
 
@@ -95,7 +95,7 @@ Django 6.0 기반 실시간 체스 게임
 ### Local (로컬 개발)
 ```bash
 cp .envs/.env.local .env
-docker-compose -f docker-compose.local.yml up
+docker compose -f docker-compose.local.yml up
 # http://localhost:8000
 # PostgreSQL: localhost:5432
 ```
@@ -103,14 +103,14 @@ docker-compose -f docker-compose.local.yml up
 ### Dev (개발 서버)
 ```bash
 cp .envs/.env.dev .env
-docker-compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml up -d
 # http://server-ip
 ```
 
 ### Prod (프로덕션)
 ```bash
 cp .envs/.env.prod .env
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 # https://your-domain.com
 ```
 
@@ -133,10 +133,10 @@ cp .envs/.env.local .env
 3. 컨테이너 빌드 및 실행:
 ```bash
 # 로컬 개발
-docker-compose -f docker-compose.local.yml up
+docker compose -f docker-compose.local.yml up
 
 # 백그라운드 실행
-docker-compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.local.yml up -d
 ```
 
 4. 애플리케이션 접속:
@@ -229,7 +229,7 @@ nano .env  # SECRET_KEY, DB_PASSWORD, DOMAIN 수정 필수
 
 4. Docker Compose로 실행:
 ```bash
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 5. SSL 인증서 발급 (선택):
@@ -239,11 +239,19 @@ docker-compose -f docker-compose.prod.yml up -d
 
 6. 방화벽 설정 (포트 80, 443 오픈)
 
-## 주요 기능 (업데이트 예정)
+## 구현된 기능
 
-- **회원가입/로그인**: accounts 앱 (구현 예정)
-- **실시간 체스 게임**: chess 앱 WebSocket (구현 예정)
-- **멀티플레이**: Channels 양방향 통신 (구현 예정)
+### 데이터베이스 모델
+- **User 모델**: 커스텀 유저 + ELO 레이팅 시스템
+- **SocialUser 모델**: OAuth 연동 (Google, GitHub, Kakao, Naver)
+- **Room 모델**: 게임 방 생성 + 관전자 시스템
+- **Game 모델**: FEN 표기법 보드 상태 저장
+- **Move 모델**: SAN/UCI 표기법 착수 기록
+
+### Service Layer
+- **RatingService**: ELO 레이팅 계산
+- **GameService**: 게임 로직 관리
+- **RoomService**: 방 입장/시작 관리
 
 ## 개발 로드맵
 
@@ -263,6 +271,6 @@ docker-compose -f docker-compose.prod.yml up -d
 - ✅ **Build**: Docker 이미지 빌드
 - 🚀 **Deploy**: EC2 자동 배포 (main 브랜치)
 
-## 라이선스
+## 개발자
 
-MIT
+**Minsoo** - Django 6.0 기반 실시간 멀티플레이 체스 게임 플랫폼
