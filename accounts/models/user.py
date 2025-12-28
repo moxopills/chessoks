@@ -6,7 +6,7 @@ from django.db import models
 class UserManager(BaseUserManager):
     """커스텀 유저 매니저"""
 
-    def create_user(self, username, email, nickname, password=None, **extra_fields):
+    def create_user(self, email, nickname, password=None, **extra_fields):
         """일반 유저 생성"""
         if not email:
             raise ValueError("이메일은 필수입니다")
@@ -14,17 +14,20 @@ class UserManager(BaseUserManager):
             raise ValueError("닉네임은 필수입니다")
 
         email = self.normalize_email(email)
+        # username을 이메일에서 자동 생성 (@ 앞부분)
+        username = extra_fields.pop("username", email.split("@")[0])
+
         user = self.model(username=username, email=email, nickname=nickname, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, username, email, nickname, password=None, **extra_fields):
+    def create_superuser(self, email, nickname, password=None, **extra_fields):
         """슈퍼유저 생성"""
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
-        return self.create_user(username, email, nickname, password, **extra_fields)
+        return self.create_user(email, nickname, password, **extra_fields)
 
     def top_players(self, limit=10):
         """상위 레이팅 플레이어"""
@@ -38,17 +41,27 @@ class UserManager(BaseUserManager):
 class User(AbstractUser):
     """커스텀 유저 모델 - 체스 게임 통계 및 프로필 포함
 
-    Note: password 필드는 AbstractUser에 이미 포함되어 있음
+    Note:
+    - password 필드는 AbstractUser에 이미 포함되어 있음
+    - 이메일로 로그인하며, username은 자동 생성됨
     """
 
-    # 이메일 (필수, AbstractUser의 email을 override)
+    # username을 선택사항으로 변경 (이메일에서 자동 생성)
+    username = models.CharField(
+        max_length=150,
+        unique=True,
+        blank=True,
+        help_text="사용자명 (이메일에서 자동 생성)",
+    )
+
+    # 이메일 (필수, 로그인에 사용)
     email = models.EmailField(
         unique=True,
         db_index=True,
-        help_text="이메일 주소",
+        help_text="이메일 주소 (로그인 ID)",
     )
 
-    # 닉네임 (필수)
+    # 닉네임 (필수, 게임 표시용)
     nickname = models.CharField(max_length=50, unique=True, help_text="게임 내 표시 이름")
 
     # 체스 레이팅
@@ -75,8 +88,8 @@ class User(AbstractUser):
 
     objects = UserManager()
 
-    USERNAME_FIELD = "username"
-    REQUIRED_FIELDS = ["email", "nickname"]
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["nickname"]
 
     class Meta:
         db_table = "users"
