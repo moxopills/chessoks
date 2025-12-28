@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
     "channels",
     "corsheaders",
     "accounts",
@@ -161,6 +162,7 @@ LOGOUT_REDIRECT_URL = "/"
 
 # Django REST Framework 설정
 REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
     ],
@@ -173,4 +175,13 @@ REST_FRAMEWORK = {
     "DEFAULT_PARSER_CLASSES": [
         "rest_framework.parsers.JSONParser",
     ],
+}
+
+# Swagger/OpenAPI 설정
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Chess Multiplayer API",
+    "DESCRIPTION": "Django 6.0 기반 실시간 체스 멀티플레이 게임 API",
+    "VERSION": "0.1.1",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SCHEMA_PATH_PREFIX": r"/api",
 }
