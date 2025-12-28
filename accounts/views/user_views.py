@@ -18,6 +18,7 @@ from accounts.serializers import (
     UserSignUpSerializer,
 )
 
+
 class LoginView(APIView):
     """로그인 - 3번 실패 시 5분 잠금"""
 
@@ -74,9 +75,7 @@ class LoginView(APIView):
             )
 
         if not user.is_active:
-            return Response(
-                {"error": "비활성화된 계정입니다."}, status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({"error": "비활성화된 계정입니다."}, status=status.HTTP_403_FORBIDDEN)
 
         cache.delete(f"login_fail:{email}")
         login(request, user)

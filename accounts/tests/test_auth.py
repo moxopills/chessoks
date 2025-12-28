@@ -1,4 +1,3 @@
-import time
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -113,8 +112,8 @@ class AuthE2ETestCase(LiveServerTestCase):
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
         # 6. 캐시 수동 삭제 (실제로는 5분 대기)
-        cache.delete(f"login_lock:locktest@test.com")
-        cache.delete(f"login_fail:locktest@test.com")
+        cache.delete("login_lock:locktest@test.com")
+        cache.delete("login_fail:locktest@test.com")
 
         # 7. 잠금 해제 후 올바른 비밀번호로 로그인 성공
         response = self.client.post("/accounts/login/", correct_data, format="json")
