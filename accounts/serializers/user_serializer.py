@@ -35,6 +35,20 @@ class UserSerializer(serializers.ModelSerializer):
         )
 
 
+class LoginRequestSerializer(serializers.Serializer):
+    """로그인 요청"""
+
+    email = serializers.EmailField(help_text="이메일 주소")
+    password = serializers.CharField(write_only=True, help_text="비밀번호")
+
+
+class LoginResponseSerializer(serializers.Serializer):
+    """로그인 응답"""
+
+    message = serializers.CharField()
+    user = UserSerializer()
+
+
 class UserSignUpSerializer(serializers.ModelSerializer):
     """회원가입용 Serializer (이메일 기반 로그인)"""
 
@@ -50,7 +64,7 @@ class UserSignUpSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("email", "nickname", "password", "password2")
+        fields = ("email", "nickname", "bio", "password", "password2")
 
     def validate_password(self, value):
         """비밀번호 커스텀 검증: 최소 길이 + 대문자 + 특수문자"""
@@ -93,3 +107,18 @@ class UserSignUpSerializer(serializers.ModelSerializer):
         validated_data.pop("password2")
         user = User.objects.create_user(**validated_data)
         return user
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    """프로필 수정용 Serializer"""
+
+    class Meta:
+        model = User
+        fields = ("nickname", "bio", "avatar_url")
+
+    def validate_nickname(self, value):
+        """닉네임 중복 체크 (본인 제외)"""
+        user = self.context["request"].user
+        if User.objects.filter(nickname=value).exclude(pk=user.pk).exists():
+            raise serializers.ValidationError("이미 사용 중인 닉네임입니다.")
+        return value
