@@ -1,3 +1,7 @@
+from .password_serializer import (
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
+)
 from .social_serializer import (
     SocialAccountUnlinkSerializer,
     SocialLoginSerializer,
@@ -20,4 +24,6 @@ __all__ = [
     "SocialLoginSerializer",
     "SocialUserSerializer",
     "SocialAccountUnlinkSerializer",
+    "PasswordResetRequestSerializer",
+    "PasswordResetConfirmSerializer",
 ]
