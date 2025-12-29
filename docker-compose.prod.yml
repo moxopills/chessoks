@@ -24,7 +24,7 @@ services:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     env_file:
-      - .env
+      - .envs/.env.prod
     depends_on:
       db:
         condition: service_healthy
