@@ -113,9 +113,7 @@ class PasswordResetServiceTest(TestCase):
         """비밀번호 재설정 성공"""
         token_obj = PasswordResetService.create_reset_token(self.user.email)
 
-        success, message = PasswordResetService.reset_password(
-            token_obj.token, "NewPass123!"
-        )
+        success, message = PasswordResetService.reset_password(token_obj.token, "NewPass123!")
 
         self.assertTrue(success)
         self.assertIn("재설정", message)

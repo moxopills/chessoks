@@ -22,9 +22,7 @@ class PasswordResetRequestView(APIView):
 
     @extend_schema(
         request=PasswordResetRequestSerializer,
-        responses={
-            200: {"type": "object", "properties": {"message": {"type": "string"}}}
-        },
+        responses={200: {"type": "object", "properties": {"message": {"type": "string"}}}},
         tags=["인증"],
     )
     def post(self, request):
@@ -50,9 +48,7 @@ class PasswordResetConfirmView(APIView):
 
     @extend_schema(
         request=PasswordResetConfirmSerializer,
-        responses={
-            200: {"type": "object", "properties": {"message": {"type": "string"}}}
-        },
+        responses={200: {"type": "object", "properties": {"message": {"type": "string"}}}},
         tags=["인증"],
     )
     def post(self, request):

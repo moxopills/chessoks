@@ -22,8 +22,12 @@ urlpatterns = [
     path("me/", CurrentUserView.as_view(), name="current-user"),
     path("profile/", ProfileUpdateView.as_view(), name="profile-update"),
     # 비밀번호 재설정
-    path("password-reset/request/", PasswordResetRequestView.as_view(), name="password-reset-request"),
-    path("password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"),
+    path(
+        "password-reset/request/", PasswordResetRequestView.as_view(), name="password-reset-request"
+    ),
+    path(
+        "password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"
+    ),
     # 소셜 인증
     path("social/", include("accounts.urls.social_urls")),
 ]
