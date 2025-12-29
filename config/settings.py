@@ -137,8 +137,23 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ASGI 애플리케이션
 ASGI_APPLICATION = "config.asgi.application"
 
-# Channels 설정
-CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+# Channels 설정 (Redis)
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [(os.getenv("REDIS_HOST", "localhost"), int(os.getenv("REDIS_PORT", "6379")))],
+        },
+    },
+}
+
+# Redis 캐시 설정
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', '6379')}/1",
+    }
+}
 
 # CORS 설정
 CORS_ALLOW_ALL_ORIGINS = DEBUG
