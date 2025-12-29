@@ -1,11 +1,16 @@
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
+from django.core import mail
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import LiveServerTestCase, TestCase
+from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.test import APIClient, APIRequestFactory
 
+from accounts.models import PasswordResetToken
 from accounts.serializers import ProfileUpdateSerializer, UserSignUpSerializer
 
 User = get_user_model()
@@ -51,7 +56,7 @@ class AuthE2ETestCase(LiveServerTestCase):
             "password": "TestPass123!",
             "password2": "TestPass123!",
         }
-        response = self.client.post("/accounts/signup/", signup_data, format="json")
+        response = self.client.post("/api/accounts/signup/", signup_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("user", response.data)
@@ -59,25 +64,25 @@ class AuthE2ETestCase(LiveServerTestCase):
 
         # 2. 로그인
         login_data = {"email": "e2e@test.com", "password": "TestPass123!"}
-        response = self.client.post("/accounts/login/", login_data, format="json")
+        response = self.client.post("/api/accounts/login/", login_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("user", response.data)
 
         # 3. 현재 유저 정보 조회 (로그인 상태)
-        response = self.client.get("/accounts/me/", format="json")
+        response = self.client.get("/api/accounts/me/", format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["email"], signup_data["email"])
         self.assertEqual(response.data["nickname"], signup_data["nickname"])
 
         # 4. 로그아웃
-        response = self.client.post("/accounts/logout/", format="json")
+        response = self.client.post("/api/accounts/logout/", format="json")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # 5. 로그아웃 후 유저 정보 조회 실패 확인
-        response = self.client.get("/accounts/me/", format="json")
+        response = self.client.get("/api/accounts/me/", format="json")
 
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -92,23 +97,23 @@ class AuthE2ETestCase(LiveServerTestCase):
         wrong_data = {"email": "locktest@test.com", "password": "WrongPass!"}
 
         # 2. 첫 번째 실패 (남은 시도: 2회)
-        response = self.client.post("/accounts/login/", wrong_data, format="json")
+        response = self.client.post("/api/accounts/login/", wrong_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertIn("남은 시도: 2회", response.data["error"])
 
         # 3. 두 번째 실패 (남은 시도: 1회)
-        response = self.client.post("/accounts/login/", wrong_data, format="json")
+        response = self.client.post("/api/accounts/login/", wrong_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertIn("남은 시도: 1회", response.data["error"])
 
         # 4. 세 번째 실패 → 잠금
-        response = self.client.post("/accounts/login/", wrong_data, format="json")
+        response = self.client.post("/api/accounts/login/", wrong_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
         self.assertIn("5분 후", response.data["error"])
 
         # 5. 잠금 상태에서 올바른 비밀번호로도 로그인 불가
         correct_data = {"email": "locktest@test.com", "password": "CorrectPass123!"}
-        response = self.client.post("/accounts/login/", correct_data, format="json")
+        response = self.client.post("/api/accounts/login/", correct_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
         # 6. 캐시 수동 삭제 (실제로는 5분 대기)
@@ -116,7 +121,7 @@ class AuthE2ETestCase(LiveServerTestCase):
         cache.delete("login_fail:locktest@test.com")
 
         # 7. 잠금 해제 후 올바른 비밀번호로 로그인 성공
-        response = self.client.post("/accounts/login/", correct_data, format="json")
+        response = self.client.post("/api/accounts/login/", correct_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_duplicate_signup_prevention(self):
@@ -130,11 +135,11 @@ class AuthE2ETestCase(LiveServerTestCase):
         }
 
         # 1. 첫 번째 회원가입 성공
-        response = self.client.post("/accounts/signup/", signup_data, format="json")
+        response = self.client.post("/api/accounts/signup/", signup_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # 2. 같은 이메일로 재가입 시도 → 실패
-        response = self.client.post("/accounts/signup/", signup_data, format="json")
+        response = self.client.post("/api/accounts/signup/", signup_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("email", response.data)
 
@@ -145,7 +150,7 @@ class AuthE2ETestCase(LiveServerTestCase):
             "password": "TestPass123!",
             "password2": "TestPass123!",
         }
-        response = self.client.post("/accounts/signup/", signup_data2, format="json")
+        response = self.client.post("/api/accounts/signup/", signup_data2, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("nickname", response.data)
 
@@ -159,27 +164,27 @@ class AuthE2ETestCase(LiveServerTestCase):
 
         # 1. 8자 미만
         data = {**base_data, "password": "Test1!", "password2": "Test1!"}
-        response = self.client.post("/accounts/signup/", data, format="json")
+        response = self.client.post("/api/accounts/signup/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         # 2. 대문자 없음
         data = {**base_data, "password": "testpass123!", "password2": "testpass123!"}
-        response = self.client.post("/accounts/signup/", data, format="json")
+        response = self.client.post("/api/accounts/signup/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         # 3. 특수문자 없음
         data = {**base_data, "password": "TestPass123", "password2": "TestPass123"}
-        response = self.client.post("/accounts/signup/", data, format="json")
+        response = self.client.post("/api/accounts/signup/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         # 4. 비밀번호 불일치
         data = {**base_data, "password": "TestPass123!", "password2": "Different!"}
-        response = self.client.post("/accounts/signup/", data, format="json")
+        response = self.client.post("/api/accounts/signup/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         # 5. 모든 조건 만족 → 성공
         data = {**base_data, "password": "TestPass123!", "password2": "TestPass123!"}
-        response = self.client.post("/accounts/signup/", data, format="json")
+        response = self.client.post("/api/accounts/signup/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_user_session_persistence(self):
@@ -192,24 +197,24 @@ class AuthE2ETestCase(LiveServerTestCase):
             "password": "TestPass123!",
             "password2": "TestPass123!",
         }
-        self.client.post("/accounts/signup/", signup_data, format="json")
+        self.client.post("/api/accounts/signup/", signup_data, format="json")
 
         # 2. 로그인
         login_data = {"email": "session@test.com", "password": "TestPass123!"}
-        response = self.client.post("/accounts/login/", login_data, format="json")
+        response = self.client.post("/api/accounts/login/", login_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # 3. 여러 번 /me/ 호출해도 세션 유지
         for _ in range(5):
-            response = self.client.get("/accounts/me/", format="json")
+            response = self.client.get("/api/accounts/me/", format="json")
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(response.data["email"], "session@test.com")
 
         # 4. 로그아웃
-        self.client.post("/accounts/logout/", format="json")
+        self.client.post("/api/accounts/logout/", format="json")
 
         # 5. 로그아웃 후 세션 무효화 확인
-        response = self.client.get("/accounts/me/", format="json")
+        response = self.client.get("/api/accounts/me/", format="json")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
@@ -405,3 +410,234 @@ class UserModelTest(BaseTestCase):
         players = User.objects.active_players()
         self.assertIn(active, players)
         self.assertNotIn(inactive, players)
+
+
+class PasswordResetTokenModelTest(BaseTestCase):
+    """PasswordResetToken 모델 테스트"""
+
+    def setUp(self):
+        self.user = self.create_user(email="test@example.com", nickname="테스터")
+
+    def test_token_generation_unique(self):
+        """토큰 생성 시 고유값"""
+        token1 = PasswordResetToken.generate_token()
+        token2 = PasswordResetToken.generate_token()
+        self.assertNotEqual(token1, token2)
+        self.assertTrue(len(token1) > 40)
+
+    def test_token_expiration(self):
+        """토큰 만료 확인"""
+        # 만료된 토큰
+        expired_token = PasswordResetToken.objects.create(
+            user=self.user,
+            token=PasswordResetToken.generate_token(),
+            expires_at=timezone.now() - timedelta(hours=1),
+        )
+        self.assertTrue(expired_token.is_expired)
+        self.assertFalse(expired_token.is_valid)
+
+        # 유효한 토큰
+        valid_token = PasswordResetToken.objects.create(
+            user=self.user,
+            token=PasswordResetToken.generate_token(),
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+        self.assertFalse(valid_token.is_expired)
+        self.assertTrue(valid_token.is_valid)
+
+    def test_used_token_invalid(self):
+        """사용된 토큰은 유효하지 않음"""
+        token = PasswordResetToken.objects.create(
+            user=self.user,
+            token=PasswordResetToken.generate_token(),
+            expires_at=timezone.now() + timedelta(hours=1),
+            is_used=True,
+        )
+        self.assertFalse(token.is_valid)
+
+    def test_str_representation(self):
+        """문자열 표현"""
+        token = PasswordResetToken.objects.create(
+            user=self.user,
+            token=PasswordResetToken.generate_token(),
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+        self.assertIn(self.user.email, str(token))
+
+
+class PasswordResetE2ETest(TestCase):
+    """비밀번호 재설정 E2E 테스트"""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            email="e2e@example.com", nickname="E2E", password="OldPass123!"
+        )
+
+    def test_complete_password_reset_flow(self):
+        """완전한 비밀번호 재설정 플로우"""
+        # 1. 재설정 요청
+        response = self.client.post(
+            "/api/accounts/password-reset/request/",
+            {"email": self.user.email},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 1)
+
+        # 2. 토큰 추출
+        token = PasswordResetToken.objects.first()
+        self.assertIsNotNone(token)
+
+        # 3. 비밀번호 재설정
+        response = self.client.post(
+            "/api/accounts/password-reset/confirm/",
+            {
+                "token": token.token,
+                "new_password": "NewPass123!",
+                "new_password2": "NewPass123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # 4. 새 비밀번호로 로그인 확인
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("NewPass123!"))
+
+    def test_nonexistent_email_security(self):
+        """존재하지 않는 이메일도 동일한 응답 (보안)"""
+        response = self.client.post(
+            "/api/accounts/password-reset/request/",
+            {"email": "nonexistent@example.com"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_expired_token_rejection(self):
+        """만료된 토큰 거부"""
+        expired_token = PasswordResetToken.objects.create(
+            user=self.user,
+            token=PasswordResetToken.generate_token(),
+            expires_at=timezone.now() - timedelta(hours=1),
+        )
+
+        response = self.client.post(
+            "/api/accounts/password-reset/confirm/",
+            {
+                "token": expired_token.token,
+                "new_password": "NewPass123!",
+                "new_password2": "NewPass123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_token_reuse_prevention(self):
+        """토큰 재사용 방지"""
+        # 토큰 생성
+        response = self.client.post(
+            "/api/accounts/password-reset/request/",
+            {"email": self.user.email},
+            format="json",
+        )
+        token = PasswordResetToken.objects.first()
+
+        # 첫 번째 사용
+        self.client.post(
+            "/api/accounts/password-reset/confirm/",
+            {
+                "token": token.token,
+                "new_password": "NewPass123!",
+                "new_password2": "NewPass123!",
+            },
+            format="json",
+        )
+
+        # 두 번째 사용 시도
+        response = self.client.post(
+            "/api/accounts/password-reset/confirm/",
+            {
+                "token": token.token,
+                "new_password": "Another123!",
+                "new_password2": "Another123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_password_validation(self):
+        """비밀번호 검증 규칙"""
+        # 너무 짧음
+        response = self.client.post(
+            "/api/accounts/password-reset/request/",
+            {"email": self.user.email},
+            format="json",
+        )
+        token1 = PasswordResetToken.objects.first()
+
+        response = self.client.post(
+            "/api/accounts/password-reset/confirm/",
+            {"token": token1.token, "new_password": "Short1!", "new_password2": "Short1!"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # 대문자 없음
+        self.client.post(
+            "/api/accounts/password-reset/request/",
+            {"email": self.user.email},
+            format="json",
+        )
+        token2 = PasswordResetToken.objects.filter(is_used=False).first()
+
+        response = self.client.post(
+            "/api/accounts/password-reset/confirm/",
+            {
+                "token": token2.token,
+                "new_password": "lowercase123!",
+                "new_password2": "lowercase123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # 특수문자 없음
+        self.client.post(
+            "/api/accounts/password-reset/request/",
+            {"email": self.user.email},
+            format="json",
+        )
+        token3 = PasswordResetToken.objects.filter(is_used=False).first()
+
+        response = self.client.post(
+            "/api/accounts/password-reset/confirm/",
+            {
+                "token": token3.token,
+                "new_password": "NoSpecial123",
+                "new_password2": "NoSpecial123",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_password_mismatch(self):
+        """비밀번호 불일치"""
+        self.client.post(
+            "/api/accounts/password-reset/request/",
+            {"email": self.user.email},
+            format="json",
+        )
+        token = PasswordResetToken.objects.first()
+
+        response = self.client.post(
+            "/api/accounts/password-reset/confirm/",
+            {
+                "token": token.token,
+                "new_password": "NewPass123!",
+                "new_password2": "Different123!",
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

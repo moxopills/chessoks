@@ -19,7 +19,7 @@ class RatingService:
         """
         expected = 1 / (1 + 10 ** ((opponent_rating - player_rating) / 400))
         new_rating = round(player_rating + k_factor * (result - expected))
-        return max(0, min(4000, new_rating))  # 0-4000 범위로 제한
+        return max(0, min(4000, new_rating))
 
     @staticmethod
     def update_user_stats(user, result):
@@ -48,7 +48,6 @@ class RatingService:
 
         Note: 이 메서드는 save()하지 않음. 호출자가 transaction.atomic으로 묶어서 처리
         """
-        # 승패 결정
         if game_result in ["white_win", "checkmate_white", "timeout_black", "resignation_black"]:
             white_result = "win"
             black_result = "loss"
@@ -64,17 +63,15 @@ class RatingService:
             black_result = "win"
             white_score = 0.0
             black_score = 1.0
-        else:  # draw 계열
+        else:
             white_result = "draw"
             black_result = "draw"
             white_score = 0.5
             black_score = 0.5
 
-        # 통계 업데이트
         RatingService.update_user_stats(white_player, white_result)
         RatingService.update_user_stats(black_player, black_result)
 
-        # 레이팅 업데이트
         white_player.rating = RatingService.calculate_new_rating(
             white_player.rating, black_player.rating, white_score
         )
