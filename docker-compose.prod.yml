@@ -17,6 +17,17 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   web:
     build: .
     command: uv run daphne -b 0.0.0.0 -p 8000 config.asgi:application
@@ -28,10 +39,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: always
     environment:
       - DEBUG=False
       - DB_HOST=db
+      - REDIS_HOST=redis
 
   nginx:
     build:
@@ -63,6 +77,7 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
   static_volume:
   media_volume:
   certbot_conf:
