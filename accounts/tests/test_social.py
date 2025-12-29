@@ -51,18 +51,16 @@ class SocialUserModelTest(TestCase):
                 user=self.user, provider=provider, provider_user_id=f"{provider}_{idx}"
             )
             self.assertEqual(social.provider, provider)
-            self.assertEqual(social.get_provider_display(), dict(SocialUser.PROVIDER_CHOICES)[provider])
+            self.assertEqual(
+                social.get_provider_display(), dict(SocialUser.PROVIDER_CHOICES)[provider]
+            )
 
     def test_unique_provider_user_id(self):
         """provider + provider_user_id 조합 중복 방지"""
-        SocialUser.objects.create(
-            user=self.user, provider="google", provider_user_id="g_123"
-        )
+        SocialUser.objects.create(user=self.user, provider="google", provider_user_id="g_123")
 
         with self.assertRaises(IntegrityError):
-            SocialUser.objects.create(
-                user=self.user, provider="google", provider_user_id="g_123"
-            )
+            SocialUser.objects.create(user=self.user, provider="google", provider_user_id="g_123")
 
     def test_multiple_providers_per_user(self):
         """한 유저가 여러 제공자 연동 가능"""
