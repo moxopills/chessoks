@@ -51,7 +51,7 @@ class SocialUser(models.Model):
 
     @property
     def is_token_expired(self):
-        """토큰 만료 여부 확인"""
+        """토큰 만료 여부"""
         if not self.token_expires_at:
             return False
         from django.utils import timezone

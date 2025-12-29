@@ -36,15 +36,12 @@ class PasswordResetToken(models.Model):
 
     @property
     def is_expired(self):
-        """토큰 만료 여부"""
         return timezone.now() > self.expires_at
 
     @property
     def is_valid(self):
-        """토큰 유효성 (미사용 + 미만료)"""
         return not self.is_used and not self.is_expired
 
     @classmethod
     def generate_token(cls):
-        """안전한 랜덤 토큰 생성"""
         return secrets.token_urlsafe(48)
