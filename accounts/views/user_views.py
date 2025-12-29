@@ -236,7 +236,9 @@ class PasswordResetConfirmView(APIView):
         try:
             token = PasswordResetToken.objects.select_related("user").get(token=token_str)
         except PasswordResetToken.DoesNotExist:
-            return Response({"error": "유효하지 않은 토큰입니다."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "유효하지 않은 토큰입니다."}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         if not token.is_valid:
             return Response(
