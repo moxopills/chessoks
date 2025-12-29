@@ -5,7 +5,6 @@ from django.core.mail import send_mail
 
 
 def send_password_reset_email(user_email, token):
-    """비밀번호 재설정 이메일 전송"""
     reset_url = f"{settings.FRONTEND_URL}/password-reset/confirm?token={token}"
 
     subject = "[ChessOK] 비밀번호 재설정 요청"

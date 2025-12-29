@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}네이버 로그인 처리 중...{% endblock %}
+
+{% block content %}
+{% if error %}
+    <div class="error">
+        <strong>오류 발생</strong><br>
+        {{ error }}
+    </div>
+    <a href="{% url 'login' %}" class="btn btn-naver">로그인 페이지로 돌아가기</a>
+{% else %}
+    <div class="loading">
+        <h2>네이버 로그인 처리 중...</h2>
+        <p>잠시만 기다려주세요.</p>
+    </div>
+{% endif %}
+{% endblock %}

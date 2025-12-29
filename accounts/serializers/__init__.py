@@ -1,7 +1,3 @@
-from .password_serializer import (
-    PasswordResetConfirmSerializer,
-    PasswordResetRequestSerializer,
-)
 from .social_serializer import (
     SocialAccountUnlinkSerializer,
     SocialLoginSerializer,
@@ -10,6 +6,8 @@ from .social_serializer import (
 from .user_serializer import (
     LoginRequestSerializer,
     LoginResponseSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     ProfileUpdateSerializer,
     UserSerializer,
     UserSignUpSerializer,

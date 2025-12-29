@@ -1,3 +1,3 @@
-from .rating_service import RatingService
+from .social_service import SocialAuthService
 
-__all__ = ["RatingService"]
+__all__ = ["SocialAuthService"]

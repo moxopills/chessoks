@@ -1,5 +1,7 @@
 """소셜 로그인 뷰"""
 
+from django.contrib.auth import login
+
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import ListAPIView
@@ -16,10 +18,11 @@ from accounts.serializers import (
     SocialUserSerializer,
     UserSerializer,
 )
+from accounts.services.social_service import SocialAuthService
 
 
 class SocialLoginView(APIView):
-    """소셜 로그인"""
+    """소셜 로그인 - Service 레이어 활용"""
 
     permission_classes = [AllowAny]
     throttle_classes = [AnonRateThrottle]
@@ -31,15 +34,29 @@ class SocialLoginView(APIView):
     )
     def post(self, request):
         serializer = SocialLoginSerializer(data=request.data)
-
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        user = serializer.save(request)
-        user_data = UserSerializer(user).data
+        provider = serializer.validated_data["provider"]
+        access_token = serializer.validated_data["access_token"]
+        nickname = serializer.validated_data.get("nickname")
+
+        try:
+            provider_data = SocialAuthService.get_provider_user_info(provider, access_token)
+            user = SocialAuthService.create_or_update_user(
+                provider=provider,
+                provider_data=provider_data,
+                access_token=access_token,
+                nickname=nickname,
+            )
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
 
         return Response(
-            {"message": "소셜 로그인 성공", "user": user_data}, status=status.HTTP_200_OK
+            {"message": "소셜 로그인 성공", "user": UserSerializer(user).data},
+            status=status.HTTP_200_OK,
         )
 
 

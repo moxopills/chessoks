@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib.auth import authenticate, login, logout
 from django.core.cache import cache
 from django.utils import timezone
@@ -10,14 +12,17 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
-from accounts.models import User
+from accounts.models import PasswordResetToken, User
 from accounts.serializers import (
     LoginRequestSerializer,
     LoginResponseSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     ProfileUpdateSerializer,
     UserSerializer,
     UserSignUpSerializer,
 )
+from accounts.utils.email import send_password_reset_email
 
 
 class LoginView(APIView):
@@ -30,7 +35,7 @@ class LoginView(APIView):
     @extend_schema(
         request=LoginRequestSerializer,
         responses={200: LoginResponseSerializer},
-        tags=["인증"],
+        tags=["로그인"],
     )
     def post(self, request):
         email = request.data.get("email", "").strip()
@@ -94,7 +99,7 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_classes = [UserRateThrottle]
 
-    @extend_schema(tags=["인증"])
+    @extend_schema(tags=["로그인"])
     def post(self, request):
         logout(request)
         return Response({"message": "로그아웃 되었습니다."}, status=status.HTTP_200_OK)
@@ -109,7 +114,7 @@ class SignUpView(APIView):
     @extend_schema(
         request=UserSignUpSerializer,
         responses={201: LoginResponseSerializer},
-        tags=["인증"],
+        tags=["로그인"],
     )
     def post(self, request):
         serializer = UserSignUpSerializer(data=request.data)
@@ -135,7 +140,7 @@ class CurrentUserView(RetrieveAPIView):
     def get_object(self):
         return self.request.user
 
-    @extend_schema(tags=["인증"])
+    @extend_schema(tags=["로그인"])
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
@@ -164,3 +169,87 @@ class ProfileUpdateView(UpdateAPIView):
     )
     def partial_update(self, request, *args, **kwargs):
         return super().partial_update(request, *args, **kwargs)
+
+
+class PasswordResetRequestView(APIView):
+    """비밀번호 재설정 요청"""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    @extend_schema(
+        request=PasswordResetRequestSerializer,
+        responses={200: {"type": "object", "properties": {"message": {"type": "string"}}}},
+        tags=["내 페이지"],
+    )
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        email = serializer.validated_data["email"]
+
+        try:
+            user = User.objects.get(email=email, is_active=True)
+        except User.DoesNotExist:
+            # 보안: 존재하지 않는 이메일도 동일하게 처리 (타이밍 공격 방지)
+            return Response(
+                {"message": "비밀번호 재설정 링크를 이메일로 전송했습니다."},
+                status=status.HTTP_200_OK,
+            )
+
+        PasswordResetToken.objects.filter(user=user, is_used=False).update(is_used=True)
+
+        token = PasswordResetToken.objects.create(
+            user=user,
+            token=PasswordResetToken.generate_token(),
+            expires_at=timezone.now() + timedelta(hours=1),
+        )
+
+        send_password_reset_email(user.email, token.token)
+
+        return Response(
+            {"message": "비밀번호 재설정 링크를 이메일로 전송했습니다."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    """비밀번호 재설정 확인"""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    @extend_schema(
+        request=PasswordResetConfirmSerializer,
+        responses={200: {"type": "object", "properties": {"message": {"type": "string"}}}},
+        tags=["내 페이지"],
+    )
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        token_str = serializer.validated_data["token"]
+        new_password = serializer.validated_data["new_password"]
+
+        try:
+            token = PasswordResetToken.objects.select_related("user").get(token=token_str)
+        except PasswordResetToken.DoesNotExist:
+            return Response({"error": "유효하지 않은 토큰입니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not token.is_valid:
+            return Response(
+                {"error": "만료되었거나 이미 사용된 토큰입니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = token.user
+        user.set_password(new_password)
+        user.save(update_fields=["password"])
+
+        token.is_used = True
+        token.used_at = timezone.now()
+        token.save(update_fields=["is_used", "used_at"])
+
+        return Response({"message": "비밀번호가 재설정되었습니다."}, status=status.HTTP_200_OK)

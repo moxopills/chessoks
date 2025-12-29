@@ -118,7 +118,7 @@ class SocialLoginE2ETestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.mock_patcher = patch(
-            "accounts.serializers.social_serializer.SocialLoginSerializer.get_provider_user_info"
+            "accounts.services.social_service.SocialAuthService.get_provider_user_info"
         )
         self.mock_provider = self.mock_patcher.start()
 
@@ -130,7 +130,7 @@ class SocialLoginE2ETestCase(TestCase):
         data = {"provider": provider, "access_token": "mock_token_1234567890"}
         if nickname:
             data["nickname"] = nickname
-        return self.client.post("/accounts/social/login/", data, format="json")
+        return self.client.post("/api/accounts/social/login/", data, format="json")
 
     def test_new_user_signup(self):
         """신규 유저 즉시 가입"""
@@ -174,7 +174,7 @@ class SocialLoginE2ETestCase(TestCase):
         old_token = SocialUser.objects.get().access_token
 
         self.client.post(
-            "/accounts/social/login/",
+            "/api/accounts/social/login/",
             {"provider": "google", "access_token": "new_token_0987654321"},
             format="json",
         )
@@ -187,7 +187,7 @@ class SocialLoginE2ETestCase(TestCase):
         self.mock_provider.return_value = {"id": "g_222", "email": "list@gmail.com", "name": "List"}
 
         self._social_login(nickname="목록")
-        response = self.client.get("/accounts/social/accounts/")
+        response = self.client.get("/api/accounts/social/accounts/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
@@ -209,7 +209,7 @@ class SocialLoginE2ETestCase(TestCase):
         self.client.force_authenticate(user=user)
 
         response = self.client.delete(
-            "/accounts/social/accounts/unlink/", {"provider": "google"}, format="json"
+            "/api/accounts/social/accounts/unlink/", {"provider": "google"}, format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -219,7 +219,7 @@ class SocialLoginE2ETestCase(TestCase):
 
         self._social_login(nickname="마지막")
         response = self.client.delete(
-            "/accounts/social/accounts/unlink/", {"provider": "google"}, format="json"
+            "/api/accounts/social/accounts/unlink/", {"provider": "google"}, format="json"
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
