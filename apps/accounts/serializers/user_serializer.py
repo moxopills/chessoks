@@ -1,8 +1,7 @@
-import re
-
 from rest_framework import serializers
 
 from apps.accounts.models import User
+from apps.accounts.utils.validators import validate_password_strength
 
 
 class UserStatsSerializer(serializers.Serializer):
@@ -59,7 +58,7 @@ class UserSignUpSerializer(serializers.ModelSerializer):
         write_only=True,
         required=True,
         style={"input_type": "password"},
-        help_text="비밀번호 (최소 8자, 대문자, 특수문자 !, *, @ 중 1개 이상 포함)",
+        help_text="비밀번호 (최소 8자, 대소문자, 숫자, 특수문자 각 1개 이상)",
     )
     password2 = serializers.CharField(
         write_only=True, required=True, style={"input_type": "password"}, help_text="비밀번호 확인"
@@ -70,15 +69,7 @@ class UserSignUpSerializer(serializers.ModelSerializer):
         fields = ("email", "nickname", "bio", "password", "password2")
 
     def validate_password(self, value):
-        if len(value) < 8:
-            raise serializers.ValidationError("비밀번호는 최소 8자 이상이어야 합니다.")
-        if not re.search(r"[A-Z]", value):
-            raise serializers.ValidationError("비밀번호에 대문자가 최소 1개 포함되어야 합니다.")
-        if not re.search(r"[!*@]", value):
-            raise serializers.ValidationError(
-                "비밀번호에 특수문자 (!, *, @) 중 1개 이상 포함되어야 합니다."
-            )
-        return value
+        return validate_password_strength(value)
 
     def validate(self, attrs):
         if attrs["password"] != attrs["password2"]:
@@ -125,19 +116,13 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     """비밀번호 재설정 확인"""
 
     token = serializers.CharField(help_text="이메일로 받은 토큰")
-    new_password = serializers.CharField(write_only=True, help_text="새 비밀번호")
+    new_password = serializers.CharField(
+        write_only=True, help_text="새 비밀번호 (최소 8자, 대소문자, 숫자, 특수문자 각 1개 이상)"
+    )
     new_password2 = serializers.CharField(write_only=True, help_text="비밀번호 확인")
 
     def validate_new_password(self, value):
-        if len(value) < 8:
-            raise serializers.ValidationError("비밀번호는 최소 8자 이상이어야 합니다.")
-        if not re.search(r"[A-Z]", value):
-            raise serializers.ValidationError("비밀번호에 대문자가 최소 1개 포함되어야 합니다.")
-        if not re.search(r"[!*@]", value):
-            raise serializers.ValidationError(
-                "비밀번호에 특수문자 (!, *, @) 중 1개 이상 포함되어야 합니다."
-            )
-        return value
+        return validate_password_strength(value)
 
     def validate(self, attrs):
         if attrs["new_password"] != attrs["new_password2"]:
