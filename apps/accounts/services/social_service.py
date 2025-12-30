@@ -4,7 +4,6 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.utils import timezone
 
 import requests
 from rest_framework import serializers
@@ -114,15 +113,12 @@ class SocialAuthService:
 
     @staticmethod
     @transaction.atomic
-    def create_or_update_user(
-        provider: str, provider_data: dict, access_token: str, nickname: str = None
-    ) -> User:
-        """소셜 계정으로 유저 생성/조회 및 토큰 업데이트
+    def create_or_update_user(provider: str, provider_data: dict, nickname: str = None) -> User:
+        """소셜 계정으로 유저 생성/조회 (토큰은 저장하지 않음)
 
         Args:
             provider: OAuth 제공자
             provider_data: OAuth에서 받은 사용자 정보
-            access_token: OAuth Access Token
             nickname: 닉네임 (최초 가입 시 필수)
 
         Returns:
@@ -142,11 +138,9 @@ class SocialAuthService:
         )
 
         if social_user:
-            # 토큰 업데이트
-            social_user.access_token = access_token
+            # extra_data만 업데이트 (프로필 정보 갱신용)
             social_user.extra_data = provider_data
-            social_user.updated_at = timezone.now()
-            social_user.save(update_fields=["access_token", "extra_data", "updated_at"])
+            social_user.save(update_fields=["extra_data", "updated_at"])
             return social_user.user
 
         # 이메일로 기존 유저 확인 후 소셜 계정 연동
@@ -156,7 +150,6 @@ class SocialAuthService:
                 user=user,
                 provider=provider,
                 provider_user_id=provider_user_id,
-                access_token=access_token,
                 extra_data=provider_data,
             )
             return user
@@ -174,7 +167,6 @@ class SocialAuthService:
             user=user,
             provider=provider,
             provider_user_id=provider_user_id,
-            access_token=access_token,
             extra_data=provider_data,
         )
         return user

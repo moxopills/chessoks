@@ -2,7 +2,6 @@
 
 from django.contrib.auth import get_user_model
 
-from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.models import SocialUser
@@ -27,12 +26,6 @@ class SocialUserSerializer(serializers.ModelSerializer):
 
     provider_display = serializers.CharField(source="get_provider_display", read_only=True)
 
-    @extend_schema_field(serializers.BooleanField)
-    def get_is_token_expired(self, obj):
-        return obj.is_token_expired
-
-    is_token_expired = serializers.SerializerMethodField()
-
     class Meta:
         model = SocialUser
         fields = (
@@ -40,7 +33,6 @@ class SocialUserSerializer(serializers.ModelSerializer):
             "provider",
             "provider_display",
             "provider_user_id",
-            "is_token_expired",
             "created_at",
         )
 

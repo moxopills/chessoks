@@ -23,12 +23,6 @@ class SocialUser(models.Model):
 
     provider_user_id = models.CharField(max_length=255, help_text="제공자의 사용자 ID")
 
-    access_token = models.TextField(blank=True, help_text="OAuth Access Token")
-
-    refresh_token = models.TextField(blank=True, help_text="OAuth Refresh Token")
-
-    token_expires_at = models.DateTimeField(null=True, blank=True, help_text="토큰 만료 시간")
-
     extra_data = models.JSONField(
         default=dict, blank=True, help_text="추가 데이터 (이메일, 프로필 등)"
     )
@@ -48,12 +42,3 @@ class SocialUser(models.Model):
 
     def __str__(self):
         return f"{self.user.nickname} - {self.get_provider_display()}"
-
-    @property
-    def is_token_expired(self):
-        """토큰 만료 여부"""
-        if not self.token_expires_at:
-            return False
-        from django.utils import timezone
-
-        return timezone.now() > self.token_expires_at
