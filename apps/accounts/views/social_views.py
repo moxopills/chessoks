@@ -46,7 +46,6 @@ class SocialLoginView(APIView):
             user = SocialAuthService.create_or_update_user(
                 provider=provider,
                 provider_data=provider_data,
-                access_token=access_token,
                 nickname=nickname,
             )
         except ValueError as e:

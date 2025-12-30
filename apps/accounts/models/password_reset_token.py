@@ -7,8 +7,22 @@ from django.db import models
 from django.utils import timezone
 
 
+class PasswordResetTokenManager(models.Manager):
+    """비밀번호 재설정 토큰 매니저"""
+
+    def delete_expired(self):
+        """만료된 토큰 삭제 (만료 시간이 지났거나 사용된 토큰)"""
+        now = timezone.now()
+        deleted_count, _ = self.filter(
+            models.Q(expires_at__lt=now) | models.Q(is_used=True)
+        ).delete()
+        return deleted_count
+
+
 class PasswordResetToken(models.Model):
     """비밀번호 재설정 토큰"""
+
+    objects = PasswordResetTokenManager()
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
