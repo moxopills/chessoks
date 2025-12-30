@@ -21,6 +21,7 @@ class UserManager(BaseUserManager):
 
         # UserStats 자동 생성
         from apps.accounts.models import UserStats
+
         UserStats.objects.create(user=user)
 
         return user
@@ -36,9 +37,7 @@ class UserManager(BaseUserManager):
     def top_players(self, limit=10):
         """상위 레이팅 플레이어 (UserStats의 rating 기준)"""
         return (
-            self.filter(is_active=True)
-            .select_related("stats")
-            .order_by("-stats__rating")[:limit]
+            self.filter(is_active=True).select_related("stats").order_by("-stats__rating")[:limit]
         )
 
     def active_players(self):
