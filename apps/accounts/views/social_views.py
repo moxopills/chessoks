@@ -10,15 +10,15 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
-from accounts.models import SocialUser
-from accounts.serializers import (
+from apps.accounts.models import SocialUser
+from apps.accounts.serializers import (
     LoginResponseSerializer,
     SocialAccountUnlinkSerializer,
     SocialLoginSerializer,
     SocialUserSerializer,
     UserSerializer,
 )
-from accounts.services.social_service import SocialAuthService
+from apps.accounts.services.social_service import SocialAuthService
 
 
 class SocialLoginView(APIView):

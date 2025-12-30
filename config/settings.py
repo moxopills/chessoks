@@ -50,8 +50,8 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "channels",
     "corsheaders",
-    "accounts",
-    "chess",
+    "apps.accounts",
+    "apps.chess",
 ]
 
 MIDDLEWARE = [

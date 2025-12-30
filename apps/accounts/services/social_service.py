@@ -9,7 +9,7 @@ from django.utils import timezone
 import requests
 from rest_framework import serializers
 
-from accounts.models import SocialUser
+from apps.accounts.models import SocialUser
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

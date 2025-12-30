@@ -1,6 +1,6 @@
 from django.urls import include, path
 
-from accounts.views.user_views import (
+from apps.accounts.views.user_views import (
     CurrentUserView,
     LoginView,
     LogoutView,
@@ -24,5 +24,5 @@ urlpatterns = [
     path(
         "password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"
     ),
-    path("social/", include("accounts.urls.social_urls")),
+    path("social/", include("apps.accounts.urls.social_urls")),
 ]
