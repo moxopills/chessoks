@@ -85,7 +85,10 @@ class LoginView(APIView):
 
         cache.delete(f"login_fail:{email}")
         login(request, user)
-        User.objects.filter(pk=user.pk).update(last_login_at=timezone.now())
+
+        # last_login 업데이트
+        user.last_login = timezone.now()
+        user.save(update_fields=["last_login"])
 
         return Response(
             {"message": "로그인 성공", "user": UserSerializer(user).data},

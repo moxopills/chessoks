@@ -35,10 +35,19 @@ Django 6.0 기반 실시간 체스 게임
 │   ├── urls.py                 # URL 라우팅
 │   ├── asgi.py                 # ASGI 설정 (WebSocket)
 │   └── wsgi.py                 # WSGI 설정
-├── accounts/                    # 사용자 인증 앱
-├── chess/                       # 체스 게임 앱
-│   ├── consumers.py            # WebSocket Consumer
-│   └── routing.py              # WebSocket URL 라우팅
+├── apps/                        # Django 앱 모음
+│   ├── accounts/               # 사용자 인증 앱
+│   │   ├── models/             # User, SocialUser, PasswordResetToken
+│   │   ├── serializers/        # DRF Serializers
+│   │   ├── views/              # API Views
+│   │   ├── services/           # 비즈니스 로직 (SocialAuthService)
+│   │   └── utils/              # 이메일 전송 등 유틸리티
+│   ├── chess/                  # 체스 게임 앱
+│   │   ├── consumers.py        # WebSocket Consumer
+│   │   ├── routing.py          # WebSocket URL 라우팅
+│   │   ├── models/             # Room, Game, Move
+│   │   └── services/           # RatingService, GameService
+│   └── core/                   # 공통 유틸리티
 ├── scripts/                     # 유틸리티 스크립트
 │   ├── format.sh               # 코드 포맷팅
 │   ├── test.sh                 # 테스트 실행
@@ -190,7 +199,15 @@ uv run daphne -b 0.0.0.0 -p 8000 config.asgi:application
 ### 새로운 앱 생성
 
 ```bash
-uv run python manage.py startapp app_name
+# apps 폴더 내에 새 앱 생성
+uv run python manage.py startapp app_name apps/app_name
+
+# apps.py에서 name과 label 설정
+# name = "apps.app_name"
+# label = "app_name"
+
+# settings.py의 INSTALLED_APPS에 추가
+# "apps.app_name",
 ```
 
 ### 마이그레이션

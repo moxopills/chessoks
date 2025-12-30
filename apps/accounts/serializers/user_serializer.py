@@ -5,32 +5,35 @@ from rest_framework import serializers
 from apps.accounts.models import User
 
 
+class UserStatsSerializer(serializers.Serializer):
+    """사용자 게임 통계 (읽기 전용)"""
+
+    rating = serializers.IntegerField(read_only=True)
+    games_played = serializers.IntegerField(read_only=True)
+    games_won = serializers.IntegerField(read_only=True)
+    games_lost = serializers.IntegerField(read_only=True)
+    games_draw = serializers.IntegerField(read_only=True)
+    win_rate = serializers.FloatField(read_only=True)
+
+
 class UserSerializer(serializers.ModelSerializer):
     """사용자 정보 조회용 Serializer"""
+
+    stats = UserStatsSerializer(read_only=True)
 
     class Meta:
         model = User
         fields = (
             "id",
-            "username",
             "email",
             "nickname",
-            "rating",
-            "games_played",
-            "games_won",
-            "games_lost",
-            "games_draw",
             "avatar_url",
             "bio",
             "created_at",
+            "stats",
         )
         read_only_fields = (
             "id",
-            "rating",
-            "games_played",
-            "games_won",
-            "games_lost",
-            "games_draw",
             "created_at",
         )
 
