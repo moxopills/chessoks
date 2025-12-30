@@ -10,8 +10,8 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APIRequestFactory
 
-from accounts.models import PasswordResetToken
-from accounts.serializers import ProfileUpdateSerializer, UserSignUpSerializer
+from apps.accounts.models import PasswordResetToken
+from apps.accounts.serializers import ProfileUpdateSerializer, UserSignUpSerializer
 
 User = get_user_model()
 

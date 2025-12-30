@@ -11,7 +11,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from accounts.models import SocialUser
+from apps.accounts.models import SocialUser
 
 User = get_user_model()
 

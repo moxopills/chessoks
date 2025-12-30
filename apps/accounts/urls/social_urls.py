@@ -2,7 +2,7 @@
 
 from django.urls import path
 
-from accounts.views.social_views import (
+from apps.accounts.views.social_views import (
     SocialAccountListView,
     SocialAccountUnlinkView,
     SocialLoginView,
