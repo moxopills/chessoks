@@ -3,6 +3,30 @@
 from django.db import migrations
 
 
+def remove_token_fields_if_exist(apps, schema_editor):
+    """컬럼이 존재하는 경우에만 제거"""
+    with schema_editor.connection.cursor() as cursor:
+        # 각 컬럼 존재 여부 확인 후 제거
+        fields_to_remove = ['access_token', 'refresh_token', 'token_expires_at']
+
+        for field in fields_to_remove:
+            # PostgreSQL: 컬럼 존재 확인
+            cursor.execute("""
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_name='social_users' AND column_name=%s
+            """, [field])
+
+            if cursor.fetchone():
+                # 컬럼이 존재하면 제거
+                cursor.execute(f'ALTER TABLE social_users DROP COLUMN IF EXISTS {field}')
+
+
+def reverse_add_token_fields(apps, schema_editor):
+    """롤백 시 필드 복원 (데이터 손실로 인해 실제로는 불가능)"""
+    pass
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,16 +34,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name="socialuser",
-            name="access_token",
-        ),
-        migrations.RemoveField(
-            model_name="socialuser",
-            name="refresh_token",
-        ),
-        migrations.RemoveField(
-            model_name="socialuser",
-            name="token_expires_at",
-        ),
+        migrations.RunPython(remove_token_fields_if_exist, reverse_add_token_fields),
     ]
