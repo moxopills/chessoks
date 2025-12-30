@@ -35,7 +35,7 @@ class LoginView(APIView):
     @extend_schema(
         request=LoginRequestSerializer,
         responses={200: LoginResponseSerializer},
-        tags=["로그인"],
+        tags=["인증"],
     )
     def post(self, request):
         email = request.data.get("email", "").strip()
@@ -99,7 +99,7 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_classes = [UserRateThrottle]
 
-    @extend_schema(tags=["로그인"])
+    @extend_schema(tags=["인증"])
     def post(self, request):
         logout(request)
         return Response({"message": "로그아웃 되었습니다."}, status=status.HTTP_200_OK)
@@ -114,7 +114,7 @@ class SignUpView(APIView):
     @extend_schema(
         request=UserSignUpSerializer,
         responses={201: LoginResponseSerializer},
-        tags=["로그인"],
+        tags=["인증"],
     )
     def post(self, request):
         serializer = UserSignUpSerializer(data=request.data)
@@ -131,6 +131,7 @@ class SignUpView(APIView):
         )
 
 
+@extend_schema(tags=["프로필"])
 class CurrentUserView(RetrieveAPIView):
     """현재 로그인한 유저 정보"""
 
@@ -140,7 +141,6 @@ class CurrentUserView(RetrieveAPIView):
     def get_object(self):
         return self.request.user
 
-    @extend_schema(tags=["로그인"])
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
@@ -149,6 +149,7 @@ class CurrentUserView(RetrieveAPIView):
         return response
 
 
+@extend_schema(tags=["프로필"])
 class ProfileUpdateView(UpdateAPIView):
     """프로필 수정"""
 
@@ -158,15 +159,11 @@ class ProfileUpdateView(UpdateAPIView):
     def get_object(self):
         return self.request.user
 
-    @extend_schema(
-        request=ProfileUpdateSerializer, responses={200: UserSerializer}, tags=["프로필"]
-    )
+    @extend_schema(request=ProfileUpdateSerializer, responses={200: UserSerializer})
     def update(self, request, *args, **kwargs):
         return super().update(request, *args, **kwargs)
 
-    @extend_schema(
-        request=ProfileUpdateSerializer, responses={200: UserSerializer}, tags=["프로필"]
-    )
+    @extend_schema(request=ProfileUpdateSerializer, responses={200: UserSerializer})
     def partial_update(self, request, *args, **kwargs):
         return super().partial_update(request, *args, **kwargs)
 
@@ -180,7 +177,7 @@ class PasswordResetRequestView(APIView):
     @extend_schema(
         request=PasswordResetRequestSerializer,
         responses={200: {"type": "object", "properties": {"message": {"type": "string"}}}},
-        tags=["내 페이지"],
+        tags=["비밀번호"],
     )
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -223,7 +220,7 @@ class PasswordResetConfirmView(APIView):
     @extend_schema(
         request=PasswordResetConfirmSerializer,
         responses={200: {"type": "object", "properties": {"message": {"type": "string"}}}},
-        tags=["내 페이지"],
+        tags=["비밀번호"],
     )
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
