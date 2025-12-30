@@ -12,8 +12,8 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
-from accounts.models import PasswordResetToken, User
-from accounts.serializers import (
+from apps.accounts.models import PasswordResetToken, User
+from apps.accounts.serializers import (
     LoginRequestSerializer,
     LoginResponseSerializer,
     PasswordResetConfirmSerializer,
@@ -22,7 +22,7 @@ from accounts.serializers import (
     UserSerializer,
     UserSignUpSerializer,
 )
-from accounts.utils.email import send_password_reset_email
+from apps.accounts.utils.email import send_password_reset_email
 
 
 class LoginView(APIView):
