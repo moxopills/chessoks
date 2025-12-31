@@ -49,6 +49,12 @@ services:
       - DEBUG=True
       - DB_HOST=db
       - REDIS_HOST=redis
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
 
   nginx:
     image: nginx:alpine
