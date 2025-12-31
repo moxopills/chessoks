@@ -51,9 +51,15 @@ jobs:
           cp .envs/.env.prod .env
           docker compose -f docker-compose.prod.yml down
           docker compose -f docker-compose.prod.yml up -d --build
-          docker compose -f docker-compose.prod.yml exec -T web uv run python manage.py migrate --noinput
-          docker compose -f docker-compose.prod.yml exec -T web uv run python manage.py collectstatic --noinput
-          docker system prune -f
+
+          # 마이그레이션 실행 (새 컨테이너로 실행하여 메모리 효율적)
+          docker compose -f docker-compose.prod.yml run --rm web uv run python manage.py migrate --noinput
+
+          # collectstatic 실행
+          docker compose -f docker-compose.prod.yml run --rm web uv run python manage.py collectstatic --noinput
+
+          # 불필요한 리소스 정리
+          docker system prune -af --volumes
         ENDSSH
 
     - name: Health Check
