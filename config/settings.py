@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "apps.accounts",
     "apps.chess",
+    "apps.core",  # S3 이미지 업로드
 ]
 
 MIDDLEWARE = [
@@ -228,3 +229,9 @@ KAKAO_REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", f"{FRONTEND_URL}/auth/kakao
 NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID", "")
 NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET", "")
 NAVER_REDIRECT_URI = os.getenv("NAVER_REDIRECT_URI", f"{FRONTEND_URL}/auth/naver/callback")
+
+# AWS S3 설정 (이미지 업로드용)
+AWS_S3_ACCESS_KEY_ID = os.getenv("AWS_S3_ACCESS_KEY_ID", "")
+AWS_S3_SECRET_ACCESS_KEY = os.getenv("AWS_S3_SECRET_ACCESS_KEY", "")
+AWS_S3_BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME", "")
+AWS_S3_REGION = os.getenv("AWS_S3_REGION", "ap-northeast-2")
