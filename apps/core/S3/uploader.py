@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from functools import lru_cache, wraps
 from typing import Any
-from collections.abc import Callable
 
 from django.conf import settings
 
@@ -31,22 +31,22 @@ def handle_s3_errors(operation: str) -> Callable[..., Any]:
                 raise
             except APIException:
                 raise
-            except NoCredentialsError:
+            except NoCredentialsError as e:
                 logger.error("S3 credentials not found", exc_info=True)
-                raise APIException("S3 자격 증명을 찾을 수 없습니다.")
+                raise APIException("S3 자격 증명을 찾을 수 없습니다.") from e
             except ClientError as e:
                 error_code = getattr(e, "response", {}).get("Error", {}).get("Code", "Unknown")
                 logger.error(f"S3 ClientError: {error_code}", exc_info=True)
-                raise APIException(f"{operation} 중 오류가 발생했습니다: {error_code}")
+                raise APIException(f"{operation} 중 오류가 발생했습니다: {error_code}") from e
             except ParamValidationError as e:
                 logger.error("S3 ParamValidationError", exc_info=True)
-                raise APIException(f"잘못된 파라미터입니다: {str(e)}")
+                raise APIException(f"잘못된 파라미터입니다: {str(e)}") from e
             except BotoCoreError as e:
                 logger.error("S3 BotoCoreError", exc_info=True)
-                raise APIException(f"S3 연결 중 오류가 발생했습니다: {str(e)}")
+                raise APIException(f"S3 연결 중 오류가 발생했습니다: {str(e)}") from e
             except Exception as e:
                 logger.error("S3 Unexpected Error", exc_info=True)
-                raise APIException(f"예상치 못한 오류가 발생했습니다: {str(e)}")
+                raise APIException(f"예상치 못한 오류가 발생했습니다: {str(e)}") from e
 
         return wrapper
 
@@ -109,7 +109,7 @@ class S3Uploader:
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "")
             if error_code == "404":
-                raise ValidationError(f"파일이 존재하지 않습니다: {key}")
+                raise ValidationError(f"파일이 존재하지 않습니다: {key}") from e
             raise
 
         cls.get_s3_client().delete_object(
