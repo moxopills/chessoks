@@ -412,7 +412,7 @@ class UserAvatarUpdateView(APIView):
             },
             400: {"description": "잘못된 요청 (파일 누락, 검증 실패 등)"},
         },
-        tags=["User"],
+        tags=["마이페이지"],
     )
     def patch(self, request):
         """아바타 업데이트"""
