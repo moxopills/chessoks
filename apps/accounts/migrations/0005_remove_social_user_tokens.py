@@ -10,16 +10,32 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name="socialuser",
-            name="access_token",
-        ),
-        migrations.RemoveField(
-            model_name="socialuser",
-            name="refresh_token",
-        ),
-        migrations.RemoveField(
-            model_name="socialuser",
-            name="token_expires_at",
+        migrations.SeparateDatabaseAndState(
+            # DB 작업: 컬럼이 존재하면 제거 (IF EXISTS로 안전하게)
+            database_operations=[
+                migrations.RunSQL(
+                    sql="""
+                        ALTER TABLE social_users DROP COLUMN IF EXISTS access_token;
+                        ALTER TABLE social_users DROP COLUMN IF EXISTS refresh_token;
+                        ALTER TABLE social_users DROP COLUMN IF EXISTS token_expires_at;
+                    """,
+                    reverse_sql=migrations.RunSQL.noop,
+                ),
+            ],
+            # 모델 상태 변경: Django가 필드 제거를 추적하도록
+            state_operations=[
+                migrations.RemoveField(
+                    model_name="socialuser",
+                    name="access_token",
+                ),
+                migrations.RemoveField(
+                    model_name="socialuser",
+                    name="refresh_token",
+                ),
+                migrations.RemoveField(
+                    model_name="socialuser",
+                    name="token_expires_at",
+                ),
+            ],
         ),
     ]

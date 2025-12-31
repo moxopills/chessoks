@@ -4,6 +4,7 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.utils import timezone
 
 import requests
 from rest_framework import serializers
@@ -146,6 +147,12 @@ class SocialAuthService:
         # 이메일로 기존 유저 확인 후 소셜 계정 연동
         user = User.objects.filter(email=email).first()
         if user:
+            # 소셜 계정 연동 시 이메일 자동 인증
+            if not user.email_verified:
+                user.email_verified = True
+                user.email_verified_at = timezone.now()
+                user.save(update_fields=["email_verified", "email_verified_at"])
+
             SocialUser.objects.create(
                 user=user,
                 provider=provider,
@@ -162,7 +169,14 @@ class SocialAuthService:
         if User.objects.filter(nickname=nickname).exists():
             raise serializers.ValidationError({"nickname": "이미 사용 중인 닉네임입니다."})
 
-        user = User.objects.create_user(email=email, nickname=nickname, password=None)
+        # 소셜 로그인 유저는 자동 인증
+        user = User.objects.create_user(
+            email=email,
+            nickname=nickname,
+            password=None,
+            email_verified=True,
+            email_verified_at=timezone.now(),
+        )
         SocialUser.objects.create(
             user=user,
             provider=provider,
