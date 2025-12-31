@@ -84,6 +84,26 @@ class S3Uploader:
         return f"https://{bucket}.s3.{region}.amazonaws.com/"
 
     @classmethod
+    def extract_key_from_url(cls, url: str) -> str | None:
+        """
+        S3 URL에서 키 추출
+
+        Args:
+            url: S3 파일 URL (예: https://bucket.s3.region.amazonaws.com/avatars/uuid.png)
+
+        Returns:
+            str | None: S3 객체 키 (예: avatars/uuid.png) 또는 None
+        """
+        if not url:
+            return None
+
+        base_url = cls.get_s3_base_url()
+        if url.startswith(base_url):
+            return url[len(base_url) :]
+
+        return None
+
+    @classmethod
     @handle_s3_errors("파일 삭제")
     def delete_file(cls, key: str) -> dict[str, Any]:
         """
