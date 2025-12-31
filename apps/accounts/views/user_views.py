@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth import authenticate, login, logout
 from django.core.cache import cache
 from django.utils import timezone
@@ -5,6 +7,7 @@ from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.generics import RetrieveAPIView, UpdateAPIView
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
@@ -30,6 +33,9 @@ from apps.accounts.utils import (
     send_verification_email,
     validate_token,
 )
+from apps.core.S3.constants import FileType, S3Constants
+from apps.core.S3.uploader import s3_uploader
+from apps.core.S3.validators import S3ImageValidator
 
 
 class LoginView(APIView):
@@ -370,5 +376,101 @@ class EmailVerificationResendView(APIView):
 
         return Response(
             {"message": "인증 이메일을 재전송했습니다."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class UserAvatarUpdateView(APIView):
+    """유저 아바타 업데이트 - 업로드 + 저장 + 기존 삭제"""
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(
+        summary="아바타 이미지 업데이트",
+        description="새 아바타 이미지를 업로드하고, 기존 아바타를 자동으로 삭제합니다.",
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "avatar": {"type": "string", "format": "binary"},
+                },
+                "required": ["avatar"],
+            }
+        },
+        responses={
+            200: {
+                "description": "업데이트 성공",
+                "content": {
+                    "application/json": {
+                        "example": {
+                            "message": "아바타가 성공적으로 업데이트되었습니다.",
+                            "avatar_url": "https://chessok.s3.ap-northeast-2.amazonaws.com/avatars/uuid.png",
+                        }
+                    }
+                },
+            },
+            400: {"description": "잘못된 요청 (파일 누락, 검증 실패 등)"},
+        },
+        tags=["User"],
+    )
+    def patch(self, request):
+        """아바타 업데이트"""
+        user = request.user
+        file = request.FILES.get("avatar")
+
+        if not file:
+            return Response(
+                {"error": "아바타 파일이 필요합니다."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 파일 검증
+        file_name = file.name
+        content_type = file.content_type
+
+        S3ImageValidator.validate_file_name(file_name)
+        ext = file_name.rsplit(".", 1)[-1].lower()
+        S3ImageValidator.validate_extension(file_name, ext)
+        S3ImageValidator.validate_mime_type(ext, content_type)
+        S3ImageValidator.validate_file_size(file.size)
+
+        # 기존 아바타 키 추출 (삭제용)
+        old_avatar_key = None
+        if user.avatar_url:
+            old_avatar_key = s3_uploader.extract_key_from_url(user.avatar_url)
+
+        # 새 아바타 업로드
+        prefix = S3Constants.PATH_MAPPING.get(FileType.USER_AVATAR)
+        key = f"{prefix}/{uuid.uuid4()}.{ext}"
+
+        s3_client = s3_uploader.get_s3_client()
+        bucket = s3_uploader.get_bucket_name()
+
+        s3_client.upload_fileobj(
+            file.file,
+            bucket,
+            key,
+            ExtraArgs={"ContentType": content_type},
+        )
+
+        new_avatar_url = f"{s3_uploader.get_s3_base_url()}{key}"
+
+        # 유저 모델 업데이트
+        user.avatar_url = new_avatar_url
+        user.save(update_fields=["avatar_url"])
+
+        # 기존 아바타 삭제 (있으면)
+        if old_avatar_key:
+            try:
+                s3_uploader.delete_file(old_avatar_key)
+            except Exception:
+                # 삭제 실패해도 새 아바타는 저장됨 (로그만 남기고 무시)
+                pass
+
+        return Response(
+            {
+                "message": "아바타가 성공적으로 업데이트되었습니다.",
+                "avatar_url": new_avatar_url,
+            },
             status=status.HTTP_200_OK,
         )
