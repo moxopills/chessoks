@@ -65,6 +65,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     bio = models.TextField(blank=True, help_text="자기소개")
 
+    # 이메일 인증
+    email_verified = models.BooleanField(default=False, help_text="이메일 인증 완료 여부")
+    email_verified_at = models.DateTimeField(
+        null=True, blank=True, help_text="이메일 인증 완료 시간"
+    )
+
     # Django Admin용 필드
     is_staff = models.BooleanField(default=False, help_text="관리자 권한")
     is_active = models.BooleanField(default=True, help_text="활성 계정")

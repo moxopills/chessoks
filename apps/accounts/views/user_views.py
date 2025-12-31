@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from django.contrib.auth import authenticate, login, logout
 from django.core.cache import cache
 from django.utils import timezone
@@ -12,8 +10,10 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
-from apps.accounts.models import PasswordResetToken, User
+from apps.accounts.models import EmailVerificationToken, PasswordResetToken
 from apps.accounts.serializers import (
+    EmailVerificationResendSerializer,
+    EmailVerificationSerializer,
     LoginRequestSerializer,
     LoginResponseSerializer,
     PasswordResetConfirmSerializer,
@@ -22,7 +22,14 @@ from apps.accounts.serializers import (
     UserSerializer,
     UserSignUpSerializer,
 )
-from apps.accounts.utils.email import send_password_reset_email
+from apps.accounts.utils import (
+    create_token,
+    get_user_or_timing_safe_response,
+    mark_token_as_used,
+    send_password_reset_email,
+    send_verification_email,
+    validate_token,
+)
 
 
 class LoginView(APIView):
@@ -83,6 +90,14 @@ class LoginView(APIView):
         if not user.is_active:
             return Response({"error": "비활성화된 계정입니다."}, status=status.HTTP_403_FORBIDDEN)
 
+        if not user.email_verified:
+            return Response(
+                {
+                    "error": "이메일 인증이 필요합니다. 가입 시 받은 이메일의 인증 링크를 확인해주세요."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         cache.delete(f"login_fail:{email}")
         login(request, user)
 
@@ -109,14 +124,19 @@ class LogoutView(APIView):
 
 
 class SignUpView(APIView):
-    """회원가입"""
+    """회원가입 - 이메일 인증 필수"""
 
     permission_classes = [AllowAny]
     throttle_classes = [AnonRateThrottle]
 
     @extend_schema(
         request=UserSignUpSerializer,
-        responses={201: LoginResponseSerializer},
+        responses={
+            201: {
+                "type": "object",
+                "properties": {"message": {"type": "string"}, "email": {"type": "string"}},
+            }
+        },
         tags=["인증"],
     )
     def post(self, request):
@@ -126,10 +146,21 @@ class SignUpView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.save()
-        user_data = UserSerializer(user).data
+
+        # 이메일 인증 토큰 생성 및 발송 (24시간 유효)
+        token = create_token(
+            token_model=EmailVerificationToken,
+            user=user,
+            expiry_hours=24,
+            invalidate_existing=True,
+        )
+        send_verification_email(user.email, token.token)
 
         return Response(
-            {"message": "회원가입 성공", "user": user_data},
+            {
+                "message": "회원가입 성공! 이메일로 전송된 인증 링크를 확인해주세요.",
+                "email": user.email,
+            },
             status=status.HTTP_201_CREATED,
         )
 
@@ -188,30 +219,28 @@ class PasswordResetRequestView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         email = serializer.validated_data["email"]
+        success_message = "비밀번호 재설정 링크를 이메일로 전송했습니다."
 
-        try:
-            user = User.objects.get(email=email, is_active=True)
-        except User.DoesNotExist:
-            # 보안: 존재하지 않는 이메일도 동일하게 처리 (타이밍 공격 방지)
-            return Response(
-                {"message": "비밀번호 재설정 링크를 이메일로 전송했습니다."},
-                status=status.HTTP_200_OK,
-            )
-
-        PasswordResetToken.objects.filter(user=user, is_used=False).update(is_used=True)
-
-        token = PasswordResetToken.objects.create(
-            user=user,
-            token=PasswordResetToken.generate_token(),
-            expires_at=timezone.now() + timedelta(hours=1),
+        # 타이밍 공격 방지
+        user, error_response = get_user_or_timing_safe_response(
+            email=email,
+            success_message=success_message,
+            is_active_only=True,
         )
 
+        if error_response:
+            return error_response
+
+        # 비밀번호 재설정 토큰 생성 (1시간 유효)
+        token = create_token(
+            token_model=PasswordResetToken,
+            user=user,
+            expiry_hours=1,
+            invalidate_existing=True,
+        )
         send_password_reset_email(user.email, token.token)
 
-        return Response(
-            {"message": "비밀번호 재설정 링크를 이메일로 전송했습니다."},
-            status=status.HTTP_200_OK,
-        )
+        return Response({"message": success_message}, status=status.HTTP_200_OK)
 
 
 class PasswordResetConfirmView(APIView):
@@ -233,25 +262,113 @@ class PasswordResetConfirmView(APIView):
         token_str = serializer.validated_data["token"]
         new_password = serializer.validated_data["new_password"]
 
-        try:
-            token = PasswordResetToken.objects.select_related("user").get(token=token_str)
-        except PasswordResetToken.DoesNotExist:
-            return Response(
-                {"error": "유효하지 않은 토큰입니다."}, status=status.HTTP_400_BAD_REQUEST
-            )
+        # 토큰 검증
+        token, error_response = validate_token(PasswordResetToken, token_str)
+        if error_response:
+            return error_response
 
-        if not token.is_valid:
-            return Response(
-                {"error": "만료되었거나 이미 사용된 토큰입니다."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
+        # 비밀번호 재설정
         user = token.user
         user.set_password(new_password)
         user.save(update_fields=["password"])
 
-        token.is_used = True
-        token.used_at = timezone.now()
-        token.save(update_fields=["is_used", "used_at"])
+        # 토큰 사용 완료 처리
+        mark_token_as_used(token)
 
         return Response({"message": "비밀번호가 재설정되었습니다."}, status=status.HTTP_200_OK)
+
+
+class EmailVerificationConfirmView(APIView):
+    """이메일 인증 확인 - 토큰으로 이메일 검증"""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    @extend_schema(
+        request={"type": "object", "properties": {"token": {"type": "string"}}},
+        responses={200: {"type": "object", "properties": {"message": {"type": "string"}}}},
+        tags=["인증"],
+    )
+    def post(self, request):
+        serializer = EmailVerificationSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        token_str = serializer.validated_data["token"]
+
+        # 토큰 검증
+        token, error_response = validate_token(
+            token_model=EmailVerificationToken,
+            token_str=token_str,
+            error_messages={
+                "not_found": "유효하지 않은 인증 링크입니다.",
+                "invalid": "만료되었거나 이미 사용된 인증 링크입니다.",
+            },
+        )
+        if error_response:
+            return error_response
+
+        # 이메일 인증 처리
+        user = token.user
+        user.email_verified = True
+        user.email_verified_at = timezone.now()
+        user.save(update_fields=["email_verified", "email_verified_at"])
+
+        # 토큰 사용 완료 처리
+        mark_token_as_used(token)
+
+        return Response(
+            {"message": "이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class EmailVerificationResendView(APIView):
+    """이메일 인증 재전송 - 미인증 유저 대상"""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    @extend_schema(
+        request={"type": "object", "properties": {"email": {"type": "string"}}},
+        responses={200: {"type": "object", "properties": {"message": {"type": "string"}}}},
+        tags=["인증"],
+    )
+    def post(self, request):
+        serializer = EmailVerificationResendSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        email = serializer.validated_data["email"]
+        success_message = "인증 이메일을 전송했습니다."
+
+        # 타이밍 공격 방지
+        user, error_response = get_user_or_timing_safe_response(
+            email=email,
+            success_message=success_message,
+            is_active_only=True,
+        )
+
+        if error_response:
+            return error_response
+
+        # 이미 인증된 유저
+        if user.email_verified:
+            return Response(
+                {"error": "이미 인증된 계정입니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 새 토큰 생성 및 발송 (24시간 유효)
+        token = create_token(
+            token_model=EmailVerificationToken,
+            user=user,
+            expiry_hours=24,
+            invalidate_existing=True,
+        )
+        send_verification_email(user.email, token.token)
+
+        return Response(
+            {"message": "인증 이메일을 재전송했습니다."},
+            status=status.HTTP_200_OK,
+        )
