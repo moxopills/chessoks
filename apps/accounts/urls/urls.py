@@ -10,6 +10,7 @@ from apps.accounts.views.user_views import (
     PasswordResetRequestView,
     ProfileUpdateView,
     SignUpView,
+    UserAvatarUpdateView,
 )
 
 app_name = "accounts"
@@ -20,6 +21,7 @@ urlpatterns = [
     path("signup/", SignUpView.as_view(), name="signup"),
     path("me/", CurrentUserView.as_view(), name="current-user"),
     path("profile/", ProfileUpdateView.as_view(), name="profile-update"),
+    path("profile/avatar/", UserAvatarUpdateView.as_view(), name="avatar-update"),
     path(
         "password-reset/request/", PasswordResetRequestView.as_view(), name="password-reset-request"
     ),

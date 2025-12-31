@@ -23,7 +23,7 @@ class S3DirectUploadView(APIView):
 
     @extend_schema(
         summary="이미지 직접 업로드",
-        description="파일을 받아서 백엔드에서 직접 S3로 업로드합니다.",
+        description="S3 파일 업로드",
         request={
             "multipart/form-data": {
                 "type": "object",
