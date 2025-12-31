@@ -128,3 +128,15 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         if attrs["new_password"] != attrs["new_password2"]:
             raise serializers.ValidationError({"new_password": "비밀번호가 일치하지 않습니다."})
         return attrs
+
+
+class EmailVerificationSerializer(serializers.Serializer):
+    """이메일 인증 확인"""
+
+    token = serializers.CharField(help_text="이메일로 받은 인증 토큰")
+
+
+class EmailVerificationResendSerializer(serializers.Serializer):
+    """이메일 인증 재전송"""
+
+    email = serializers.EmailField(help_text="가입된 이메일 주소")

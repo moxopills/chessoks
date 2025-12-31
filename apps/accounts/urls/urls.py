@@ -2,6 +2,8 @@ from django.urls import include, path
 
 from apps.accounts.views.user_views import (
     CurrentUserView,
+    EmailVerificationConfirmView,
+    EmailVerificationResendView,
     LoginView,
     LogoutView,
     PasswordResetConfirmView,
@@ -23,6 +25,16 @@ urlpatterns = [
     ),
     path(
         "password-reset/confirm/", PasswordResetConfirmView.as_view(), name="password-reset-confirm"
+    ),
+    path(
+        "email-verification/confirm/",
+        EmailVerificationConfirmView.as_view(),
+        name="email-verification-confirm",
+    ),
+    path(
+        "email-verification/resend/",
+        EmailVerificationResendView.as_view(),
+        name="email-verification-resend",
     ),
     path("social/", include("apps.accounts.urls.social_urls")),
 ]
