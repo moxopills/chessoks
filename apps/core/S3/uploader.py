@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import logging
 from functools import lru_cache, wraps
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
+
+from django.conf import settings
 
 import boto3
 from botocore.exceptions import (
@@ -11,7 +14,6 @@ from botocore.exceptions import (
     NoCredentialsError,
     ParamValidationError,
 )
-from django.conf import settings
 from rest_framework.exceptions import APIException, ValidationError
 
 logger = logging.getLogger(__name__)

@@ -118,7 +118,11 @@ class S3FileDeleteView(APIView):
         summary="S3 이미지 삭제",
         description="S3 객체 키로 이미지를 삭제합니다.",
         request={
-            "application/json": {"type": "object", "properties": {"key": {"type": "string"}}, "required": ["key"]}
+            "application/json": {
+                "type": "object",
+                "properties": {"key": {"type": "string"}},
+                "required": ["key"],
+            }
         },
         responses={
             200: {
@@ -143,7 +147,9 @@ class S3FileDeleteView(APIView):
                             },
                             "file_not_found": {
                                 "summary": "파일이 존재하지 않음",
-                                "value": {"error_detail": "파일이 존재하지 않습니다: avatars/example.png"},
+                                "value": {
+                                    "error_detail": "파일이 존재하지 않습니다: avatars/example.png"
+                                },
                             },
                         }
                     }
@@ -152,7 +158,9 @@ class S3FileDeleteView(APIView):
             401: {
                 "description": "인증 실패",
                 "content": {
-                    "application/json": {"example": {"error_detail": "자격 인증 데이터가 제공되지 않았습니다."}}
+                    "application/json": {
+                        "example": {"error_detail": "자격 인증 데이터가 제공되지 않았습니다."}
+                    }
                 },
             },
         },
