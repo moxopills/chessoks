@@ -52,11 +52,11 @@ jobs:
           docker compose -f docker-compose.prod.yml down
           docker compose -f docker-compose.prod.yml up -d --build
 
-          # 마이그레이션 실행 (새 컨테이너로 실행하여 메모리 효율적)
-          docker compose -f docker-compose.prod.yml run --rm web uv run python manage.py migrate --noinput
+          # 마이그레이션 실행 (entrypoint 우회하여 명령어만 실행)
+          docker compose -f docker-compose.prod.yml run --rm --entrypoint="" web uv run python manage.py migrate --noinput
 
-          # collectstatic 실행
-          docker compose -f docker-compose.prod.yml run --rm web uv run python manage.py collectstatic --noinput
+          # collectstatic 실행 (entrypoint 우회하여 명령어만 실행)
+          docker compose -f docker-compose.prod.yml run --rm --entrypoint="" web uv run python manage.py collectstatic --noinput
 
           # 불필요한 리소스 정리
           docker system prune -af --volumes
