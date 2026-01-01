@@ -102,6 +102,7 @@ class TestS3Validators:
         with pytest.raises(ValidationError):
             S3ImageValidator.validate_file_size(11 * 1024 * 1024)
 
+
 @pytest.mark.django_db
 class TestS3Uploader:
     """S3 업로더 테스트"""
