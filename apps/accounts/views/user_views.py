@@ -1,4 +1,5 @@
 import uuid
+from typing import Any
 
 from django.contrib.auth import authenticate, login, logout
 from django.core.cache import cache
@@ -37,13 +38,17 @@ from apps.core.S3.constants import FileType, S3Constants
 from apps.core.S3.uploader import s3_uploader
 from apps.core.S3.validators import S3ImageValidator
 
+# 상수 정의
+MAX_LOGIN_ATTEMPTS = 3
+LOGIN_LOCKOUT_DURATION = 300  # 5분
+EMAIL_VERIFICATION_HOURS = 24
+PASSWORD_RESET_HOURS = 1
+
 
 class LoginView(APIView):
     """로그인 - 3번 실패 시 5분 잠금"""
 
     permission_classes = [AllowAny]
-    MAX_ATTEMPTS = 3
-    LOCKOUT_DURATION = 300
 
     @extend_schema(
         request=LoginRequestSerializer,
@@ -54,6 +59,29 @@ class LoginView(APIView):
         email = request.data.get("email", "").strip()
         password = request.data.get("password", "")
 
+        # 입력 검증
+        if validation_error := self._validate_credentials(email, password):
+            return validation_error
+
+        # 잠금 상태 확인
+        if lockout_response := self._check_lockout(email):
+            return lockout_response
+
+        # 인증 시도
+        user = authenticate(request, username=email, password=password)
+
+        if not user:
+            return self._handle_failed_login(email)
+
+        # 사용자 상태 확인
+        if status_error := self._check_user_status(user):
+            return status_error
+
+        # 로그인 성공 처리
+        return self._handle_successful_login(request, user, email)
+
+    def _validate_credentials(self, email: str, password: str) -> Response | None:
+        """인증 정보 검증"""
         if not email or not password:
             return Response(
                 {"error": "이메일과 비밀번호를 입력해주세요."},
@@ -66,44 +94,54 @@ class LoginView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        return None
+
+    def _check_lockout(self, email: str) -> Response | None:
+        """잠금 상태 확인"""
         lockout_key = f"login_lock:{email}"
         if cache.get(lockout_key):
             return Response(
                 {"error": "로그인 시도 횟수 초과. 5분 후 다시 시도해주세요."},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
+        return None
 
-        user = authenticate(request, username=email, password=password)
+    def _handle_failed_login(self, email: str) -> Response:
+        """로그인 실패 처리"""
+        attempts_key = f"login_fail:{email}"
+        attempts = cache.get(attempts_key, 0) + 1
 
-        if user is None:
-            attempts_key = f"login_fail:{email}"
-            attempts = cache.get(attempts_key, 0) + 1
-
-            if attempts >= self.MAX_ATTEMPTS:
-                cache.set(lockout_key, 1, self.LOCKOUT_DURATION)
-                cache.delete(attempts_key)
-                return Response(
-                    {"error": "로그인 3회 실패. 5분 후 다시 시도해주세요."},
-                    status=status.HTTP_429_TOO_MANY_REQUESTS,
-                )
-
-            cache.set(attempts_key, attempts, 300)
+        if attempts >= MAX_LOGIN_ATTEMPTS:
+            cache.set(f"login_lock:{email}", 1, LOGIN_LOCKOUT_DURATION)
+            cache.delete(attempts_key)
             return Response(
-                {"error": f"로그인 실패. 남은 시도: {self.MAX_ATTEMPTS - attempts}회"},
-                status=status.HTTP_401_UNAUTHORIZED,
+                {"error": "로그인 3회 실패. 5분 후 다시 시도해주세요."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
+        cache.set(attempts_key, attempts, LOGIN_LOCKOUT_DURATION)
+        return Response(
+            {"error": f"로그인 실패. 남은 시도: {MAX_LOGIN_ATTEMPTS - attempts}회"},
+            status=status.HTTP_401_UNAUTHORIZED,
+        )
+
+    def _check_user_status(self, user: Any) -> Response | None:
+        """사용자 상태 확인"""
         if not user.is_active:
-            return Response({"error": "비활성화된 계정입니다."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"error": "비활성화된 계정입니다."}, status=status.HTTP_403_FORBIDDEN
+            )
 
         if not user.email_verified:
             return Response(
-                {
-                    "error": "이메일 인증이 필요합니다. 가입 시 받은 이메일의 인증 링크를 확인해주세요."
-                },
+                {"error": "이메일 인증이 필요합니다. 가입 시 받은 이메일의 인증 링크를 확인해주세요."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        return None
+
+    def _handle_successful_login(self, request: Any, user: Any, email: str) -> Response:
+        """로그인 성공 처리"""
         cache.delete(f"login_fail:{email}")
         login(request, user)
 
@@ -153,14 +191,8 @@ class SignUpView(APIView):
 
         user = serializer.save()
 
-        # 이메일 인증 토큰 생성 및 발송 (24시간 유효)
-        token = create_token(
-            token_model=EmailVerificationToken,
-            user=user,
-            expiry_hours=24,
-            invalidate_existing=True,
-        )
-        send_verification_email(user.email, token.token)
+        # 이메일 인증 토큰 생성 및 발송
+        self._send_email_verification(user)
 
         return Response(
             {
@@ -169,6 +201,16 @@ class SignUpView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+    def _send_email_verification(self, user: Any) -> None:
+        """이메일 인증 토큰 생성 및 발송"""
+        token = create_token(
+            token_model=EmailVerificationToken,
+            user=user,
+            expiry_hours=EMAIL_VERIFICATION_HOURS,
+            invalidate_existing=True,
+        )
+        send_verification_email(user.email, token.token)
 
 
 @extend_schema(tags=["프로필"])
@@ -229,19 +271,17 @@ class PasswordResetRequestView(APIView):
 
         # 타이밍 공격 방지
         user, error_response = get_user_or_timing_safe_response(
-            email=email,
-            success_message=success_message,
-            is_active_only=True,
+            email=email, success_message=success_message, is_active_only=True
         )
 
         if error_response:
             return error_response
 
-        # 비밀번호 재설정 토큰 생성 (1시간 유효)
+        # 비밀번호 재설정 토큰 생성 및 발송
         token = create_token(
             token_model=PasswordResetToken,
             user=user,
-            expiry_hours=1,
+            expiry_hours=PASSWORD_RESET_HOURS,
             invalidate_existing=True,
         )
         send_password_reset_email(user.email, token.token)
@@ -291,7 +331,7 @@ class EmailVerificationConfirmView(APIView):
     throttle_classes = [AnonRateThrottle]
 
     @extend_schema(
-        request={"type": "object", "properties": {"token": {"type": "string"}}},
+        request=EmailVerificationSerializer,
         responses={200: {"type": "object", "properties": {"message": {"type": "string"}}}},
         tags=["인증"],
     )
@@ -336,7 +376,7 @@ class EmailVerificationResendView(APIView):
     throttle_classes = [AnonRateThrottle]
 
     @extend_schema(
-        request={"type": "object", "properties": {"email": {"type": "string"}}},
+        request=EmailVerificationResendSerializer,
         responses={200: {"type": "object", "properties": {"message": {"type": "string"}}}},
         tags=["인증"],
     )
@@ -350,9 +390,7 @@ class EmailVerificationResendView(APIView):
 
         # 타이밍 공격 방지
         user, error_response = get_user_or_timing_safe_response(
-            email=email,
-            success_message=success_message,
-            is_active_only=True,
+            email=email, success_message=success_message, is_active_only=True
         )
 
         if error_response:
@@ -365,11 +403,11 @@ class EmailVerificationResendView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # 새 토큰 생성 및 발송 (24시간 유효)
+        # 새 토큰 생성 및 발송
         token = create_token(
             token_model=EmailVerificationToken,
             user=user,
-            expiry_hours=24,
+            expiry_hours=EMAIL_VERIFICATION_HOURS,
             invalidate_existing=True,
         )
         send_verification_email(user.email, token.token)
@@ -412,11 +450,10 @@ class UserAvatarUpdateView(APIView):
             },
             400: {"description": "잘못된 요청 (파일 누락, 검증 실패 등)"},
         },
-        tags=["마이페이지"],
+        tags=["프로필"],
     )
     def patch(self, request):
         """아바타 업데이트"""
-        user = request.user
         file = request.FILES.get("avatar")
 
         if not file:
@@ -425,6 +462,31 @@ class UserAvatarUpdateView(APIView):
             )
 
         # 파일 검증
+        ext = self._validate_avatar_file(file)
+
+        # 기존 아바타 키 추출
+        old_avatar_key = self._extract_old_avatar_key(request.user)
+
+        # 새 아바타 업로드
+        new_avatar_url = self._upload_new_avatar(file, ext)
+
+        # 유저 모델 업데이트
+        request.user.avatar_url = new_avatar_url
+        request.user.save(update_fields=["avatar_url"])
+
+        # 기존 아바타 삭제
+        self._delete_old_avatar(old_avatar_key)
+
+        return Response(
+            {
+                "message": "아바타가 성공적으로 업데이트되었습니다.",
+                "avatar_url": new_avatar_url,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    def _validate_avatar_file(self, file: Any) -> str:
+        """아바타 파일 검증 및 확장자 반환"""
         file_name = file.name
         content_type = file.content_type
 
@@ -434,43 +496,35 @@ class UserAvatarUpdateView(APIView):
         S3ImageValidator.validate_mime_type(ext, content_type)
         S3ImageValidator.validate_file_size(file.size)
 
-        # 기존 아바타 키 추출 (삭제용)
-        old_avatar_key = None
-        if user.avatar_url:
-            old_avatar_key = s3_uploader.extract_key_from_url(user.avatar_url)
+        return ext
 
-        # 새 아바타 업로드
-        prefix = S3Constants.PATH_MAPPING.get(FileType.USER_AVATAR)
+    def _extract_old_avatar_key(self, user: Any) -> str | None:
+        """기존 아바타 키 추출"""
+        if not user.avatar_url:
+            return None
+        return s3_uploader.extract_key_from_url(user.avatar_url)
+
+    def _upload_new_avatar(self, file: Any, ext: str) -> str:
+        """새 아바타를 S3에 업로드하고 URL 반환"""
+        prefix = S3Constants.PATH_MAPPING[FileType.USER_AVATAR]
         key = f"{prefix}/{uuid.uuid4()}.{ext}"
 
-        s3_client = s3_uploader.get_s3_client()
-        bucket = s3_uploader.get_bucket_name()
-
-        s3_client.upload_fileobj(
+        s3_uploader.get_s3_client().upload_fileobj(
             file.file,
-            bucket,
+            s3_uploader.get_bucket_name(),
             key,
-            ExtraArgs={"ContentType": content_type},
+            ExtraArgs={"ContentType": file.content_type},
         )
 
-        new_avatar_url = f"{s3_uploader.get_s3_base_url()}{key}"
+        return f"{s3_uploader.get_s3_base_url()}{key}"
 
-        # 유저 모델 업데이트
-        user.avatar_url = new_avatar_url
-        user.save(update_fields=["avatar_url"])
+    def _delete_old_avatar(self, old_avatar_key: str | None) -> None:
+        """기존 아바타 삭제 (실패 시 무시)"""
+        if not old_avatar_key:
+            return
 
-        # 기존 아바타 삭제 (있으면)
-        if old_avatar_key:
-            try:
-                s3_uploader.delete_file(old_avatar_key)
-            except Exception:
-                # 삭제 실패해도 새 아바타는 저장됨 (로그만 남기고 무시)
-                pass
-
-        return Response(
-            {
-                "message": "아바타가 성공적으로 업데이트되었습니다.",
-                "avatar_url": new_avatar_url,
-            },
-            status=status.HTTP_200_OK,
-        )
+        try:
+            s3_uploader.delete_file(old_avatar_key)
+        except Exception:
+            # 삭제 실패해도 새 아바타는 저장됨 (로그만 남기고 무시)
+            pass
