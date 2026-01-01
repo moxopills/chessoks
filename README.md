@@ -87,6 +87,8 @@ Django 6.0 기반 실시간 체스 게임
 - **보드 저장**: 체스판 상태 DB 저장
 - **동시성 제어**: select_for_update()로 race condition 방지
 - **소셜 로그인**: OAuth 연동 (Google, GitHub 등)
+- **ELO 레이팅**: ELO 레이팅을 활용한 랜덤 매칭
+- **랭킹 시스템**: ELO레이팅 시스템으로 랭킹 서비스
 
 ## 🎯 아키텍처 특징
 
