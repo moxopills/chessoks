@@ -1,12 +1,10 @@
 """소셜 로그인 E2E 테스트"""
 
-from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
 from django.test import TestCase
-from django.utils import timezone
 
 from rest_framework import serializers, status
 from rest_framework.test import APIClient
@@ -148,6 +146,7 @@ class SocialLoginE2ETestCase(TestCase):
 
         # 약간의 지연을 위해
         import time
+
         time.sleep(0.01)
 
         self.client.post(

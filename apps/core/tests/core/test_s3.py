@@ -1,14 +1,14 @@
 """S3 기능 테스트 (moto 사용)"""
 
-import io
 from unittest.mock import patch
 
-import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
+
+import pytest
 from moto import mock_aws
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 
-from apps.core.S3.constants import S3Constants
 from apps.core.S3.uploader import s3_uploader
 from apps.core.S3.validators import S3ImageValidator
 
@@ -19,7 +19,6 @@ def s3_mock():
     with mock_aws():
         import boto3
 
-        # S3 버킷 생성
         s3_client = boto3.client(
             "s3",
             region_name="ap-northeast-2",
@@ -36,7 +35,6 @@ def s3_mock():
 @pytest.fixture
 def image_file():
     """테스트용 이미지 파일"""
-    # 1x1 PNG 이미지 (최소 유효 PNG)
     png_data = (
         b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
         b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
@@ -57,9 +55,9 @@ class TestS3Validators:
 
     def test_validate_file_name_fail(self):
         """파일명 검증 - 실패"""
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             S3ImageValidator.validate_file_name("")
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             S3ImageValidator.validate_file_name("test")  # 확장자 없음
 
     def test_validate_extension_success(self):
@@ -69,12 +67,12 @@ class TestS3Validators:
 
     def test_validate_extension_fail(self):
         """확장자 검증 - 실패"""
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             S3ImageValidator.validate_extension("test.txt", "txt")
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             S3ImageValidator.validate_extension("test.exe", "exe")
-        # 파일명과 요청 확장자 불일치
-        with pytest.raises(Exception) as exc_info:
+
+        with pytest.raises(ValidationError) as exc_info:
             S3ImageValidator.validate_extension("test.png", "jpg")
         assert "일치하지 않습니다" in str(exc_info.value)
 
@@ -85,25 +83,24 @@ class TestS3Validators:
 
     def test_validate_mime_type_fail(self):
         """MIME 타입 검증 - 실패"""
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             S3ImageValidator.validate_mime_type("png", "text/plain")
-        # Content-Type 없음
-        with pytest.raises(Exception) as exc_info:
+
+        with pytest.raises(ValidationError) as exc_info:
             S3ImageValidator.validate_mime_type("png", "")
         assert "Content-Type이 필요합니다" in str(exc_info.value)
 
     def test_validate_file_size_success(self):
         """파일 크기 검증 - 성공"""
-        S3ImageValidator.validate_file_size(1024)  # 1KB
-        S3ImageValidator.validate_file_size(5 * 1024 * 1024)  # 5MB
+        S3ImageValidator.validate_file_size(1024)
+        S3ImageValidator.validate_file_size(5 * 1024 * 1024)
 
     def test_validate_file_size_fail(self):
         """파일 크기 검증 - 실패"""
-        with pytest.raises(Exception):
-            S3ImageValidator.validate_file_size(None)  # None
-        with pytest.raises(Exception):
-            S3ImageValidator.validate_file_size(11 * 1024 * 1024)  # 10MB 초과
-
+        with pytest.raises(ValidationError):
+            S3ImageValidator.validate_file_size(None)
+        with pytest.raises(ValidationError):
+            S3ImageValidator.validate_file_size(11 * 1024 * 1024)
 
 @pytest.mark.django_db
 class TestS3Uploader:
@@ -149,7 +146,6 @@ class TestS3Uploader:
     @patch("apps.core.S3.uploader.settings")
     def test_delete_file_not_found(self, mock_settings, s3_mock):
         """파일 삭제 - 파일 없음 (404)"""
-        from botocore.exceptions import ClientError
 
         mock_settings.AWS_S3_BUCKET_NAME = "test-bucket"
         mock_settings.AWS_S3_REGION = "ap-northeast-2"
@@ -167,8 +163,9 @@ class TestS3Uploader:
     @patch("apps.core.S3.uploader.s3_uploader.get_s3_client")
     def test_s3_credentials_error(self, mock_client, mock_settings):
         """S3 자격 증명 오류"""
-        from botocore.exceptions import NoCredentialsError
         from unittest.mock import MagicMock
+
+        from botocore.exceptions import NoCredentialsError
 
         mock_settings.AWS_S3_BUCKET_NAME = "test-bucket"
         mock_settings.AWS_S3_REGION = "ap-northeast-2"
@@ -187,8 +184,9 @@ class TestS3Uploader:
     @patch("apps.core.S3.uploader.s3_uploader.get_s3_client")
     def test_s3_client_error(self, mock_client, mock_settings):
         """S3 ClientError"""
-        from botocore.exceptions import ClientError
         from unittest.mock import MagicMock
+
+        from botocore.exceptions import ClientError
 
         mock_settings.AWS_S3_BUCKET_NAME = "test-bucket"
         mock_settings.AWS_S3_REGION = "ap-northeast-2"
@@ -207,8 +205,9 @@ class TestS3Uploader:
     @patch("apps.core.S3.uploader.s3_uploader.get_s3_client")
     def test_s3_param_validation_error(self, mock_client, mock_settings):
         """S3 파라미터 검증 오류"""
-        from botocore.exceptions import ParamValidationError
         from unittest.mock import MagicMock
+
+        from botocore.exceptions import ParamValidationError
 
         mock_settings.AWS_S3_BUCKET_NAME = "test-bucket"
         mock_settings.AWS_S3_REGION = "ap-northeast-2"
@@ -228,8 +227,9 @@ class TestS3Uploader:
     @patch("apps.core.S3.uploader.s3_uploader.get_s3_client")
     def test_s3_botocore_error(self, mock_client, mock_settings):
         """S3 BotoCore 오류"""
-        from botocore.exceptions import BotoCoreError
         from unittest.mock import MagicMock
+
+        from botocore.exceptions import BotoCoreError
 
         mock_settings.AWS_S3_BUCKET_NAME = "test-bucket"
         mock_settings.AWS_S3_REGION = "ap-northeast-2"

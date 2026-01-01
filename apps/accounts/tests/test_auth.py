@@ -971,7 +971,9 @@ class EmailVerificationTestCase(TestCase):
     def test_email_resend_nonexistent_user(self):
         """존재하지 않는 이메일 - 타이밍 공격 방지"""
         response = self.client.post(
-            "/api/accounts/email-verification/resend/", {"email": "nonexistent@test.com"}, format="json"
+            "/api/accounts/email-verification/resend/",
+            {"email": "nonexistent@test.com"},
+            format="json",
         )
 
         # 보안: 동일한 응답

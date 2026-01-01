@@ -1,7 +1,8 @@
 """Pytest 설정 및 공통 Fixtures"""
 
-import pytest
 from django.contrib.auth import get_user_model
+
+import pytest
 from faker import Faker
 from rest_framework.test import APIClient
 

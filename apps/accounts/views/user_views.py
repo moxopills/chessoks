@@ -128,13 +128,13 @@ class LoginView(APIView):
     def _check_user_status(self, user: Any) -> Response | None:
         """사용자 상태 확인"""
         if not user.is_active:
-            return Response(
-                {"error": "비활성화된 계정입니다."}, status=status.HTTP_403_FORBIDDEN
-            )
+            return Response({"error": "비활성화된 계정입니다."}, status=status.HTTP_403_FORBIDDEN)
 
         if not user.email_verified:
             return Response(
-                {"error": "이메일 인증이 필요합니다. 가입 시 받은 이메일의 인증 링크를 확인해주세요."},
+                {
+                    "error": "이메일 인증이 필요합니다. 가입 시 받은 이메일의 인증 링크를 확인해주세요."
+                },
                 status=status.HTTP_403_FORBIDDEN,
             )
 
