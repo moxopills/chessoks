@@ -1,11 +1,16 @@
 """이메일 전송 유틸리티"""
 
+import logging
+import threading
+
 from django.conf import settings
 from django.core.mail import send_mail
 
+logger = logging.getLogger(__name__)
+
 
 def _send_template_email(user_email: str, subject: str, message: str) -> None:
-    """공통 이메일 전송 함수
+    """공통 이메일 전송 함수 (동기)
 
     Args:
         user_email: 수신자 이메일
@@ -21,8 +26,34 @@ def _send_template_email(user_email: str, subject: str, message: str) -> None:
     )
 
 
+def _send_template_email_async(user_email: str, subject: str, message: str) -> None:
+    """공통 이메일 전송 함수 (비동기 - threading)
+
+    Args:
+        user_email: 수신자 이메일
+        subject: 이메일 제목
+        message: 이메일 본문
+    """
+
+    def _send():
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user_email],
+                fail_silently=False,
+            )
+            logger.info(f"이메일 전송 성공: {user_email}")
+        except Exception as e:
+            logger.error(f"이메일 전송 실패: {user_email}, 에러: {e}")
+
+    thread = threading.Thread(target=_send, daemon=True)
+    thread.start()
+
+
 def send_password_reset_email(user_email: str, token: str) -> None:
-    """비밀번호 재설정 이메일 발송"""
+    """비밀번호 재설정 이메일 발송 (비동기)"""
     reset_url = f"{settings.FRONTEND_URL}/password-reset/confirm?token={token}"
 
     subject = "[ChessOK] 비밀번호 재설정 요청"
@@ -39,11 +70,11 @@ def send_password_reset_email(user_email: str, token: str) -> None:
 ChessOK 팀
     """
 
-    _send_template_email(user_email, subject, message)
+    _send_template_email_async(user_email, subject, message)
 
 
 def send_verification_email(user_email: str, token: str) -> None:
-    """이메일 인증 메일 발송"""
+    """이메일 인증 메일 발송 (비동기)"""
     verification_url = f"{settings.FRONTEND_URL}/email-verification/confirm?token={token}"
 
     subject = "[ChessOK] 이메일 인증을 완료해주세요"
@@ -60,4 +91,4 @@ ChessOK 회원가입을 환영합니다!
 ChessOK 팀
     """
 
-    _send_template_email(user_email, subject, message)
+    _send_template_email_async(user_email, subject, message)
