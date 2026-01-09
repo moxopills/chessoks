@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
-from apps.accounts.models import EmailVerificationToken, PasswordResetToken
+from apps.accounts.models import EmailVerificationToken, PasswordResetToken, User
 from apps.accounts.serializers import (
     EmailVerificationResendSerializer,
     EmailVerificationSerializer,
@@ -149,8 +149,11 @@ class LoginView(APIView):
         user.last_login = timezone.now()
         user.save(update_fields=["last_login"])
 
+        # N+1 방지: stats를 미리 로드
+        user_with_stats = User.objects.select_related("stats").get(pk=user.pk)
+
         return Response(
-            {"message": "로그인 성공", "user": UserSerializer(user).data},
+            {"message": "로그인 성공", "user": UserSerializer(user_with_stats).data},
             status=status.HTTP_200_OK,
         )
 
@@ -221,7 +224,8 @@ class CurrentUserView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
-        return self.request.user
+        # N+1 방지: stats를 미리 로드
+        return User.objects.select_related("stats").get(pk=self.request.user.pk)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -239,7 +243,8 @@ class ProfileUpdateView(UpdateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
-        return self.request.user
+        # N+1 방지: stats를 미리 로드
+        return User.objects.select_related("stats").get(pk=self.request.user.pk)
 
     @extend_schema(request=ProfileUpdateSerializer, responses={200: UserSerializer})
     def update(self, request, *args, **kwargs):
