@@ -1,11 +1,16 @@
 from django.urls import include, path
 
 from apps.accounts.views.user_views import (
+    AccountDeleteView,
     CurrentUserView,
+    EmailChangeConfirmView,
+    EmailChangeRequestView,
+    EmailCheckView,
     EmailVerificationConfirmView,
     EmailVerificationResendView,
     LoginView,
     LogoutView,
+    NicknameCheckView,
     PasswordChangeView,
     PasswordResetConfirmView,
     PasswordResetRequestView,
@@ -40,5 +45,10 @@ urlpatterns = [
         EmailVerificationResendView.as_view(),
         name="email-verification-resend",
     ),
+    path("account/delete/", AccountDeleteView.as_view(), name="account-delete"),
+    path("check-email/", EmailCheckView.as_view(), name="check-email"),
+    path("check-nickname/", NicknameCheckView.as_view(), name="check-nickname"),
+    path("email/change/", EmailChangeRequestView.as_view(), name="email-change-request"),
+    path("email/change/confirm/", EmailChangeConfirmView.as_view(), name="email-change-confirm"),
     path("social/", include("apps.accounts.urls.social_urls")),
 ]

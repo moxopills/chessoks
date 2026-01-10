@@ -2,7 +2,27 @@
 
 import string
 
-from rest_framework import serializers
+from rest_framework import serializers, status
+from rest_framework.response import Response
+
+
+def check_passwords_match(
+    password1: str,
+    password2: str,
+    field_name: str = "password",
+) -> Response | None:
+    """비밀번호 일치 검증 (View용)
+
+    Returns:
+        None: 일치
+        Response: 불일치 시 400 에러 응답
+    """
+    if password1 != password2:
+        return Response(
+            {field_name: ["비밀번호가 일치하지 않습니다."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return None
 
 
 def validate_password_strength(password: str) -> str:
