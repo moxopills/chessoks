@@ -2,25 +2,19 @@
 
 from unittest.mock import patch
 
-from django.contrib.auth import get_user_model
 from django.db import IntegrityError
-from django.test import TestCase
 
 from rest_framework import serializers, status
-from rest_framework.test import APIClient
 
 from apps.accounts.models import SocialUser
+from apps.accounts.tests.test_auth import BaseAPITestCase, BaseTestCase, User
 
-User = get_user_model()
 
-
-class SocialUserModelTest(TestCase):
+class SocialUserModelTest(BaseTestCase):
     """SocialUser 모델 테스트"""
 
     def setUp(self):
-        self.user = User.objects.create_user(
-            email="test@example.com", nickname="테스트", password="Pass123!"
-        )
+        self.user = self.create_user(email="test@example.com", nickname="테스트")
 
     def test_create_social_user(self):
         """소셜 유저 생성"""
@@ -82,11 +76,10 @@ class SocialUserModelTest(TestCase):
         self.assertEqual(SocialUser.objects.count(), 0)
 
 
-class SocialLoginE2ETestCase(TestCase):
+class SocialLoginE2ETestCase(BaseAPITestCase):
     """소셜 로그인 E2E 테스트"""
 
     def setUp(self):
-        self.client = APIClient()
         self.mock_patcher = patch(
             "apps.accounts.services.social_service.SocialAuthService.get_provider_user_info"
         )
@@ -121,7 +114,7 @@ class SocialLoginE2ETestCase(TestCase):
 
     def test_existing_user_link(self):
         """기존 유저 자동 연동"""
-        User.objects.create_user(email="exist@gmail.com", nickname="기존", password="Pass123!")
+        self.create_user(email="exist@gmail.com", nickname="기존")
         self.mock_provider.return_value = {
             "id": "g_789",
             "email": "exist@gmail.com",
@@ -203,7 +196,7 @@ class SocialLoginE2ETestCase(TestCase):
         self.assertIn("마지막", str(response.data))
 
 
-class SocialAuthServiceTest(TestCase):
+class SocialAuthServiceTest(BaseTestCase):
     """SocialAuthService 유닛 테스트"""
 
     @patch("apps.accounts.services.social_service.requests.get")
@@ -354,7 +347,7 @@ class SocialAuthServiceTest(TestCase):
         """신규 유저 생성 시 닉네임 중복"""
         from apps.accounts.services.social_service import SocialAuthService
 
-        User.objects.create_user(email="existing@test.com", nickname="중복닉", password="Pass123!")
+        self.create_user(email="existing@test.com", nickname="중복닉")
 
         provider_data = {"id": "new123", "email": "new@gmail.com", "name": "New User"}
 
@@ -362,3 +355,49 @@ class SocialAuthServiceTest(TestCase):
             SocialAuthService.create_or_update_user("google", provider_data, nickname="중복닉")
 
         self.assertIn("nickname", str(ctx.exception))
+
+
+class SocialViewsEdgeCaseTest(BaseAPITestCase):
+    """소셜 뷰 엣지 케이스 테스트"""
+
+    def test_list_accounts_without_auth(self):
+        """인증 없이 소셜 계정 목록 조회"""
+        response = self.client.get("/api/accounts/social/accounts/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unlink_without_auth(self):
+        """인증 없이 연동 해제 시도"""
+        response = self.client.delete(
+            "/api/accounts/social/accounts/unlink/", {"provider": "google"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unlink_nonexistent_provider(self):
+        """연동되지 않은 provider 해제 시도"""
+        user = self.create_user()
+        self.client.force_authenticate(user=user)
+
+        response = self.client.delete(
+            "/api/accounts/social/accounts/unlink/", {"provider": "google"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_login_invalid_serializer(self):
+        """잘못된 로그인 요청 데이터"""
+        response = self.client.post(
+            "/api/accounts/social/login/", {"provider": "invalid"}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch("apps.accounts.services.social_service.SocialAuthService.get_provider_user_info")
+    def test_login_provider_error(self, mock_provider):
+        """OAuth provider 에러 처리"""
+        mock_provider.side_effect = ValueError("유효하지 않은 access token입니다.")
+
+        response = self.client.post(
+            "/api/accounts/social/login/",
+            {"provider": "google", "access_token": "invalid_token"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
