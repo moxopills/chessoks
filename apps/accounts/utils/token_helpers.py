@@ -69,13 +69,13 @@ def validate_token[T: models.Model](
         token = token_model.objects.select_related("user").get(token=token_str)
     except token_model.DoesNotExist:
         return None, Response(
-            {"error": default_messages["not_found"]},
+            {"token": [default_messages["not_found"]]},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
     if not token.is_valid:
         return None, Response(
-            {"error": default_messages["invalid"]},
+            {"token": [default_messages["invalid"]]},
             status=status.HTTP_400_BAD_REQUEST,
         )
 

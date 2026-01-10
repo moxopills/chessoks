@@ -76,6 +76,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True, help_text="활성 계정")
     date_joined = models.DateTimeField(default=timezone.now, help_text="가입일")
 
+    # 회원 탈퇴 예약
+    scheduled_deletion_at = models.DateTimeField(
+        null=True, blank=True, help_text="탈퇴 예정 시간 (이 시간 전에 로그인하면 취소)"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
