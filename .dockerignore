@@ -35,6 +35,7 @@ db.sqlite3
 # Static/Media
 staticfiles/
 media/
+volumes/
 
 # Docker
 Dockerfile
