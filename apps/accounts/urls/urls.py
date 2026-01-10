@@ -6,6 +6,7 @@ from apps.accounts.views.user_views import (
     EmailVerificationResendView,
     LoginView,
     LogoutView,
+    PasswordChangeView,
     PasswordResetConfirmView,
     PasswordResetRequestView,
     ProfileUpdateView,
@@ -22,6 +23,7 @@ urlpatterns = [
     path("me/", CurrentUserView.as_view(), name="current-user"),
     path("profile/", ProfileUpdateView.as_view(), name="profile-update"),
     path("profile/avatar/", UserAvatarUpdateView.as_view(), name="avatar-update"),
+    path("password/change/", PasswordChangeView.as_view(), name="password-change"),
     path(
         "password-reset/request/", PasswordResetRequestView.as_view(), name="password-reset-request"
     ),

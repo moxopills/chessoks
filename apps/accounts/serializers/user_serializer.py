@@ -140,3 +140,23 @@ class EmailVerificationResendSerializer(serializers.Serializer):
     """이메일 인증 재전송"""
 
     email = serializers.EmailField(help_text="가입된 이메일 주소")
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    """비밀번호 변경 (로그인 상태)"""
+
+    current_password = serializers.CharField(
+        write_only=True,
+        style={"input_type": "password"},
+        help_text="현재 비밀번호",
+    )
+    new_password = serializers.CharField(
+        write_only=True,
+        style={"input_type": "password"},
+        help_text="새 비밀번호",
+    )
+    new_password2 = serializers.CharField(
+        write_only=True,
+        style={"input_type": "password"},
+        help_text="새 비밀번호 확인",
+    )
