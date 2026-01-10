@@ -7,6 +7,7 @@ from .token_helpers import (
     mark_token_as_used,
     validate_token,
 )
+from .validators import check_passwords_match
 
 __all__ = [
     "send_password_reset_email",
@@ -15,4 +16,5 @@ __all__ = [
     "validate_token",
     "mark_token_as_used",
     "get_user_or_timing_safe_response",
+    "check_passwords_match",
 ]
