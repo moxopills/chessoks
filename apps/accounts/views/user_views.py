@@ -564,6 +564,41 @@ class UserAvatarUpdateView(APIView):
             status=status.HTTP_200_OK,
         )
 
+    @extend_schema(
+        summary="아바타 이미지 삭제",
+        description="현재 아바타 이미지를 삭제합니다.",
+        responses={
+            200: {
+                "description": "삭제 성공",
+                "content": {"application/json": {"example": {"message": "아바타가 삭제되었습니다."}}},
+            },
+            400: {"description": "삭제할 아바타가 없음"},
+        },
+        tags=["프로필"],
+    )
+    def delete(self, request):
+        user = request.user
+
+        if not user.avatar_url:
+            return Response(
+                {"avatar": ["삭제할 아바타가 없습니다."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # S3에서 아바타 삭제
+        old_avatar_key = self._extract_old_avatar_key(user)
+        if old_avatar_key:
+            try:
+                s3_uploader.delete_file(old_avatar_key)
+            except Exception:
+                pass
+
+        # 유저 모델 업데이트
+        user.avatar_url = None
+        user.save(update_fields=["avatar_url"])
+
+        return Response({"message": "아바타가 삭제되었습니다."}, status=status.HTTP_200_OK)
+
     def _validate_avatar_file(self, file: Any) -> str:
         """아바타 파일 검증 및 확장자 반환"""
         file_name = file.name

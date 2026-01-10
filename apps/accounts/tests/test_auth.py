@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -17,6 +18,11 @@ from apps.accounts.serializers import ProfileUpdateSerializer, UserSignUpSeriali
 
 User = get_user_model()
 
+# 테스트 상수
+TEST_PASSWORD = "Pass123!"
+TEST_EMAIL = "test@test.com"
+TEST_NICKNAME = "테스터"
+
 
 class BaseTestCase(TestCase):
     """공통 테스트 베이스 클래스"""
@@ -28,13 +34,27 @@ class BaseTestCase(TestCase):
             "email": "test@example.com",
             "nickname": "테스터",
             "bio": "자기소개입니다",
-            "password": "TestPass123!",
-            "password2": "TestPass123!",
+            "password": TEST_PASSWORD,
+            "password2": TEST_PASSWORD,
         }
 
-    def create_user(self, email="user@test.com", nickname="유저", password="Pass123!"):
+    def create_user(
+        self,
+        email=TEST_EMAIL,
+        nickname=TEST_NICKNAME,
+        password=TEST_PASSWORD,
+        email_verified=False,
+    ):
         """테스트 유저 생성 헬퍼"""
-        return User.objects.create_user(email=email, nickname=nickname, password=password)
+        user = User.objects.create_user(email=email, nickname=nickname, password=password)
+        if email_verified:
+            user.email_verified = True
+            user.save(update_fields=["email_verified"])
+        return user
+
+    def create_verified_user(self, email=TEST_EMAIL, nickname=TEST_NICKNAME, password=TEST_PASSWORD):
+        """이메일 인증된 테스트 유저 생성"""
+        return self.create_user(email=email, nickname=nickname, password=password, email_verified=True)
 
     def create_test_image(self, filename="test.png"):
         """테스트용 이미지 파일 생성"""
@@ -44,6 +64,42 @@ class BaseTestCase(TestCase):
             b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
         )
         return SimpleUploadedFile(filename, png_data, content_type="image/png")
+
+    @contextmanager
+    def mock_s3(self):
+        """S3 mock context manager"""
+        from moto import mock_aws
+
+        with patch("apps.core.S3.uploader.settings") as mock_settings:
+            mock_settings.AWS_S3_BUCKET_NAME = "test-bucket"
+            mock_settings.AWS_S3_REGION = "ap-northeast-2"
+            mock_settings.AWS_S3_ACCESS_KEY_ID = "test"
+            mock_settings.AWS_S3_SECRET_ACCESS_KEY = "test"
+
+            with mock_aws():
+                import boto3
+
+                s3_client = boto3.client(
+                    "s3",
+                    region_name="ap-northeast-2",
+                    aws_access_key_id="test",
+                    aws_secret_access_key="test",
+                )
+                s3_client.create_bucket(
+                    Bucket="test-bucket",
+                    CreateBucketConfiguration={"LocationConstraint": "ap-northeast-2"},
+                )
+
+                with patch(
+                    "apps.core.S3.uploader.s3_uploader.get_s3_client", return_value=s3_client
+                ):
+                    yield s3_client
+
+
+class BaseAPITestCase(APITestCase, BaseTestCase):
+    """API 테스트용 베이스 클래스"""
+
+    pass
 
 
 class AuthE2ETestCase(LiveServerTestCase):
@@ -751,110 +807,60 @@ class PasswordResetE2ETest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
-class AvatarUpdateAPITestCase(APITestCase, BaseTestCase):
+class AvatarUpdateAPITestCase(BaseAPITestCase):
     """아바타 업데이트 E2E 테스트"""
 
     def setUp(self):
-        """테스트 유저 및 클라이언트 설정"""
         self.user = self.create_user()
         self.client.force_authenticate(user=self.user)
 
-    @patch("apps.core.S3.uploader.settings")
-    def test_avatar_update_success(self, mock_settings):
+    def test_avatar_update_success(self):
         """아바타 업데이트 - 성공"""
-        from moto import mock_aws
-
-        mock_settings.AWS_S3_BUCKET_NAME = "test-bucket"
-        mock_settings.AWS_S3_REGION = "ap-northeast-2"
-        mock_settings.AWS_S3_ACCESS_KEY_ID = "test"
-        mock_settings.AWS_S3_SECRET_ACCESS_KEY = "test"
-
-        with mock_aws():
-            import boto3
-
-            s3_client = boto3.client(
-                "s3",
-                region_name="ap-northeast-2",
-                aws_access_key_id="test",
-                aws_secret_access_key="test",
-            )
-            s3_client.create_bucket(
-                Bucket="test-bucket",
-                CreateBucketConfiguration={"LocationConstraint": "ap-northeast-2"},
+        with self.mock_s3():
+            response = self.client.patch(
+                "/api/accounts/profile/avatar/",
+                {"avatar": self.create_test_image("avatar.png")},
+                format="multipart",
             )
 
-            with patch("apps.core.S3.uploader.s3_uploader.get_s3_client", return_value=s3_client):
-                image_file = self.create_test_image("avatar.png")
-                response = self.client.patch(
-                    "/api/accounts/profile/avatar/", {"avatar": image_file}, format="multipart"
-                )
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertIn("avatar_url", response.data)
 
-                self.assertEqual(response.status_code, status.HTTP_200_OK)
-                self.assertIn("avatar_url", response.data)
-                self.assertIn("아바타가 성공적으로 업데이트되었습니다", response.data["message"])
+            self.user.refresh_from_db()
+            self.assertIsNotNone(self.user.avatar_url)
 
-                # DB 확인
-                self.user.refresh_from_db()
-                self.assertIsNotNone(self.user.avatar_url)
-                self.assertIn("avatars/", self.user.avatar_url)
-
-    @patch("apps.core.S3.uploader.settings")
-    def test_avatar_update_replaces_old(self, mock_settings):
+    def test_avatar_update_replaces_old(self):
         """아바타 업데이트 - 기존 아바타 자동 교체"""
-        from moto import mock_aws
-
-        mock_settings.AWS_S3_BUCKET_NAME = "test-bucket"
-        mock_settings.AWS_S3_REGION = "ap-northeast-2"
-        mock_settings.AWS_S3_ACCESS_KEY_ID = "test"
-        mock_settings.AWS_S3_SECRET_ACCESS_KEY = "test"
-
-        # 기존 아바타 설정
         self.user.avatar_url = "https://test-bucket.s3.ap-northeast-2.amazonaws.com/avatars/old.png"
         self.user.save()
         old_url = self.user.avatar_url
 
-        with mock_aws():
-            import boto3
-
-            s3_client = boto3.client(
-                "s3",
-                region_name="ap-northeast-2",
-                aws_access_key_id="test",
-                aws_secret_access_key="test",
-            )
-            s3_client.create_bucket(
-                Bucket="test-bucket",
-                CreateBucketConfiguration={"LocationConstraint": "ap-northeast-2"},
-            )
-            # 기존 파일 생성
+        with self.mock_s3() as s3_client:
             s3_client.put_object(Bucket="test-bucket", Key="avatars/old.png", Body=b"old")
 
-            with patch("apps.core.S3.uploader.s3_uploader.get_s3_client", return_value=s3_client):
-                image_file = self.create_test_image("new_avatar.png")
-                response = self.client.patch(
-                    "/api/accounts/profile/avatar/", {"avatar": image_file}, format="multipart"
-                )
+            response = self.client.patch(
+                "/api/accounts/profile/avatar/",
+                {"avatar": self.create_test_image("new.png")},
+                format="multipart",
+            )
 
-                self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-                # URL이 변경되었는지 확인
-                self.user.refresh_from_db()
-                self.assertNotEqual(self.user.avatar_url, old_url)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.user.refresh_from_db()
+            self.assertNotEqual(self.user.avatar_url, old_url)
 
     def test_avatar_update_without_auth(self):
         """아바타 업데이트 - 인증 없음"""
         self.client.force_authenticate(user=None)
-        image_file = self.create_test_image()
         response = self.client.patch(
-            "/api/accounts/profile/avatar/", {"avatar": image_file}, format="multipart"
+            "/api/accounts/profile/avatar/",
+            {"avatar": self.create_test_image()},
+            format="multipart",
         )
-
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_avatar_update_without_file(self):
         """아바타 업데이트 - 파일 없음"""
         response = self.client.patch("/api/accounts/profile/avatar/", {})
-
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("avatar", response.data)
 
@@ -864,22 +870,46 @@ class AvatarUpdateAPITestCase(APITestCase, BaseTestCase):
         response = self.client.patch(
             "/api/accounts/profile/avatar/", {"avatar": txt_file}, format="multipart"
         )
-
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_avatar_update_file_too_large(self):
         """아바타 업데이트 - 파일 크기 초과"""
-        # 11MB 파일 생성
-        large_file = SimpleUploadedFile(
-            "large.png",
-            b"x" * (11 * 1024 * 1024),
-            content_type="image/png",
-        )
+        large_file = SimpleUploadedFile("large.png", b"x" * (11 * 1024 * 1024), content_type="image/png")
         response = self.client.patch(
             "/api/accounts/profile/avatar/", {"avatar": large_file}, format="multipart"
         )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_avatar_delete_success(self):
+        """아바타 삭제 - 성공"""
+        self.user.avatar_url = "https://test-bucket.s3.ap-northeast-2.amazonaws.com/avatars/test.png"
+        self.user.save()
+
+        with self.mock_s3() as s3_client:
+            s3_client.put_object(Bucket="test-bucket", Key="avatars/test.png", Body=b"test")
+
+            response = self.client.delete("/api/accounts/profile/avatar/")
+
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.user.refresh_from_db()
+            self.assertIsNone(self.user.avatar_url)
+
+    def test_avatar_delete_no_avatar(self):
+        """아바타 삭제 - 삭제할 아바타 없음"""
+        self.user.avatar_url = None
+        self.user.save()
+
+        response = self.client.delete("/api/accounts/profile/avatar/")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("avatar", response.data)
+
+    def test_avatar_delete_without_auth(self):
+        """아바타 삭제 - 인증 없음"""
+        self.client.force_authenticate(user=None)
+        response = self.client.delete("/api/accounts/profile/avatar/")
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class LoginValidationTestCase(APITestCase):
