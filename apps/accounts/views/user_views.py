@@ -20,6 +20,7 @@ from apps.accounts.serializers import (
     EmailVerificationSerializer,
     LoginRequestSerializer,
     LoginResponseSerializer,
+    PasswordChangeSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     ProfileUpdateSerializer,
@@ -327,6 +328,56 @@ class PasswordResetConfirmView(APIView):
         mark_token_as_used(token)
 
         return Response({"message": "비밀번호가 재설정되었습니다."}, status=status.HTTP_200_OK)
+
+
+class PasswordChangeView(APIView):
+    """비밀번호 변경 (로그인 상태)"""
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [UserRateThrottle]
+
+    @extend_schema(
+        request=PasswordChangeSerializer,
+        responses={200: {"type": "object", "properties": {"message": {"type": "string"}}}},
+        tags=["비밀번호"],
+    )
+    def post(self, request):
+        serializer = PasswordChangeSerializer(data=request.data, context={"request": request})
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        current_password = serializer.validated_data["current_password"]
+        new_password = serializer.validated_data["new_password"]
+        new_password2 = serializer.validated_data["new_password2"]
+
+        user = request.user
+
+        # 현재 비밀번호 확인
+        if not user.check_password(current_password):
+            return Response(
+                {"error": "현재 비밀번호가 일치하지 않습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 새 비밀번호 일치 확인
+        if new_password != new_password2:
+            return Response(
+                {"error": "새 비밀번호가 일치하지 않습니다."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 현재 비밀번호와 새 비밀번호 동일 여부 확인
+        if current_password == new_password:
+            return Response(
+                {"error": "현재 비밀번호와 다른 비밀번호를 입력해주세요."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 비밀번호 변경
+        user.set_password(new_password)
+        user.save(update_fields=["password"])
+
+        return Response({"message": "비밀번호가 변경되었습니다."}, status=status.HTTP_200_OK)
 
 
 class EmailVerificationConfirmView(APIView):
