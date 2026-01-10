@@ -6,8 +6,8 @@
 set -e
 
 # 환경 변수 로드
-if [ -f .env ]; then
-    export $(cat .env | grep -v '^#' | xargs)
+if [ -f .envs/.env.prod ]; then
+    export $(grep -v '^#' .envs/.env.prod | grep -v '^$' | grep '=' | xargs)
 fi
 
 # 도메인 확인
@@ -46,39 +46,38 @@ fi
 # 더미 인증서 생성 (nginx 시작을 위해)
 echo "더미 인증서 생성 중..."
 mkdir -p volumes/certbot/conf/live/$DOMAIN
-docker-compose run --rm --entrypoint "\
+docker compose -f docker-compose.prod.yml run --rm --entrypoint "\
     openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
     -keyout /etc/letsencrypt/live/$DOMAIN/privkey.pem \
     -out /etc/letsencrypt/live/$DOMAIN/fullchain.pem \
     -subj '/CN=localhost'" certbot
 
 echo "nginx 시작 중..."
-docker-compose up -d nginx
+docker compose -f docker-compose.prod.yml up -d nginx
 
 echo "더미 인증서 삭제 중..."
-docker-compose run --rm --entrypoint "\
+docker compose -f docker-compose.prod.yml run --rm --entrypoint "\
     rm -rf /etc/letsencrypt/live/$DOMAIN && \
     rm -rf /etc/letsencrypt/archive/$DOMAIN && \
     rm -rf /etc/letsencrypt/renewal/$DOMAIN.conf" certbot
 
 # Let's Encrypt 인증서 발급
 echo "Let's Encrypt 인증서 발급 중..."
-docker-compose run --rm --entrypoint "\
+docker compose -f docker-compose.prod.yml run --rm --entrypoint "\
     certbot certonly --webroot -w /var/www/certbot \
     --email $SSL_EMAIL \
     --agree-tos \
     --no-eff-email \
-    -d $DOMAIN \
-    -d www.$DOMAIN" certbot
+    -d $DOMAIN" certbot
 
 echo ""
 echo "=== SSL 인증서 발급 완료 ==="
 echo ""
 echo "다음 단계:"
 echo "1. nginx 설정을 SSL 모드로 변경:"
-echo "   docker-compose down"
+echo "   docker compose -f docker-compose.prod.yml down"
 echo "   # nginx/nginx.conf를 nginx-ssl.conf로 교체"
-echo "   docker-compose up -d"
+echo "   docker compose -f docker-compose.prod.yml up -d"
 echo ""
 echo "2. 인증서는 자동으로 12시간마다 갱신됩니다."
 echo ""

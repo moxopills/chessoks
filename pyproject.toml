@@ -106,8 +106,7 @@ testpaths = ["accounts", "chess"]
 addopts = [
     "--verbose",
     "--cov=.",
-    "--cov-report=html",
-    "--cov-report=term-missing",
+    "--cov-report=term",
 ]
 
 [tool.coverage.run]
@@ -130,4 +129,16 @@ exclude_lines = [
     "raise AssertionError",
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.12.0",
+    "faker>=40.1.0",
+    "isort>=7.0.0",
+    "moto>=5.1.19",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
+    "pytest-django>=4.11.1",
+    "ruff>=0.14.10",
 ]

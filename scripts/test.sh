@@ -16,6 +16,3 @@ uv run pytest
 
 echo ""
 echo "=== ✅ 테스트 완료 ==="
-echo ""
-echo "📁 HTML 커버리지 리포트: htmlcov/index.html"
-echo "브라우저에서 확인: open htmlcov/index.html"
