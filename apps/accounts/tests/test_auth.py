@@ -1569,9 +1569,7 @@ class EmailChangeTestCase(APITestCase):
 
     def test_email_change_duplicate_email(self):
         """이미 사용 중인 이메일로 변경 시도"""
-        User.objects.create_user(
-            email="taken@test.com", nickname="taken", password="Pass123!"
-        )
+        User.objects.create_user(email="taken@test.com", nickname="taken", password="Pass123!")
         response = self.client.post(
             "/api/accounts/email/change/",
             {"new_email": "taken@test.com", "password": "Pass123!"},
@@ -1596,8 +1594,9 @@ class CleanupDeletedAccountsCommandTestCase(TestCase):
 
     def test_cleanup_expired_accounts(self):
         """만료된 탈퇴 예약 계정 삭제"""
-        from django.core.management import call_command
         from io import StringIO
+
+        from django.core.management import call_command
 
         # 만료된 탈퇴 예약 계정 생성
         expired_user = User.objects.create_user(
@@ -1616,9 +1615,7 @@ class CleanupDeletedAccountsCommandTestCase(TestCase):
         pending_user.save()
 
         # 일반 활성 계정 생성
-        active_user = User.objects.create_user(
-            email="active@test.com", nickname="active", password="Pass123!"
-        )
+        User.objects.create_user(email="active@test.com", nickname="active", password="Pass123!")
 
         out = StringIO()
         call_command("cleanup_deleted_accounts", stdout=out)
@@ -1631,8 +1628,9 @@ class CleanupDeletedAccountsCommandTestCase(TestCase):
 
     def test_cleanup_dry_run(self):
         """dry-run 모드에서는 삭제하지 않음"""
-        from django.core.management import call_command
         from io import StringIO
+
+        from django.core.management import call_command
 
         expired_user = User.objects.create_user(
             email="expired@test.com", nickname="expired", password="Pass123!"
@@ -1650,8 +1648,9 @@ class CleanupDeletedAccountsCommandTestCase(TestCase):
 
     def test_cleanup_no_accounts_to_delete(self):
         """삭제할 계정이 없는 경우"""
-        from django.core.management import call_command
         from io import StringIO
+
+        from django.core.management import call_command
 
         out = StringIO()
         call_command("cleanup_deleted_accounts", stdout=out)
