@@ -52,9 +52,13 @@ class BaseTestCase(TestCase):
             user.save(update_fields=["email_verified"])
         return user
 
-    def create_verified_user(self, email=TEST_EMAIL, nickname=TEST_NICKNAME, password=TEST_PASSWORD):
+    def create_verified_user(
+        self, email=TEST_EMAIL, nickname=TEST_NICKNAME, password=TEST_PASSWORD
+    ):
         """이메일 인증된 테스트 유저 생성"""
-        return self.create_user(email=email, nickname=nickname, password=password, email_verified=True)
+        return self.create_user(
+            email=email, nickname=nickname, password=password, email_verified=True
+        )
 
     def create_test_image(self, filename="test.png"):
         """테스트용 이미지 파일 생성"""
@@ -874,7 +878,9 @@ class AvatarUpdateAPITestCase(BaseAPITestCase):
 
     def test_avatar_update_file_too_large(self):
         """아바타 업데이트 - 파일 크기 초과"""
-        large_file = SimpleUploadedFile("large.png", b"x" * (11 * 1024 * 1024), content_type="image/png")
+        large_file = SimpleUploadedFile(
+            "large.png", b"x" * (11 * 1024 * 1024), content_type="image/png"
+        )
         response = self.client.patch(
             "/api/accounts/profile/avatar/", {"avatar": large_file}, format="multipart"
         )
@@ -882,7 +888,9 @@ class AvatarUpdateAPITestCase(BaseAPITestCase):
 
     def test_avatar_delete_success(self):
         """아바타 삭제 - 성공"""
-        self.user.avatar_url = "https://test-bucket.s3.ap-northeast-2.amazonaws.com/avatars/test.png"
+        self.user.avatar_url = (
+            "https://test-bucket.s3.ap-northeast-2.amazonaws.com/avatars/test.png"
+        )
         self.user.save()
 
         with self.mock_s3() as s3_client:

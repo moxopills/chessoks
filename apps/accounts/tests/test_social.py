@@ -5,7 +5,6 @@ from unittest.mock import patch
 from django.db import IntegrityError
 
 from rest_framework import serializers, status
-from rest_framework.test import APIClient
 
 from apps.accounts.models import SocialUser
 from apps.accounts.tests.test_auth import BaseAPITestCase, BaseTestCase, User

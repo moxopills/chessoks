@@ -570,7 +570,9 @@ class UserAvatarUpdateView(APIView):
         responses={
             200: {
                 "description": "삭제 성공",
-                "content": {"application/json": {"example": {"message": "아바타가 삭제되었습니다."}}},
+                "content": {
+                    "application/json": {"example": {"message": "아바타가 삭제되었습니다."}}
+                },
             },
             400: {"description": "삭제할 아바타가 없음"},
         },
