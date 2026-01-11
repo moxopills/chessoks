@@ -177,12 +177,12 @@ class AuthE2ETestCase(LiveServerTestCase):
         for remaining in [4, 3, 2, 1]:
             response = self.client.post("/api/accounts/login/", wrong_data, format="json")
             self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-            self.assertIn(f"남은 시도: {remaining}회", response.data["non_field_errors"][0])
+            self.assertIn(f"남은 시도: {remaining}회", response.data["detail"])
 
         # 3. 다섯 번째 실패 → 잠금
         response = self.client.post("/api/accounts/login/", wrong_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
-        self.assertIn("5분 후", response.data["non_field_errors"][0])
+        self.assertIn("5분 후", response.data["detail"])
 
         # 4. 잠금 상태에서 올바른 비밀번호로도 로그인 불가
         correct_data = {"email": "locktest@test.com", "password": "CorrectPass123!"}
@@ -953,7 +953,7 @@ class LoginValidationTestCase(BaseAPITestCase):
         )
         # is_active=False는 authenticate가 None을 반환하므로 401
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertIn("로그인 실패", response.data["non_field_errors"][0])
+        self.assertIn("로그인 실패", response.data["detail"])
 
 
 class EmailVerificationTestCase(BaseAPITestCase):

@@ -7,9 +7,10 @@ from django.core.cache import cache
 from django.utils import timezone
 
 from rest_framework import status
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied, Throttled, ValidationError
 
 from apps.accounts.models import User
-from apps.accounts.services.base_service import ServiceResult, _error, _ok, _validate_serializer
+from apps.accounts.services.base_service import ServiceResult, _ok, _validate_serializer
 
 # 상수 정의
 MAX_LOGIN_ATTEMPTS = 5
@@ -160,49 +161,29 @@ class AccountSessionService:
     @staticmethod
     def login(request, email: str, password: str) -> ServiceResult:
         if not email or not password:
-            return _error(
-                {"non_field_errors": ["이메일과 비밀번호를 입력해주세요."]},
-                status.HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"non_field_errors": ["이메일과 비밀번호를 입력해주세요."]})
 
         if "@" not in email:
-            return _error(
-                {"email": ["올바른 이메일 형식이 아닙니다."]},
-                status.HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"email": ["올바른 이메일 형식이 아닙니다."]})
 
         if AuthService.check_lockout(email):
-            return _error(
-                {"non_field_errors": ["로그인 시도 횟수 초과. 5분 후 다시 시도해주세요."]},
-                status.HTTP_429_TOO_MANY_REQUESTS,
-            )
+            raise Throttled(detail="로그인 시도 횟수 초과. 5분 후 다시 시도해주세요.")
 
         AuthService.try_recover_account(email, password)
 
         user = authenticate(request, username=email, password=password)
         if not user:
             remaining, error_msg = AuthService.handle_failed_login(email)
-            status_code = (
-                status.HTTP_429_TOO_MANY_REQUESTS
-                if remaining == 0
-                else status.HTTP_401_UNAUTHORIZED
-            )
-            return _error({"non_field_errors": [error_msg]}, status_code)
+            if remaining == 0:
+                raise Throttled(detail=error_msg)
+            raise AuthenticationFailed(detail=error_msg)
 
         if not user.is_active:
-            return _error(
-                {"non_field_errors": ["비활성화된 계정입니다."]},
-                status.HTTP_403_FORBIDDEN,
-            )
+            raise PermissionDenied(detail="비활성화된 계정입니다.")
 
         if not user.email_verified:
-            return _error(
-                {
-                    "non_field_errors": [
-                        "이메일 인증이 필요합니다. 가입 시 받은 이메일의 인증 링크를 확인해주세요."
-                    ]
-                },
-                status.HTTP_403_FORBIDDEN,
+            raise PermissionDenied(
+                detail="이메일 인증이 필요합니다. 가입 시 받은 이메일의 인증 링크를 확인해주세요."
             )
 
         user_with_stats = AuthService.handle_successful_login(request, user)
@@ -221,15 +202,11 @@ class AccountSessionService:
 
     @staticmethod
     def account_delete(serializer, user: User, request) -> ServiceResult:
-        if error := _validate_serializer(serializer):
-            return error
+        _validate_serializer(serializer)
 
         password = serializer.validated_data["password"]
         if not PasswordService.verify_current_password(user, password):
-            return _error(
-                {"password": ["비밀번호가 일치하지 않습니다."]},
-                status.HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"password": ["비밀번호가 일치하지 않습니다."]})
 
         AccountService.schedule_deletion(user)
         AccountService.logout_user(request)
