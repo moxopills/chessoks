@@ -1559,6 +1559,10 @@ class EmailChangeTestCase(BaseAPITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("인증 이메일", response.data["message"])
+        token = EmailVerificationToken.objects.filter(user=self.user, is_used=False).latest(
+            "created_at"
+        )
+        self.assertEqual(token.new_email, "new@test.com")
 
     def test_email_change_wrong_password(self):
         """잘못된 비밀번호로 이메일 변경 요청"""
@@ -1600,6 +1604,47 @@ class EmailChangeTestCase(BaseAPITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_email_change_confirm_success(self):
+        """이메일 변경 확인 성공"""
+        token = EmailVerificationToken.objects.create(
+            user=self.user,
+            token=EmailVerificationToken.generate_token(),
+            expires_at=timezone.now() + timedelta(hours=24),
+            new_email="changed@test.com",
+        )
+
+        response = self.client.post(
+            "/api/accounts/email/change/confirm/",
+            {"token": token.token},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("변경되었습니다", response.data["message"])
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "changed@test.com")
+        token.refresh_from_db()
+        self.assertTrue(token.is_used)
+
+    def test_email_change_confirm_missing_new_email(self):
+        """new_email이 없는 토큰 처리"""
+        token = EmailVerificationToken.objects.create(
+            user=self.user,
+            token=EmailVerificationToken.generate_token(),
+            expires_at=timezone.now() + timedelta(hours=24),
+            new_email=None,
+        )
+
+        response = self.client.post(
+            "/api/accounts/email/change/confirm/",
+            {"token": token.token},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("token", response.data)
 
 
 class CleanupDeletedAccountsCommandTestCase(BaseTestCase):
