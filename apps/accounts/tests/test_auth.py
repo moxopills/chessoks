@@ -164,7 +164,7 @@ class AuthE2ETestCase(LiveServerTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_login_failure_lockout_flow(self):
-        """로그인 실패 → 잠금 → 해제 플로우 E2E 테스트"""
+        """로그인 실패 → 잠금 → 해제 플로우 E2E 테스트 (5회 실패 시 잠금)"""
 
         # 1. 유저 생성
         User.objects.create_user(
@@ -173,31 +173,27 @@ class AuthE2ETestCase(LiveServerTestCase):
 
         wrong_data = {"email": "locktest@test.com", "password": "WrongPass!"}
 
-        # 2. 첫 번째 실패 (남은 시도: 2회)
-        response = self.client.post("/api/accounts/login/", wrong_data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertIn("남은 시도: 2회", response.data["non_field_errors"][0])
+        # 2. 첫 번째 ~ 네 번째 실패
+        for remaining in [4, 3, 2, 1]:
+            response = self.client.post("/api/accounts/login/", wrong_data, format="json")
+            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+            self.assertIn(f"남은 시도: {remaining}회", response.data["non_field_errors"][0])
 
-        # 3. 두 번째 실패 (남은 시도: 1회)
-        response = self.client.post("/api/accounts/login/", wrong_data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertIn("남은 시도: 1회", response.data["non_field_errors"][0])
-
-        # 4. 세 번째 실패 → 잠금
+        # 3. 다섯 번째 실패 → 잠금
         response = self.client.post("/api/accounts/login/", wrong_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
         self.assertIn("5분 후", response.data["non_field_errors"][0])
 
-        # 5. 잠금 상태에서 올바른 비밀번호로도 로그인 불가
+        # 4. 잠금 상태에서 올바른 비밀번호로도 로그인 불가
         correct_data = {"email": "locktest@test.com", "password": "CorrectPass123!"}
         response = self.client.post("/api/accounts/login/", correct_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
-        # 6. 캐시 수동 삭제 (실제로는 5분 대기)
+        # 5. 캐시 수동 삭제 (실제로는 5분 대기)
         cache.delete("login_lock:locktest@test.com")
         cache.delete("login_fail:locktest@test.com")
 
-        # 7. 잠금 해제 후 올바른 비밀번호로 로그인 성공
+        # 6. 잠금 해제 후 올바른 비밀번호로 로그인 성공
         response = self.client.post("/api/accounts/login/", correct_data, format="json")
         # 로그인 성공 확인 (이메일 인증이 안되어 있으면 403일 수 있음)
         self.assertIn(response.status_code, [status.HTTP_200_OK, status.HTTP_403_FORBIDDEN])
@@ -633,14 +629,11 @@ class PasswordResetTokenModelTest(BaseTestCase):
         self.assertTrue(PasswordResetToken.objects.filter(id=valid_token.id).exists())
 
 
-class PasswordResetE2ETest(TestCase):
+class PasswordResetE2ETest(BaseAPITestCase):
     """비밀번호 재설정 E2E 테스트"""
 
     def setUp(self):
-        self.client = APIClient()
-        self.user = User.objects.create_user(
-            email="e2e@example.com", nickname="E2E", password="OldPass123!"
-        )
+        self.user = self.create_user(email="e2e@example.com", nickname="E2E", password="OldPass123!")
 
     def test_complete_password_reset_flow(self):
         """완전한 비밀번호 재설정 플로우"""
@@ -920,7 +913,7 @@ class AvatarUpdateAPITestCase(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
-class LoginValidationTestCase(APITestCase):
+class LoginValidationTestCase(BaseAPITestCase):
     """로그인 검증 테스트"""
 
     def test_login_without_email(self):
@@ -947,12 +940,9 @@ class LoginValidationTestCase(APITestCase):
 
     def test_login_inactive_user(self):
         """비활성화된 계정 로그인 - Django는 is_active=False 유저를 인증하지 않음"""
-        user = User.objects.create_user(
-            email="inactive@test.com", nickname="비활성", password="Pass123!"
-        )
+        user = self.create_verified_user(email="inactive@test.com", nickname="비활성")
         user.is_active = False
-        user.email_verified = True
-        user.save()
+        user.save(update_fields=["is_active"])
 
         response = self.client.post(
             "/api/accounts/login/",
@@ -964,14 +954,11 @@ class LoginValidationTestCase(APITestCase):
         self.assertIn("로그인 실패", response.data["non_field_errors"][0])
 
 
-class EmailVerificationTestCase(TestCase):
+class EmailVerificationTestCase(BaseAPITestCase):
     """이메일 인증 테스트"""
 
     def setUp(self):
-        self.client = APIClient()
-        self.user = User.objects.create_user(
-            email="verify@test.com", nickname="인증테스트", password="Pass123!"
-        )
+        self.user = self.create_user(email="verify@test.com", nickname="인증테스트")
 
     def test_email_verification_success(self):
         """이메일 인증 성공"""
@@ -1137,15 +1124,13 @@ class EmailVerificationTokenModelTest(BaseTestCase):
         self.assertTrue(EmailVerificationToken.objects.filter(id=valid_token.id).exists())
 
 
-class PasswordChangeTestCase(APITestCase):
+class PasswordChangeTestCase(BaseAPITestCase):
     """비밀번호 변경 테스트"""
 
     def setUp(self):
-        self.user = User.objects.create_user(
+        self.user = self.create_verified_user(
             email="change@test.com", nickname="변경테스트", password="OldPass123!"
         )
-        self.user.email_verified = True
-        self.user.save()
         self.client.force_authenticate(user=self.user)
 
     def test_password_change_success(self):
@@ -1346,15 +1331,11 @@ class PasswordChangeE2ETestCase(LiveServerTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
-class AccountDeleteTestCase(APITestCase):
+class AccountDeleteTestCase(BaseAPITestCase):
     """회원 탈퇴 테스트"""
 
     def setUp(self):
-        self.user = User.objects.create_user(
-            email="delete@test.com", nickname="탈퇴테스트", password="Pass123!"
-        )
-        self.user.email_verified = True
-        self.user.save()
+        self.user = self.create_verified_user(email="delete@test.com", nickname="탈퇴테스트")
         self.client.force_authenticate(user=self.user)
 
     def test_account_delete_success(self):
@@ -1489,13 +1470,11 @@ class AccountDeleteE2ETestCase(LiveServerTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
-class EmailCheckTestCase(APITestCase):
+class EmailCheckTestCase(BaseAPITestCase):
     """이메일 중복 체크 테스트"""
 
     def setUp(self):
-        self.user = User.objects.create_user(
-            email="existing@test.com", nickname="existing", password="Pass123!"
-        )
+        self.user = self.create_user(email="existing@test.com", nickname="existing")
 
     def test_email_available(self):
         """사용 가능한 이메일"""
@@ -1534,13 +1513,11 @@ class EmailCheckTestCase(APITestCase):
         self.assertIn("탈퇴 예약", response.data["message"])
 
 
-class NicknameCheckTestCase(APITestCase):
+class NicknameCheckTestCase(BaseAPITestCase):
     """닉네임 중복 체크 테스트"""
 
     def setUp(self):
-        self.user = User.objects.create_user(
-            email="user@test.com", nickname="existingnick", password="Pass123!"
-        )
+        self.user = self.create_user(email="user@test.com", nickname="existingnick")
 
     def test_nickname_available(self):
         """사용 가능한 닉네임"""
@@ -1564,15 +1541,11 @@ class NicknameCheckTestCase(APITestCase):
         self.assertIn("이미 사용 중", response.data["message"])
 
 
-class EmailChangeTestCase(APITestCase):
+class EmailChangeTestCase(BaseAPITestCase):
     """이메일 변경 테스트"""
 
     def setUp(self):
-        self.user = User.objects.create_user(
-            email="original@test.com", nickname="emailchange", password="Pass123!"
-        )
-        self.user.email_verified = True
-        self.user.save()
+        self.user = self.create_verified_user(email="original@test.com", nickname="emailchange")
         self.client.force_authenticate(user=self.user)
 
     def test_email_change_request_success(self):
@@ -1607,7 +1580,7 @@ class EmailChangeTestCase(APITestCase):
 
     def test_email_change_duplicate_email(self):
         """이미 사용 중인 이메일로 변경 시도"""
-        User.objects.create_user(email="taken@test.com", nickname="taken", password="Pass123!")
+        self.create_user(email="taken@test.com", nickname="taken")
         response = self.client.post(
             "/api/accounts/email/change/",
             {"new_email": "taken@test.com", "password": "Pass123!"},
@@ -1627,7 +1600,7 @@ class EmailChangeTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
-class CleanupDeletedAccountsCommandTestCase(TestCase):
+class CleanupDeletedAccountsCommandTestCase(BaseTestCase):
     """cleanup_deleted_accounts 관리 명령어 테스트"""
 
     def test_cleanup_expired_accounts(self):
@@ -1637,23 +1610,19 @@ class CleanupDeletedAccountsCommandTestCase(TestCase):
         from django.core.management import call_command
 
         # 만료된 탈퇴 예약 계정 생성
-        expired_user = User.objects.create_user(
-            email="expired@test.com", nickname="expired", password="Pass123!"
-        )
+        expired_user = self.create_user(email="expired@test.com", nickname="expired")
         expired_user.is_active = False
         expired_user.scheduled_deletion_at = timezone.now() - timedelta(days=1)
         expired_user.save()
 
         # 아직 만료되지 않은 탈퇴 예약 계정 생성
-        pending_user = User.objects.create_user(
-            email="pending@test.com", nickname="pending", password="Pass123!"
-        )
+        pending_user = self.create_user(email="pending@test.com", nickname="pending")
         pending_user.is_active = False
         pending_user.scheduled_deletion_at = timezone.now() + timedelta(days=7)
         pending_user.save()
 
         # 일반 활성 계정 생성
-        User.objects.create_user(email="active@test.com", nickname="active", password="Pass123!")
+        self.create_user(email="active@test.com", nickname="active")
 
         out = StringIO()
         call_command("cleanup_deleted_accounts", stdout=out)
@@ -1670,9 +1639,7 @@ class CleanupDeletedAccountsCommandTestCase(TestCase):
 
         from django.core.management import call_command
 
-        expired_user = User.objects.create_user(
-            email="expired@test.com", nickname="expired", password="Pass123!"
-        )
+        expired_user = self.create_user(email="expired@test.com", nickname="expired")
         expired_user.is_active = False
         expired_user.scheduled_deletion_at = timezone.now() - timedelta(days=1)
         expired_user.save()
