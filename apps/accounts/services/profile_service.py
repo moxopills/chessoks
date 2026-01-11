@@ -175,7 +175,9 @@ class UserProfileService:
         )
 
         if PasswordService.is_same_as_current(user, new_password):
-            raise ValidationError({"new_password": ["현재 비밀번호와 다른 비밀번호를 입력해주세요."]})
+            raise ValidationError(
+                {"new_password": ["현재 비밀번호와 다른 비밀번호를 입력해주세요."]}
+            )
 
         PasswordService.change_password(user, new_password)
         return _ok(
@@ -353,7 +355,9 @@ class UserProfileService:
 
         new_email = token.new_email
         if not new_email:
-            raise ValidationError({"token": ["이메일 변경 요청이 만료되었습니다. 다시 시도해주세요."]})
+            raise ValidationError(
+                {"token": ["이메일 변경 요청이 만료되었습니다. 다시 시도해주세요."]}
+            )
 
         if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
             raise ValidationError({"new_email": ["이미 사용 중인 이메일입니다."]})

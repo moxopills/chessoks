@@ -7,7 +7,12 @@ from django.core.cache import cache
 from django.utils import timezone
 
 from rest_framework import status
-from rest_framework.exceptions import AuthenticationFailed, PermissionDenied, Throttled, ValidationError
+from rest_framework.exceptions import (
+    AuthenticationFailed,
+    PermissionDenied,
+    Throttled,
+    ValidationError,
+)
 
 from apps.accounts.models import User
 from apps.accounts.services.base_service import ServiceResult, _ok, _validate_serializer
