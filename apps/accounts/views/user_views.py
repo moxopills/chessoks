@@ -51,9 +51,6 @@ class LoginView(APIView):
         password = request.data.get("password", "")
 
         result = AccountSessionService.login(request, email, password)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         user = result.payload["user"]
         message = result.payload["message"]
         return Response(
@@ -97,9 +94,6 @@ class SignUpView(APIView):
     def post(self, request):
         serializer = UserSignUpSerializer(data=request.data)
         result = UserProfileService.signup(serializer)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         return Response(result.data, status=result.status)
 
 
@@ -147,9 +141,6 @@ class PasswordResetRequestView(APIView):
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
         result = UserProfileService.password_reset_request(serializer)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         return Response(result.data, status=result.status)
 
 
@@ -167,9 +158,6 @@ class PasswordResetConfirmView(APIView):
     def post(self, request):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         result = UserProfileService.password_reset_confirm(serializer)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         return Response(result.data, status=result.status)
 
 
@@ -187,9 +175,6 @@ class PasswordChangeView(APIView):
     def post(self, request):
         serializer = PasswordChangeSerializer(data=request.data, context={"request": request})
         result = UserProfileService.password_change(serializer, request.user)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         return Response(result.data, status=result.status)
 
 
@@ -207,9 +192,6 @@ class AccountDeleteView(APIView):
     def post(self, request):
         serializer = AccountDeleteSerializer(data=request.data)
         result = AccountSessionService.account_delete(serializer, request.user, request)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         return Response(result.data, status=result.status)
 
 
@@ -227,9 +209,6 @@ class EmailVerificationConfirmView(APIView):
     def post(self, request):
         serializer = EmailVerificationSerializer(data=request.data)
         result = UserProfileService.email_verification_confirm(serializer)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         return Response(result.data, status=result.status)
 
 
@@ -247,9 +226,6 @@ class EmailVerificationResendView(APIView):
     def post(self, request):
         serializer = EmailVerificationResendSerializer(data=request.data)
         result = UserProfileService.email_verification_resend(serializer)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         return Response(result.data, status=result.status)
 
 
@@ -288,9 +264,6 @@ class UserAvatarUpdateView(APIView):
     def patch(self, request):
         file = request.FILES.get("avatar")
         result = UserProfileService.avatar_update(request.user, file)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         return Response(result.data, status=result.status)
 
     @extend_schema(
@@ -309,9 +282,6 @@ class UserAvatarUpdateView(APIView):
     )
     def delete(self, request):
         result = UserProfileService.avatar_delete(request.user)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         return Response(result.data, status=result.status)
 
 
@@ -337,9 +307,6 @@ class EmailCheckView(APIView):
     def post(self, request):
         serializer = EmailCheckSerializer(data=request.data)
         result = UserProfileService.email_check(serializer)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         return Response(result.data, status=result.status)
 
 
@@ -365,9 +332,6 @@ class NicknameCheckView(APIView):
     def post(self, request):
         serializer = NicknameCheckSerializer(data=request.data)
         result = UserProfileService.nickname_check(serializer)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         return Response(result.data, status=result.status)
 
 
@@ -385,9 +349,6 @@ class EmailChangeRequestView(APIView):
     def post(self, request):
         serializer = EmailChangeRequestSerializer(data=request.data)
         result = UserProfileService.email_change_request(serializer, request.user)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         return Response(result.data, status=result.status)
 
 
@@ -405,7 +366,4 @@ class EmailChangeConfirmView(APIView):
     def post(self, request):
         serializer = EmailChangeConfirmSerializer(data=request.data)
         result = UserProfileService.email_change_confirm(serializer, request.user)
-        if not result.ok:
-            return Response(result.errors, status=result.status)
-
         return Response(result.data, status=result.status)

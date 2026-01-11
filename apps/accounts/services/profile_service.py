@@ -3,15 +3,10 @@
 import uuid
 
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import EmailVerificationToken, PasswordResetToken, User
-from apps.accounts.services.base_service import (
-    ServiceResult,
-    _error,
-    _error_from_response,
-    _ok,
-    _validate_serializer,
-)
+from apps.accounts.services.base_service import ServiceResult, _ok, _validate_serializer
 from apps.accounts.services.session_service import AccountService, PasswordService
 from apps.accounts.utils import (
     check_passwords_match,
@@ -87,14 +82,12 @@ class UserProfileService:
 
     @staticmethod
     def signup(serializer) -> ServiceResult:
-        if error := _validate_serializer(serializer):
-            return error
+        _validate_serializer(serializer)
 
-        if error_response := check_passwords_match(
+        check_passwords_match(
             serializer.validated_data["password"],
             serializer.validated_data["password2"],
-        ):
-            return _error_from_response(error_response)
+        )
 
         user = serializer.save()
         token = create_token(
@@ -115,8 +108,7 @@ class UserProfileService:
 
     @staticmethod
     def password_reset_request(serializer) -> ServiceResult:
-        if error := _validate_serializer(serializer):
-            return error
+        _validate_serializer(serializer)
 
         email = serializer.validated_data["email"]
         success_message = "비밀번호 재설정 링크를 이메일로 전송했습니다."
@@ -125,7 +117,7 @@ class UserProfileService:
             email=email, success_message=success_message, is_active_only=True
         )
         if error_response:
-            return _error_from_response(error_response)
+            return _ok(data=error_response.data, status_code=error_response.status_code)
 
         token = create_token(
             token_model=PasswordResetToken,
@@ -142,22 +134,20 @@ class UserProfileService:
 
     @staticmethod
     def password_reset_confirm(serializer) -> ServiceResult:
-        if error := _validate_serializer(serializer):
-            return error
+        _validate_serializer(serializer)
 
-        if error_response := check_passwords_match(
+        check_passwords_match(
             serializer.validated_data["new_password"],
             serializer.validated_data["new_password2"],
             field_name="new_password",
-        ):
-            return _error_from_response(error_response)
+        )
 
         token_str = serializer.validated_data["token"]
         new_password = serializer.validated_data["new_password"]
 
         token, error_response = validate_token(PasswordResetToken, token_str)
         if error_response:
-            return _error_from_response(error_response)
+            raise ValidationError(error_response.data)
 
         PasswordService.change_password(token.user, new_password)
         mark_token_as_used(token)
@@ -169,30 +159,24 @@ class UserProfileService:
 
     @staticmethod
     def password_change(serializer, user: User) -> ServiceResult:
-        if error := _validate_serializer(serializer):
-            return error
+        _validate_serializer(serializer)
 
         current_password = serializer.validated_data["current_password"]
         new_password = serializer.validated_data["new_password"]
         new_password2 = serializer.validated_data["new_password2"]
 
         if not PasswordService.verify_current_password(user, current_password):
-            return _error(
-                {"current_password": ["현재 비밀번호가 일치하지 않습니다."]},
-                status.HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"current_password": ["현재 비밀번호가 일치하지 않습니다."]})
 
-        if error_response := check_passwords_match(
+        check_passwords_match(
             new_password,
             new_password2,
             field_name="new_password",
-        ):
-            return _error_from_response(error_response)
+        )
 
         if PasswordService.is_same_as_current(user, new_password):
-            return _error(
-                {"new_password": ["현재 비밀번호와 다른 비밀번호를 입력해주세요."]},
-                status.HTTP_400_BAD_REQUEST,
+            raise ValidationError(
+                {"new_password": ["현재 비밀번호와 다른 비밀번호를 입력해주세요."]}
             )
 
         PasswordService.change_password(user, new_password)
@@ -203,8 +187,7 @@ class UserProfileService:
 
     @staticmethod
     def email_verification_confirm(serializer) -> ServiceResult:
-        if error := _validate_serializer(serializer):
-            return error
+        _validate_serializer(serializer)
 
         token_str = serializer.validated_data["token"]
         token, error_response = validate_token(
@@ -216,7 +199,7 @@ class UserProfileService:
             },
         )
         if error_response:
-            return _error_from_response(error_response)
+            raise ValidationError(error_response.data)
 
         AccountService.verify_email(token.user)
         mark_token_as_used(token)
@@ -228,8 +211,7 @@ class UserProfileService:
 
     @staticmethod
     def email_verification_resend(serializer) -> ServiceResult:
-        if error := _validate_serializer(serializer):
-            return error
+        _validate_serializer(serializer)
 
         email = serializer.validated_data["email"]
         success_message = "인증 이메일을 전송했습니다."
@@ -237,13 +219,10 @@ class UserProfileService:
             email=email, success_message=success_message, is_active_only=True
         )
         if error_response:
-            return _error_from_response(error_response)
+            return _ok(data=error_response.data, status_code=error_response.status_code)
 
         if user.email_verified:
-            return _error(
-                {"email": ["이미 인증된 계정입니다."]},
-                status.HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"email": ["이미 인증된 계정입니다."]})
 
         token = create_token(
             token_model=EmailVerificationToken,
@@ -261,10 +240,7 @@ class UserProfileService:
     @staticmethod
     def avatar_update(user: User, file) -> ServiceResult:
         if not file:
-            return _error(
-                {"avatar": ["아바타 파일이 필요합니다."]},
-                status.HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"avatar": ["아바타 파일이 필요합니다."]})
 
         ext = _validate_avatar_file(file)
         old_avatar_key = _extract_old_avatar_key(user)
@@ -290,10 +266,7 @@ class UserProfileService:
     @staticmethod
     def avatar_delete(user: User) -> ServiceResult:
         if not user.avatar_url:
-            return _error(
-                {"avatar": ["삭제할 아바타가 없습니다."]},
-                status.HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"avatar": ["삭제할 아바타가 없습니다."]})
 
         old_avatar_key = _extract_old_avatar_key(user)
         if old_avatar_key:
@@ -312,8 +285,7 @@ class UserProfileService:
 
     @staticmethod
     def email_check(serializer) -> ServiceResult:
-        if error := _validate_serializer(serializer):
-            return error
+        _validate_serializer(serializer)
 
         user = User.objects.filter(email=serializer.validated_data["email"]).first()
         return _ok(
@@ -323,8 +295,7 @@ class UserProfileService:
 
     @staticmethod
     def nickname_check(serializer) -> ServiceResult:
-        if error := _validate_serializer(serializer):
-            return error
+        _validate_serializer(serializer)
 
         user = User.objects.filter(nickname=serializer.validated_data["nickname"]).first()
         return _ok(
@@ -334,29 +305,19 @@ class UserProfileService:
 
     @staticmethod
     def email_change_request(serializer, user: User) -> ServiceResult:
-        if error := _validate_serializer(serializer):
-            return error
+        _validate_serializer(serializer)
 
         new_email = serializer.validated_data["new_email"]
         password = serializer.validated_data["password"]
 
         if not PasswordService.verify_current_password(user, password):
-            return _error(
-                {"password": ["비밀번호가 일치하지 않습니다."]},
-                status.HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"password": ["비밀번호가 일치하지 않습니다."]})
 
         if user.email == new_email:
-            return _error(
-                {"new_email": ["현재 이메일과 동일합니다."]},
-                status.HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"new_email": ["현재 이메일과 동일합니다."]})
 
         if User.objects.filter(email=new_email).exists():
-            return _error(
-                {"new_email": ["이미 사용 중인 이메일입니다."]},
-                status.HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"new_email": ["이미 사용 중인 이메일입니다."]})
 
         token = create_token(
             token_model=EmailVerificationToken,
@@ -375,8 +336,7 @@ class UserProfileService:
 
     @staticmethod
     def email_change_confirm(serializer, user: User) -> ServiceResult:
-        if error := _validate_serializer(serializer):
-            return error
+        _validate_serializer(serializer)
 
         token_str = serializer.validated_data["token"]
         token, error_response = validate_token(
@@ -388,26 +348,19 @@ class UserProfileService:
             },
         )
         if error_response:
-            return _error_from_response(error_response)
+            raise ValidationError(error_response.data)
 
         if token.user_id != user.id:
-            return _error(
-                {"token": ["본인의 인증 토큰이 아닙니다."]},
-                status.HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"token": ["본인의 인증 토큰이 아닙니다."]})
 
         new_email = token.new_email
         if not new_email:
-            return _error(
-                {"token": ["이메일 변경 요청이 만료되었습니다. 다시 시도해주세요."]},
-                status.HTTP_400_BAD_REQUEST,
+            raise ValidationError(
+                {"token": ["이메일 변경 요청이 만료되었습니다. 다시 시도해주세요."]}
             )
 
         if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
-            return _error(
-                {"new_email": ["이미 사용 중인 이메일입니다."]},
-                status.HTTP_400_BAD_REQUEST,
-            )
+            raise ValidationError({"new_email": ["이미 사용 중인 이메일입니다."]})
 
         user.email = new_email
         user.save(update_fields=["email"])
