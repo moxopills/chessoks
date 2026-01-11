@@ -633,7 +633,9 @@ class PasswordResetE2ETest(BaseAPITestCase):
     """비밀번호 재설정 E2E 테스트"""
 
     def setUp(self):
-        self.user = self.create_user(email="e2e@example.com", nickname="E2E", password="OldPass123!")
+        self.user = self.create_user(
+            email="e2e@example.com", nickname="E2E", password="OldPass123!"
+        )
 
     def test_complete_password_reset_flow(self):
         """완전한 비밀번호 재설정 플로우"""

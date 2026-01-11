@@ -280,7 +280,10 @@ class UserProfileService:
                 pass
 
         return _ok(
-            data={"message": "아바타가 성공적으로 업데이트되었습니다.", "avatar_url": new_avatar_url},
+            data={
+                "message": "아바타가 성공적으로 업데이트되었습니다.",
+                "avatar_url": new_avatar_url,
+            },
             status_code=status.HTTP_200_OK,
         )
 
