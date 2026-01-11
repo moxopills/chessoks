@@ -50,7 +50,8 @@ jobs:
           git pull origin main
           cp .envs/.env.prod .env
           docker compose -f docker-compose.prod.yml down
-          docker compose -f docker-compose.prod.yml up -d --build
+          docker compose -f docker-compose.prod.yml build --no-cache --pull
+          docker compose -f docker-compose.prod.yml up -d --force-recreate
 
           # 불필요한 리소스 정리
           docker system prune -af --volumes
