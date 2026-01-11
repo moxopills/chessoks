@@ -35,6 +35,12 @@ class EmailVerificationToken(models.Model):
         max_length=64, unique=True, db_index=True, help_text="이메일 인증 토큰"
     )
 
+    new_email = models.EmailField(
+        null=True,
+        blank=True,
+        help_text="이메일 변경 요청 시 새 이메일",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(help_text="토큰 만료 시간")
 
