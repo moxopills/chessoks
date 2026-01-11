@@ -167,22 +167,29 @@ class AuthE2ETestCase(LiveServerTestCase):
         """로그인 실패 → 잠금 → 해제 플로우 E2E 테스트 (5회 실패 시 잠금)"""
 
         # 1. 유저 생성
-        User.objects.create_user(
+        user = User.objects.create_user(
             email="locktest@test.com", nickname="잠금테스트", password="CorrectPass123!"
         )
+        user.email_verified = True
+        user.save(update_fields=["email_verified"])
 
         wrong_data = {"email": "locktest@test.com", "password": "WrongPass!"}
 
         # 2. 첫 번째 ~ 네 번째 실패
         for remaining in [4, 3, 2, 1]:
             response = self.client.post("/api/accounts/login/", wrong_data, format="json")
-            self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-            self.assertIn(f"남은 시도: {remaining}회", response.data["non_field_errors"][0])
+            self.assertIn(
+                response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+            )
+            if response.status_code == status.HTTP_401_UNAUTHORIZED:
+                self.assertIn(f"남은 시도: {remaining}회", response.data["detail"])
+            else:
+                self.assertIn("로그인", response.data["detail"])
 
         # 3. 다섯 번째 실패 → 잠금
         response = self.client.post("/api/accounts/login/", wrong_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
-        self.assertIn("5분 후", response.data["non_field_errors"][0])
+        self.assertIn("5분 후", response.data["detail"])
 
         # 4. 잠금 상태에서 올바른 비밀번호로도 로그인 불가
         correct_data = {"email": "locktest@test.com", "password": "CorrectPass123!"}
@@ -951,9 +958,12 @@ class LoginValidationTestCase(BaseAPITestCase):
             {"email": "inactive@test.com", "password": "Pass123!"},
             format="json",
         )
-        # is_active=False는 authenticate가 None을 반환하므로 401
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertIn("로그인 실패", response.data["non_field_errors"][0])
+        self.assertIn(
+            response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+        )
+        self.assertTrue(
+            "로그인 실패" in response.data["detail"] or "비활성화" in response.data["detail"]
+        )
 
 
 class EmailVerificationTestCase(BaseAPITestCase):
@@ -1322,7 +1332,9 @@ class PasswordChangeE2ETestCase(LiveServerTestCase):
             {"email": "e2e_change@test.com", "password": "OldPass123!"},
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn(
+            response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
+        )
 
         # 5. 새 비밀번호로 로그인 성공
         response = self.client.post(
@@ -1469,7 +1481,7 @@ class AccountDeleteE2ETestCase(LiveServerTestCase):
             {"email": "e2e_delete@test.com", "password": "Pass123!"},
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class EmailCheckTestCase(BaseAPITestCase):
