@@ -58,9 +58,7 @@ class SocialUserModelTest(BaseTestCase):
         SocialUser.objects.create(user=self.user, provider="google", provider_user_id="g_1")
 
         with self.assertRaises(IntegrityError):
-            SocialUser.objects.create(
-                user=self.user, provider="github", provider_user_id="gh_1"
-            )
+            SocialUser.objects.create(user=self.user, provider="github", provider_user_id="gh_1")
 
     def test_str_representation(self):
         """문자열 표현"""
