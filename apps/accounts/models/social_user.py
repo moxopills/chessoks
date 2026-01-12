@@ -39,6 +39,9 @@ class SocialUser(models.Model):
             models.Index(fields=["user", "provider"]),
             models.Index(fields=["provider", "provider_user_id"]),
         ]
+        constraints = [
+            models.UniqueConstraint(fields=["user"], name="uniq_social_user_per_user"),
+        ]
 
     def __str__(self):
         return f"{self.user.nickname} - {self.get_provider_display()}"
