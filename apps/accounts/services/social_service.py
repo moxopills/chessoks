@@ -2,16 +2,14 @@
 
 import logging
 
-from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils import timezone
 
 import requests
 from rest_framework import serializers
 
-from apps.accounts.models import SocialUser
+from apps.accounts.models import SocialUser, User
 
-User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
@@ -114,7 +112,9 @@ class SocialAuthService:
 
     @staticmethod
     @transaction.atomic
-    def create_or_update_user(provider: str, provider_data: dict, nickname: str = None) -> User:
+    def create_or_update_user(
+        provider: str, provider_data: dict, nickname: str | None = None
+    ) -> User:
         """소셜 계정으로 유저 생성/조회 (토큰은 저장하지 않음)
 
         Args:
@@ -129,7 +129,7 @@ class SocialAuthService:
             serializers.ValidationError: 닉네임 필요 또는 중복
         """
         provider_user_id = provider_data["id"]
-        email = provider_data.get("email", f"{provider}_{provider_user_id}@social.local")
+        email = provider_data.get("email") or f"{provider}_{provider_user_id}@social.local"
 
         # 기존 소셜 계정 조회 (성능 최적화: select_related)
         social_user = (
@@ -147,6 +147,11 @@ class SocialAuthService:
         # 이메일로 기존 유저 확인 후 소셜 계정 연동
         user = User.objects.filter(email=email).first()
         if user:
+            if user.social_users.exists():
+                raise serializers.ValidationError(
+                    {"provider": "이미 다른 소셜 계정이 연동되어 있습니다."}
+                )
+
             # 소셜 계정 연동 시 이메일 자동 인증
             if not user.email_verified:
                 user.email_verified = True
@@ -170,13 +175,10 @@ class SocialAuthService:
             raise serializers.ValidationError({"nickname": "이미 사용 중인 닉네임입니다."})
 
         # 소셜 로그인 유저는 자동 인증
-        user = User.objects.create_user(
-            email=email,
-            nickname=nickname,
-            password=None,
-            email_verified=True,
-            email_verified_at=timezone.now(),
-        )
+        user = User.objects.create_user(email=email, nickname=nickname, password=None)
+        user.email_verified = True
+        user.email_verified_at = timezone.now()
+        user.save(update_fields=["email_verified", "email_verified_at"])
         SocialUser.objects.create(
             user=user,
             provider=provider,
