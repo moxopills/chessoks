@@ -25,6 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 개발 환경 빠른 설정 - 프로덕션에는 부적합
 # 배포 체크리스트: https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
+
 def _env_bool(name: str, default: bool = False) -> bool:
     return os.getenv(name, str(default)) == "True"
 
@@ -187,9 +188,7 @@ SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", not DEBUG)
 SESSION_COOKIE_SECURE = _env_bool("SESSION_COOKIE_SECURE", not DEBUG)
 CSRF_COOKIE_SECURE = _env_bool("CSRF_COOKIE_SECURE", not DEBUG)
 SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0" if DEBUG else "3600"))
-SECURE_HSTS_INCLUDE_SUBDOMAINS = (
-    _env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG)
-)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG)
 SECURE_HSTS_PRELOAD = _env_bool("SECURE_HSTS_PRELOAD", not DEBUG)
 SECURE_REFERRER_POLICY = os.getenv("SECURE_REFERRER_POLICY", "same-origin")
 
