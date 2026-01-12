@@ -25,23 +25,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 개발 환경 빠른 설정 - 프로덕션에는 부적합
 # 배포 체크리스트: https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
+def _env_bool(name: str, default: bool = False) -> bool:
+    return os.getenv(name, str(default)) == "True"
+
+
+def _env_list(name: str, default: str = "") -> list[str]:
+    return [value.strip() for value in os.getenv(name, default).split(",") if value.strip()]
+
+
 # 보안 경고: 프로덕션 환경에서는 시크릿 키를 반드시 비밀로 유지할 것!
-SECRET_KEY = os.getenv("SECRET_KEY", "")
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key")
 
 # 보안 경고: 프로덕션 환경에서는 DEBUG를 켜지 말 것!
-DEBUG = os.getenv("DEBUG", "False") == "True"
+DEBUG = _env_bool("DEBUG", True)
 
-if not SECRET_KEY:
-    if DEBUG:
-        SECRET_KEY = "django-insecure-dev-key"
-    else:
-        raise RuntimeError("SECRET_KEY is required when DEBUG=False")
-
-_allowed_hosts = os.getenv("ALLOWED_HOSTS")
-if _allowed_hosts:
-    ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts.split(",") if host.strip()]
-else:
-    ALLOWED_HOSTS = ["localhost", "127.0.0.1"] if DEBUG else []
+ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS", "localhost,127.0.0.1" if DEBUG else "")
 
 
 # 애플리케이션 정의
@@ -165,12 +163,10 @@ CACHES = {
 }
 
 # CORS 설정 (템플릿 중심이면 기본 비활성)
-CORS_ALLOW_ALL_ORIGINS = os.getenv("CORS_ALLOW_ALL_ORIGINS", "False") == "True"
-_cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "")
-CORS_ALLOWED_ORIGINS = [origin.strip() for origin in _cors_origins.split(",") if origin.strip()]
+CORS_ALLOW_ALL_ORIGINS = _env_bool("CORS_ALLOW_ALL_ORIGINS", False)
+CORS_ALLOWED_ORIGINS = _env_list("CORS_ALLOWED_ORIGINS")
 
-_csrf_trusted = os.getenv("CSRF_TRUSTED_ORIGINS", "")
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_trusted.split(",") if origin.strip()]
+CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS")
 
 # WhiteNoise 설정
 STORAGES = {
@@ -187,14 +183,14 @@ SECURE_PROXY_SSL_HEADER = (
     "HTTP_X_FORWARDED_PROTO",
     "https",
 )
-SECURE_SSL_REDIRECT = os.getenv("SECURE_SSL_REDIRECT", str(not DEBUG)) == "True"
-SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", str(not DEBUG)) == "True"
-CSRF_COOKIE_SECURE = os.getenv("CSRF_COOKIE_SECURE", str(not DEBUG)) == "True"
+SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", not DEBUG)
+SESSION_COOKIE_SECURE = _env_bool("SESSION_COOKIE_SECURE", not DEBUG)
+CSRF_COOKIE_SECURE = _env_bool("CSRF_COOKIE_SECURE", not DEBUG)
 SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0" if DEBUG else "3600"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = (
-    os.getenv("SECURE_HSTS_INCLUDE_SUBDOMAINS", str(not DEBUG)) == "True"
+    _env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG)
 )
-SECURE_HSTS_PRELOAD = os.getenv("SECURE_HSTS_PRELOAD", str(not DEBUG)) == "True"
+SECURE_HSTS_PRELOAD = _env_bool("SECURE_HSTS_PRELOAD", not DEBUG)
 SECURE_REFERRER_POLICY = os.getenv("SECURE_REFERRER_POLICY", "same-origin")
 
 # 인증 설정
