@@ -37,8 +37,9 @@ class SocialUserModelTest(BaseTestCase):
         providers = ["google", "github", "kakao", "naver"]
 
         for idx, provider in enumerate(providers):
+            user = self.create_user(email=f"test{idx}@example.com", nickname=f"테스트{idx}")
             social = SocialUser.objects.create(
-                user=self.user, provider=provider, provider_user_id=f"{provider}_{idx}"
+                user=user, provider=provider, provider_user_id=f"{provider}_{idx}"
             )
             self.assertEqual(social.provider, provider)
             self.assertEqual(
@@ -52,12 +53,14 @@ class SocialUserModelTest(BaseTestCase):
         with self.assertRaises(IntegrityError):
             SocialUser.objects.create(user=self.user, provider="google", provider_user_id="g_123")
 
-    def test_multiple_providers_per_user(self):
-        """한 유저가 여러 제공자 연동 가능"""
+    def test_single_provider_per_user(self):
+        """한 유저당 소셜 계정 1개만 허용"""
         SocialUser.objects.create(user=self.user, provider="google", provider_user_id="g_1")
-        SocialUser.objects.create(user=self.user, provider="github", provider_user_id="gh_1")
 
-        self.assertEqual(self.user.social_users.count(), 2)
+        with self.assertRaises(IntegrityError):
+            SocialUser.objects.create(
+                user=self.user, provider="github", provider_user_id="gh_1"
+            )
 
     def test_str_representation(self):
         """문자열 표현"""
@@ -355,6 +358,20 @@ class SocialAuthServiceTest(BaseTestCase):
             SocialAuthService.create_or_update_user("google", provider_data, nickname="중복닉")
 
         self.assertIn("nickname", str(ctx.exception))
+
+    def test_existing_user_with_social_blocked(self):
+        """이미 소셜 연동된 유저는 다른 소셜 추가 불가"""
+        from apps.accounts.services.social_service import SocialAuthService
+
+        user = self.create_user(email="linked@test.com", nickname="연동유저")
+        SocialUser.objects.create(user=user, provider="google", provider_user_id="g_linked")
+
+        provider_data = {"id": "gh_new", "email": "linked@test.com", "name": "GitHub User"}
+
+        with self.assertRaises(serializers.ValidationError) as ctx:
+            SocialAuthService.create_or_update_user("github", provider_data, nickname=None)
+
+        self.assertIn("provider", str(ctx.exception))
 
 
 class SocialViewsEdgeCaseTest(BaseAPITestCase):
