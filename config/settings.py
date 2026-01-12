@@ -25,15 +25,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 개발 환경 빠른 설정 - 프로덕션에는 부적합
 # 배포 체크리스트: https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    return os.getenv(name, str(default)) == "True"
+
+
+def _env_list(name: str, default: str = "") -> list[str]:
+    return [value.strip() for value in os.getenv(name, default).split(",") if value.strip()]
+
+
 # 보안 경고: 프로덕션 환경에서는 시크릿 키를 반드시 비밀로 유지할 것!
-SECRET_KEY = os.getenv(
-    "SECRET_KEY", "django-insecure-%#fuo=ru7!-)ocfm97g!qc0-j+zj$p8zz3(j4gv8wu-yo=3%b@"
-)
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key")
 
 # 보안 경고: 프로덕션 환경에서는 DEBUG를 켜지 말 것!
-DEBUG = os.getenv("DEBUG", "True") == "True"
+DEBUG = _env_bool("DEBUG", True)
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS", "localhost,127.0.0.1" if DEBUG else "")
 
 
 # 애플리케이션 정의
@@ -156,9 +163,11 @@ CACHES = {
     }
 }
 
-# CORS 설정
-CORS_ALLOW_ALL_ORIGINS = DEBUG
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+# CORS 설정 (템플릿 중심이면 기본 비활성)
+CORS_ALLOW_ALL_ORIGINS = _env_bool("CORS_ALLOW_ALL_ORIGINS", False)
+CORS_ALLOWED_ORIGINS = _env_list("CORS_ALLOWED_ORIGINS")
+
+CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS")
 
 # WhiteNoise 설정
 STORAGES = {
@@ -169,6 +178,19 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
+# 보안 설정 (프로덕션 기준, DEBUG=False일 때 기본 활성화)
+SECURE_PROXY_SSL_HEADER = (
+    "HTTP_X_FORWARDED_PROTO",
+    "https",
+)
+SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", not DEBUG)
+SESSION_COOKIE_SECURE = _env_bool("SESSION_COOKIE_SECURE", not DEBUG)
+CSRF_COOKIE_SECURE = _env_bool("CSRF_COOKIE_SECURE", not DEBUG)
+SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0" if DEBUG else "3600"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG)
+SECURE_HSTS_PRELOAD = _env_bool("SECURE_HSTS_PRELOAD", not DEBUG)
+SECURE_REFERRER_POLICY = os.getenv("SECURE_REFERRER_POLICY", "same-origin")
 
 # 인증 설정
 AUTH_USER_MODEL = "accounts.User"
@@ -202,6 +224,44 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX": r"/api",
 }
 
+# Logging 설정
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[{levelname}] {asctime} {name} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "[{levelname}] {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "apps.accounts": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
 # 이메일 설정
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
@@ -211,8 +271,9 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "moxopills@gmail.com")
 
-# 프론트엔드 URL (이메일 링크용)
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+# 도메인/프론트엔드 URL (이메일 링크용)
+DOMAIN = os.getenv("DOMAIN", "")
+FRONTEND_URL = os.getenv("FRONTEND_URL", DOMAIN or "http://localhost:8000")
 
 # 소셜 로그인 설정
 # Google OAuth

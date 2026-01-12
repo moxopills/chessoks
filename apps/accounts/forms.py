@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.forms import UserCreationForm
 
 from apps.accounts.models import User
+from apps.accounts.utils.validators import validate_password_strength
 
 
 class SignUpForm(UserCreationForm):
@@ -49,13 +50,20 @@ class SignUpForm(UserCreationForm):
             raise forms.ValidationError("이미 사용 중인 닉네임입니다.")
         return nickname
 
+    def clean_password1(self):
+        """비밀번호 강도 체크"""
+        password = self.cleaned_data.get("password1")
+        return validate_password_strength(password)
+
     def save(self, commit=True):
         """UserManager.create_user 사용하여 저장"""
-        user = User.objects.create_user(
+        user = User(
             email=self.cleaned_data["email"],
             nickname=self.cleaned_data["nickname"],
-            password=self.cleaned_data["password1"],
         )
+        user.set_password(self.cleaned_data["password1"])
+        if commit:
+            user.save()
         return user
 
 

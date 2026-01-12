@@ -168,6 +168,8 @@ class AccountSessionService:
         if not email or not password:
             raise ValidationError({"non_field_errors": ["이메일과 비밀번호를 입력해주세요."]})
 
+        email = User.objects.normalize_email(email.strip())
+
         if "@" not in email:
             raise ValidationError({"email": ["올바른 이메일 형식이 아닙니다."]})
 
