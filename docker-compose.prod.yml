@@ -53,6 +53,52 @@ services:
         reservations:
           memory: 256M
 
+  celery:
+    build: .
+    command: uv run celery -A config worker -l info
+    volumes:
+      - media_volume:/app/media
+    env_file:
+      - .envs/.env.prod
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    environment:
+      - DEBUG=False
+      - DB_HOST=db
+      - REDIS_HOST=redis
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  celery-beat:
+    build: .
+    command: uv run celery -A config beat -l info
+    env_file:
+      - .envs/.env.prod
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    environment:
+      - DEBUG=False
+      - DB_HOST=db
+      - REDIS_HOST=redis
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
   nginx:
     build:
       context: ./nginx
