@@ -1,5 +1,6 @@
 """비밀번호/이메일/프로필 관련 서비스"""
 
+import logging
 import uuid
 
 from rest_framework import status
@@ -20,6 +21,8 @@ from apps.accounts.utils import (
 from apps.core.S3.constants import FileType, S3Constants
 from apps.core.S3.uploader import s3_uploader
 from apps.core.S3.validators import S3ImageValidator
+
+logger = logging.getLogger(__name__)
 
 # 상수 정의
 EMAIL_VERIFICATION_HOURS = 24
@@ -251,8 +254,8 @@ class UserProfileService:
         if old_avatar_key:
             try:
                 s3_uploader.delete_file(old_avatar_key)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"이전 아바타 삭제 실패: {old_avatar_key}, error: {e}")
 
         return _ok(
             data={
@@ -271,8 +274,8 @@ class UserProfileService:
         if old_avatar_key:
             try:
                 s3_uploader.delete_file(old_avatar_key)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"아바타 삭제 실패: {old_avatar_key}, error: {e}")
 
         user.avatar_url = None
         user.save(update_fields=["avatar_url"])
