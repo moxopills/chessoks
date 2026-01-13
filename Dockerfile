@@ -22,8 +22,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 # 프로젝트 의존성 파일 복사
 COPY pyproject.toml uv.lock ./
 
-# 의존성 설치
-RUN uv sync --frozen
+# 의존성 설치 (프로덕션만, dev 제외)
+RUN uv sync --frozen --no-dev
 
 # 프로젝트 파일 복사
 COPY . .
