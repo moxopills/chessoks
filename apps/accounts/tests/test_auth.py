@@ -13,7 +13,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APIRequestFactory, APITestCase
 
-from apps.accounts.models import EmailVerificationToken, PasswordResetToken
+from apps.accounts.models import AuthToken
 from apps.accounts.serializers import ProfileUpdateSerializer, UserSignUpSerializer
 
 User = get_user_model()
@@ -553,89 +553,6 @@ class UserModelTest(BaseTestCase):
         self.assertIn("1500", str(user.stats))
 
 
-class PasswordResetTokenModelTest(BaseTestCase):
-    """PasswordResetToken 모델 테스트"""
-
-    def setUp(self):
-        self.user = self.create_user(email="test@example.com", nickname="테스터")
-
-    def test_token_generation_unique(self):
-        """토큰 생성 시 고유값"""
-        token1 = PasswordResetToken.generate_token()
-        token2 = PasswordResetToken.generate_token()
-        self.assertNotEqual(token1, token2)
-        self.assertTrue(len(token1) > 40)
-
-    def test_token_expiration(self):
-        """토큰 만료 확인"""
-        # 만료된 토큰
-        expired_token = PasswordResetToken.objects.create(
-            user=self.user,
-            token=PasswordResetToken.generate_token(),
-            expires_at=timezone.now() - timedelta(hours=1),
-        )
-        self.assertTrue(expired_token.is_expired)
-        self.assertFalse(expired_token.is_valid)
-
-        # 유효한 토큰
-        valid_token = PasswordResetToken.objects.create(
-            user=self.user,
-            token=PasswordResetToken.generate_token(),
-            expires_at=timezone.now() + timedelta(hours=1),
-        )
-        self.assertFalse(valid_token.is_expired)
-        self.assertTrue(valid_token.is_valid)
-
-    def test_used_token_invalid(self):
-        """사용된 토큰은 유효하지 않음"""
-        token = PasswordResetToken.objects.create(
-            user=self.user,
-            token=PasswordResetToken.generate_token(),
-            expires_at=timezone.now() + timedelta(hours=1),
-            is_used=True,
-        )
-        self.assertFalse(token.is_valid)
-
-    def test_str_representation(self):
-        """문자열 표현"""
-        token = PasswordResetToken.objects.create(
-            user=self.user,
-            token=PasswordResetToken.generate_token(),
-            expires_at=timezone.now() + timedelta(hours=1),
-        )
-        self.assertIn(self.user.email, str(token))
-
-    def test_cleanup_expired(self):
-        """만료된 토큰 정리"""
-        # 만료된 토큰
-        PasswordResetToken.objects.create(
-            user=self.user,
-            token=PasswordResetToken.generate_token(),
-            expires_at=timezone.now() - timedelta(hours=1),
-        )
-
-        # 사용된 토큰
-        PasswordResetToken.objects.create(
-            user=self.user,
-            token=PasswordResetToken.generate_token(),
-            expires_at=timezone.now() + timedelta(hours=1),
-            is_used=True,
-        )
-
-        # 유효한 토큰
-        valid_token = PasswordResetToken.objects.create(
-            user=self.user,
-            token=PasswordResetToken.generate_token(),
-            expires_at=timezone.now() + timedelta(hours=1),
-        )
-
-        # 정리 실행
-        deleted_count = PasswordResetToken.objects.delete_expired()
-
-        self.assertEqual(deleted_count, 2)
-        self.assertTrue(PasswordResetToken.objects.filter(id=valid_token.id).exists())
-
-
 class PasswordResetE2ETest(BaseAPITestCase):
     """비밀번호 재설정 E2E 테스트"""
 
@@ -656,7 +573,7 @@ class PasswordResetE2ETest(BaseAPITestCase):
         # 이메일은 비동기(threading)로 전송되어 mail.outbox에서 확인 불가
 
         # 2. 토큰 추출 (토큰이 생성되었는지 확인)
-        token = PasswordResetToken.objects.first()
+        token = AuthToken.objects.password_reset().first()
         self.assertIsNotNone(token)
 
         # 3. 비밀번호 재설정
@@ -687,9 +604,10 @@ class PasswordResetE2ETest(BaseAPITestCase):
 
     def test_expired_token_rejection(self):
         """만료된 토큰 거부"""
-        expired_token = PasswordResetToken.objects.create(
+        expired_token = AuthToken.objects.create(
             user=self.user,
-            token=PasswordResetToken.generate_token(),
+            token_type=AuthToken.TokenType.PASSWORD_RESET,
+            token=AuthToken.generate_token(),
             expires_at=timezone.now() - timedelta(hours=1),
         )
 
@@ -712,7 +630,7 @@ class PasswordResetE2ETest(BaseAPITestCase):
             {"email": self.user.email},
             format="json",
         )
-        token = PasswordResetToken.objects.first()
+        token = AuthToken.objects.password_reset().first()
 
         # 첫 번째 사용
         self.client.post(
@@ -745,7 +663,7 @@ class PasswordResetE2ETest(BaseAPITestCase):
             {"email": self.user.email},
             format="json",
         )
-        token1 = PasswordResetToken.objects.first()
+        token1 = AuthToken.objects.password_reset().first()
 
         response = self.client.post(
             "/api/accounts/password-reset/confirm/",
@@ -760,7 +678,7 @@ class PasswordResetE2ETest(BaseAPITestCase):
             {"email": self.user.email},
             format="json",
         )
-        token2 = PasswordResetToken.objects.filter(is_used=False).first()
+        token2 = AuthToken.objects.password_reset().filter(is_used=False).first()
 
         response = self.client.post(
             "/api/accounts/password-reset/confirm/",
@@ -779,7 +697,7 @@ class PasswordResetE2ETest(BaseAPITestCase):
             {"email": self.user.email},
             format="json",
         )
-        token3 = PasswordResetToken.objects.filter(is_used=False).first()
+        token3 = AuthToken.objects.password_reset().filter(is_used=False).first()
 
         response = self.client.post(
             "/api/accounts/password-reset/confirm/",
@@ -799,7 +717,7 @@ class PasswordResetE2ETest(BaseAPITestCase):
             {"email": self.user.email},
             format="json",
         )
-        token = PasswordResetToken.objects.first()
+        token = AuthToken.objects.password_reset().first()
 
         response = self.client.post(
             "/api/accounts/password-reset/confirm/",
@@ -974,9 +892,10 @@ class EmailVerificationTestCase(BaseAPITestCase):
 
     def test_email_verification_success(self):
         """이메일 인증 성공"""
-        token = EmailVerificationToken.objects.create(
+        token = AuthToken.objects.create(
             user=self.user,
-            token=EmailVerificationToken.generate_token(),
+            token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
+            token=AuthToken.generate_token(),
             expires_at=timezone.now() + timedelta(hours=24),
         )
 
@@ -1005,9 +924,10 @@ class EmailVerificationTestCase(BaseAPITestCase):
 
     def test_email_verification_expired_token(self):
         """만료된 토큰"""
-        token = EmailVerificationToken.objects.create(
+        token = AuthToken.objects.create(
             user=self.user,
-            token=EmailVerificationToken.generate_token(),
+            token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
+            token=AuthToken.generate_token(),
             expires_at=timezone.now() - timedelta(hours=1),
         )
 
@@ -1029,7 +949,7 @@ class EmailVerificationTestCase(BaseAPITestCase):
 
         # 토큰 생성 확인
         self.assertTrue(
-            EmailVerificationToken.objects.filter(user=self.user, is_used=False).exists()
+            AuthToken.objects.email_verification().filter(user=self.user, is_used=False).exists()
         )
 
     def test_email_resend_already_verified(self):
@@ -1057,47 +977,42 @@ class EmailVerificationTestCase(BaseAPITestCase):
         self.assertIn("전송", response.data["message"])
 
 
-class EmailVerificationTokenModelTest(BaseTestCase):
-    """EmailVerificationToken 모델 테스트"""
+class AuthTokenModelTest(BaseTestCase):
+    """AuthToken 모델 테스트"""
 
     def setUp(self):
         self.user = self.create_user(email="model@test.com", nickname="모델테스트")
 
+    def _create_token(self, **kwargs):
+        """토큰 생성 헬퍼"""
+        defaults = {
+            "user": self.user,
+            "token_type": AuthToken.TokenType.EMAIL_VERIFICATION,
+            "token": AuthToken.generate_token(),
+            "expires_at": timezone.now() + timedelta(hours=1),
+        }
+        defaults.update(kwargs)
+        return AuthToken.objects.create(**defaults)
+
     def test_token_str_representation(self):
         """토큰 문자열 표현"""
-        token = EmailVerificationToken.objects.create(
-            user=self.user,
-            token=EmailVerificationToken.generate_token(),
-            expires_at=timezone.now() + timedelta(hours=1),
-        )
+        token = self._create_token()
         self.assertIn(self.user.email, str(token))
 
     def test_token_is_expired_property(self):
         """토큰 만료 확인 프로퍼티"""
         # 만료된 토큰
-        expired = EmailVerificationToken.objects.create(
-            user=self.user,
-            token=EmailVerificationToken.generate_token(),
-            expires_at=timezone.now() - timedelta(hours=1),
-        )
+        expired = self._create_token(expires_at=timezone.now() - timedelta(hours=1))
         self.assertTrue(expired.is_expired)
 
         # 유효한 토큰
-        valid = EmailVerificationToken.objects.create(
-            user=self.user,
-            token=EmailVerificationToken.generate_token(),
-            expires_at=timezone.now() + timedelta(hours=1),
-        )
+        valid = self._create_token()
         self.assertFalse(valid.is_expired)
 
     def test_token_is_valid_property(self):
         """토큰 유효성 확인 프로퍼티"""
         # 유효한 토큰
-        valid = EmailVerificationToken.objects.create(
-            user=self.user,
-            token=EmailVerificationToken.generate_token(),
-            expires_at=timezone.now() + timedelta(hours=1),
-        )
+        valid = self._create_token()
         self.assertTrue(valid.is_valid)
 
         # 사용된 토큰
@@ -1108,32 +1023,19 @@ class EmailVerificationTokenModelTest(BaseTestCase):
     def test_cleanup_expired(self):
         """만료된 토큰 정리"""
         # 만료된 토큰
-        EmailVerificationToken.objects.create(
-            user=self.user,
-            token=EmailVerificationToken.generate_token(),
-            expires_at=timezone.now() - timedelta(hours=1),
-        )
+        self._create_token(expires_at=timezone.now() - timedelta(hours=1))
 
         # 사용된 토큰
-        EmailVerificationToken.objects.create(
-            user=self.user,
-            token=EmailVerificationToken.generate_token(),
-            expires_at=timezone.now() + timedelta(hours=1),
-            is_used=True,
-        )
+        self._create_token(is_used=True)
 
         # 유효한 토큰
-        valid_token = EmailVerificationToken.objects.create(
-            user=self.user,
-            token=EmailVerificationToken.generate_token(),
-            expires_at=timezone.now() + timedelta(hours=1),
-        )
+        valid_token = self._create_token()
 
         # 정리 실행
-        deleted_count = EmailVerificationToken.objects.delete_expired()
+        deleted_count = AuthToken.objects.delete_expired()
 
         self.assertEqual(deleted_count, 2)
-        self.assertTrue(EmailVerificationToken.objects.filter(id=valid_token.id).exists())
+        self.assertTrue(AuthToken.objects.filter(id=valid_token.id).exists())
 
 
 class PasswordChangeTestCase(BaseAPITestCase):
@@ -1571,7 +1473,7 @@ class EmailChangeTestCase(BaseAPITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("인증 이메일", response.data["message"])
-        token = EmailVerificationToken.objects.filter(user=self.user, is_used=False).latest(
+        token = AuthToken.objects.email_verification().filter(user=self.user, is_used=False).latest(
             "created_at"
         )
         self.assertEqual(token.new_email, "new@test.com")
@@ -1619,9 +1521,10 @@ class EmailChangeTestCase(BaseAPITestCase):
 
     def test_email_change_confirm_success(self):
         """이메일 변경 확인 성공"""
-        token = EmailVerificationToken.objects.create(
+        token = AuthToken.objects.create(
             user=self.user,
-            token=EmailVerificationToken.generate_token(),
+            token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
+            token=AuthToken.generate_token(),
             expires_at=timezone.now() + timedelta(hours=24),
             new_email="changed@test.com",
         )
@@ -1642,9 +1545,10 @@ class EmailChangeTestCase(BaseAPITestCase):
 
     def test_email_change_confirm_missing_new_email(self):
         """new_email이 없는 토큰 처리"""
-        token = EmailVerificationToken.objects.create(
+        token = AuthToken.objects.create(
             user=self.user,
-            token=EmailVerificationToken.generate_token(),
+            token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
+            token=AuthToken.generate_token(),
             expires_at=timezone.now() + timedelta(hours=24),
             new_email=None,
         )

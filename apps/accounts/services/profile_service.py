@@ -5,7 +5,7 @@ import uuid
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
-from apps.accounts.models import EmailVerificationToken, PasswordResetToken, User
+from apps.accounts.models import AuthToken, User
 from apps.accounts.services.base_service import ServiceResult, _ok, _validate_serializer
 from apps.accounts.services.session_service import AccountService, PasswordService
 from apps.accounts.utils import (
@@ -91,10 +91,9 @@ class UserProfileService:
 
         user = serializer.save()
         token = create_token(
-            token_model=EmailVerificationToken,
+            token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
             user=user,
             expiry_hours=EMAIL_VERIFICATION_HOURS,
-            invalidate_existing=True,
         )
         send_verification_email(user.email, token.token)
 
@@ -120,10 +119,9 @@ class UserProfileService:
             return _ok(data=error_response.data, status_code=error_response.status_code)
 
         token = create_token(
-            token_model=PasswordResetToken,
+            token_type=AuthToken.TokenType.PASSWORD_RESET,
             user=user,
             expiry_hours=PASSWORD_RESET_HOURS,
-            invalidate_existing=True,
         )
         send_password_reset_email(user.email, token.token)
 
@@ -145,7 +143,9 @@ class UserProfileService:
         token_str = serializer.validated_data["token"]
         new_password = serializer.validated_data["new_password"]
 
-        token, error_response = validate_token(PasswordResetToken, token_str)
+        token, error_response = validate_token(
+            token_str, token_type=AuthToken.TokenType.PASSWORD_RESET
+        )
         if error_response:
             raise ValidationError(error_response.data)
 
@@ -191,8 +191,8 @@ class UserProfileService:
 
         token_str = serializer.validated_data["token"]
         token, error_response = validate_token(
-            token_model=EmailVerificationToken,
-            token_str=token_str,
+            token_str,
+            token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
             error_messages={
                 "not_found": "유효하지 않은 인증 링크입니다.",
                 "invalid": "만료되었거나 이미 사용된 인증 링크입니다.",
@@ -225,10 +225,9 @@ class UserProfileService:
             raise ValidationError({"email": ["이미 인증된 계정입니다."]})
 
         token = create_token(
-            token_model=EmailVerificationToken,
+            token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
             user=user,
             expiry_hours=EMAIL_VERIFICATION_HOURS,
-            invalidate_existing=True,
         )
         send_verification_email(user.email, token.token)
 
@@ -320,13 +319,11 @@ class UserProfileService:
             raise ValidationError({"new_email": ["이미 사용 중인 이메일입니다."]})
 
         token = create_token(
-            token_model=EmailVerificationToken,
+            token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
             user=user,
             expiry_hours=EMAIL_VERIFICATION_HOURS,
-            invalidate_existing=True,
+            new_email=new_email,
         )
-        token.new_email = new_email
-        token.save(update_fields=["new_email"])
         send_verification_email(new_email, token.token)
 
         return _ok(
@@ -340,8 +337,8 @@ class UserProfileService:
 
         token_str = serializer.validated_data["token"]
         token, error_response = validate_token(
-            token_model=EmailVerificationToken,
-            token_str=token_str,
+            token_str,
+            token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
             error_messages={
                 "not_found": "유효하지 않은 인증 토큰입니다.",
                 "invalid": "만료되었거나 이미 사용된 토큰입니다.",
