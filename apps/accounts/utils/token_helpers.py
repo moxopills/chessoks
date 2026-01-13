@@ -2,52 +2,59 @@
 
 from datetime import timedelta
 
-from django.db import models
 from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.response import Response
 
+from apps.accounts.models import AuthToken
 
-def create_token[T: models.Model](
-    token_model: type[T],
+
+def create_token(
+    token_type: str,
     user,
     expiry_hours: int,
     invalidate_existing: bool = True,
-) -> T:
+    new_email: str | None = None,
+) -> AuthToken:
     """토큰 생성 및 기존 토큰 무효화
 
     Args:
-        token_model: 토큰 모델 클래스 (EmailVerificationToken, PasswordResetToken 등)
+        token_type: 토큰 타입 (AuthToken.TokenType.EMAIL_VERIFICATION 등)
         user: 연결된 사용자
         expiry_hours: 토큰 만료 시간 (시간 단위)
         invalidate_existing: 기존 미사용 토큰 무효화 여부
+        new_email: 이메일 변경 요청 시 새 이메일
 
     Returns:
         생성된 토큰 인스턴스
     """
     if invalidate_existing:
-        token_model.objects.filter(user=user, is_used=False).update(is_used=True)
+        AuthToken.objects.filter(user=user, token_type=token_type, is_used=False).update(
+            is_used=True
+        )
 
-    token = token_model.objects.create(
+    token = AuthToken.objects.create(
         user=user,
-        token=token_model.generate_token(),
+        token_type=token_type,
+        token=AuthToken.generate_token(),
         expires_at=timezone.now() + timedelta(hours=expiry_hours),
+        new_email=new_email,
     )
 
     return token
 
 
-def validate_token[T: models.Model](
-    token_model: type[T],
+def validate_token(
     token_str: str,
+    token_type: str | None = None,
     error_messages: dict[str, str] | None = None,
-) -> tuple[T | None, Response | None]:
+) -> tuple[AuthToken | None, Response | None]:
     """토큰 검증 및 에러 응답 반환
 
     Args:
-        token_model: 토큰 모델 클래스
         token_str: 토큰 문자열
+        token_type: 특정 토큰 타입으로 필터링 (None이면 전체)
         error_messages: 커스텀 에러 메시지 dict
             - "not_found": 토큰이 존재하지 않을 때
             - "invalid": 토큰이 만료/사용됨일 때
@@ -65,9 +72,13 @@ def validate_token[T: models.Model](
     if error_messages:
         default_messages.update(error_messages)
 
+    filters = {"token": token_str}
+    if token_type:
+        filters["token_type"] = token_type
+
     try:
-        token = token_model.objects.select_related("user").get(token=token_str)
-    except token_model.DoesNotExist:
+        token = AuthToken.objects.select_related("user").get(**filters)
+    except AuthToken.DoesNotExist:
         return None, Response(
             {"token": [default_messages["not_found"]]},
             status=status.HTTP_400_BAD_REQUEST,
@@ -82,11 +93,11 @@ def validate_token[T: models.Model](
     return token, None
 
 
-def mark_token_as_used(token: models.Model) -> None:
+def mark_token_as_used(token: AuthToken) -> None:
     """토큰을 사용 완료 상태로 표시
 
     Args:
-        token: 토큰 인스턴스 (is_used, used_at 필드 필요)
+        token: 토큰 인스턴스
     """
     token.is_used = True
     token.used_at = timezone.now()
