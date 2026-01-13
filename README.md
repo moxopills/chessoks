@@ -37,7 +37,7 @@ Django 6.0 기반 실시간 체스 게임
 │   └── wsgi.py                 # WSGI 설정
 ├── apps/                        # Django 앱 모음
 │   ├── accounts/               # 사용자 인증 앱
-│   │   ├── models/             # User, SocialUser, PasswordResetToken
+│   │   ├── models/             # User, SocialUser, AuthToken
 │   │   ├── serializers/        # DRF Serializers
 │   │   ├── views/              # API Views
 │   │   ├── services/           # 비즈니스 로직 (SocialAuthService)
