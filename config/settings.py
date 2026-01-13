@@ -296,3 +296,26 @@ AWS_S3_ACCESS_KEY_ID = os.getenv("AWS_S3_ACCESS_KEY_ID", "")
 AWS_S3_SECRET_ACCESS_KEY = os.getenv("AWS_S3_SECRET_ACCESS_KEY", "")
 AWS_S3_BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME", "")
 AWS_S3_REGION = os.getenv("AWS_S3_REGION", "ap-northeast-2")
+
+# Celery 설정
+CELERY_BROKER_URL = os.getenv(
+    "CELERY_BROKER_URL",
+    f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', '6379')}/0",
+)
+CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+
+# Celery Beat 스케줄 (정기 작업)
+CELERY_BEAT_SCHEDULE = {
+    "cleanup-expired-tokens": {
+        "task": "apps.accounts.tasks.cleanup_expired_tokens",
+        "schedule": 60 * 60 * 24,  # 매일 (24시간마다)
+    },
+    "cleanup-deleted-accounts": {
+        "task": "apps.accounts.tasks.cleanup_deleted_accounts",
+        "schedule": 60 * 60 * 24,  # 매일 (24시간마다)
+    },
+}
