@@ -3,8 +3,6 @@
 import logging
 import uuid
 
-logger = logging.getLogger(__name__)
-
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
@@ -23,6 +21,8 @@ from apps.accounts.utils import (
 from apps.core.S3.constants import FileType, S3Constants
 from apps.core.S3.uploader import s3_uploader
 from apps.core.S3.validators import S3ImageValidator
+
+logger = logging.getLogger(__name__)
 
 # 상수 정의
 EMAIL_VERIFICATION_HOURS = 24
