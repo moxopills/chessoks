@@ -53,8 +53,8 @@ jobs:
           docker compose -f docker-compose.prod.yml build --no-cache --pull
           docker compose -f docker-compose.prod.yml up -d --force-recreate
 
-          # 불필요한 리소스 정리
-          docker system prune -af --volumes
+          # 불필요한 이미지만 정리 (볼륨 유지)
+          docker image prune -af
         ENDSSH
 
     - name: Health Check
