@@ -49,14 +49,8 @@ class LoginView(APIView):
     def post(self, request):
         email = request.data.get("email", "").strip()
         password = request.data.get("password", "")
-
         result = AccountSessionService.login(request, email, password)
-        user = result.payload["user"]
-        message = result.payload["message"]
-        return Response(
-            {"message": message, "user": UserSerializer(user).data},
-            status=result.status,
-        )
+        return Response(result.data, status=result.status)
 
 
 class LogoutView(APIView):
@@ -120,11 +114,17 @@ class ProfileUpdateView(CurrentUserMixin, UpdateAPIView):
 
     @extend_schema(request=ProfileUpdateSerializer, responses={200: UserSerializer})
     def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
+        user = self.get_object()
+        serializer = self.get_serializer(user, data=request.data)
+        UserProfileService.profile_update(serializer, user)
+        return Response(UserSerializer(user).data)
 
     @extend_schema(request=ProfileUpdateSerializer, responses={200: UserSerializer})
     def partial_update(self, request, *args, **kwargs):
-        return super().partial_update(request, *args, **kwargs)
+        user = self.get_object()
+        serializer = self.get_serializer(user, data=request.data, partial=True)
+        UserProfileService.profile_update(serializer, user)
+        return Response(UserSerializer(user).data)
 
 
 class PasswordResetRequestView(APIView):

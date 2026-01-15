@@ -1,28 +1,24 @@
 """서비스 공통 유틸리티"""
 
 from dataclasses import dataclass
-from typing import Any
 
 from rest_framework.exceptions import ValidationError
 
 
 @dataclass(frozen=True)
 class ServiceResult:
+    """서비스 결과 - JSON 응답 데이터와 HTTP 상태 코드"""
+
+    data: dict
     status: int
-    data: dict | None = None
-    errors: dict | None = None
-    payload: Any | None = None
-
-    @property
-    def ok(self) -> bool:
-        return self.errors is None
 
 
-def _ok(*, data: dict | None = None, payload: Any | None = None, status_code: int) -> ServiceResult:
-    return ServiceResult(status=status_code, data=data, payload=payload)
+def _ok(data: dict, status_code: int) -> ServiceResult:
+    """성공 응답 생성"""
+    return ServiceResult(data=data, status=status_code)
 
 
-def _validate_serializer(serializer) -> ServiceResult | None:
+def _validate_serializer(serializer) -> None:
+    """시리얼라이저 유효성 검증 - 실패 시 ValidationError 발생"""
     if not serializer.is_valid():
         raise ValidationError(serializer.errors)
-    return None

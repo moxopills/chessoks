@@ -139,6 +139,36 @@ class AccountService:
         user.email_verified_at = timezone.now()
         user.save(update_fields=["email_verified", "email_verified_at"])
 
+    @staticmethod
+    def check_availability(user: User | None, field_name: str) -> dict:
+        """필드 가용성 체크 (탈퇴 유예 기간 고려)
+
+        Args:
+            user: 해당 필드값을 가진 유저 (없으면 None)
+            field_name: 필드 표시명 (이메일, 닉네임)
+
+        Returns:
+            {"available": bool, "message": str, "error_type": str | None}
+        """
+        available_msg = f"사용 가능한 {field_name}입니다."
+        used_msg = f"이미 사용 중인 {field_name}입니다."
+        scheduled_msg = (
+            "탈퇴 예약된 계정입니다. 기존 비밀번호로 로그인하면 복구됩니다."
+            if field_name == "이메일"
+            else f"탈퇴 예약된 계정의 {field_name}입니다. 잠시 후 다시 시도해주세요."
+        )
+
+        if not user:
+            return {"available": True, "message": available_msg, "error_type": None}
+
+        if AccountService.delete_if_expired(user):
+            return {"available": True, "message": available_msg, "error_type": None}
+
+        if AccountService.is_in_deletion_grace_period(user):
+            return {"available": False, "message": scheduled_msg, "error_type": "scheduled"}
+
+        return {"available": False, "message": used_msg, "error_type": "used"}
+
 
 class PasswordService:
     """비밀번호 관련 비즈니스 로직"""
@@ -194,18 +224,17 @@ class AccountSessionService:
             )
 
         user_with_stats = AuthService.handle_successful_login(request, user)
+        from apps.accounts.serializers import UserSerializer
+
         return _ok(
-            payload={"user": user_with_stats, "message": "로그인 성공"},
-            status_code=status.HTTP_200_OK,
+            {"message": "로그인 성공", "user": UserSerializer(user_with_stats).data},
+            status.HTTP_200_OK,
         )
 
     @staticmethod
     def logout(request) -> ServiceResult:
         AccountService.logout_user(request)
-        return _ok(
-            data={"message": "로그아웃 되었습니다."},
-            status_code=status.HTTP_200_OK,
-        )
+        return _ok({"message": "로그아웃 되었습니다."}, status.HTTP_200_OK)
 
     @staticmethod
     def account_delete(serializer, user: User, request) -> ServiceResult:
@@ -219,6 +248,6 @@ class AccountSessionService:
         AccountService.logout_user(request)
 
         return _ok(
-            data={"message": "회원 탈퇴가 예약되었습니다. 1일 내 로그인하면 취소됩니다."},
-            status_code=status.HTTP_200_OK,
+            {"message": "회원 탈퇴가 예약되었습니다. 1일 내 로그인하면 취소됩니다."},
+            status.HTTP_200_OK,
         )
