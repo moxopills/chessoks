@@ -94,6 +94,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name = "사용자"
         verbose_name_plural = "사용자"
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["email_verified"], name="idx_user_email_verified"),
+            models.Index(fields=["scheduled_deletion_at"], name="idx_user_scheduled_del"),
+            models.Index(fields=["is_active", "email_verified"], name="idx_user_active_verified"),
+        ]
 
     def __str__(self):
         return f"{self.nickname} ({self.email})"

@@ -111,7 +111,7 @@ class SocialLoginE2ETestCase(BaseAPITestCase):
 
         response = self._social_login()
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("nickname", response.data)
+        self.assertFieldError(response, "nickname")
 
     def test_existing_user_link(self):
         """기존 유저 자동 연동"""

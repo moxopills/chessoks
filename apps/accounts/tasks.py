@@ -4,8 +4,11 @@ import logging
 
 from django.conf import settings
 from django.core.mail import send_mail
+from django.utils import timezone
 
 from celery import shared_task
+
+from apps.accounts.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +61,6 @@ def cleanup_deleted_accounts() -> int:
     Returns:
         삭제된 계정 수
     """
-    from django.utils import timezone
-
-    from apps.accounts.models import User
-
     expired_accounts = User.objects.filter(
         is_active=False,
         scheduled_deletion_at__isnull=False,

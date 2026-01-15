@@ -30,24 +30,8 @@ PASSWORD_RESET_HOURS = 1
 
 
 def _check_availability(user: User | None, field_name: str) -> dict:
-    available_msg = f"사용 가능한 {field_name}입니다."
-    used_msg = f"이미 사용 중인 {field_name}입니다."
-    scheduled_msg = (
-        "탈퇴 예약된 계정입니다. 기존 비밀번호로 로그인하면 복구됩니다."
-        if field_name == "이메일"
-        else f"탈퇴 예약된 계정의 {field_name}입니다. 잠시 후 다시 시도해주세요."
-    )
-
-    if not user:
-        return {"available": True, "message": available_msg}
-
-    if AccountService.delete_if_expired(user):
-        return {"available": True, "message": available_msg}
-
-    if AccountService.is_in_deletion_grace_period(user):
-        return {"available": False, "message": scheduled_msg}
-
-    return {"available": False, "message": used_msg}
+    result = AccountService.check_availability(user, field_name)
+    return {"available": result["available"], "message": result["message"]}
 
 
 def _validate_avatar_file(file) -> str:
@@ -84,12 +68,30 @@ class UserProfileService:
     """비밀번호/이메일/프로필 흐름 서비스"""
 
     @staticmethod
+    def _validate_availability(email: str, nickname: str) -> None:
+        """이메일/닉네임 가용성 검증"""
+        email_user = User.objects.filter(email=email).first()
+        result = AccountService.check_availability(email_user, "이메일")
+        if not result["available"]:
+            raise ValidationError({"email": [result["message"]]})
+
+        nickname_user = User.objects.filter(nickname=nickname).first()
+        result = AccountService.check_availability(nickname_user, "닉네임")
+        if not result["available"]:
+            raise ValidationError({"nickname": [result["message"]]})
+
+    @staticmethod
     def signup(serializer) -> ServiceResult:
         _validate_serializer(serializer)
 
         check_passwords_match(
             serializer.validated_data["password"],
             serializer.validated_data["password2"],
+        )
+
+        UserProfileService._validate_availability(
+            serializer.validated_data["email"],
+            serializer.validated_data["nickname"],
         )
 
         user = serializer.save()
@@ -101,11 +103,11 @@ class UserProfileService:
         send_verification_email(user.email, token.token)
 
         return _ok(
-            data={
+            {
                 "message": "회원가입 성공! 이메일로 전송된 인증 링크를 확인해주세요.",
                 "email": user.email,
             },
-            status_code=status.HTTP_201_CREATED,
+            status.HTTP_201_CREATED,
         )
 
     @staticmethod
@@ -119,7 +121,7 @@ class UserProfileService:
             email=email, success_message=success_message, is_active_only=True
         )
         if error_response:
-            return _ok(data=error_response.data, status_code=error_response.status_code)
+            return _ok(error_response.data, error_response.status_code)
 
         token = create_token(
             token_type=AuthToken.TokenType.PASSWORD_RESET,
@@ -128,10 +130,7 @@ class UserProfileService:
         )
         send_password_reset_email(user.email, token.token)
 
-        return _ok(
-            data={"message": success_message},
-            status_code=status.HTTP_200_OK,
-        )
+        return _ok({"message": success_message}, status.HTTP_200_OK)
 
     @staticmethod
     def password_reset_confirm(serializer) -> ServiceResult:
@@ -155,10 +154,7 @@ class UserProfileService:
         PasswordService.change_password(token.user, new_password)
         mark_token_as_used(token)
 
-        return _ok(
-            data={"message": "비밀번호가 재설정되었습니다."},
-            status_code=status.HTTP_200_OK,
-        )
+        return _ok({"message": "비밀번호가 재설정되었습니다."}, status.HTTP_200_OK)
 
     @staticmethod
     def password_change(serializer, user: User) -> ServiceResult:
@@ -183,10 +179,7 @@ class UserProfileService:
             )
 
         PasswordService.change_password(user, new_password)
-        return _ok(
-            data={"message": "비밀번호가 변경되었습니다."},
-            status_code=status.HTTP_200_OK,
-        )
+        return _ok({"message": "비밀번호가 변경되었습니다."}, status.HTTP_200_OK)
 
     @staticmethod
     def email_verification_confirm(serializer) -> ServiceResult:
@@ -208,8 +201,8 @@ class UserProfileService:
         mark_token_as_used(token)
 
         return _ok(
-            data={"message": "이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다."},
-            status_code=status.HTTP_200_OK,
+            {"message": "이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다."},
+            status.HTTP_200_OK,
         )
 
     @staticmethod
@@ -222,7 +215,7 @@ class UserProfileService:
             email=email, success_message=success_message, is_active_only=True
         )
         if error_response:
-            return _ok(data=error_response.data, status_code=error_response.status_code)
+            return _ok(error_response.data, error_response.status_code)
 
         if user.email_verified:
             raise ValidationError({"email": ["이미 인증된 계정입니다."]})
@@ -234,10 +227,7 @@ class UserProfileService:
         )
         send_verification_email(user.email, token.token)
 
-        return _ok(
-            data={"message": "인증 이메일을 재전송했습니다."},
-            status_code=status.HTTP_200_OK,
-        )
+        return _ok({"message": "인증 이메일을 재전송했습니다."}, status.HTTP_200_OK)
 
     @staticmethod
     def avatar_update(user: User, file) -> ServiceResult:
@@ -258,11 +248,8 @@ class UserProfileService:
                 logger.warning(f"이전 아바타 삭제 실패: {old_avatar_key}, error: {e}")
 
         return _ok(
-            data={
-                "message": "아바타가 성공적으로 업데이트되었습니다.",
-                "avatar_url": new_avatar_url,
-            },
-            status_code=status.HTTP_200_OK,
+            {"message": "아바타가 성공적으로 업데이트되었습니다.", "avatar_url": new_avatar_url},
+            status.HTTP_200_OK,
         )
 
     @staticmethod
@@ -280,30 +267,33 @@ class UserProfileService:
         user.avatar_url = None
         user.save(update_fields=["avatar_url"])
 
-        return _ok(
-            data={"message": "아바타가 삭제되었습니다."},
-            status_code=status.HTTP_200_OK,
-        )
+        return _ok({"message": "아바타가 삭제되었습니다."}, status.HTTP_200_OK)
 
     @staticmethod
     def email_check(serializer) -> ServiceResult:
         _validate_serializer(serializer)
-
         user = User.objects.filter(email=serializer.validated_data["email"]).first()
-        return _ok(
-            data=_check_availability(user, "이메일"),
-            status_code=status.HTTP_200_OK,
-        )
+        return _ok(_check_availability(user, "이메일"), status.HTTP_200_OK)
 
     @staticmethod
     def nickname_check(serializer) -> ServiceResult:
         _validate_serializer(serializer)
-
         user = User.objects.filter(nickname=serializer.validated_data["nickname"]).first()
-        return _ok(
-            data=_check_availability(user, "닉네임"),
-            status_code=status.HTTP_200_OK,
-        )
+        return _ok(_check_availability(user, "닉네임"), status.HTTP_200_OK)
+
+    @staticmethod
+    def profile_update(serializer, user: User) -> ServiceResult:
+        _validate_serializer(serializer)
+
+        new_nickname = serializer.validated_data.get("nickname")
+        if new_nickname and new_nickname != user.nickname:
+            existing = User.objects.filter(nickname=new_nickname).exclude(pk=user.pk).first()
+            result = AccountService.check_availability(existing, "닉네임")
+            if not result["available"]:
+                raise ValidationError({"nickname": [result["message"]]})
+
+        serializer.save()
+        return _ok({"message": "프로필이 업데이트되었습니다."}, status.HTTP_200_OK)
 
     @staticmethod
     def email_change_request(serializer, user: User) -> ServiceResult:
@@ -329,10 +319,7 @@ class UserProfileService:
         )
         send_verification_email(new_email, token.token)
 
-        return _ok(
-            data={"message": f"인증 이메일을 {new_email}로 전송했습니다."},
-            status_code=status.HTTP_200_OK,
-        )
+        return _ok({"message": f"인증 이메일을 {new_email}로 전송했습니다."}, status.HTTP_200_OK)
 
     @staticmethod
     def email_change_confirm(serializer, user: User) -> ServiceResult:
@@ -366,7 +353,4 @@ class UserProfileService:
         user.save(update_fields=["email"])
 
         mark_token_as_used(token)
-        return _ok(
-            data={"message": f"이메일이 {new_email}로 변경되었습니다."},
-            status_code=status.HTTP_200_OK,
-        )
+        return _ok({"message": f"이메일이 {new_email}로 변경되었습니다."}, status.HTTP_200_OK)

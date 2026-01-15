@@ -5,16 +5,17 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.cache import cache
-from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import LiveServerTestCase, TestCase
 from django.utils import timezone
 
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient, APIRequestFactory, APITestCase
 
 from apps.accounts.models import AuthToken
 from apps.accounts.serializers import ProfileUpdateSerializer, UserSignUpSerializer
+from apps.accounts.services import UserProfileService
 
 User = get_user_model()
 
@@ -24,7 +25,38 @@ TEST_EMAIL = "test@test.com"
 TEST_NICKNAME = "테스터"
 
 
-class BaseTestCase(TestCase):
+class ErrorResponseMixin:
+    """통일된 에러 응답 검증 헬퍼"""
+
+    def get_error_message(self, response):
+        """에러 메시지 추출"""
+        return response.data.get("error", {}).get("message", "")
+
+    def get_error_details(self, response):
+        """에러 상세 정보 추출"""
+        return response.data.get("error", {}).get("details", {})
+
+    def get_field_error(self, response, field):
+        """특정 필드의 첫 번째 에러 메시지 추출"""
+        details = self.get_error_details(response)
+        errors = details.get(field, [])
+        return str(errors[0]) if errors else ""
+
+    def assertFieldError(self, response, field, expected_text=None):
+        """필드 에러 존재 확인"""
+        details = self.get_error_details(response)
+        self.assertIn(field, details, f"'{field}' not found in error details: {details}")
+        if expected_text:
+            error_msg = self.get_field_error(response, field)
+            self.assertIn(expected_text, error_msg, f"'{expected_text}' not in '{error_msg}'")
+
+    def assertErrorMessage(self, response, expected_text):
+        """에러 메시지 내용 확인"""
+        message = self.get_error_message(response)
+        self.assertIn(expected_text, message, f"'{expected_text}' not in '{message}'")
+
+
+class BaseTestCase(ErrorResponseMixin, TestCase):
     """공통 테스트 베이스 클래스"""
 
     @classmethod
@@ -106,7 +138,7 @@ class BaseAPITestCase(APITestCase, BaseTestCase):
     pass
 
 
-class AuthE2ETestCase(LiveServerTestCase):
+class AuthE2ETestCase(ErrorResponseMixin, LiveServerTestCase):
     """인증 E2E 테스트"""
 
     def setUp(self):
@@ -181,15 +213,16 @@ class AuthE2ETestCase(LiveServerTestCase):
             self.assertIn(
                 response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
             )
+            error_msg = self.get_error_message(response)
             if response.status_code == status.HTTP_401_UNAUTHORIZED:
-                self.assertIn(f"남은 시도: {remaining}회", response.data["detail"])
+                self.assertIn(f"남은 시도: {remaining}회", error_msg)
             else:
-                self.assertIn("로그인", response.data["detail"])
+                self.assertIn("로그인", error_msg)
 
         # 3. 다섯 번째 실패 → 잠금
         response = self.client.post("/api/accounts/login/", wrong_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
-        self.assertIn("5분 후", response.data["detail"])
+        self.assertErrorMessage(response, "5분 후")
 
         # 4. 잠금 상태에서 올바른 비밀번호로도 로그인 불가
         correct_data = {"email": "locktest@test.com", "password": "CorrectPass123!"}
@@ -222,7 +255,7 @@ class AuthE2ETestCase(LiveServerTestCase):
         # 2. 같은 이메일로 재가입 시도 → 실패
         response = self.client.post("/api/accounts/signup/", signup_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("email", response.data)
+        self.assertFieldError(response, "email")
 
         # 3. 다른 이메일, 같은 닉네임으로 재가입 시도 → 실패
         signup_data2 = {
@@ -233,7 +266,7 @@ class AuthE2ETestCase(LiveServerTestCase):
         }
         response = self.client.post("/api/accounts/signup/", signup_data2, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("nickname", response.data)
+        self.assertFieldError(response, "nickname")
 
     def test_password_validation_flow(self):
         """비밀번호 검증 E2E 테스트"""
@@ -338,25 +371,29 @@ class UserSignUpSerializerTest(BaseTestCase):
         self._assert_invalid_password("TestPass123", "특수문자")
 
     def test_duplicate_email(self):
-        """이메일 중복 검증"""
+        """이메일 중복 검증 - 서비스 레이어에서 검증"""
         self.create_user(email="dup@test.com")
         data = self.valid_signup_data.copy()
         data["email"] = "dup@test.com"
         serializer = UserSignUpSerializer(data=data)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("email", serializer.errors)
+        self.assertTrue(serializer.is_valid())  # 포맷 검증은 통과
+        with self.assertRaises(ValidationError) as context:
+            UserProfileService.signup(serializer)
+        self.assertIn("email", context.exception.detail)
 
     def test_duplicate_nickname(self):
-        """닉네임 중복 검증"""
+        """닉네임 중복 검증 - 서비스 레이어에서 검증"""
         self.create_user(nickname="중복닉네임")
         data = self.valid_signup_data.copy()
         data["nickname"] = "중복닉네임"
         serializer = UserSignUpSerializer(data=data)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("nickname", serializer.errors)
+        self.assertTrue(serializer.is_valid())  # 포맷 검증은 통과
+        with self.assertRaises(ValidationError) as context:
+            UserProfileService.signup(serializer)
+        self.assertIn("nickname", context.exception.detail)
 
     def test_signup_with_scheduled_deletion_email(self):
-        """탈퇴 예약된 이메일로 회원가입 시도 (유예 기간 내)"""
+        """탈퇴 예약된 이메일로 회원가입 시도 (유예 기간 내) - 서비스 레이어에서 검증"""
         user = self.create_user(email="scheduled@test.com")
         user.is_active = False
         user.scheduled_deletion_at = timezone.now() + timedelta(days=1)
@@ -365,12 +402,15 @@ class UserSignUpSerializerTest(BaseTestCase):
         data = self.valid_signup_data.copy()
         data["email"] = "scheduled@test.com"
         serializer = UserSignUpSerializer(data=data)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("email", serializer.errors)
-        self.assertIn("탈퇴 예약", str(serializer.errors["email"][0]))
+        self.assertTrue(serializer.is_valid())  # 포맷 검증은 통과
+        with self.assertRaises(ValidationError) as context:
+            UserProfileService.signup(serializer)
+        self.assertIn("email", context.exception.detail)
+        self.assertIn("탈퇴 예약", str(context.exception.detail["email"][0]))
 
-    def test_signup_with_expired_scheduled_deletion_email(self):
-        """유예 기간 만료된 이메일로 회원가입 - 기존 계정 삭제 후 허용"""
+    @patch("apps.accounts.services.profile_service.send_verification_email")
+    def test_signup_with_expired_scheduled_deletion_email(self, mock_send_email):
+        """유예 기간 만료된 이메일로 회원가입 - 기존 계정 삭제 후 허용 (서비스 레이어)"""
         old_user = self.create_user(email="expired@test.com", nickname="expireduser")
         old_user.is_active = False
         old_user.scheduled_deletion_at = timezone.now() - timedelta(hours=1)
@@ -381,13 +421,16 @@ class UserSignUpSerializerTest(BaseTestCase):
         data["email"] = "expired@test.com"
         data["nickname"] = "newuser123"
         serializer = UserSignUpSerializer(data=data)
-        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertTrue(serializer.is_valid())  # 포맷 검증은 통과
+        result = UserProfileService.signup(serializer)  # 서비스 호출로 삭제 트리거
+        self.assertEqual(result.status, 201)
 
         # 기존 계정이 삭제되었는지 확인
         self.assertFalse(User.objects.filter(id=old_user_id).exists())
 
-    def test_signup_with_expired_scheduled_deletion_nickname(self):
-        """유예 기간 만료된 닉네임으로 회원가입 - 기존 계정 삭제 후 허용"""
+    @patch("apps.accounts.services.profile_service.send_verification_email")
+    def test_signup_with_expired_scheduled_deletion_nickname(self, mock_send_email):
+        """유예 기간 만료된 닉네임으로 회원가입 - 기존 계정 삭제 후 허용 (서비스 레이어)"""
         old_user = self.create_user(email="old@test.com", nickname="expirednick")
         old_user.is_active = False
         old_user.scheduled_deletion_at = timezone.now() - timedelta(hours=1)
@@ -398,7 +441,9 @@ class UserSignUpSerializerTest(BaseTestCase):
         data["email"] = "newuser@test.com"
         data["nickname"] = "expirednick"
         serializer = UserSignUpSerializer(data=data)
-        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertTrue(serializer.is_valid())  # 포맷 검증은 통과
+        result = UserProfileService.signup(serializer)  # 서비스 호출로 삭제 트리거
+        self.assertEqual(result.status, 201)
 
         # 기존 계정이 삭제되었는지 확인
         self.assertFalse(User.objects.filter(id=old_user_id).exists())
@@ -435,10 +480,12 @@ class ProfileUpdateSerializerTest(BaseTestCase):
         self.assertEqual(user.avatar_url, "https://example.com/avatar.jpg")
 
     def test_duplicate_nickname_validation(self):
-        """다른 유저가 사용 중인 닉네임으로 변경 시도"""
+        """다른 유저가 사용 중인 닉네임으로 변경 시도 - 서비스 레이어에서 검증"""
         serializer = self._get_serializer({"nickname": "다른유저"})
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("nickname", serializer.errors)
+        self.assertTrue(serializer.is_valid())  # 포맷 검증은 통과
+        with self.assertRaises(ValidationError) as context:
+            UserProfileService.profile_update(serializer, self.user)
+        self.assertIn("nickname", context.exception.detail)
 
     def test_same_nickname_allowed(self):
         """자기 자신의 닉네임은 유지 가능"""
@@ -502,17 +549,15 @@ class UserModelTest(BaseTestCase):
         user = self.create_user()
         # UserStats 모델의 clean 메서드 테스트
         user.stats.rating = 5000
-        with self.assertRaises(ValidationError) as ctx:
+        with self.assertRaisesMessage(Exception, "레이팅은 0-4000"):
             user.stats.clean()
-        self.assertIn("레이팅은 0-4000", str(ctx.exception))
 
     def test_clean_negative_games_played(self):
         """게임 수 음수 검증"""
         user = self.create_user()
         user.stats.games_played = -5
-        with self.assertRaises(ValidationError) as ctx:
+        with self.assertRaisesMessage(Exception, "음수가 될 수 없습니다"):
             user.stats.clean()
-        self.assertIn("음수가 될 수 없습니다", str(ctx.exception))
 
     def test_top_players(self):
         """상위 플레이어 조회"""
@@ -786,7 +831,7 @@ class AvatarUpdateAPITestCase(BaseAPITestCase):
         """아바타 업데이트 - 파일 없음"""
         response = self.client.patch("/api/accounts/profile/avatar/", {})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("avatar", response.data)
+        self.assertFieldError(response, "avatar")
 
     def test_avatar_update_invalid_file_type(self):
         """아바타 업데이트 - 잘못된 파일 타입"""
@@ -830,7 +875,7 @@ class AvatarUpdateAPITestCase(BaseAPITestCase):
         response = self.client.delete("/api/accounts/profile/avatar/")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("avatar", response.data)
+        self.assertFieldError(response, "avatar")
 
     def test_avatar_delete_without_auth(self):
         """아바타 삭제 - 인증 없음"""
@@ -847,7 +892,7 @@ class LoginValidationTestCase(BaseAPITestCase):
         """이메일 없이 로그인"""
         response = self.client.post("/api/accounts/login/", {"password": "Pass123!"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("이메일과 비밀번호", response.data["non_field_errors"][0])
+        self.assertErrorMessage(response, "이메일과 비밀번호")
 
     def test_login_without_password(self):
         """비밀번호 없이 로그인"""
@@ -855,7 +900,7 @@ class LoginValidationTestCase(BaseAPITestCase):
             "/api/accounts/login/", {"email": "test@test.com"}, format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("이메일과 비밀번호", response.data["non_field_errors"][0])
+        self.assertErrorMessage(response, "이메일과 비밀번호")
 
     def test_login_invalid_email_format(self):
         """잘못된 이메일 형식"""
@@ -863,7 +908,7 @@ class LoginValidationTestCase(BaseAPITestCase):
             "/api/accounts/login/", {"email": "notanemail", "password": "Pass123!"}, format="json"
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("이메일 형식", response.data["email"][0])
+        self.assertFieldError(response, "email", "이메일 형식")
 
     def test_login_inactive_user(self):
         """비활성화된 계정 로그인 - Django는 is_active=False 유저를 인증하지 않음"""
@@ -879,9 +924,8 @@ class LoginValidationTestCase(BaseAPITestCase):
         self.assertIn(
             response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
         )
-        self.assertTrue(
-            "로그인 실패" in response.data["detail"] or "비활성화" in response.data["detail"]
-        )
+        error_msg = self.get_error_message(response)
+        self.assertTrue("로그인 실패" in error_msg or "비활성화" in error_msg)
 
 
 class EmailVerificationTestCase(BaseAPITestCase):
@@ -920,7 +964,7 @@ class EmailVerificationTestCase(BaseAPITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("유효하지 않은", response.data["token"][0])
+        self.assertFieldError(response, "token", "유효하지 않은")
 
     def test_email_verification_expired_token(self):
         """만료된 토큰"""
@@ -936,7 +980,7 @@ class EmailVerificationTestCase(BaseAPITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("만료", response.data["token"][0])
+        self.assertFieldError(response, "token", "만료")
 
     def test_email_resend_success(self):
         """이메일 재전송 성공"""
@@ -962,7 +1006,7 @@ class EmailVerificationTestCase(BaseAPITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("이미 인증", response.data["email"][0])
+        self.assertFieldError(response, "email", "이미 인증")
 
     def test_email_resend_nonexistent_user(self):
         """존재하지 않는 이메일 - 타이밍 공격 방지"""
@@ -1080,7 +1124,7 @@ class PasswordChangeTestCase(BaseAPITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("현재 비밀번호가 일치하지 않습니다", response.data["current_password"][0])
+        self.assertFieldError(response, "current_password", "현재 비밀번호가 일치하지 않습니다")
 
     def test_password_change_new_password_mismatch(self):
         """새 비밀번호 불일치"""
@@ -1095,7 +1139,7 @@ class PasswordChangeTestCase(BaseAPITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("비밀번호가 일치하지 않습니다", response.data["new_password"][0])
+        self.assertFieldError(response, "new_password", "비밀번호가 일치하지 않습니다")
 
     def test_password_change_same_as_current(self):
         """현재 비밀번호와 동일한 새 비밀번호"""
@@ -1110,7 +1154,7 @@ class PasswordChangeTestCase(BaseAPITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("현재 비밀번호와 다른", response.data["new_password"][0])
+        self.assertFieldError(response, "new_password", "현재 비밀번호와 다른")
 
     def test_password_change_without_auth(self):
         """인증 없이 비밀번호 변경 시도"""
@@ -1176,7 +1220,7 @@ class PasswordChangeTestCase(BaseAPITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("new_password", response.data)
+        self.assertFieldError(response, "new_password")
 
         # 특수문자 없음
         response = self.client.post(
@@ -1189,7 +1233,7 @@ class PasswordChangeTestCase(BaseAPITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("new_password", response.data)
+        self.assertFieldError(response, "new_password")
 
 
 class PasswordChangeE2ETestCase(LiveServerTestCase):
@@ -1279,7 +1323,7 @@ class AccountDeleteTestCase(BaseAPITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("비밀번호가 일치하지 않습니다", response.data["password"][0])
+        self.assertFieldError(response, "password", "비밀번호가 일치하지 않습니다")
 
         # 계정 활성 상태 유지
         self.user.refresh_from_db()
@@ -1488,7 +1532,7 @@ class EmailChangeTestCase(BaseAPITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("password", response.data)
+        self.assertFieldError(response, "password")
 
     def test_email_change_same_email(self):
         """현재 이메일과 동일한 이메일로 변경 시도"""
@@ -1498,7 +1542,7 @@ class EmailChangeTestCase(BaseAPITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("new_email", response.data)
+        self.assertFieldError(response, "new_email")
 
     def test_email_change_duplicate_email(self):
         """이미 사용 중인 이메일로 변경 시도"""
@@ -1509,7 +1553,7 @@ class EmailChangeTestCase(BaseAPITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("new_email", response.data)
+        self.assertFieldError(response, "new_email")
 
     def test_email_change_without_auth(self):
         """인증 없이 이메일 변경 시도"""
@@ -1562,7 +1606,7 @@ class EmailChangeTestCase(BaseAPITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("token", response.data)
+        self.assertFieldError(response, "token")
 
 
 class CleanupDeletedAccountsCommandTestCase(BaseTestCase):

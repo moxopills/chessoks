@@ -1,7 +1,6 @@
 from rest_framework import serializers
 
 from apps.accounts.models import User
-from apps.accounts.services import AccountService
 from apps.accounts.utils.validators import validate_password_strength
 
 
@@ -69,48 +68,18 @@ class UserSignUpSerializer(serializers.ModelSerializer):
         model = User
         fields = ("email", "nickname", "bio", "password", "password2")
         extra_kwargs = {
-            "email": {"validators": []},  # validate_email에서 직접 검증
-            "nickname": {"validators": []},  # validate_nickname에서 직접 검증
+            "email": {"validators": []},  # 서비스에서 검증
+            "nickname": {"validators": []},  # 서비스에서 검증
         }
 
     def validate_password(self, value):
         return validate_password_strength(value)
 
-    def validate_email(self, value):
-        try:
-            user = User.objects.get(email=value)
-
-            # 유예 기간 만료된 계정이면 삭제 후 허용
-            if AccountService.delete_if_expired(user):
-                return value
-
-            # 유예 기간 내 탈퇴 예약 상태
-            if AccountService.is_in_deletion_grace_period(user):
-                raise serializers.ValidationError(
-                    "탈퇴 예약된 계정입니다. 기존 비밀번호로 로그인하면 계정이 복구됩니다."
-                )
-
-            raise serializers.ValidationError("이미 사용 중인 이메일입니다.")
-        except User.DoesNotExist:
-            return value
-
     def validate_nickname(self, value):
-        try:
-            user = User.objects.get(nickname=value)
-
-            # 유예 기간 만료된 계정이면 삭제 후 허용
-            if AccountService.delete_if_expired(user):
-                return value
-
-            # 유예 기간 내 탈퇴 예약 상태
-            if AccountService.is_in_deletion_grace_period(user):
-                raise serializers.ValidationError(
-                    "탈퇴 예약된 계정의 닉네임입니다. 잠시 후 다시 시도해주세요."
-                )
-
-            raise serializers.ValidationError("이미 사용 중인 닉네임입니다.")
-        except User.DoesNotExist:
-            return value
+        value = value.strip()
+        if len(value) < 2:
+            raise serializers.ValidationError("닉네임은 최소 2자 이상이어야 합니다.")
+        return value
 
     def create(self, validated_data):
         validated_data.pop("password2")
@@ -124,25 +93,15 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("nickname", "bio", "avatar_url")
+        extra_kwargs = {
+            "nickname": {"validators": []},  # 서비스에서 검증
+        }
 
     def validate_nickname(self, value):
-        current_user = self.context["request"].user
-        existing = User.objects.filter(nickname=value).exclude(pk=current_user.pk).first()
-
-        if not existing:
-            return value
-
-        # 유예 기간 만료된 계정이면 삭제 후 허용
-        if AccountService.delete_if_expired(existing):
-            return value
-
-        # 유예 기간 내 탈퇴 예약 상태
-        if AccountService.is_in_deletion_grace_period(existing):
-            raise serializers.ValidationError(
-                "탈퇴 예약된 계정의 닉네임입니다. 잠시 후 다시 시도해주세요."
-            )
-
-        raise serializers.ValidationError("이미 사용 중인 닉네임입니다.")
+        value = value.strip()
+        if len(value) < 2:
+            raise serializers.ValidationError("닉네임은 최소 2자 이상이어야 합니다.")
+        return value
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
