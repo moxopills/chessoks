@@ -1,6 +1,7 @@
+from django.core.exceptions import ValidationError
+
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
-from django.core.exceptions import ValidationError
 
 from apps.chess.services import GameService
 

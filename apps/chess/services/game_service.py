@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import chess
-
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+import chess
 from apps.chess.models import Game, Move
 
 
