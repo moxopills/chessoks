@@ -1,7 +1,10 @@
 """통일된 에러 응답 처리"""
 
+from django.db import IntegrityError
+
 from rest_framework import status
 from rest_framework.exceptions import APIException
+from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
 ERROR_CODES = {
@@ -26,6 +29,12 @@ def custom_exception_handler(exc, context):
         }
     }
     """
+    if isinstance(exc, IntegrityError):
+        return Response(
+            {"error": {"code": "validation_error", "message": "이미 사용 중인 값입니다."}},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     response = exception_handler(exc, context)
 
     if response is None:
