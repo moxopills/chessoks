@@ -71,3 +71,19 @@ class UserStats(models.Model):
         if self.games_played == 0:
             return 0
         return round((self.games_won / self.games_played) * 100, 2)
+
+    @property
+    def rank_tier(self):
+        """레이팅 구간 기반 등급"""
+        rating = self.rating
+        if rating >= 3000:
+            return "Master"
+        if rating >= 2500:
+            return "Expert"
+        if rating >= 2000:
+            return "Advanced"
+        if rating >= 1500:
+            return "Intermediate"
+        if rating >= 1000:
+            return "Junior"
+        return "Beginner"

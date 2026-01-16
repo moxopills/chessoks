@@ -25,6 +25,10 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
         action = content.get("action")
         if action == "move":
             await self._handle_move(content)
+        elif action == "resign":
+            await self._handle_resign(content)
+        elif action == "draw":
+            await self._handle_draw(content)
         else:
             await self.send_json({"type": "error", "message": "지원하지 않는 액션입니다."})
 
@@ -38,15 +42,41 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json({"type": "error", "message": self._format_error(exc)})
             return
 
-        payload = {
-            "type": "move",
-            "game_id": result.game.id,
-            "fen": result.game.fen,
-            "pgn": result.game.pgn,
-            "current_turn": result.game.current_turn,
-            "result": result.game.result,
-            "move": result.move.san if result.move else None,
-        }
+        payload = self._game_payload(result.game)
+        payload["type"] = "move"
+        payload["move"] = result.move.san if result.move else None
+        await self.channel_layer.group_send(
+            self.group_name, {"type": "broadcast", "payload": payload}
+        )
+
+    async def _handle_resign(self, content):
+        try:
+            game_id = content.get("game_id")
+            game = await self._resign(game_id)
+        except ValidationError as exc:
+            await self.send_json({"type": "error", "message": self._format_error(exc)})
+            return
+
+        payload = self._game_payload(game)
+        payload["type"] = "game_end"
+        await self.channel_layer.group_send(
+            self.group_name, {"type": "broadcast", "payload": payload}
+        )
+
+    async def _handle_draw(self, content):
+        try:
+            game_id = content.get("game_id")
+            game, status, player_color = await self._request_draw(game_id)
+        except ValidationError as exc:
+            await self.send_json({"type": "error", "message": self._format_error(exc)})
+            return
+
+        if status == "pending":
+            payload = {"type": "draw_offer", "game_id": game_id, "from": player_color}
+        else:
+            payload = self._game_payload(game)
+            payload["type"] = "game_end"
+
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}
         )
@@ -57,6 +87,14 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def _make_move(self, game_id, uci, promotion):
         return GameService.make_move(game_id, self.scope["user"], uci, promotion)
+
+    @database_sync_to_async
+    def _resign(self, game_id):
+        return GameService.resign(game_id, self.scope["user"])
+
+    @database_sync_to_async
+    def _request_draw(self, game_id):
+        return GameService.request_draw(game_id, self.scope["user"])
 
     @staticmethod
     def _format_error(exc: ValidationError) -> str:
@@ -69,3 +107,16 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
                 return str(first[0])
             return str(first)
         return str(exc)
+
+    @staticmethod
+    def _game_payload(game):
+        return {
+            "game_id": game.id,
+            "fen": game.fen,
+            "pgn": game.pgn,
+            "current_turn": game.current_turn,
+            "result": game.result,
+            "white_time_remaining": game.white_time_remaining,
+            "black_time_remaining": game.black_time_remaining,
+            "turn_started_at": game.turn_started_at.isoformat() if game.turn_started_at else None,
+        }

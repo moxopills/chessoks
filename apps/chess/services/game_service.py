@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
 import chess
 from apps.chess.models import Game, Move
+from apps.chess.services.rating_service import RatingService
 
 
 @dataclass(frozen=True)
@@ -19,14 +21,12 @@ class MoveResult:
 class GameService:
     """체스 게임 진행 서비스 (서버 authoritative)"""
 
+    DRAW_OFFER_TTL = 300
+
     @staticmethod
     @transaction.atomic
     def make_move(game_id: int, player, uci: str, promotion: str | None = None) -> MoveResult:
-        game = (
-            Game.objects.select_for_update()
-            .select_related("room", "white_player", "black_player")
-            .get(pk=game_id)
-        )
+        game = GameService._get_game_for_update(game_id)
 
         if game.result != "playing":
             raise ValidationError("이미 종료된 게임입니다.")
@@ -100,6 +100,7 @@ class GameService:
         if result != "playing":
             game.result = result
             game.finished_at = now
+            GameService._apply_rating_update(game)
         elif game.started_at is None:
             game.started_at = now
             started_at_set = True
@@ -120,6 +121,44 @@ class GameService:
 
         game.save(update_fields=update_fields)
         return MoveResult(game=game, move=move_obj)
+
+    @staticmethod
+    @transaction.atomic
+    def resign(game_id: int, player) -> Game:
+        game = GameService._get_game_for_update(game_id)
+        if game.result != "playing":
+            raise ValidationError("이미 종료된 게임입니다.")
+
+        player_color = GameService._player_color(game, player)
+        game.result = "resignation_white" if player_color == "white" else "resignation_black"
+        game.finished_at = timezone.now()
+        GameService._apply_rating_update(game)
+        game.save(update_fields=["result", "finished_at"])
+        GameService._clear_draw_offers(game.id)
+        return game
+
+    @staticmethod
+    @transaction.atomic
+    def request_draw(game_id: int, player) -> tuple[Game | None, str, str]:
+        game = GameService._get_game_for_update(game_id)
+        if game.result != "playing":
+            raise ValidationError("이미 종료된 게임입니다.")
+
+        player_color = GameService._player_color(game, player)
+        opponent_color = "black" if player_color == "white" else "white"
+        key = GameService._draw_offer_key(game.id, player_color)
+        opponent_key = GameService._draw_offer_key(game.id, opponent_color)
+
+        if cache.get(opponent_key):
+            cache.delete(opponent_key)
+            game.result = "draw_agreement"
+            game.finished_at = timezone.now()
+            GameService._apply_rating_update(game)
+            game.save(update_fields=["result", "finished_at"])
+            return game, "accepted", player_color
+
+        cache.set(key, True, timeout=GameService.DRAW_OFFER_TTL)
+        return None, "pending", player_color
 
     @staticmethod
     def _player_color(game: Game, player) -> str:
@@ -179,6 +218,7 @@ class GameService:
         else:
             game.result = "timeout_black"
             game.black_time_remaining = 0
+        GameService._apply_rating_update(game)
         game.finished_at = now
         game.save(
             update_fields=[
@@ -188,6 +228,7 @@ class GameService:
                 "black_time_remaining",
             ]
         )
+        GameService._clear_draw_offers(game.id)
 
     @staticmethod
     def _determine_result(board: chess.Board) -> str:
@@ -209,3 +250,29 @@ class GameService:
         if not pgn:
             return prefix
         return f"{pgn} {prefix}"
+
+    @staticmethod
+    def _apply_rating_update(game: Game) -> None:
+        white_stats = game.white_player.stats
+        black_stats = game.black_player.stats
+
+        RatingService.update_ratings_and_stats(white_stats, black_stats, game.result)
+        white_stats.save()
+        black_stats.save()
+
+    @staticmethod
+    def _get_game_for_update(game_id: int) -> Game:
+        return (
+            Game.objects.select_for_update()
+            .select_related("room", "white_player", "black_player")
+            .get(pk=game_id)
+        )
+
+    @staticmethod
+    def _draw_offer_key(game_id: int, player_color: str) -> str:
+        return f"chess:draw_offer:{game_id}:{player_color}"
+
+    @staticmethod
+    def _clear_draw_offers(game_id: int) -> None:
+        cache.delete(GameService._draw_offer_key(game_id, "white"))
+        cache.delete(GameService._draw_offer_key(game_id, "black"))
