@@ -48,7 +48,8 @@ class SignUpForm(UserCreationForm):
 
     def clean_nickname(self):
         """닉네임 중복 체크"""
-        nickname = self.cleaned_data.get("nickname")
+        nickname = (self.cleaned_data.get("nickname") or "").strip()
+        self.cleaned_data["nickname"] = nickname
         user = User.objects.filter(nickname=nickname).first()
         result = AccountService.check_availability(user, "닉네임")
         if not result["available"]:
