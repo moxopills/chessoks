@@ -319,4 +319,8 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.accounts.tasks.cleanup_deleted_accounts",
         "schedule": 60 * 60 * 24,  # 매일 (24시간마다)
     },
+    "chess-handle-timeouts": {
+        "task": "apps.chess.tasks.handle_timeouts",
+        "schedule": 10,  # 10초마다
+    },
 }
