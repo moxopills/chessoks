@@ -72,3 +72,8 @@ class SignUpFormTestCase(TestCase):
         form = SignUpForm(data=self._valid_data(email="new@test.com", nickname="중복닉"))
         self.assertFalse(form.is_valid())
         self.assertIn("탈퇴 예약", form.errors["nickname"][0])
+
+    def test_nickname_stripped_before_validation(self):
+        form = SignUpForm(data=self._valid_data(nickname="  공백닉  "))
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["nickname"], "공백닉")
