@@ -82,7 +82,10 @@ class Room(models.Model):
     )
 
     # 시간 제한 (분)
-    time_limit = models.IntegerField(default=30, help_text="각 플레이어당 시간 제한 (분)")
+    time_limit = models.IntegerField(default=15, help_text="각 플레이어당 시간 제한 (분)")
+
+    # 인크리먼트 (초)
+    increment_seconds = models.IntegerField(default=10, help_text="턴 종료 시 추가 시간 (초)")
 
     # 타임스탬프
     created_at = models.DateTimeField(auto_now_add=True)
@@ -104,6 +107,9 @@ class Room(models.Model):
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(time_limit__gt=0), name="time_limit_positive"
+            ),
+            models.CheckConstraint(
+                condition=models.Q(increment_seconds__gte=0), name="increment_seconds_nonnegative"
             ),
         ]
 

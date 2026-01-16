@@ -305,6 +305,12 @@ wheels = [
 ]
 
 [[package]]
+name = "chess"
+version = "1.11.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/09/7d04d7581ae3bb8b598017941781bceb7959dd1b13e3ebf7b6a2cd843bc9/chess-1.11.2.tar.gz", hash = "sha256:a8b43e5678fdb3000695bdaa573117ad683761e5ca38e591c4826eba6d25bb39", size = 6131385, upload-time = "2025-02-25T19:10:27.328Z" }
+
+[[package]]
 name = "chessok"
 version = "0.1.1"
 source = { virtual = "." }
@@ -321,6 +327,7 @@ dependencies = [
     { name = "drf-spectacular" },
     { name = "gunicorn" },
     { name = "psycopg2-binary" },
+    { name = "python-chess" },
     { name = "python-dotenv" },
     { name = "redis" },
     { name = "requests" },
@@ -378,6 +385,7 @@ requires-dist = [
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.4" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0.0" },
     { name = "pytest-django", marker = "extra == 'dev'", specifier = ">=4.9.0" },
+    { name = "python-chess", specifier = ">=1.999" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
     { name = "redis", specifier = ">=5.0.3,<6.5" },
     { name = "requests", specifier = ">=2.32.5" },
@@ -1222,6 +1230,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b1/fb/55d580352db26eb3d59ad50c64321ddfe228d3d8ac107db05387a2fadf3a/pytest_django-4.11.1.tar.gz", hash = "sha256:a949141a1ee103cb0e7a20f1451d355f83f5e4a5d07bdd4dcfdd1fd0ff227991", size = 86202, upload-time = "2025-04-03T18:56:09.338Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/be/ac/bd0608d229ec808e51a21044f3f2f27b9a37e7a0ebaca7247882e67876af/pytest_django-4.11.1-py3-none-any.whl", hash = "sha256:1b63773f648aa3d8541000c26929c1ea63934be1cfa674c76436966d73fe6a10", size = 25281, upload-time = "2025-04-03T18:56:07.678Z" },
+]
+
+[[package]]
+name = "python-chess"
+version = "1.999"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "chess" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5f/60/7c7d132b6683ff215bf705fc55ffc0240a6cddea89657407ca0a4fb628d0/python-chess-1.999.tar.gz", hash = "sha256:8cad0388c42242d890ac6368ad64def15cd0165db033df0ad479492e266e5e6c", size = 1453, upload-time = "2020-10-26T11:30:10.118Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/47/dfebc06e589530691d33c71bc7b3d8d311252b58ae338980fd4327fe77f2/python_chess-1.999-py3-none-any.whl", hash = "sha256:93b562f8f1124cb7bf56fb095e18743758e69dc6a028ccda0badcaa5c59d88c8", size = 1401, upload-time = "2020-10-26T11:30:07.758Z" },
 ]
 
 [[package]]

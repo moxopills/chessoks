@@ -30,8 +30,9 @@ def custom_exception_handler(exc, context):
     }
     """
     if isinstance(exc, IntegrityError):
+        message = _get_integrity_error_message(exc)
         return Response(
-            {"error": {"code": "validation_error", "message": "이미 사용 중인 값입니다."}},
+            {"error": {"code": "validation_error", "message": message}},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -92,3 +93,16 @@ class ServiceException(APIException):
             self.detail["code"] = code
         if details:
             self.detail["details"] = details
+
+
+def _get_integrity_error_message(exc: IntegrityError) -> str:
+    """Unique 제약 위반 메시지 구체화"""
+    cause = getattr(exc, "__cause__", None)
+    constraint = getattr(getattr(cause, "diag", None), "constraint_name", "")
+    raw = f"{constraint} {exc}"
+
+    if "email" in raw:
+        return "이미 사용 중인 이메일입니다."
+    if "nickname" in raw:
+        return "이미 사용 중인 닉네임입니다."
+    return "이미 사용 중인 값입니다."
