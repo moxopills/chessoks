@@ -597,6 +597,34 @@ class UserModelTest(BaseTestCase):
         self.assertIn("통계테스트", str(user.stats))
         self.assertIn("1500", str(user.stats))
 
+    def test_rank_tier_by_rating(self):
+        """레이팅 구간별 등급"""
+        user = self.create_user()
+
+        user.stats.rating = 500
+        user.stats.save(update_fields=["rating"])
+        self.assertEqual(user.stats.rank_tier, "Beginner")
+
+        user.stats.rating = 1200
+        user.stats.save(update_fields=["rating"])
+        self.assertEqual(user.stats.rank_tier, "Junior")
+
+        user.stats.rating = 1700
+        user.stats.save(update_fields=["rating"])
+        self.assertEqual(user.stats.rank_tier, "Intermediate")
+
+        user.stats.rating = 2200
+        user.stats.save(update_fields=["rating"])
+        self.assertEqual(user.stats.rank_tier, "Advanced")
+
+        user.stats.rating = 2700
+        user.stats.save(update_fields=["rating"])
+        self.assertEqual(user.stats.rank_tier, "Expert")
+
+        user.stats.rating = 3200
+        user.stats.save(update_fields=["rating"])
+        self.assertEqual(user.stats.rank_tier, "Master")
+
 
 class PasswordResetE2ETest(BaseAPITestCase):
     """비밀번호 재설정 E2E 테스트"""
