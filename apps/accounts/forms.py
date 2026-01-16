@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.forms import UserCreationForm
 
 from apps.accounts.models import User
+from apps.accounts.services.session_service import AccountService
 from apps.accounts.utils.validators import validate_password_strength
 
 
@@ -38,16 +39,20 @@ class SignUpForm(UserCreationForm):
 
     def clean_email(self):
         """이메일 중복 체크"""
-        email = self.cleaned_data.get("email")
-        if User.objects.filter(email=email).exists():
-            raise forms.ValidationError("이미 사용 중인 이메일입니다.")
+        email = User.objects.normalize_email(self.cleaned_data.get("email"))
+        user = User.objects.filter(email=email).first()
+        result = AccountService.check_availability(user, "이메일")
+        if not result["available"]:
+            raise forms.ValidationError(result["message"])
         return email
 
     def clean_nickname(self):
         """닉네임 중복 체크"""
         nickname = self.cleaned_data.get("nickname")
-        if User.objects.filter(nickname=nickname).exists():
-            raise forms.ValidationError("이미 사용 중인 닉네임입니다.")
+        user = User.objects.filter(nickname=nickname).first()
+        result = AccountService.check_availability(user, "닉네임")
+        if not result["available"]:
+            raise forms.ValidationError(result["message"])
         return nickname
 
     def clean_password1(self):
@@ -57,13 +62,11 @@ class SignUpForm(UserCreationForm):
 
     def save(self, commit=True):
         """UserManager.create_user 사용하여 저장"""
-        user = User(
+        user = User.objects.create_user(
             email=self.cleaned_data["email"],
             nickname=self.cleaned_data["nickname"],
+            password=self.cleaned_data["password1"],
         )
-        user.set_password(self.cleaned_data["password1"])
-        if commit:
-            user.save()
         return user
 
 
