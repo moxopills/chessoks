@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from .room import Room
 
@@ -124,6 +125,7 @@ class Game(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
+    turn_started_at = models.DateTimeField(null=True, blank=True, help_text="현재 턴 시작 시간")
 
     objects = GameManager()
 
@@ -159,6 +161,8 @@ class Game(models.Model):
             time_limit_seconds = self.room.time_limit * 60
             self.white_time_remaining = time_limit_seconds
             self.black_time_remaining = time_limit_seconds
+            if not self.turn_started_at:
+                self.turn_started_at = timezone.now()
         super().save(*args, **kwargs)
 
     @property
