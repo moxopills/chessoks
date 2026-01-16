@@ -42,7 +42,9 @@ def custom_exception_handler(exc, context):
             # {"field": ["message"]} 또는 {"non_field_errors": ["message"]}
             if "non_field_errors" in detail:
                 error_data["message"] = detail["non_field_errors"][0]
-                remaining = {key: value for key, value in detail.items() if key != "non_field_errors"}
+                remaining = {
+                    key: value for key, value in detail.items() if key != "non_field_errors"
+                }
                 if remaining:
                     error_data["details"] = remaining
             else:

@@ -55,9 +55,7 @@ class SignUpFormTestCase(TestCase):
         user.scheduled_deletion_at = timezone.now() - timedelta(hours=1)
         user.save(update_fields=["is_active", "scheduled_deletion_at"])
 
-        form = SignUpForm(
-            data=self._valid_data(email="expired@test.com", nickname="신규닉2")
-        )
+        form = SignUpForm(data=self._valid_data(email="expired@test.com", nickname="신규닉2"))
         self.assertTrue(form.is_valid(), form.errors)
         self.assertFalse(User.objects.filter(id=user.id).exists())
 
