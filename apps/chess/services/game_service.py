@@ -8,6 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 import chess
+from apps.accounts.models import UserStats
 from apps.chess.models import Game, Move
 from apps.chess.services.rating_service import RatingService
 
@@ -149,8 +150,8 @@ class GameService:
         key = GameService._draw_offer_key(game.id, player_color)
         opponent_key = GameService._draw_offer_key(game.id, opponent_color)
 
-        if cache.get(opponent_key):
-            cache.delete(opponent_key)
+        # cache.delete()는 삭제 성공 시 True 반환 (원자적 연산)
+        if cache.delete(opponent_key):
             game.result = "draw_agreement"
             game.finished_at = timezone.now()
             GameService._apply_rating_update(game)
@@ -253,8 +254,8 @@ class GameService:
 
     @staticmethod
     def _apply_rating_update(game: Game) -> None:
-        white_stats = game.white_player.stats
-        black_stats = game.black_player.stats
+        white_stats, _ = UserStats.objects.get_or_create(user=game.white_player)
+        black_stats, _ = UserStats.objects.get_or_create(user=game.black_player)
 
         RatingService.update_ratings_and_stats(white_stats, black_stats, game.result)
         white_stats.save()

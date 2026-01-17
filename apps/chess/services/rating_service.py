@@ -72,9 +72,13 @@ class RatingService:
         RatingService.update_user_stats(white_player, white_result)
         RatingService.update_user_stats(black_player, black_result)
 
+        # 레이팅 계산 전에 원래 값을 저장 (순서 의존성 방지)
+        white_old_rating = white_player.rating
+        black_old_rating = black_player.rating
+
         white_player.rating = RatingService.calculate_new_rating(
-            white_player.rating, black_player.rating, white_score
+            white_old_rating, black_old_rating, white_score
         )
         black_player.rating = RatingService.calculate_new_rating(
-            black_player.rating, white_player.rating, black_score
+            black_old_rating, white_old_rating, black_score
         )
