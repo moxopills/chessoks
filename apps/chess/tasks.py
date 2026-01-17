@@ -28,7 +28,8 @@ def handle_timeouts() -> int:
         for game in games:
             elapsed = (now - game.turn_started_at).total_seconds()
             remaining = (
-                game.white_time_remaining if game.current_turn == "white"
+                game.white_time_remaining
+                if game.current_turn == "white"
                 else game.black_time_remaining
             ) - elapsed
 

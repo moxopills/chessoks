@@ -93,9 +93,7 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
     def _check_room_access(self, user) -> bool:
         """방 접근 권한 확인"""
         try:
-            room = Room.objects.only(
-                "host_id", "guest_id", "allow_spectators"
-            ).get(pk=self.room_id)
+            room = Room.objects.only("host_id", "guest_id", "allow_spectators").get(pk=self.room_id)
 
             if room.host_id == user.id or room.guest_id == user.id:
                 return True
