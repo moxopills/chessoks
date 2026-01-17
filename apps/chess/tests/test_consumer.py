@@ -59,3 +59,22 @@ class ChessConsumerTestCase(TransactionTestCase):
         self.assertIsNotNone(message)
         self.assertEqual(message["type"], "move")
         self.assertEqual(message["game_id"], self.game.id)
+
+    def test_rematch_offer(self):
+        self.game.result = "checkmate_black"
+        self.game.save(update_fields=["result"])
+
+        async def _run():
+            communicator = self._communicator(self.white)
+            connected, _ = await communicator.connect()
+            if not connected:
+                return None
+
+            await communicator.send_json_to({"action": "rematch", "game_id": self.game.id})
+            message = await communicator.receive_json_from()
+            await communicator.disconnect()
+            return message
+
+        message = async_to_sync(_run)()
+        self.assertIsNotNone(message)
+        self.assertEqual(message["type"], "rematch_offer")
