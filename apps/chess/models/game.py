@@ -67,9 +67,9 @@ class Game(models.Model):
         ("draw_insufficient", "기물 부족 무승부"),
     ]
 
-    # 게임이 속한 방
-    room = models.OneToOneField(
-        Room, on_delete=models.CASCADE, related_name="game", help_text="게임이 진행되는 방"
+    # 게임이 속한 방 (한 방에서 여러 게임 가능 - 리매치)
+    room = models.ForeignKey(
+        Room, on_delete=models.CASCADE, related_name="games", help_text="게임이 진행되는 방"
     )
 
     # 백 플레이어 (선공)

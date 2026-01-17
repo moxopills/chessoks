@@ -117,6 +117,22 @@ class GameServiceTestCase(TestCase):
         self.assertEqual(status, "accepted")
         self.assertEqual(game.result, "draw_agreement")
 
+    def test_rematch_offer_pending_then_accepted(self):
+        cache.clear()
+        self.game.result = "checkmate_black"
+        self.game.save(update_fields=["result"])
+
+        game, status, _ = GameService.request_rematch(self.game.id, self.white)
+        self.assertIsNone(game)
+        self.assertEqual(status, "pending")
+
+        game, status, _ = GameService.request_rematch(self.game.id, self.black)
+        self.assertIsNotNone(game)
+        self.assertEqual(status, "accepted")
+        self.assertNotEqual(game.id, self.game.id)
+        self.assertEqual(game.white_player, self.black)
+        self.assertEqual(game.black_player, self.white)
+
 
 class TimeoutTaskTestCase(TestCase):
     def setUp(self):

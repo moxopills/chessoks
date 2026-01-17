@@ -23,6 +23,7 @@ class GameService:
     """체스 게임 진행 서비스 (서버 authoritative)"""
 
     DRAW_OFFER_TTL = 300
+    REMATCH_OFFER_TTL = 90
 
     @staticmethod
     @transaction.atomic
@@ -162,6 +163,42 @@ class GameService:
         return None, "pending", player_color
 
     @staticmethod
+    @transaction.atomic
+    def request_rematch(game_id: int, player) -> tuple[Game | None, str, str]:
+        game = GameService._get_game_for_update(game_id)
+        if game.result == "playing":
+            raise ValidationError("진행 중인 게임에는 리매치를 요청할 수 없습니다.")
+
+        player_color = GameService._player_color(game, player)
+        opponent_color = "black" if player_color == "white" else "white"
+        key = GameService._rematch_offer_key(game.id, player_color)
+        opponent_key = GameService._rematch_offer_key(game.id, opponent_color)
+
+        # cache.delete()는 삭제 성공 시 True 반환 (원자적 연산)
+        if cache.delete(opponent_key):
+            rematch_game = GameService._create_rematch_game(game)
+            return rematch_game, "accepted", player_color
+
+        cache.set(key, True, timeout=GameService.REMATCH_OFFER_TTL)
+        return None, "pending", player_color
+
+    @staticmethod
+    def decline_rematch(game_id: int, player) -> tuple[bool, str]:
+        """리매치 요청 거절"""
+        game = Game.objects.select_related("white_player", "black_player").get(pk=game_id)
+        if game.result == "playing":
+            raise ValidationError("진행 중인 게임입니다.")
+
+        player_color = GameService._player_color(game, player)
+        opponent_color = "black" if player_color == "white" else "white"
+        opponent_key = GameService._rematch_offer_key(game.id, opponent_color)
+
+        # 상대방의 리매치 요청이 있으면 삭제
+        if cache.delete(opponent_key):
+            return True, player_color
+        return False, player_color
+
+    @staticmethod
     def _player_color(game: Game, player) -> str:
         if player == game.white_player:
             return "white"
@@ -230,6 +267,7 @@ class GameService:
             ]
         )
         GameService._clear_draw_offers(game.id)
+        GameService._clear_rematch_offers(game.id)
 
     @staticmethod
     def _determine_result(board: chess.Board) -> str:
@@ -277,3 +315,27 @@ class GameService:
     def _clear_draw_offers(game_id: int) -> None:
         cache.delete(GameService._draw_offer_key(game_id, "white"))
         cache.delete(GameService._draw_offer_key(game_id, "black"))
+
+    @staticmethod
+    def _rematch_offer_key(game_id: int, player_color: str) -> str:
+        return f"chess:rematch_offer:{game_id}:{player_color}"
+
+    @staticmethod
+    def _clear_rematch_offers(game_id: int) -> None:
+        cache.delete(GameService._rematch_offer_key(game_id, "white"))
+        cache.delete(GameService._rematch_offer_key(game_id, "black"))
+
+    @staticmethod
+    def _create_rematch_game(game: Game) -> Game:
+        """기존 Room에서 흑백을 바꿔 새 Game 생성"""
+        room = game.room
+        # 흑백 교체
+        white_player = game.black_player
+        black_player = game.white_player
+
+        # Room의 host/guest 업데이트
+        room.host = white_player
+        room.guest = black_player
+        room.save(update_fields=["host", "guest"])
+
+        return Game.objects.create(room=room, white_player=white_player, black_player=black_player)

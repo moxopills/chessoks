@@ -40,6 +40,8 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
                 "move": self._handle_move,
                 "resign": self._handle_resign,
                 "draw": self._handle_draw,
+                "rematch": self._handle_rematch,
+                "decline_rematch": self._handle_decline_rematch,
             }.get(action)
 
             if handler:
@@ -78,6 +80,26 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
             payload["type"] = "game_end"
         await self._broadcast(payload)
 
+    async def _handle_rematch(self, content):
+        game_id = content.get("game_id")
+        game, status, player_color = await self._request_rematch(game_id)
+
+        if status == "pending":
+            payload = {"type": "rematch_offer", "game_id": game_id, "from": player_color}
+        else:
+            payload = self._game_payload(game)
+            payload["type"] = "rematch_created"
+            payload["room_id"] = game.room_id
+        await self._broadcast(payload)
+
+    async def _handle_decline_rematch(self, content):
+        game_id = content.get("game_id")
+        declined, player_color = await self._decline_rematch(game_id)
+
+        if declined:
+            payload = {"type": "rematch_declined", "game_id": game_id, "from": player_color}
+            await self._broadcast(payload)
+
     async def _broadcast(self, payload):
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}
@@ -115,6 +137,14 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def _request_draw(self, game_id):
         return GameService.request_draw(game_id, self.scope["user"])
+
+    @database_sync_to_async
+    def _request_rematch(self, game_id):
+        return GameService.request_rematch(game_id, self.scope["user"])
+
+    @database_sync_to_async
+    def _decline_rematch(self, game_id):
+        return GameService.decline_rematch(game_id, self.scope["user"])
 
     @staticmethod
     def _format_error(exc: ValidationError) -> str:
