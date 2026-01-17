@@ -67,9 +67,9 @@ class Game(models.Model):
         ("draw_insufficient", "기물 부족 무승부"),
     ]
 
-    # 게임이 속한 방
-    room = models.OneToOneField(
-        Room, on_delete=models.CASCADE, related_name="game", help_text="게임이 진행되는 방"
+    # 게임이 속한 방 (한 방에서 여러 게임 가능 - 리매치)
+    room = models.ForeignKey(
+        Room, on_delete=models.CASCADE, related_name="games", help_text="게임이 진행되는 방"
     )
 
     # 백 플레이어 (선공)
@@ -140,7 +140,16 @@ class Game(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(move_count__gte=0), name="move_count_positive"
+                condition=models.Q(move_count__gte=0),
+                name="move_count_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(white_time_remaining__gte=0),
+                name="white_time_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(black_time_remaining__gte=0),
+                name="black_time_nonnegative",
             ),
         ]
 

@@ -106,7 +106,16 @@ class Move(models.Model):
             models.Index(fields=["game", "move_number"]),
             models.Index(fields=["game", "created_at"]),
         ]
-        unique_together = [["game", "move_number", "player_color"]]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["game", "move_number", "player_color"],
+                name="unique_move_per_turn",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(move_number__gte=1),
+                name="move_number_positive",
+            ),
+        ]
 
     def __str__(self):
         return f"Move {self.move_number}: {self.san} ({self.player_color})"

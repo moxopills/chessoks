@@ -68,7 +68,7 @@ class Room(models.Model):
     is_private = models.BooleanField(default=False, help_text="비공개방 여부")
 
     # 비밀번호 (비공개방일 때)
-    password = models.CharField(max_length=50, blank=True, help_text="방 비밀번호")
+    password = models.CharField(max_length=128, blank=True, help_text="방 비밀번호")
 
     # 관전 허용 여부
     allow_spectators = models.BooleanField(default=True, help_text="관전 허용 여부")
