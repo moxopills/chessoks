@@ -140,7 +140,16 @@ class Game(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(move_count__gte=0), name="move_count_positive"
+                condition=models.Q(move_count__gte=0),
+                name="move_count_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(white_time_remaining__gte=0),
+                name="white_time_nonnegative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(black_time_remaining__gte=0),
+                name="black_time_nonnegative",
             ),
         ]
 
