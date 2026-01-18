@@ -1,5 +1,9 @@
+from django.urls import path
+
+from apps.chess.views import QuickMatchView
+
 app_name = "chess"
 
 urlpatterns = [
-    # URL 패턴을 여기에 추가하세요
+    path("quick-match/", QuickMatchView.as_view(), name="quick-match"),
 ]
