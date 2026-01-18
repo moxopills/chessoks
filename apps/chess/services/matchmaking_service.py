@@ -15,7 +15,7 @@ from apps.chess.models import Game, Room
 class MatchmakingService:
     """빠른 대전 매칭 서비스"""
 
-    RATING_BANDS = [200, 400, 800, 2000]
+    MAX_RATING_DIFF = 125
 
     @staticmethod
     @transaction.atomic
@@ -47,25 +47,22 @@ class MatchmakingService:
 
     @staticmethod
     def _find_best_room(user, rating):
-        base = (
+        return (
             Room.objects.select_for_update(skip_locked=True)
-            .filter(room_type="quick", status="waiting", is_private=False, guest__isnull=True)
+            .filter(
+                room_type="quick",
+                status="waiting",
+                is_private=False,
+                guest__isnull=True,
+                host__stats__rating__gte=rating - MatchmakingService.MAX_RATING_DIFF,
+                host__stats__rating__lte=rating + MatchmakingService.MAX_RATING_DIFF,
+            )
             .exclude(host=user)
             .select_related("host__stats")
+            .annotate(abs_diff=Abs(F("host__stats__rating") - Value(rating)))
+            .order_by("abs_diff", "created_at")
+            .first()
         )
-
-        for band in MatchmakingService.RATING_BANDS:
-            candidates = (
-                base.filter(
-                    host__stats__rating__gte=rating - band, host__stats__rating__lte=rating + band
-                )
-                .annotate(abs_diff=Abs(F("host__stats__rating") - Value(rating)))
-                .order_by("abs_diff", "created_at")
-            )
-            room = candidates.first()
-            if room:
-                return room
-        return None
 
     @staticmethod
     def _assign_colors(host, guest):
@@ -74,7 +71,6 @@ class MatchmakingService:
         return guest, host
 
     @staticmethod
-    @transaction.atomic
     def cancel_match(user) -> bool:
         """대기 중인 빠른 대전 취소"""
         deleted, _ = Room.objects.filter(
