@@ -1,11 +1,12 @@
 import logging
+from datetime import timedelta
 
 from django.db import transaction
 from django.utils import timezone
 
 from celery import shared_task
 
-from apps.chess.models import Game
+from apps.chess.models import Game, Room
 from apps.chess.services import GameService
 
 logger = logging.getLogger(__name__)
@@ -41,3 +42,13 @@ def handle_timeouts() -> int:
                     logger.warning("Timeout failed for game %s: %s", game.id, exc)
 
     return updated
+
+
+@shared_task
+def cleanup_stale_waiting_rooms(timeout_minutes: int = 10) -> int:
+    """오래된 빠른 대전 대기방 정리"""
+    cutoff = timezone.now() - timedelta(minutes=timeout_minutes)
+    deleted, _ = Room.objects.filter(
+        room_type="quick", status="waiting", guest__isnull=True, created_at__lt=cutoff
+    ).delete()
+    return deleted
