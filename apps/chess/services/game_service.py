@@ -9,6 +9,7 @@ from django.utils import timezone
 
 import chess
 from apps.accounts.models import UserStats
+from apps.chess.engine import board as rule_engine
 from apps.chess.models import Game, Move
 from apps.chess.services.rating_service import RatingService
 
@@ -40,6 +41,8 @@ class GameService:
         move_uci = GameService._normalize_uci(uci, promotion)
         if not move_uci:
             raise ValidationError("이동 정보가 올바르지 않습니다.")
+
+        GameService._precheck_move(game.fen, move_uci)
 
         now = timezone.now()
         time_spent = GameService._calc_time_spent(game, now)
@@ -211,6 +214,15 @@ class GameService:
         expected = chess.WHITE if player_color == "white" else chess.BLACK
         if board.turn != expected:
             raise ValidationError("현재 보드 턴과 요청이 일치하지 않습니다.")
+
+    @staticmethod
+    def _precheck_move(fen: str, move_uci: str) -> None:
+        position = rule_engine.from_fen(fen)
+        legal_moves = {
+            rule_engine.move_to_uci(move) for move in rule_engine.generate_legal_moves(position)
+        }
+        if move_uci not in legal_moves:
+            raise ValidationError("허용되지 않는 수입니다.")
 
     @staticmethod
     def _normalize_uci(uci: str | None, promotion: str | None) -> str:
