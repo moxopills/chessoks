@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from celery import shared_task
 
-from apps.chess.models import Game, Room
+from apps.chess.models import Game, LobbyMessage, Room
 from apps.chess.services import GameService
 
 logger = logging.getLogger(__name__)
@@ -51,4 +51,12 @@ def cleanup_stale_waiting_rooms(timeout_minutes: int = 10) -> int:
     deleted, _ = Room.objects.filter(
         room_type="quick", status="waiting", guest__isnull=True, created_at__lt=cutoff
     ).delete()
+    return deleted
+
+
+@shared_task
+def cleanup_lobby_messages(retention_days: int = 3) -> int:
+    """로비 채팅 메시지 보관 기간 정리"""
+    cutoff = timezone.now() - timedelta(days=retention_days)
+    deleted, _ = LobbyMessage.objects.filter(created_at__lt=cutoff).delete()
     return deleted
