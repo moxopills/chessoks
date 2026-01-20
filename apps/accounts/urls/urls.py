@@ -8,8 +8,10 @@ from apps.accounts.views.user_views import (
     EmailCheckView,
     EmailVerificationConfirmView,
     EmailVerificationResendView,
+    LeaderboardView,
     LoginView,
     LogoutView,
+    MyRankView,
     NicknameCheckView,
     PasswordChangeView,
     PasswordResetConfirmView,
@@ -50,5 +52,7 @@ urlpatterns = [
     path("check-nickname/", NicknameCheckView.as_view(), name="check-nickname"),
     path("email/change/", EmailChangeRequestView.as_view(), name="email-change-request"),
     path("email/change/confirm/", EmailChangeConfirmView.as_view(), name="email-change-confirm"),
+    path("leaderboard/", LeaderboardView.as_view(), name="leaderboard"),
+    path("leaderboard/me/", MyRankView.as_view(), name="leaderboard-me"),
     path("social/", include("apps.accounts.urls.social_urls")),
 ]
