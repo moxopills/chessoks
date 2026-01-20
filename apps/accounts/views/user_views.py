@@ -17,6 +17,7 @@ from apps.accounts.serializers import (
     EmailVerificationResendSerializer,
     EmailVerificationSerializer,
     LeaderboardEntrySerializer,
+    LeaderboardResponseSerializer,
     LoginRequestSerializer,
     LoginResponseSerializer,
     NicknameCheckSerializer,
@@ -378,7 +379,7 @@ class LeaderboardView(APIView):
 
     @extend_schema(
         parameters=[],
-        responses={200: LeaderboardEntrySerializer(many=True)},
+        responses={200: LeaderboardResponseSerializer},
         tags=["랭킹"],
     )
     def get(self, request):
