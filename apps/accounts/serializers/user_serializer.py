@@ -52,6 +52,33 @@ class LeaderboardEntrySerializer(serializers.Serializer):
     rank = serializers.IntegerField(read_only=True)
 
 
+class MyRankSerializer(serializers.Serializer):
+    """내 랭킹 정보 (페이지네이션 응답 내 포함용)"""
+
+    id = serializers.IntegerField()
+    nickname = serializers.CharField()
+    avatar_url = serializers.URLField(allow_null=True)
+    rating = serializers.IntegerField()
+    games_played = serializers.IntegerField()
+    games_won = serializers.IntegerField()
+    games_draw = serializers.IntegerField()
+    games_lost = serializers.IntegerField()
+    rank_tier = serializers.CharField()
+    rank = serializers.IntegerField()
+
+
+class LeaderboardResponseSerializer(serializers.Serializer):
+    """랭킹 보드 페이지네이션 응답"""
+
+    count = serializers.IntegerField(help_text="전체 유저 수")
+    total_pages = serializers.IntegerField(help_text="전체 페이지 수")
+    current_page = serializers.IntegerField(help_text="현재 페이지")
+    next = serializers.URLField(allow_null=True, help_text="다음 페이지 URL")
+    previous = serializers.URLField(allow_null=True, help_text="이전 페이지 URL")
+    results = LeaderboardEntrySerializer(many=True, help_text="랭킹 목록")
+    my_rank = MyRankSerializer(allow_null=True, help_text="내 랭킹 (로그인 시)")
+
+
 class LoginRequestSerializer(serializers.Serializer):
     """로그인 요청"""
 
