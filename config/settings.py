@@ -323,4 +323,9 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.chess.tasks.handle_timeouts",
         "schedule": 10,  # 10초마다
     },
+    "chess-cleanup-lobby-messages": {
+        "task": "apps.chess.tasks.cleanup_lobby_messages",
+        "schedule": 60 * 60 * 24,  # 매일 (24시간마다)
+        "args": [3],
+    },
 }

@@ -1,11 +1,12 @@
 import logging
 
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
-from apps.chess.models import Room
+from apps.chess.models import LobbyMessage, Room
 from apps.chess.services import GameService
 
 logger = logging.getLogger(__name__)
@@ -23,10 +24,12 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
             await self.close(code=4001)
             return
 
-        if not await self._check_room_access(user):
+        is_player = await self._check_room_access(user)
+        if is_player is None:
             await self.close(code=4003)
             return
 
+        self.is_player = is_player
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
@@ -42,6 +45,7 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
                 "draw": self._handle_draw,
                 "rematch": self._handle_rematch,
                 "decline_rematch": self._handle_decline_rematch,
+                "chat": self._handle_chat,
             }.get(action)
 
             if handler:
@@ -100,6 +104,32 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
             payload = {"type": "rematch_declined", "game_id": game_id, "from": player_color}
             await self._broadcast(payload)
 
+    async def _handle_chat(self, content):
+        message = (content.get("message") or "").strip()
+        if not message:
+            await self.send_json({"type": "error", "message": "메시지를 입력해주세요."})
+            return
+        if len(message) > 500:
+            await self.send_json(
+                {"type": "error", "message": "메시지는 500자 이하로 입력해주세요."}
+            )
+            return
+
+        if not self.is_player:
+            await self.send_json({"type": "error", "message": "채팅 권한이 없습니다."})
+            return
+
+        payload = {
+            "type": "chat",
+            "scope": "game",
+            "room_id": int(self.room_id),
+            "user_id": self.scope["user"].id,
+            "nickname": self.scope["user"].nickname,
+            "message": message,
+            "sent_at": timezone.now().isoformat(),
+        }
+        await self._broadcast(payload)
+
     async def _broadcast(self, payload):
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}
@@ -112,8 +142,8 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
             pass  # 연결 끊긴 클라이언트 무시
 
     @database_sync_to_async
-    def _check_room_access(self, user) -> bool:
-        """방 접근 권한 확인"""
+    def _check_room_access(self, user) -> bool | None:
+        """방 접근 권한 확인. 플레이어면 True, 관전자면 False, 접근 불가면 None"""
         try:
             room = Room.objects.only("host_id", "guest_id", "allow_spectators").get(pk=self.room_id)
 
@@ -121,10 +151,10 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
                 return True
             if room.allow_spectators:
                 room.spectators.add(user)
-                return True
-            return False
+                return False
+            return None
         except Room.DoesNotExist:
-            return False
+            return None
 
     @database_sync_to_async
     def _make_move(self, game_id, uci, promotion):
@@ -170,3 +200,64 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
             "black_time_remaining": game.black_time_remaining,
             "turn_started_at": game.turn_started_at.isoformat() if game.turn_started_at else None,
         }
+
+
+class LobbyChatConsumer(AsyncJsonWebsocketConsumer):
+    """로비 채팅 WebSocket Consumer"""
+
+    group_name = "chess_lobby"
+
+    async def connect(self):
+        user = self.scope["user"]
+        if not user.is_authenticated:
+            await self.close(code=4001)
+            return
+
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def receive_json(self, content, **kwargs):
+        try:
+            action = content.get("action")
+            if action != "chat":
+                await self.send_json({"type": "error", "message": "지원하지 않는 액션입니다."})
+                return
+
+            message = (content.get("message") or "").strip()
+            if not message:
+                await self.send_json({"type": "error", "message": "메시지를 입력해주세요."})
+                return
+            if len(message) > 500:
+                await self.send_json(
+                    {"type": "error", "message": "메시지는 500자 이하로 입력해주세요."}
+                )
+                return
+
+            await self._save_lobby_message(message)
+            payload = {
+                "type": "chat",
+                "scope": "lobby",
+                "user_id": self.scope["user"].id,
+                "nickname": self.scope["user"].nickname,
+                "message": message,
+                "sent_at": timezone.now().isoformat(),
+            }
+            await self.channel_layer.group_send(
+                self.group_name, {"type": "broadcast", "payload": payload}
+            )
+        except Exception as exc:
+            logger.exception("Lobby chat error: %s", exc)
+            await self.send_json({"type": "error", "message": "서버 오류가 발생했습니다."})
+
+    async def broadcast(self, event):
+        try:
+            await self.send_json(event["payload"])
+        except Exception:
+            pass
+
+    @database_sync_to_async
+    def _save_lobby_message(self, message: str) -> None:
+        LobbyMessage.objects.create(user=self.scope["user"], message=message)

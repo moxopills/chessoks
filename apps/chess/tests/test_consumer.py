@@ -5,8 +5,8 @@ from django.test import TransactionTestCase, override_settings
 from asgiref.sync import async_to_sync
 from channels.testing import WebsocketCommunicator
 
-from apps.chess.consumers import ChessConsumer
-from apps.chess.models import Game, Room
+from apps.chess.consumers import ChessConsumer, LobbyChatConsumer
+from apps.chess.models import Game, LobbyMessage, Room
 
 User = get_user_model()
 
@@ -78,3 +78,56 @@ class ChessConsumerTestCase(TransactionTestCase):
         message = async_to_sync(_run)()
         self.assertIsNotNone(message)
         self.assertEqual(message["type"], "rematch_offer")
+
+    def test_game_chat_broadcast(self):
+        async def _run():
+            communicator = self._communicator(self.white)
+            connected, _ = await communicator.connect()
+            if not connected:
+                return None
+
+            await communicator.send_json_to({"action": "chat", "message": "안녕하세요"})
+            message = await communicator.receive_json_from()
+            await communicator.disconnect()
+            return message
+
+        message = async_to_sync(_run)()
+        self.assertIsNotNone(message)
+        self.assertEqual(message["type"], "chat")
+        self.assertEqual(message["scope"], "game")
+        self.assertEqual(message["room_id"], self.room.id)
+
+
+@override_settings(CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}})
+class LobbyChatConsumerTestCase(TransactionTestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="lobby@test.com", nickname="로비", password="Pass123!"
+        )
+
+    def _communicator(self, user):
+        communicator = WebsocketCommunicator(LobbyChatConsumer.as_asgi(), "/ws/lobby/")
+        communicator.scope["user"] = user
+        communicator.scope["url_route"] = {"kwargs": {}}
+        return communicator
+
+    def test_lobby_chat_broadcast(self):
+        async def _run():
+            communicator = self._communicator(self.user)
+            connected, _ = await communicator.connect()
+            if not connected:
+                return None
+
+            await communicator.send_json_to({"action": "chat", "message": "로비 채팅"})
+            message = await communicator.receive_json_from()
+            await communicator.disconnect()
+            return message
+
+        message = async_to_sync(_run)()
+        self.assertIsNotNone(message)
+        self.assertEqual(message["type"], "chat")
+        self.assertEqual(message["scope"], "lobby")
+        self.assertEqual(LobbyMessage.objects.count(), 1)
+        saved = LobbyMessage.objects.first()
+        self.assertEqual(saved.user_id, self.user.id)
+        self.assertEqual(saved.message, "로비 채팅")
