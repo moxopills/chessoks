@@ -103,6 +103,7 @@ class Room(models.Model):
         indexes = [
             models.Index(fields=["status", "room_type"]),
             models.Index(fields=["host"]),
+            models.Index(fields=["is_private", "status", "room_type"], name="room_list_idx"),
         ]
         constraints = [
             models.CheckConstraint(
