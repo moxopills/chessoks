@@ -1,8 +1,6 @@
 import random
 
 from django.db import transaction
-from django.db.models import F, Value
-from django.db.models.functions import Abs
 from django.utils import timezone
 
 from asgiref.sync import async_to_sync
@@ -15,7 +13,18 @@ from apps.chess.models import Game, Room
 class MatchmakingService:
     """빠른 대전 매칭 서비스"""
 
-    MAX_RATING_DIFF = 125
+    RATING_DIFF_TIERS = (
+        (0, 125),
+        (15, 175),
+        (30, 250),
+        (45, 350),
+        (60, 500),
+        (90, 650),
+        (120, 800),
+        (180, 1000),
+        (300, 1200),
+    )
+    MAX_RATING_DIFF = RATING_DIFF_TIERS[-1][1]
 
     @staticmethod
     @transaction.atomic
@@ -47,7 +56,8 @@ class MatchmakingService:
 
     @staticmethod
     def _find_best_room(user, rating):
-        return (
+        now = timezone.now()
+        rooms = list(
             Room.objects.select_for_update(skip_locked=True)
             .filter(
                 room_type="quick",
@@ -59,10 +69,34 @@ class MatchmakingService:
             )
             .exclude(host=user)
             .select_related("host__stats")
-            .annotate(abs_diff=Abs(F("host__stats__rating") - Value(rating)))
-            .order_by("abs_diff", "created_at")
-            .first()
         )
+
+        best_room = None
+        best_diff = None
+        for room in rooms:
+            host_rating = room.host.stats.rating
+            diff = abs(host_rating - rating)
+            wait_seconds = (now - room.created_at).total_seconds()
+            allowed = MatchmakingService._allowed_rating_diff(wait_seconds)
+            if diff > allowed:
+                continue
+            if (
+                best_room is None
+                or diff < best_diff
+                or (diff == best_diff and room.created_at < best_room.created_at)
+            ):
+                best_room = room
+                best_diff = diff
+
+        return best_room
+
+    @staticmethod
+    def _allowed_rating_diff(wait_seconds: float) -> int:
+        allowed = MatchmakingService.RATING_DIFF_TIERS[0][1]
+        for threshold, diff in MatchmakingService.RATING_DIFF_TIERS:
+            if wait_seconds >= threshold:
+                allowed = diff
+        return allowed
 
     @staticmethod
     def _assign_colors(host, guest):
