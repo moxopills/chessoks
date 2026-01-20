@@ -29,6 +29,8 @@ class GameMoveListView(APIView):
     @extend_schema(responses={200: PagedMoveSerializer}, tags=["게임"])
     def get(self, request, game_id: int):
         limit = parse_int(request.query_params.get("limit"), default=50, min_value=1, max_value=200)
-        offset = parse_int(request.query_params.get("offset"), default=0, min_value=0, max_value=10_000)
+        offset = parse_int(
+            request.query_params.get("offset"), default=0, min_value=0, max_value=10_000
+        )
         total, moves = GameQueryService.list_moves(game_id, request.user, limit, offset)
         return Response({"count": total, "results": MoveSerializer(moves, many=True).data})

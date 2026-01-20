@@ -22,8 +22,12 @@ class GameHistoryApiTestCase(TestCase):
             email="opp@test.com", nickname="상대", password="Pass123!"
         )
 
-        self.quick_room = Room.objects.create(host=self.user, guest=self.opponent, room_type="quick")
-        self.custom_room = Room.objects.create(host=self.user, guest=self.opponent, room_type="custom")
+        self.quick_room = Room.objects.create(
+            host=self.user, guest=self.opponent, room_type="quick"
+        )
+        self.custom_room = Room.objects.create(
+            host=self.user, guest=self.opponent, room_type="custom"
+        )
 
         self.game_quick = Game.objects.create(
             room=self.quick_room,

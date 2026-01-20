@@ -18,7 +18,9 @@ class GameHistoryView(APIView):
     @extend_schema(responses={200: PagedGameHistorySerializer}, tags=["전적"])
     def get(self, request):
         limit = parse_int(request.query_params.get("limit"), default=20, min_value=1, max_value=100)
-        offset = parse_int(request.query_params.get("offset"), default=0, min_value=0, max_value=10_000)
+        offset = parse_int(
+            request.query_params.get("offset"), default=0, min_value=0, max_value=10_000
+        )
         opponent = request.query_params.get("opponent")
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")

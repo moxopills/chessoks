@@ -13,12 +13,11 @@ class GameQueryService:
     @staticmethod
     def get_game_for_user(game_id: int, user) -> Game:
         try:
-            game = (
-                Game.objects.select_related("room", "white_player__stats", "black_player__stats")
-                .get(pk=game_id)
-            )
+            game = Game.objects.select_related(
+                "room", "white_player__stats", "black_player__stats"
+            ).get(pk=game_id)
         except Game.DoesNotExist:
-            raise NotFound("게임을 찾을 수 없습니다.")
+            raise NotFound("게임을 찾을 수 없습니다.") from None
 
         if not GameQueryService._has_access(game, user):
             raise NotFound("게임 접근 권한이 없습니다.")

@@ -18,7 +18,9 @@ class RoomListView(APIView):
     @extend_schema(responses={200: PagedRoomSerializer}, tags=["방"])
     def get(self, request):
         limit = parse_int(request.query_params.get("limit"), default=20, min_value=1, max_value=100)
-        offset = parse_int(request.query_params.get("offset"), default=0, min_value=0, max_value=10_000)
+        offset = parse_int(
+            request.query_params.get("offset"), default=0, min_value=0, max_value=10_000
+        )
         room_type = request.query_params.get("room_type")
         status = request.query_params.get("status")
 

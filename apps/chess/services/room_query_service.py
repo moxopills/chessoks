@@ -10,7 +10,9 @@ class RoomQueryService:
     VALID_STATUSES = {choice[0] for choice in Room.STATUS_CHOICES}
 
     @staticmethod
-    def list_rooms(*, room_type: str | None, status: str | None, limit: int, offset: int) -> tuple[int, list[Room]]:
+    def list_rooms(
+        *, room_type: str | None, status: str | None, limit: int, offset: int
+    ) -> tuple[int, list[Room]]:
         queryset = (
             Room.objects.filter(is_private=False)
             .select_related("host__stats", "guest__stats")
@@ -35,12 +37,9 @@ class RoomQueryService:
     @staticmethod
     def get_room(room_id: int, user) -> Room:
         try:
-            room = (
-                Room.objects.select_related("host__stats", "guest__stats")
-                .get(pk=room_id)
-            )
+            room = Room.objects.select_related("host__stats", "guest__stats").get(pk=room_id)
         except Room.DoesNotExist:
-            raise NotFound("방을 찾을 수 없습니다.")
+            raise NotFound("방을 찾을 수 없습니다.") from None
 
         if room.is_private and not RoomQueryService._has_access(room, user):
             raise NotFound("방에 접근할 수 없습니다.")
