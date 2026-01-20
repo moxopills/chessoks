@@ -51,8 +51,7 @@ class UserStats(models.Model):
             ),
         ]
         indexes = [
-            models.Index(fields=["-rating"], name="stats_rating_idx"),
-            models.Index(fields=["-games_played"], name="stats_games_idx"),
+            models.Index(fields=["-rating", "-games_played"], name="stats_ranking_idx"),
         ]
 
     def __str__(self):

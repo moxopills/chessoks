@@ -37,6 +37,21 @@ class UserSerializer(serializers.ModelSerializer):
         )
 
 
+class LeaderboardEntrySerializer(serializers.Serializer):
+    """랭킹 보드 항목"""
+
+    id = serializers.IntegerField(read_only=True)
+    nickname = serializers.CharField(read_only=True)
+    avatar_url = serializers.URLField(read_only=True, allow_null=True)
+    rating = serializers.IntegerField(source="stats.rating", read_only=True)
+    games_played = serializers.IntegerField(source="stats.games_played", read_only=True)
+    games_won = serializers.IntegerField(source="stats.games_won", read_only=True)
+    games_draw = serializers.IntegerField(source="stats.games_draw", read_only=True)
+    games_lost = serializers.IntegerField(source="stats.games_lost", read_only=True)
+    rank_tier = serializers.CharField(source="stats.rank_tier", read_only=True)
+    rank = serializers.IntegerField(read_only=True)
+
+
 class LoginRequestSerializer(serializers.Serializer):
     """로그인 요청"""
 

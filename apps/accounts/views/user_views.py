@@ -16,6 +16,7 @@ from apps.accounts.serializers import (
     EmailCheckSerializer,
     EmailVerificationResendSerializer,
     EmailVerificationSerializer,
+    LeaderboardEntrySerializer,
     LoginRequestSerializer,
     LoginResponseSerializer,
     NicknameCheckSerializer,
@@ -26,7 +27,7 @@ from apps.accounts.serializers import (
     UserSerializer,
     UserSignUpSerializer,
 )
-from apps.accounts.services import AccountSessionService, UserProfileService
+from apps.accounts.services import AccountSessionService, RankingService, UserProfileService
 
 
 class CurrentUserMixin:
@@ -367,3 +368,42 @@ class EmailChangeConfirmView(APIView):
         serializer = EmailChangeConfirmSerializer(data=request.data)
         result = UserProfileService.email_change_confirm(serializer, request.user)
         return Response(result.data, status=result.status)
+
+
+class LeaderboardView(APIView):
+    """레이팅 기반 랭킹 보드 (20명씩 페이지네이션, 로그인 시 내 랭킹 포함)"""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    @extend_schema(
+        parameters=[],
+        responses={200: LeaderboardEntrySerializer(many=True)},
+        tags=["랭킹"],
+    )
+    def get(self, request):
+        from apps.accounts.pagination import LeaderboardPagination
+
+        queryset = RankingService.get_leaderboard_queryset()
+        paginator = LeaderboardPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = LeaderboardEntrySerializer(page, many=True)
+
+        my_rank = None
+        if request.user.is_authenticated:
+            my_rank = RankingService.get_my_rank_data(request.user.pk)
+
+        return paginator.get_paginated_response(serializer.data, my_rank=my_rank)
+
+
+class MyRankView(APIView):
+    """내 랭킹 정보"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: LeaderboardEntrySerializer}, tags=["랭킹"])
+    def get(self, request):
+        user = RankingService.get_user_with_rank(request.user.pk)
+        if user is None:
+            return Response({"message": "유저 정보를 찾을 수 없습니다."}, status=400)
+        return Response(LeaderboardEntrySerializer(user).data)
