@@ -22,12 +22,16 @@ class RoomFlowApiTestCase(TestCase):
 
     def test_ready_and_start_flow(self):
         self.client.force_authenticate(user=self.host)
-        response = self.client.post(f"/api/chess/rooms/{self.room.id}/ready/", {"ready": True}, format="json")
+        response = self.client.post(
+            f"/api/chess/rooms/{self.room.id}/ready/", {"ready": True}, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.data["guest_ready"])
 
         self.client.force_authenticate(user=self.guest)
-        response = self.client.post(f"/api/chess/rooms/{self.room.id}/ready/", {"ready": True}, format="json")
+        response = self.client.post(
+            f"/api/chess/rooms/{self.room.id}/ready/", {"ready": True}, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["status"], "ready")
 
@@ -46,7 +50,9 @@ class RoomFlowApiTestCase(TestCase):
         self.client.post(f"/api/chess/rooms/{self.room.id}/ready/", {"ready": True}, format="json")
         self.client.post(f"/api/chess/rooms/{self.room.id}/start/")
 
-        response = self.client.post(f"/api/chess/rooms/{self.room.id}/ready/", {"ready": False}, format="json")
+        response = self.client.post(
+            f"/api/chess/rooms/{self.room.id}/ready/", {"ready": False}, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["status"], "waiting")
 
@@ -65,7 +71,9 @@ class RoomFlowApiTestCase(TestCase):
             email="outsider@test.com", nickname="외부인", password="Pass123!"
         )
         self.client.force_authenticate(user=outsider)
-        response = self.client.post(f"/api/chess/rooms/{self.room.id}/ready/", {"ready": True}, format="json")
+        response = self.client.post(
+            f"/api/chess/rooms/{self.room.id}/ready/", {"ready": True}, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_start_without_both_ready(self):
@@ -77,6 +85,8 @@ class RoomFlowApiTestCase(TestCase):
     def test_start_without_guest(self):
         room_no_guest = Room.objects.create(host=self.host, room_type="custom")
         self.client.force_authenticate(user=self.host)
-        self.client.post(f"/api/chess/rooms/{room_no_guest.id}/ready/", {"ready": True}, format="json")
+        self.client.post(
+            f"/api/chess/rooms/{room_no_guest.id}/ready/", {"ready": True}, format="json"
+        )
         response = self.client.post(f"/api/chess/rooms/{room_no_guest.id}/start/")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

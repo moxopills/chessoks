@@ -33,7 +33,15 @@ class RoomFlowService:
             room.guest_start_confirmed = False
 
         room.status = RoomFlowService._compute_status(room)
-        room.save(update_fields=["host_ready", "guest_ready", "host_start_confirmed", "guest_start_confirmed", "status"])
+        room.save(
+            update_fields=[
+                "host_ready",
+                "guest_ready",
+                "host_start_confirmed",
+                "guest_start_confirmed",
+                "status",
+            ]
+        )
         return room
 
     @staticmethod
@@ -65,9 +73,13 @@ class RoomFlowService:
             game = room.games.filter(result="playing").first()
             if game is None:
                 white_player, black_player = RoomFlowService._assign_colors(room.host, room.guest)
-                game = Game.objects.create(room=room, white_player=white_player, black_player=black_player)
+                game = Game.objects.create(
+                    room=room, white_player=white_player, black_player=black_player
+                )
 
-        room.save(update_fields=["host_start_confirmed", "guest_start_confirmed", "status", "started_at"])
+        room.save(
+            update_fields=["host_start_confirmed", "guest_start_confirmed", "status", "started_at"]
+        )
         return room, game
 
     @staticmethod
