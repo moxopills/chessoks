@@ -5,8 +5,14 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.chess.serializers import PagedRoomSerializer, RoomSerializer
-from apps.chess.services import RoomQueryService
+from apps.chess.serializers import (
+    PagedRoomSerializer,
+    RoomReadyRequestSerializer,
+    RoomReadyResponseSerializer,
+    RoomSerializer,
+    RoomStartConfirmResponseSerializer,
+)
+from apps.chess.services import RoomFlowService, RoomQueryService
 from apps.chess.utils import parse_int
 
 
@@ -43,3 +49,48 @@ class RoomDetailView(APIView):
     def get(self, request, room_id: int):
         room = RoomQueryService.get_room(room_id, request.user)
         return Response(RoomSerializer(room).data)
+
+
+class RoomReadyView(APIView):
+    """방 준비 상태 변경"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=RoomReadyRequestSerializer,
+        responses={200: RoomReadyResponseSerializer},
+        tags=["방"],
+    )
+    def post(self, request, room_id: int):
+        serializer = RoomReadyRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        room = RoomFlowService.set_ready(room_id, request.user, serializer.validated_data["ready"])
+        return Response(
+            {
+                "room_id": room.id,
+                "status": room.status,
+                "host_ready": room.host_ready,
+                "guest_ready": room.guest_ready,
+                "host_start_confirmed": room.host_start_confirmed,
+                "guest_start_confirmed": room.guest_start_confirmed,
+            }
+        )
+
+
+class RoomStartConfirmView(APIView):
+    """게임 시작 승인"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: RoomStartConfirmResponseSerializer}, tags=["방"])
+    def post(self, request, room_id: int):
+        room, game = RoomFlowService.confirm_start(room_id, request.user)
+        return Response(
+            {
+                "room_id": room.id,
+                "status": room.status,
+                "game_id": game.id if game else None,
+                "host_start_confirmed": room.host_start_confirmed,
+                "guest_start_confirmed": room.guest_start_confirmed,
+            }
+        )

@@ -34,6 +34,9 @@ class GameService:
         if game.result != "playing":
             raise ValidationError("이미 종료된 게임입니다.")
 
+        if game.room.status != "playing":
+            raise ValidationError("게임이 아직 시작되지 않았습니다.")
+
         player_color = GameService._player_color(game, player)
         if player_color != game.current_turn:
             raise ValidationError("현재 차례가 아닙니다.")

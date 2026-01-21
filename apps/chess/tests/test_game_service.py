@@ -24,6 +24,8 @@ class GameServiceTestCase(TestCase):
             email="black@test.com", nickname="블랙", password="Pass123!"
         )
         self.room = Room.objects.create(host=self.white, guest=self.black, time_limit=15)
+        self.room.status = "playing"
+        self.room.save(update_fields=["status"])
         self.game = Game.objects.create(
             room=self.room, white_player=self.white, black_player=self.black
         )
@@ -143,6 +145,8 @@ class TimeoutTaskTestCase(TestCase):
             email="black2@test.com", nickname="블랙2", password="Pass123!"
         )
         self.room = Room.objects.create(host=self.white, guest=self.black, time_limit=15)
+        self.room.status = "playing"
+        self.room.save(update_fields=["status"])
         self.game = Game.objects.create(
             room=self.room, white_player=self.white, black_player=self.black
         )

@@ -8,6 +8,8 @@ from apps.chess.views import (
     QuickMatchView,
     RoomDetailView,
     RoomListView,
+    RoomReadyView,
+    RoomStartConfirmView,
 )
 
 app_name = "chess"
@@ -20,4 +22,6 @@ urlpatterns = [
     path("games/history/", GameHistoryView.as_view(), name="game-history"),
     path("rooms/", RoomListView.as_view(), name="room-list"),
     path("rooms/<int:room_id>/", RoomDetailView.as_view(), name="room-detail"),
+    path("rooms/<int:room_id>/ready/", RoomReadyView.as_view(), name="room-ready"),
+    path("rooms/<int:room_id>/start/", RoomStartConfirmView.as_view(), name="room-start"),
 ]

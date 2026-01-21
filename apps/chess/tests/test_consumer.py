@@ -21,6 +21,8 @@ class ChessConsumerTestCase(TransactionTestCase):
             email="black5@test.com", nickname="블랙5", password="Pass123!"
         )
         self.room = Room.objects.create(host=self.white, guest=self.black)
+        self.room.status = "playing"
+        self.room.save(update_fields=["status"])
         self.game = Game.objects.create(
             room=self.room, white_player=self.white, black_player=self.black
         )
