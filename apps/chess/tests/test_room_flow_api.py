@@ -90,3 +90,35 @@ class RoomFlowApiTestCase(TestCase):
         )
         response = self.client.post(f"/api/chess/rooms/{room_no_guest.id}/start/")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_ready_during_playing(self):
+        """게임 진행 중 준비 상태 변경 시도"""
+        # 게임 시작까지 진행
+        self.client.force_authenticate(user=self.host)
+        self.client.post(f"/api/chess/rooms/{self.room.id}/ready/", {"ready": True}, format="json")
+        self.client.force_authenticate(user=self.guest)
+        self.client.post(f"/api/chess/rooms/{self.room.id}/ready/", {"ready": True}, format="json")
+        self.client.post(f"/api/chess/rooms/{self.room.id}/start/")
+        self.client.force_authenticate(user=self.host)
+        self.client.post(f"/api/chess/rooms/{self.room.id}/start/")
+
+        # 게임 중 준비 변경 시도
+        response = self.client.post(
+            f"/api/chess/rooms/{self.room.id}/ready/", {"ready": False}, format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_start_already_playing(self):
+        """이미 시작된 게임 다시 시작 시도"""
+        # 게임 시작까지 진행
+        self.client.force_authenticate(user=self.host)
+        self.client.post(f"/api/chess/rooms/{self.room.id}/ready/", {"ready": True}, format="json")
+        self.client.force_authenticate(user=self.guest)
+        self.client.post(f"/api/chess/rooms/{self.room.id}/ready/", {"ready": True}, format="json")
+        self.client.post(f"/api/chess/rooms/{self.room.id}/start/")
+        self.client.force_authenticate(user=self.host)
+        self.client.post(f"/api/chess/rooms/{self.room.id}/start/")
+
+        # 이미 시작된 게임 다시 시작 시도
+        response = self.client.post(f"/api/chess/rooms/{self.room.id}/start/")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
