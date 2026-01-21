@@ -26,6 +26,7 @@ class Room(models.Model):
 
     STATUS_CHOICES = [
         ("waiting", "대기 중"),
+        ("ready", "준비 중"),
         ("playing", "게임 중"),
         ("finished", "종료"),
     ]
@@ -80,6 +81,12 @@ class Room(models.Model):
         blank=True,
         help_text="현재 관전 중인 사용자들",
     )
+
+    # 준비/시작 상태
+    host_ready = models.BooleanField(default=False, help_text="호스트 준비 여부")
+    guest_ready = models.BooleanField(default=False, help_text="게스트 준비 여부")
+    host_start_confirmed = models.BooleanField(default=False, help_text="호스트 시작 승인")
+    guest_start_confirmed = models.BooleanField(default=False, help_text="게스트 시작 승인")
 
     # 시간 제한 (분)
     time_limit = models.IntegerField(default=15, help_text="각 플레이어당 시간 제한 (분)")
