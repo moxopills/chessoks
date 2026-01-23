@@ -87,7 +87,9 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
 
     async def _handle_draw(self, content):
         if not self.is_player:
-            await self.send_json({"type": "error", "message": "관전자는 무승부 요청을 할 수 없습니다."})
+            await self.send_json(
+                {"type": "error", "message": "관전자는 무승부 요청을 할 수 없습니다."}
+            )
             return
         game_id = content.get("game_id")
         game, status, player_color = await self._request_draw(game_id)
@@ -101,7 +103,9 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
 
     async def _handle_rematch(self, content):
         if not self.is_player:
-            await self.send_json({"type": "error", "message": "관전자는 리매치를 요청할 수 없습니다."})
+            await self.send_json(
+                {"type": "error", "message": "관전자는 리매치를 요청할 수 없습니다."}
+            )
             return
         game_id = content.get("game_id")
         game, status, player_color = await self._request_rematch(game_id)
@@ -116,7 +120,9 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
 
     async def _handle_decline_rematch(self, content):
         if not self.is_player:
-            await self.send_json({"type": "error", "message": "관전자는 리매치를 거절할 수 없습니다."})
+            await self.send_json(
+                {"type": "error", "message": "관전자는 리매치를 거절할 수 없습니다."}
+            )
             return
         game_id = content.get("game_id")
         declined, player_color = await self._decline_rematch(game_id)
@@ -127,7 +133,9 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
 
     async def _handle_chat(self, content):
         if not self.is_player:
-            await self.send_json({"type": "error", "message": "관전자는 플레이어 채팅을 사용할 수 없습니다."})
+            await self.send_json(
+                {"type": "error", "message": "관전자는 플레이어 채팅을 사용할 수 없습니다."}
+            )
             return
         message = (content.get("message") or "").strip()
         if not message:
@@ -152,7 +160,9 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
 
     async def _handle_spectator_chat(self, content):
         if self.is_player:
-            await self.send_json({"type": "error", "message": "플레이어는 관전자 채팅을 사용할 수 없습니다."})
+            await self.send_json(
+                {"type": "error", "message": "플레이어는 관전자 채팅을 사용할 수 없습니다."}
+            )
             return
         message = (content.get("message") or "").strip()
         if not message:
@@ -180,9 +190,7 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
         await self._broadcast_to_group(self.spectator_group, payload)
 
     async def _broadcast_to_group(self, group_name, payload):
-        await self.channel_layer.group_send(
-            group_name, {"type": "broadcast", "payload": payload}
-        )
+        await self.channel_layer.group_send(group_name, {"type": "broadcast", "payload": payload})
 
     async def broadcast(self, event):
         try:

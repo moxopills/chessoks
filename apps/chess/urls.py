@@ -28,6 +28,12 @@ urlpatterns = [
     path("rooms/<int:room_id>/ready/", RoomReadyView.as_view(), name="room-ready"),
     path("rooms/<int:room_id>/start/", RoomStartConfirmView.as_view(), name="room-start"),
     path("rooms/<int:room_id>/spectators/", SpectatorListView.as_view(), name="spectator-list"),
-    path("rooms/<int:room_id>/spectators/join/", SpectatorJoinView.as_view(), name="spectator-join"),
-    path("rooms/<int:room_id>/spectators/leave/", SpectatorLeaveView.as_view(), name="spectator-leave"),
+    path(
+        "rooms/<int:room_id>/spectators/join/", SpectatorJoinView.as_view(), name="spectator-join"
+    ),
+    path(
+        "rooms/<int:room_id>/spectators/leave/",
+        SpectatorLeaveView.as_view(),
+        name="spectator-leave",
+    ),
 ]
