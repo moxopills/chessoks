@@ -6,13 +6,34 @@ from django.utils import timezone
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
+from apps.accounts.services import OnlineStatusService
 from apps.chess.models import LobbyMessage, Room
 from apps.chess.services import GameService
 
 logger = logging.getLogger(__name__)
 
 
-class ChessConsumer(AsyncJsonWebsocketConsumer):
+class OnlineStatusMixin:
+    """온라인 상태 관리 Mixin (Heartbeat 방식)"""
+
+    def _get_user_id(self):
+        user = self.scope.get("user")
+        return user.id if user and user.is_authenticated else None
+
+    async def _handle_heartbeat(self, content=None):
+        """heartbeat 처리 - TTL 갱신"""
+        user_id = self._get_user_id()
+        if user_id:
+            OnlineStatusService.refresh(user_id)
+            await self.send_json({"type": "heartbeat_ack"})
+
+    async def _set_user_online(self):
+        user_id = self._get_user_id()
+        if user_id:
+            OnlineStatusService.set_online(user_id)
+
+
+class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     """체스 게임 WebSocket Consumer"""
 
     async def connect(self):
@@ -34,6 +55,7 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
         group = self.player_group if self.is_player else self.spectator_group
         await self.channel_layer.group_add(group, self.channel_name)
         await self.accept()
+        await self._set_user_online()
 
     async def disconnect(self, close_code):
         if hasattr(self, "player_group"):
@@ -52,6 +74,7 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
                 "decline_rematch": self._handle_decline_rematch,
                 "chat": self._handle_chat,
                 "spectator_chat": self._handle_spectator_chat,
+                "heartbeat": self._handle_heartbeat,
             }.get(action)
 
             if handler:
@@ -259,7 +282,7 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
         }
 
 
-class LobbyChatConsumer(AsyncJsonWebsocketConsumer):
+class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     """로비 채팅 WebSocket Consumer"""
 
     group_name = "chess_lobby"
@@ -272,6 +295,7 @@ class LobbyChatConsumer(AsyncJsonWebsocketConsumer):
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
+        await self._set_user_online()
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
@@ -279,6 +303,9 @@ class LobbyChatConsumer(AsyncJsonWebsocketConsumer):
     async def receive_json(self, content, **kwargs):
         try:
             action = content.get("action")
+            if action == "heartbeat":
+                await self._handle_heartbeat(content)
+                return
             if action != "chat":
                 await self.send_json({"type": "error", "message": "지원하지 않는 액션입니다."})
                 return

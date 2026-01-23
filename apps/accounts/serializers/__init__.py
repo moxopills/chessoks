@@ -1,3 +1,4 @@
+from .online_serializers import OnlineStatusListSerializer, OnlineStatusSerializer
 from .social_serializer import (
     SocialAccountUnlinkSerializer,
     SocialLoginSerializer,
@@ -44,4 +45,6 @@ __all__ = [
     "NicknameCheckSerializer",
     "EmailChangeRequestSerializer",
     "EmailChangeConfirmSerializer",
+    "OnlineStatusSerializer",
+    "OnlineStatusListSerializer",
 ]
