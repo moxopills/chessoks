@@ -3,6 +3,7 @@ from .social_serializer import (
     SocialLoginSerializer,
     SocialUserSerializer,
 )
+from .online_serializers import OnlineStatusListSerializer, OnlineStatusSerializer
 from .user_serializer import (
     AccountDeleteSerializer,
     EmailChangeConfirmSerializer,
@@ -44,4 +45,6 @@ __all__ = [
     "NicknameCheckSerializer",
     "EmailChangeRequestSerializer",
     "EmailChangeConfirmSerializer",
+    "OnlineStatusSerializer",
+    "OnlineStatusListSerializer",
 ]
