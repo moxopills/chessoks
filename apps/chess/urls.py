@@ -10,6 +10,9 @@ from apps.chess.views import (
     RoomListView,
     RoomReadyView,
     RoomStartConfirmView,
+    SpectatorJoinView,
+    SpectatorLeaveView,
+    SpectatorListView,
 )
 
 app_name = "chess"
@@ -24,4 +27,7 @@ urlpatterns = [
     path("rooms/<int:room_id>/", RoomDetailView.as_view(), name="room-detail"),
     path("rooms/<int:room_id>/ready/", RoomReadyView.as_view(), name="room-ready"),
     path("rooms/<int:room_id>/start/", RoomStartConfirmView.as_view(), name="room-start"),
+    path("rooms/<int:room_id>/spectators/", SpectatorListView.as_view(), name="spectator-list"),
+    path("rooms/<int:room_id>/spectators/join/", SpectatorJoinView.as_view(), name="spectator-join"),
+    path("rooms/<int:room_id>/spectators/leave/", SpectatorLeaveView.as_view(), name="spectator-leave"),
 ]
