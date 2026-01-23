@@ -6,6 +6,7 @@ from apps.chess.services.matchmaking_service import MatchmakingService
 from apps.chess.services.rating_service import RatingService
 from apps.chess.services.room_flow_service import RoomFlowService
 from apps.chess.services.room_query_service import RoomQueryService
+from apps.chess.services.spectator_service import SpectatorService
 
 __all__ = [
     "GameService",
@@ -13,5 +14,6 @@ __all__ = [
     "MatchmakingService",
     "RoomFlowService",
     "RoomQueryService",
+    "SpectatorService",
     "RatingService",
 ]

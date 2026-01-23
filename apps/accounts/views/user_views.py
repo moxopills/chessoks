@@ -21,6 +21,8 @@ from apps.accounts.serializers import (
     LoginRequestSerializer,
     LoginResponseSerializer,
     NicknameCheckSerializer,
+    OnlineStatusListSerializer,
+    OnlineStatusSerializer,
     PasswordChangeSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
@@ -28,7 +30,12 @@ from apps.accounts.serializers import (
     UserSerializer,
     UserSignUpSerializer,
 )
-from apps.accounts.services import AccountSessionService, RankingService, UserProfileService
+from apps.accounts.services import (
+    AccountSessionService,
+    OnlineStatusService,
+    RankingService,
+    UserProfileService,
+)
 
 
 class CurrentUserMixin:
@@ -408,3 +415,33 @@ class MyRankView(APIView):
         if user is None:
             return Response({"message": "유저 정보를 찾을 수 없습니다."}, status=400)
         return Response(LeaderboardEntrySerializer(user).data)
+
+
+class OnlineStatusView(APIView):
+    """온라인 상태 조회"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: OnlineStatusListSerializer}, tags=["유저"])
+    def get(self, request):
+        ids_param = request.query_params.get("ids", "")
+        ids = _parse_id_list(ids_param)
+        statuses = OnlineStatusService.bulk_status(ids) if ids else {}
+        data = [
+            OnlineStatusSerializer({"id": user_id, "online": statuses.get(user_id, False)}).data
+            for user_id in ids
+        ]
+        return Response({"results": data})
+
+
+def _parse_id_list(value: str) -> list[int]:
+    if not value:
+        return []
+    ids = []
+    for part in value.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if part.isdigit():
+            ids.append(int(part))
+    return ids

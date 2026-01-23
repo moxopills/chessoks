@@ -96,8 +96,29 @@ class ChessConsumerTestCase(TransactionTestCase):
         message = async_to_sync(_run)()
         self.assertIsNotNone(message)
         self.assertEqual(message["type"], "chat")
-        self.assertEqual(message["scope"], "game")
+        self.assertEqual(message["scope"], "player")
         self.assertEqual(message["room_id"], self.room.id)
+
+    def test_spectator_chat_broadcast(self):
+        spectator = User.objects.create_user(
+            email="spectator@test.com", nickname="관전자", password="Pass123!"
+        )
+
+        async def _run():
+            communicator = self._communicator(spectator)
+            connected, _ = await communicator.connect()
+            if not connected:
+                return None
+
+            await communicator.send_json_to({"action": "spectator_chat", "message": "관전 채팅"})
+            message = await communicator.receive_json_from()
+            await communicator.disconnect()
+            return message
+
+        message = async_to_sync(_run)()
+        self.assertIsNotNone(message)
+        self.assertEqual(message["type"], "chat")
+        self.assertEqual(message["scope"], "spectator")
 
 
 @override_settings(CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}})

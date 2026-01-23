@@ -1,10 +1,17 @@
 from rest_framework import serializers
 
 
-class PlayerSerializer(serializers.Serializer):
+class BaseUserSerializer(serializers.Serializer):
+    """사용자 기본 정보 (관전자 등)"""
+
     id = serializers.IntegerField(read_only=True)
     nickname = serializers.CharField(read_only=True)
     avatar_url = serializers.URLField(read_only=True, allow_null=True)
+
+
+class PlayerSerializer(BaseUserSerializer):
+    """플레이어 정보 (레이팅 포함)"""
+
     rating = serializers.IntegerField(source="stats.rating", read_only=True)
     rank_tier = serializers.CharField(source="stats.rank_tier", read_only=True)
 

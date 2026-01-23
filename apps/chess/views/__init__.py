@@ -7,6 +7,11 @@ from apps.chess.views.room_views import (
     RoomReadyView,
     RoomStartConfirmView,
 )
+from apps.chess.views.spectator_views import (
+    SpectatorJoinView,
+    SpectatorLeaveView,
+    SpectatorListView,
+)
 
 __all__ = [
     "QuickMatchView",
@@ -18,4 +23,7 @@ __all__ = [
     "RoomDetailView",
     "RoomReadyView",
     "RoomStartConfirmView",
+    "SpectatorListView",
+    "SpectatorJoinView",
+    "SpectatorLeaveView",
 ]

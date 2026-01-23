@@ -6,35 +6,62 @@ from django.utils import timezone
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
+from apps.accounts.services import OnlineStatusService
 from apps.chess.models import LobbyMessage, Room
 from apps.chess.services import GameService
 
 logger = logging.getLogger(__name__)
 
 
-class ChessConsumer(AsyncJsonWebsocketConsumer):
+class OnlineStatusMixin:
+    """온라인 상태 관리 Mixin (Heartbeat 방식)"""
+
+    def _get_user_id(self):
+        user = self.scope.get("user")
+        return user.id if user and user.is_authenticated else None
+
+    async def _handle_heartbeat(self, content=None):
+        """heartbeat 처리 - TTL 갱신"""
+        user_id = self._get_user_id()
+        if user_id:
+            OnlineStatusService.refresh(user_id)
+            await self.send_json({"type": "heartbeat_ack"})
+
+    async def _set_user_online(self):
+        user_id = self._get_user_id()
+        if user_id:
+            OnlineStatusService.set_online(user_id)
+
+
+class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     """체스 게임 WebSocket Consumer"""
 
     async def connect(self):
         self.room_id = self.scope["url_route"]["kwargs"]["room_id"]
-        self.group_name = f"chess_room_{self.room_id}"
+        self.player_group = f"chess_room_{self.room_id}"
+        self.spectator_group = f"chess_room_{self.room_id}_spectators"
         user = self.scope["user"]
 
         if not user.is_authenticated:
             await self.close(code=4001)
             return
 
-        is_player = await self._check_room_access(user)
-        if is_player is None:
+        role = await self._check_room_access(user)
+        if role is None:
             await self.close(code=4003)
             return
 
-        self.is_player = is_player
-        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        self.is_player = role
+        group = self.player_group if self.is_player else self.spectator_group
+        await self.channel_layer.group_add(group, self.channel_name)
         await self.accept()
+        await self._set_user_online()
 
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+        if hasattr(self, "player_group"):
+            await self.channel_layer.group_discard(self.player_group, self.channel_name)
+        if hasattr(self, "spectator_group"):
+            await self.channel_layer.group_discard(self.spectator_group, self.channel_name)
 
     async def receive_json(self, content, **kwargs):
         try:
@@ -46,6 +73,8 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
                 "rematch": self._handle_rematch,
                 "decline_rematch": self._handle_decline_rematch,
                 "chat": self._handle_chat,
+                "spectator_chat": self._handle_spectator_chat,
+                "heartbeat": self._handle_heartbeat,
             }.get(action)
 
             if handler:
@@ -59,6 +88,9 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
             await self.send_json({"type": "error", "message": "서버 오류가 발생했습니다."})
 
     async def _handle_move(self, content):
+        if not self.is_player:
+            await self.send_json({"type": "error", "message": "관전자는 착수할 수 없습니다."})
+            return
         result = await self._make_move(
             content.get("game_id"), content.get("uci"), content.get("promotion")
         )
@@ -68,12 +100,20 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
         await self._broadcast(payload)
 
     async def _handle_resign(self, content):
+        if not self.is_player:
+            await self.send_json({"type": "error", "message": "관전자는 기권할 수 없습니다."})
+            return
         game = await self._resign(content.get("game_id"))
         payload = self._game_payload(game)
         payload["type"] = "game_end"
         await self._broadcast(payload)
 
     async def _handle_draw(self, content):
+        if not self.is_player:
+            await self.send_json(
+                {"type": "error", "message": "관전자는 무승부 요청을 할 수 없습니다."}
+            )
+            return
         game_id = content.get("game_id")
         game, status, player_color = await self._request_draw(game_id)
 
@@ -85,6 +125,11 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
         await self._broadcast(payload)
 
     async def _handle_rematch(self, content):
+        if not self.is_player:
+            await self.send_json(
+                {"type": "error", "message": "관전자는 리매치를 요청할 수 없습니다."}
+            )
+            return
         game_id = content.get("game_id")
         game, status, player_color = await self._request_rematch(game_id)
 
@@ -97,6 +142,11 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
         await self._broadcast(payload)
 
     async def _handle_decline_rematch(self, content):
+        if not self.is_player:
+            await self.send_json(
+                {"type": "error", "message": "관전자는 리매치를 거절할 수 없습니다."}
+            )
+            return
         game_id = content.get("game_id")
         declined, player_color = await self._decline_rematch(game_id)
 
@@ -105,6 +155,11 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
             await self._broadcast(payload)
 
     async def _handle_chat(self, content):
+        if not self.is_player:
+            await self.send_json(
+                {"type": "error", "message": "관전자는 플레이어 채팅을 사용할 수 없습니다."}
+            )
+            return
         message = (content.get("message") or "").strip()
         if not message:
             await self.send_json({"type": "error", "message": "메시지를 입력해주세요."})
@@ -115,25 +170,50 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
             )
             return
 
-        if not self.is_player:
-            await self.send_json({"type": "error", "message": "채팅 권한이 없습니다."})
-            return
-
         payload = {
             "type": "chat",
-            "scope": "game",
+            "scope": "player",
             "room_id": int(self.room_id),
             "user_id": self.scope["user"].id,
             "nickname": self.scope["user"].nickname,
             "message": message,
             "sent_at": timezone.now().isoformat(),
         }
-        await self._broadcast(payload)
+        await self._broadcast_to_group(self.player_group, payload)
+
+    async def _handle_spectator_chat(self, content):
+        if self.is_player:
+            await self.send_json(
+                {"type": "error", "message": "플레이어는 관전자 채팅을 사용할 수 없습니다."}
+            )
+            return
+        message = (content.get("message") or "").strip()
+        if not message:
+            await self.send_json({"type": "error", "message": "메시지를 입력해주세요."})
+            return
+        if len(message) > 500:
+            await self.send_json(
+                {"type": "error", "message": "메시지는 500자 이하로 입력해주세요."}
+            )
+            return
+
+        payload = {
+            "type": "chat",
+            "scope": "spectator",
+            "room_id": int(self.room_id),
+            "user_id": self.scope["user"].id,
+            "nickname": self.scope["user"].nickname,
+            "message": message,
+            "sent_at": timezone.now().isoformat(),
+        }
+        await self._broadcast_to_group(self.spectator_group, payload)
 
     async def _broadcast(self, payload):
-        await self.channel_layer.group_send(
-            self.group_name, {"type": "broadcast", "payload": payload}
-        )
+        await self._broadcast_to_group(self.player_group, payload)
+        await self._broadcast_to_group(self.spectator_group, payload)
+
+    async def _broadcast_to_group(self, group_name, payload):
+        await self.channel_layer.group_send(group_name, {"type": "broadcast", "payload": payload})
 
     async def broadcast(self, event):
         try:
@@ -202,7 +282,7 @@ class ChessConsumer(AsyncJsonWebsocketConsumer):
         }
 
 
-class LobbyChatConsumer(AsyncJsonWebsocketConsumer):
+class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     """로비 채팅 WebSocket Consumer"""
 
     group_name = "chess_lobby"
@@ -215,6 +295,7 @@ class LobbyChatConsumer(AsyncJsonWebsocketConsumer):
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
+        await self._set_user_online()
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
@@ -222,6 +303,9 @@ class LobbyChatConsumer(AsyncJsonWebsocketConsumer):
     async def receive_json(self, content, **kwargs):
         try:
             action = content.get("action")
+            if action == "heartbeat":
+                await self._handle_heartbeat(content)
+                return
             if action != "chat":
                 await self.send_json({"type": "error", "message": "지원하지 않는 액션입니다."})
                 return

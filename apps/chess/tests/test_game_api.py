@@ -68,3 +68,16 @@ class GameApiTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 3)
         self.assertEqual(len(response.data["results"]), 2)
+
+    def test_game_detail_allows_spectator_when_enabled(self):
+        spectator_room = Room.objects.create(
+            host=self.white, guest=self.black, allow_spectators=True
+        )
+        spectator_game = Game.objects.create(
+            room=spectator_room, white_player=self.white, black_player=self.black
+        )
+
+        self.client.force_authenticate(user=self.other)
+        response = self.client.get(f"/api/chess/games/{spectator_game.id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], spectator_game.id)
