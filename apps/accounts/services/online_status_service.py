@@ -40,7 +40,7 @@ class OnlineStatusService:
     def bulk_status(user_ids: list[int]) -> dict[int, bool]:
         keys = {OnlineStatusService._key(user_id): user_id for user_id in user_ids}
         cached = cache.get_many(keys.keys())
-        status = {user_id: False for user_id in user_ids}
+        status = dict.fromkeys(user_ids, False)
         for key in cached.keys():
             status[keys[key]] = True
         return status

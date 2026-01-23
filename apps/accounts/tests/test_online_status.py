@@ -26,7 +26,9 @@ class OnlineStatusApiTestCase(TestCase):
         OnlineStatusService.set_online(self.user1.id)
 
         self.client.force_authenticate(user=self.user1)
-        response = self.client.get(f"/api/accounts/online-status/?ids={self.user1.id},{self.user2.id}")
+        response = self.client.get(
+            f"/api/accounts/online-status/?ids={self.user1.id},{self.user2.id}"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         results = {item["id"]: item["online"] for item in response.data["results"]}
         self.assertTrue(results[self.user1.id])
