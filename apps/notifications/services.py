@@ -1,9 +1,9 @@
 import logging
 
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
 from django.db import transaction
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from rest_framework.exceptions import ValidationError
 
 from apps.notifications.models import Notification
@@ -29,9 +29,8 @@ class NotificationService:
         if not ids:
             raise ValidationError({"ids": "ids는 비어있을 수 없습니다."})
         with transaction.atomic():
-            updated = (
-                Notification.objects.filter(user=user, id__in=ids, is_read=False)
-                .update(is_read=True)
+            updated = Notification.objects.filter(user=user, id__in=ids, is_read=False).update(
+                is_read=True
             )
         return updated
 

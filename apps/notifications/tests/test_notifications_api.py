@@ -30,9 +30,7 @@ class NotificationApiTestCase(TestCase):
     def test_notification_mark_read(self):
         self.client.force_authenticate(user=self.user)
         notif_id = Notification.objects.filter(user=self.user).first().id
-        response = self.client.post(
-            "/api/notifications/read/", {"ids": [notif_id]}, format="json"
-        )
+        response = self.client.post("/api/notifications/read/", {"ids": [notif_id]}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["updated"], 1)
         self.assertTrue(Notification.objects.get(id=notif_id).is_read)
@@ -60,9 +58,7 @@ class NotificationApiTestCase(TestCase):
         notif.save()
 
         self.client.force_authenticate(user=self.user)
-        response = self.client.post(
-            "/api/notifications/read/", {"ids": [notif.id]}, format="json"
-        )
+        response = self.client.post("/api/notifications/read/", {"ids": [notif.id]}, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["updated"], 0)
 

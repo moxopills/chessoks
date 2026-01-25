@@ -17,9 +17,7 @@ class NotificationListSerializer(serializers.Serializer):
 
 
 class NotificationReadSerializer(serializers.Serializer):
-    ids = serializers.ListField(
-        child=serializers.IntegerField(min_value=1), allow_empty=False
-    )
+    ids = serializers.ListField(child=serializers.IntegerField(min_value=1), allow_empty=False)
 
 
 class NotificationUnreadSerializer(serializers.Serializer):

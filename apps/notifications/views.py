@@ -21,8 +21,12 @@ class NotificationListView(APIView):
     @extend_schema(responses={200: NotificationListSerializer}, tags=["알림"])
     def get(self, request):
         limit = parse_int(request.query_params.get("limit"), default=20, min_value=1, max_value=100)
-        offset = parse_int(request.query_params.get("offset"), default=0, min_value=0, max_value=10_000)
-        total, items = NotificationService.list_notifications(request.user, limit=limit, offset=offset)
+        offset = parse_int(
+            request.query_params.get("offset"), default=0, min_value=0, max_value=10_000
+        )
+        total, items = NotificationService.list_notifications(
+            request.user, limit=limit, offset=offset
+        )
         return Response({"count": total, "results": NotificationSerializer(items, many=True).data})
 
 
@@ -31,7 +35,11 @@ class NotificationReadView(APIView):
 
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(request=NotificationReadSerializer, responses={200: {"type": "object", "properties": {"updated": {"type": "integer"}}}}, tags=["알림"])
+    @extend_schema(
+        request=NotificationReadSerializer,
+        responses={200: {"type": "object", "properties": {"updated": {"type": "integer"}}}},
+        tags=["알림"],
+    )
     def post(self, request):
         serializer = NotificationReadSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
