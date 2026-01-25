@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "apps.accounts",
     "apps.chess",
+    "apps.notifications",
     "apps.core",  # S3 이미지 업로드
 ]
 

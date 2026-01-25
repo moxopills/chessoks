@@ -17,12 +17,17 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
 django_asgi_app = get_asgi_application()
 
-# Import chess routing after Django setup
+# Import routing after Django setup
 from apps.chess import routing as chess_routing  # noqa: E402
+from apps.notifications import routing as notifications_routing  # noqa: E402
+
+websocket_urlpatterns = (
+    chess_routing.websocket_urlpatterns + notifications_routing.websocket_urlpatterns
+)
 
 application = ProtocolTypeRouter(
     {
         "http": django_asgi_app,
-        "websocket": AuthMiddlewareStack(URLRouter(chess_routing.websocket_urlpatterns)),
+        "websocket": AuthMiddlewareStack(URLRouter(websocket_urlpatterns)),
     }
 )

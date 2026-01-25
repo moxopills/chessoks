@@ -71,9 +71,12 @@ class GameHistoryApiTestCase(TestCase):
 
     def test_history_filter_by_date_range(self):
         self.client.force_authenticate(user=self.user)
-        start = (timezone.now() - timedelta(days=1)).date().isoformat()
-        end = timezone.now().date().isoformat()
-        response = self.client.get(f"/api/chess/games/history/?start_date={start}&end_date={end}")
+        # game_quick: 2일 전, game_custom: 1일 전
+        # 1일 전 날짜만 필터링 (start=end=1일 전)
+        target_date = (timezone.now() - timedelta(days=1)).date().isoformat()
+        response = self.client.get(
+            f"/api/chess/games/history/?start_date={target_date}&end_date={target_date}"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
 

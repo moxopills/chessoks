@@ -8,6 +8,7 @@ from channels.layers import get_channel_layer
 
 from apps.accounts.models import UserStats
 from apps.chess.models import Game, Room
+from apps.notifications.services import NotificationService
 
 
 class MatchmakingService:
@@ -115,6 +116,33 @@ class MatchmakingService:
     @staticmethod
     def _notify_match(room: Room, game: Game) -> None:
         """매칭 완료 시 WebSocket 알림"""
+        host_opponent = game.black_player if room.host == game.white_player else game.white_player
+        guest_opponent = game.black_player if room.guest == game.white_player else game.white_player
+        NotificationService.create_notification(
+            user=room.host,
+            type="match_found",
+            title="매칭 완료",
+            message=f"{host_opponent.nickname}님과 매칭되었습니다.",
+            payload={
+                "room_id": room.id,
+                "game_id": game.id,
+                "white_player": game.white_player.nickname,
+                "black_player": game.black_player.nickname,
+            },
+        )
+        NotificationService.create_notification(
+            user=room.guest,
+            type="match_found",
+            title="매칭 완료",
+            message=f"{guest_opponent.nickname}님과 매칭되었습니다.",
+            payload={
+                "room_id": room.id,
+                "game_id": game.id,
+                "white_player": game.white_player.nickname,
+                "black_player": game.black_player.nickname,
+            },
+        )
+
         channel_layer = get_channel_layer()
         if channel_layer is None:
             return
