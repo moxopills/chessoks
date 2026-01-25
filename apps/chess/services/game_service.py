@@ -12,6 +12,7 @@ from apps.accounts.models import UserStats
 from apps.chess.engine import board as rule_engine
 from apps.chess.models import Game, Move
 from apps.chess.services.rating_service import RatingService
+from apps.notifications.services import NotificationService
 
 
 @dataclass(frozen=True)
@@ -25,6 +26,14 @@ class GameService:
 
     DRAW_OFFER_TTL = 300
     REMATCH_OFFER_TTL = 90
+    TIER_ORDER = {
+        "Beginner": 0,
+        "Junior": 1,
+        "Intermediate": 2,
+        "Advanced": 3,
+        "Expert": 4,
+        "Master": 5,
+    }
 
     @staticmethod
     @transaction.atomic
@@ -105,10 +114,11 @@ class GameService:
         game.turn_started_at = now
 
         started_at_set = False
+        rating_info = None
         if result != "playing":
             game.result = result
             game.finished_at = now
-            GameService._apply_rating_update(game)
+            rating_info = GameService._apply_rating_update(game)
         elif game.started_at is None:
             game.started_at = now
             started_at_set = True
@@ -128,6 +138,8 @@ class GameService:
             update_fields += ["started_at"]
 
         game.save(update_fields=update_fields)
+        if rating_info:
+            GameService._notify_game_end(game, rating_info)
         return MoveResult(game=game, move=move_obj)
 
     @staticmethod
@@ -140,8 +152,9 @@ class GameService:
         player_color = GameService._player_color(game, player)
         game.result = "resignation_white" if player_color == "white" else "resignation_black"
         game.finished_at = timezone.now()
-        GameService._apply_rating_update(game)
+        rating_info = GameService._apply_rating_update(game)
         game.save(update_fields=["result", "finished_at"])
+        GameService._notify_game_end(game, rating_info)
         GameService._clear_draw_offers(game.id)
         return game
 
@@ -161,8 +174,9 @@ class GameService:
         if cache.delete(opponent_key):
             game.result = "draw_agreement"
             game.finished_at = timezone.now()
-            GameService._apply_rating_update(game)
+            rating_info = GameService._apply_rating_update(game)
             game.save(update_fields=["result", "finished_at"])
+            GameService._notify_game_end(game, rating_info)
             return game, "accepted", player_color
 
         cache.set(key, True, timeout=GameService.DRAW_OFFER_TTL)
@@ -183,9 +197,16 @@ class GameService:
         # cache.delete()는 삭제 성공 시 True 반환 (원자적 연산)
         if cache.delete(opponent_key):
             rematch_game = GameService._create_rematch_game(game)
+            GameService._notify_rematch(
+                game,
+                status="accepted",
+                sender_color=player_color,
+                rematch_game_id=rematch_game.id,
+            )
             return rematch_game, "accepted", player_color
 
         cache.set(key, True, timeout=GameService.REMATCH_OFFER_TTL)
+        GameService._notify_rematch(game, status="requested", sender_color=player_color)
         return None, "pending", player_color
 
     @staticmethod
@@ -201,6 +222,7 @@ class GameService:
 
         # 상대방의 리매치 요청이 있으면 삭제
         if cache.delete(opponent_key):
+            GameService._notify_rematch(game, status="declined", sender_color=player_color)
             return True, player_color
         return False, player_color
 
@@ -271,7 +293,7 @@ class GameService:
         else:
             game.result = "timeout_black"
             game.black_time_remaining = 0
-        GameService._apply_rating_update(game)
+        rating_info = GameService._apply_rating_update(game)
         game.finished_at = now
         game.save(
             update_fields=[
@@ -281,6 +303,7 @@ class GameService:
                 "black_time_remaining",
             ]
         )
+        GameService._notify_game_end(game, rating_info)
         GameService._clear_draw_offers(game.id)
         GameService._clear_rematch_offers(game.id)
 
@@ -306,13 +329,32 @@ class GameService:
         return f"{pgn} {prefix}"
 
     @staticmethod
-    def _apply_rating_update(game: Game) -> None:
+    def _apply_rating_update(game: Game) -> dict:
         white_stats, _ = UserStats.objects.get_or_create(user=game.white_player)
         black_stats, _ = UserStats.objects.get_or_create(user=game.black_player)
+
+        white_before = white_stats.rating
+        black_before = black_stats.rating
+        white_tier_before = white_stats.rank_tier
+        black_tier_before = black_stats.rank_tier
 
         RatingService.update_ratings_and_stats(white_stats, black_stats, game.result)
         white_stats.save()
         black_stats.save()
+        return {
+            "white": {
+                "before": white_before,
+                "after": white_stats.rating,
+                "tier_before": white_tier_before,
+                "tier_after": white_stats.rank_tier,
+            },
+            "black": {
+                "before": black_before,
+                "after": black_stats.rating,
+                "tier_before": black_tier_before,
+                "tier_after": black_stats.rank_tier,
+            },
+        }
 
     @staticmethod
     def _get_game_for_update(game_id: int) -> Game:
@@ -354,3 +396,139 @@ class GameService:
         room.save(update_fields=["host", "guest"])
 
         return Game.objects.create(room=room, white_player=white_player, black_player=black_player)
+
+    @staticmethod
+    def _notify_game_end(game: Game, rating_info: dict) -> None:
+        reason = GameService._result_reason(game.result)
+        for color, player in (("white", game.white_player), ("black", game.black_player)):
+            outcome = GameService._result_outcome(game.result, color)
+            outcome_text = {"win": "승리", "loss": "패배", "draw": "무승부"}[outcome]
+            if reason:
+                message = f"{reason}로 {outcome_text}했습니다."
+            else:
+                message = f"{outcome_text}했습니다."
+            NotificationService.create_notification(
+                user=player,
+                type="game_result",
+                title="게임 종료",
+                message=message,
+                payload={"game_id": game.id, "result": game.result, "outcome": outcome},
+            )
+
+            rating_before = rating_info[color]["before"]
+            rating_after = rating_info[color]["after"]
+            delta = rating_after - rating_before
+            NotificationService.create_notification(
+                user=player,
+                type="rating_change",
+                title="레이팅 변동",
+                message=f"{rating_before} -> {rating_after} ({delta:+d})",
+                payload={
+                    "game_id": game.id,
+                    "before": rating_before,
+                    "after": rating_after,
+                    "delta": delta,
+                },
+            )
+
+            tier_before = rating_info[color]["tier_before"]
+            tier_after = rating_info[color]["tier_after"]
+            if GameService._tier_rank(tier_after) > GameService._tier_rank(tier_before):
+                NotificationService.create_notification(
+                    user=player,
+                    type="tier_promotion",
+                    title="티어 승격",
+                    message=f"{tier_after} 티어로 승격했습니다.",
+                    payload={"before": tier_before, "after": tier_after, "game_id": game.id},
+                )
+
+    @staticmethod
+    def _notify_rematch(
+        game: Game, *, status: str, sender_color: str, rematch_game_id: int | None = None
+    ) -> None:
+        sender = game.white_player if sender_color == "white" else game.black_player
+        opponent = game.black_player if sender_color == "white" else game.white_player
+        if status == "requested":
+            NotificationService.create_notification(
+                user=opponent,
+                type="rematch",
+                title="리매치 요청",
+                message=f"{sender.nickname}님이 리매치를 요청했습니다.",
+                payload={"game_id": game.id, "room_id": game.room_id, "from": sender_color},
+            )
+            return
+        if status == "accepted":
+            NotificationService.create_notification(
+                user=sender,
+                type="rematch",
+                title="리매치 성사",
+                message="리매치가 성사되었습니다.",
+                payload={
+                    "game_id": game.id,
+                    "room_id": game.room_id,
+                    "status": status,
+                    "rematch_game_id": rematch_game_id,
+                },
+            )
+            NotificationService.create_notification(
+                user=opponent,
+                type="rematch",
+                title="리매치 성사",
+                message="리매치가 성사되었습니다.",
+                payload={
+                    "game_id": game.id,
+                    "room_id": game.room_id,
+                    "status": status,
+                    "rematch_game_id": rematch_game_id,
+                },
+            )
+            return
+        if status == "declined":
+            NotificationService.create_notification(
+                user=opponent,
+                type="rematch",
+                title="리매치 거절",
+                message=f"{sender.nickname}님이 리매치를 거절했습니다.",
+                payload={"game_id": game.id, "room_id": game.room_id, "from": sender_color},
+            )
+
+    @staticmethod
+    def _tier_rank(tier: str) -> int:
+        return GameService.TIER_ORDER.get(tier, 0)
+
+    @staticmethod
+    def _result_outcome(result: str, player_color: str) -> str:
+        white_win = {
+            "white_win",
+            "checkmate_white",
+            "timeout_black",
+            "resignation_black",
+        }
+        black_win = {
+            "black_win",
+            "checkmate_black",
+            "timeout_white",
+            "resignation_white",
+        }
+        if result in white_win:
+            return "win" if player_color == "white" else "loss"
+        if result in black_win:
+            return "loss" if player_color == "white" else "win"
+        return "draw"
+
+    @staticmethod
+    def _result_reason(result: str) -> str:
+        reasons = {
+            "checkmate_white": "체크메이트",
+            "checkmate_black": "체크메이트",
+            "timeout_white": "시간 초과",
+            "timeout_black": "시간 초과",
+            "resignation_white": "기권",
+            "resignation_black": "기권",
+            "stalemate": "스테일메이트",
+            "draw_insufficient": "기물 부족",
+            "draw_repetition": "삼중 반복",
+            "draw_fifty_move": "50수 규칙",
+            "draw_agreement": "합의 무승부",
+        }
+        return reasons.get(result, "")
