@@ -1,3 +1,10 @@
+from .friend_serializers import (
+    FriendListSerializer,
+    FriendRequestCreateSerializer,
+    FriendRequestListSerializer,
+    FriendRequestSerializer,
+    FriendSerializer,
+)
 from .online_serializers import OnlineStatusListSerializer, OnlineStatusSerializer
 from .social_serializer import (
     SocialAccountUnlinkSerializer,
@@ -47,4 +54,9 @@ __all__ = [
     "EmailChangeConfirmSerializer",
     "OnlineStatusSerializer",
     "OnlineStatusListSerializer",
+    "FriendSerializer",
+    "FriendRequestSerializer",
+    "FriendRequestCreateSerializer",
+    "FriendListSerializer",
+    "FriendRequestListSerializer",
 ]

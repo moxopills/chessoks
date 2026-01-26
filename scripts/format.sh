@@ -2,6 +2,9 @@
 
 set -eo pipefail
 
+# Docker 환경변수 충돌 방지
+unset VIRTUAL_ENV
+
 COLOR_GREEN=$(tput setaf 2)
 COLOR_BLUE=$(tput setaf 4)
 COLOR_NC=$(tput sgr0)
