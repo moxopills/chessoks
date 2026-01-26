@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from apps.chess.serializers import (
     PagedRoomSerializer,
+    RoomJoinRequestSerializer,
     RoomReadyRequestSerializer,
     RoomReadyResponseSerializer,
     RoomSerializer,
@@ -94,3 +95,35 @@ class RoomStartConfirmView(APIView):
                 "guest_start_confirmed": room.guest_start_confirmed,
             }
         )
+
+
+class RoomJoinView(APIView):
+    """방 입장"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=RoomJoinRequestSerializer,
+        responses={200: RoomSerializer},
+        tags=["방"],
+    )
+    def post(self, request, room_id: int):
+        serializer = RoomJoinRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        room = RoomFlowService.join_room(
+            room_id, request.user, serializer.validated_data.get("password")
+        )
+        return Response(RoomSerializer(room).data)
+
+
+class RoomLeaveView(APIView):
+    """방 나가기"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: {"type": "object"}}, tags=["방"])
+    def post(self, request, room_id: int):
+        deleted, room = RoomFlowService.leave_room(room_id, request.user)
+        if deleted:
+            return Response({"deleted": True, "room_id": room_id})
+        return Response({"deleted": False, "room": RoomSerializer(room).data})

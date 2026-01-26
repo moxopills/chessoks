@@ -20,3 +20,7 @@ class RoomStartConfirmResponseSerializer(serializers.Serializer):
     game_id = serializers.IntegerField(read_only=True, allow_null=True)
     host_start_confirmed = serializers.BooleanField(read_only=True)
     guest_start_confirmed = serializers.BooleanField(read_only=True)
+
+
+class RoomJoinRequestSerializer(serializers.Serializer):
+    password = serializers.CharField(required=False, allow_blank=True)

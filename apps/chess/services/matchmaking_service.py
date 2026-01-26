@@ -1,5 +1,3 @@
-import random
-
 from django.db import transaction
 from django.utils import timezone
 
@@ -8,6 +6,7 @@ from channels.layers import get_channel_layer
 
 from apps.accounts.models import UserStats
 from apps.chess.models import Game, Room
+from apps.chess.utils import assign_colors, broadcast_room_removed, broadcast_room_update
 from apps.notifications.services import NotificationService
 
 
@@ -42,14 +41,16 @@ class MatchmakingService:
                 status="waiting",
                 is_private=False,
             )
+            broadcast_room_update(room)
             return room, None, "waiting"
 
         room.guest = user
         room.status = "playing"
         room.started_at = timezone.now()
         room.save(update_fields=["guest", "status", "started_at"])
+        broadcast_room_update(room)
 
-        white_player, black_player = MatchmakingService._assign_colors(room.host, room.guest)
+        white_player, black_player = assign_colors(room.host, room.guest)
         game = Game.objects.create(room=room, white_player=white_player, black_player=black_player)
 
         MatchmakingService._notify_match(room, game)
@@ -100,18 +101,19 @@ class MatchmakingService:
         return allowed
 
     @staticmethod
-    def _assign_colors(host, guest):
-        if random.choice([True, False]):
-            return host, guest
-        return guest, host
-
-    @staticmethod
     def cancel_match(user) -> bool:
         """대기 중인 빠른 대전 취소"""
-        deleted, _ = Room.objects.filter(
-            room_type="quick", host=user, status="waiting", guest__isnull=True
-        ).delete()
-        return deleted > 0
+        room = (
+            Room.objects.filter(room_type="quick", host=user, status="waiting", guest__isnull=True)
+            .only("id")
+            .first()
+        )
+        if room is None:
+            return False
+        room_id = room.id
+        room.delete()
+        broadcast_room_removed(room_id)
+        return True
 
     @staticmethod
     def _notify_match(room: Room, game: Game) -> None:

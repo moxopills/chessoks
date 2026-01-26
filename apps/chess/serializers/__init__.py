@@ -12,6 +12,7 @@ from apps.chess.serializers.match_serializers import (
     QuickMatchResponseSerializer,
 )
 from apps.chess.serializers.room_action_serializers import (
+    RoomJoinRequestSerializer,
     RoomReadyRequestSerializer,
     RoomReadyResponseSerializer,
     RoomStartConfirmResponseSerializer,
@@ -34,5 +35,6 @@ __all__ = [
     "RoomReadyRequestSerializer",
     "RoomReadyResponseSerializer",
     "RoomStartConfirmResponseSerializer",
+    "RoomJoinRequestSerializer",
     "SpectatorListSerializer",
 ]
