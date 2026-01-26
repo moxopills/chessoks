@@ -4,6 +4,9 @@
 
 set -e
 
+# Docker 환경변수 충돌 방지
+unset VIRTUAL_ENV
+
 # 프로젝트 루트로 이동
 cd "$(dirname "$0")/.."
 

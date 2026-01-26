@@ -1,4 +1,5 @@
 from .base_service import ServiceResult
+from .friend_service import FriendService
 from .online_status_service import OnlineStatusService
 from .profile_service import UserProfileService
 from .ranking_service import RankingService
@@ -15,4 +16,5 @@ __all__ = [
     "UserProfileService",
     "RankingService",
     "OnlineStatusService",
+    "FriendService",
 ]

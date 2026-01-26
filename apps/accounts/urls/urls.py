@@ -1,5 +1,11 @@
 from django.urls import include, path
 
+from apps.accounts.views.friend_views import (
+    FriendListView,
+    FriendRequestAcceptView,
+    FriendRequestListCreateView,
+    FriendRequestRejectView,
+)
 from apps.accounts.views.user_views import (
     AccountDeleteView,
     CurrentUserView,
@@ -56,5 +62,17 @@ urlpatterns = [
     path("online-status/", OnlineStatusView.as_view(), name="online-status"),
     path("leaderboard/", LeaderboardView.as_view(), name="leaderboard"),
     path("leaderboard/me/", MyRankView.as_view(), name="leaderboard-me"),
+    path("friends/", FriendListView.as_view(), name="friends"),
+    path("friends/requests/", FriendRequestListCreateView.as_view(), name="friend-requests"),
+    path(
+        "friends/requests/<int:request_id>/accept/",
+        FriendRequestAcceptView.as_view(),
+        name="friend-request-accept",
+    ),
+    path(
+        "friends/requests/<int:request_id>/reject/",
+        FriendRequestRejectView.as_view(),
+        name="friend-request-reject",
+    ),
     path("social/", include("apps.accounts.urls.social_urls")),
 ]
