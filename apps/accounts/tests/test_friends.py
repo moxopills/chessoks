@@ -16,7 +16,9 @@ class FriendApiTestCase(BaseTestCase):
 
     def test_send_and_accept_friend_request(self):
         self.client.force_authenticate(user=self.user)
-        response = self.client.post("/api/accounts/friends/requests/", {"user_id": self.other.id})
+        response = self.client.post(
+            "/api/accounts/friends/requests/", {"user_id": self.other.id}, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.client.force_authenticate(user=self.other)
@@ -33,15 +35,21 @@ class FriendApiTestCase(BaseTestCase):
 
     def test_send_request_to_self_blocked(self):
         self.client.force_authenticate(user=self.user)
-        response = self.client.post("/api/accounts/friends/requests/", {"user_id": self.user.id})
+        response = self.client.post(
+            "/api/accounts/friends/requests/", {"user_id": self.user.id}, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_auto_accept_reverse_request(self):
         self.client.force_authenticate(user=self.user)
-        self.client.post("/api/accounts/friends/requests/", {"user_id": self.other.id})
+        self.client.post(
+            "/api/accounts/friends/requests/", {"user_id": self.other.id}, format="json"
+        )
 
         self.client.force_authenticate(user=self.other)
-        response = self.client.post("/api/accounts/friends/requests/", {"user_id": self.user.id})
+        response = self.client.post(
+            "/api/accounts/friends/requests/", {"user_id": self.user.id}, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["status"], "accepted")
 
@@ -51,7 +59,9 @@ class FriendApiTestCase(BaseTestCase):
     def test_reject_friend_request(self):
         """친구 요청 거절"""
         self.client.force_authenticate(user=self.user)
-        self.client.post("/api/accounts/friends/requests/", {"user_id": self.other.id})
+        self.client.post(
+            "/api/accounts/friends/requests/", {"user_id": self.other.id}, format="json"
+        )
 
         self.client.force_authenticate(user=self.other)
         requests = self.client.get("/api/accounts/friends/requests/?type=incoming")
@@ -66,14 +76,20 @@ class FriendApiTestCase(BaseTestCase):
     def test_duplicate_friend_request(self):
         """중복 친구 요청"""
         self.client.force_authenticate(user=self.user)
-        self.client.post("/api/accounts/friends/requests/", {"user_id": self.other.id})
-        response = self.client.post("/api/accounts/friends/requests/", {"user_id": self.other.id})
+        self.client.post(
+            "/api/accounts/friends/requests/", {"user_id": self.other.id}, format="json"
+        )
+        response = self.client.post(
+            "/api/accounts/friends/requests/", {"user_id": self.other.id}, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_request_already_friends(self):
         """이미 친구 상태에서 요청"""
         self.client.force_authenticate(user=self.user)
-        self.client.post("/api/accounts/friends/requests/", {"user_id": self.other.id})
+        self.client.post(
+            "/api/accounts/friends/requests/", {"user_id": self.other.id}, format="json"
+        )
 
         self.client.force_authenticate(user=self.other)
         requests = self.client.get("/api/accounts/friends/requests/?type=incoming")
@@ -81,7 +97,9 @@ class FriendApiTestCase(BaseTestCase):
         self.client.post(f"/api/accounts/friends/requests/{request_id}/accept/")
 
         self.client.force_authenticate(user=self.user)
-        response = self.client.post("/api/accounts/friends/requests/", {"user_id": self.other.id})
+        response = self.client.post(
+            "/api/accounts/friends/requests/", {"user_id": self.other.id}, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_accept_request_not_found(self):
@@ -93,5 +111,7 @@ class FriendApiTestCase(BaseTestCase):
     def test_request_user_not_found(self):
         """존재하지 않는 유저에게 요청"""
         self.client.force_authenticate(user=self.user)
-        response = self.client.post("/api/accounts/friends/requests/", {"user_id": 99999})
+        response = self.client.post(
+            "/api/accounts/friends/requests/", {"user_id": 99999}, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
