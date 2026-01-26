@@ -10,6 +10,19 @@ from apps.chess.models import Game, Move
 class GameQueryService:
     """게임 조회 관련 서비스"""
 
+    WHITE_WIN_RESULTS = {
+        "white_win",
+        "checkmate_white",
+        "timeout_black",
+        "resignation_black",
+    }
+    BLACK_WIN_RESULTS = {
+        "black_win",
+        "checkmate_black",
+        "timeout_white",
+        "resignation_white",
+    }
+
     @staticmethod
     def get_game_for_user(game_id: int, user) -> Game:
         try:
@@ -109,6 +122,45 @@ class GameQueryService:
 
         total = queryset.count()
         return total, list(queryset[offset : offset + limit])
+
+    @staticmethod
+    def list_recent_for_user(user, *, limit: int) -> list[Game]:
+        return list(
+            Game.objects.user_games(user)
+            .select_related("room", "white_player__stats", "black_player__stats")
+            .exclude(result="playing")
+            .order_by("-created_at")[:limit]
+        )
+
+    @staticmethod
+    def head_to_head_summary(user, opponent) -> dict:
+        games = (
+            Game.objects.filter(
+                Q(white_player=user, black_player=opponent)
+                | Q(white_player=opponent, black_player=user)
+            )
+            .exclude(result="playing")
+            .only("result", "white_player_id", "black_player_id")
+        )
+        wins = losses = draws = 0
+        for game in games:
+            outcome = GameQueryService._outcome_for_user(game, user)
+            if outcome == "win":
+                wins += 1
+            elif outcome == "loss":
+                losses += 1
+            else:
+                draws += 1
+        total = wins + losses + draws
+        return {"total": total, "wins": wins, "losses": losses, "draws": draws}
+
+    @staticmethod
+    def _outcome_for_user(game: Game, user) -> str:
+        if game.result in GameQueryService.WHITE_WIN_RESULTS:
+            return "win" if game.white_player_id == user.id else "loss"
+        if game.result in GameQueryService.BLACK_WIN_RESULTS:
+            return "win" if game.black_player_id == user.id else "loss"
+        return "draw"
 
     @staticmethod
     def _opponent_filter(user, opponent: str):
