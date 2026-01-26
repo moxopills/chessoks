@@ -3,6 +3,8 @@ from apps.chess.views.history_views import GameHistoryView
 from apps.chess.views.match_views import CancelMatchView, QuickMatchView
 from apps.chess.views.room_views import (
     RoomDetailView,
+    RoomJoinView,
+    RoomLeaveView,
     RoomListView,
     RoomReadyView,
     RoomStartConfirmView,
@@ -21,6 +23,8 @@ __all__ = [
     "GameHistoryView",
     "RoomListView",
     "RoomDetailView",
+    "RoomJoinView",
+    "RoomLeaveView",
     "RoomReadyView",
     "RoomStartConfirmView",
     "SpectatorListView",
