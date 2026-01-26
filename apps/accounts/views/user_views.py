@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 from apps.accounts.models import User
 from apps.accounts.serializers import (
     AccountDeleteSerializer,
+    DashboardSerializer,
     EmailChangeConfirmSerializer,
     EmailChangeRequestSerializer,
     EmailCheckSerializer,
@@ -23,10 +24,12 @@ from apps.accounts.serializers import (
     NicknameCheckSerializer,
     OnlineStatusListSerializer,
     OnlineStatusSerializer,
+    OpponentProfileSerializer,
     PasswordChangeSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     ProfileUpdateSerializer,
+    PublicUserSerializer,
     UserSerializer,
     UserSignUpSerializer,
 )
@@ -36,6 +39,8 @@ from apps.accounts.services import (
     RankingService,
     UserProfileService,
 )
+from apps.chess.serializers import GameHistorySerializer
+from apps.chess.services import GameQueryService
 
 
 class CurrentUserMixin:
@@ -432,6 +437,56 @@ class OnlineStatusView(APIView):
             for user_id in ids
         ]
         return Response({"results": data})
+
+
+class UserProfileView(APIView):
+    """상대 프로필 + 최근 전적"""
+
+    permission_classes = [AllowAny]
+
+    @extend_schema(responses={200: OpponentProfileSerializer}, tags=["유저"])
+    def get(self, request, user_id: int):
+        user = User.objects.select_related("stats").filter(pk=user_id).first()
+        if user is None:
+            return Response({"message": "유저 정보를 찾을 수 없습니다."}, status=404)
+
+        recent_games = GameQueryService.list_recent_for_user(user, limit=20)
+        vs_summary = None
+        if request.user.is_authenticated and request.user.pk != user.pk:
+            vs_summary = GameQueryService.head_to_head_summary(request.user, user)
+
+        data = {
+            "user": PublicUserSerializer(user).data,
+            "recent_games": GameHistorySerializer(recent_games, many=True).data,
+            "vs_summary": vs_summary,
+        }
+        return Response(data)
+
+
+class UserDashboardView(APIView):
+    """내 통계 대시보드"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: DashboardSerializer}, tags=["통계"])
+    def get(self, request):
+        user = User.objects.select_related("stats").get(pk=request.user.pk)
+        stats = user.stats
+        recent_games = GameQueryService.list_recent_for_user(user, limit=10)
+        data = {
+            "user": PublicUserSerializer(user).data,
+            "summary": {
+                "rating": stats.rating,
+                "rank_tier": stats.rank_tier,
+                "games_played": stats.games_played,
+                "games_won": stats.games_won,
+                "games_lost": stats.games_lost,
+                "games_draw": stats.games_draw,
+                "win_rate": stats.win_rate,
+            },
+            "recent_games": GameHistorySerializer(recent_games, many=True).data,
+        }
+        return Response(data)
 
 
 def _parse_id_list(value: str) -> list[int]:

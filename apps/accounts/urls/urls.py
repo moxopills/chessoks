@@ -26,6 +26,8 @@ from apps.accounts.views.user_views import (
     ProfileUpdateView,
     SignUpView,
     UserAvatarUpdateView,
+    UserDashboardView,
+    UserProfileView,
 )
 
 app_name = "accounts"
@@ -62,6 +64,8 @@ urlpatterns = [
     path("online-status/", OnlineStatusView.as_view(), name="online-status"),
     path("leaderboard/", LeaderboardView.as_view(), name="leaderboard"),
     path("leaderboard/me/", MyRankView.as_view(), name="leaderboard-me"),
+    path("dashboard/", UserDashboardView.as_view(), name="dashboard"),
+    path("users/<int:user_id>/profile/", UserProfileView.as_view(), name="user-profile"),
     path("friends/", FriendListView.as_view(), name="friends"),
     path("friends/requests/", FriendRequestListCreateView.as_view(), name="friend-requests"),
     path(

@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import User
 from apps.accounts.utils.validators import validate_password_strength
+from apps.chess.serializers import GameHistorySerializer
 
 
 class UserStatsSerializer(serializers.Serializer):
@@ -34,6 +35,23 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = (
             "id",
             "created_at",
+        )
+
+
+class PublicUserSerializer(serializers.ModelSerializer):
+    """공개 사용자 정보 Serializer (이메일 제외)"""
+
+    stats = UserStatsSerializer(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            "id",
+            "nickname",
+            "avatar_url",
+            "bio",
+            "created_at",
+            "stats",
         )
 
 
@@ -77,6 +95,35 @@ class LeaderboardResponseSerializer(serializers.Serializer):
     previous = serializers.URLField(allow_null=True, help_text="이전 페이지 URL")
     results = LeaderboardEntrySerializer(many=True, help_text="랭킹 목록")
     my_rank = MyRankSerializer(allow_null=True, help_text="내 랭킹 (로그인 시)")
+
+
+class OpponentSummarySerializer(serializers.Serializer):
+    """상대 전적 요약 (내 기준)"""
+
+    total = serializers.IntegerField()
+    wins = serializers.IntegerField()
+    losses = serializers.IntegerField()
+    draws = serializers.IntegerField()
+
+
+class OpponentProfileSerializer(serializers.Serializer):
+    """상대 프로필 + 최근 전적"""
+
+    user = PublicUserSerializer()
+    recent_games = GameHistorySerializer(many=True)
+    vs_summary = OpponentSummarySerializer(allow_null=True)
+
+
+class DashboardSummarySerializer(UserStatsSerializer):
+    """대시보드 요약 (UserStatsSerializer + rank_tier)"""
+
+    rank_tier = serializers.CharField(read_only=True)
+
+
+class DashboardSerializer(serializers.Serializer):
+    user = PublicUserSerializer()
+    summary = DashboardSummarySerializer()
+    recent_games = GameHistorySerializer(many=True)
 
 
 class LoginRequestSerializer(serializers.Serializer):
