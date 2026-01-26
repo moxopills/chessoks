@@ -52,9 +52,7 @@ class FriendRequest(models.Model):
     class Meta:
         db_table = "friend_requests"
         constraints = [
-            models.UniqueConstraint(
-                fields=["from_user", "to_user"], name="uniq_friend_request"
-            ),
+            models.UniqueConstraint(fields=["from_user", "to_user"], name="uniq_friend_request"),
             models.CheckConstraint(
                 condition=~models.Q(from_user=models.F("to_user")),
                 name="friend_request_no_self",

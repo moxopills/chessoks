@@ -21,7 +21,9 @@ class FriendListView(APIView):
     @extend_schema(responses={200: FriendListSerializer}, tags=["친구"])
     def get(self, request):
         friends = FriendService.list_friends(request.user)
-        return Response({"count": len(friends), "results": FriendSerializer(friends, many=True).data})
+        return Response(
+            {"count": len(friends), "results": FriendSerializer(friends, many=True).data}
+        )
 
 
 class FriendRequestListCreateView(APIView):

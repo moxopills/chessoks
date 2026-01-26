@@ -23,9 +23,7 @@ class FriendService:
         if FriendRequest.objects.filter(from_user=from_user, to_user=to_user).exists():
             raise ValidationError({"user_id": ["이미 친구 요청을 보냈습니다."]})
 
-        reverse_request = FriendRequest.objects.filter(
-            from_user=to_user, to_user=from_user
-        ).first()
+        reverse_request = FriendRequest.objects.filter(from_user=to_user, to_user=from_user).first()
         if reverse_request:
             FriendService._create_friendship(from_user, to_user)
             reverse_request.delete()
@@ -78,9 +76,7 @@ class FriendService:
             return list(
                 FriendRequest.objects.filter(from_user=user).select_related("to_user__stats")
             )
-        return list(
-            FriendRequest.objects.filter(to_user=user).select_related("from_user__stats")
-        )
+        return list(FriendRequest.objects.filter(to_user=user).select_related("from_user__stats"))
 
     @staticmethod
     def _create_friendship(user, friend) -> None:

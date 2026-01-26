@@ -1,5 +1,11 @@
 from django.urls import include, path
 
+from apps.accounts.views.friend_views import (
+    FriendListView,
+    FriendRequestAcceptView,
+    FriendRequestListCreateView,
+    FriendRequestRejectView,
+)
 from apps.accounts.views.user_views import (
     AccountDeleteView,
     CurrentUserView,
@@ -20,12 +26,6 @@ from apps.accounts.views.user_views import (
     ProfileUpdateView,
     SignUpView,
     UserAvatarUpdateView,
-)
-from apps.accounts.views.friend_views import (
-    FriendListView,
-    FriendRequestAcceptView,
-    FriendRequestListCreateView,
-    FriendRequestRejectView,
 )
 
 app_name = "accounts"

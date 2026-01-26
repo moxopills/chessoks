@@ -1,4 +1,3 @@
-from .online_serializers import OnlineStatusListSerializer, OnlineStatusSerializer
 from .friend_serializers import (
     FriendListSerializer,
     FriendRequestCreateSerializer,
@@ -6,6 +5,7 @@ from .friend_serializers import (
     FriendRequestSerializer,
     FriendSerializer,
 )
+from .online_serializers import OnlineStatusListSerializer, OnlineStatusSerializer
 from .social_serializer import (
     SocialAccountUnlinkSerializer,
     SocialLoginSerializer,
