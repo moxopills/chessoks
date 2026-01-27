@@ -5,6 +5,7 @@ from apps.chess.engine.board import (
     game_status,
     generate_legal_moves,
     move_to_uci,
+    position_key,
     to_fen,
     uci_to_move,
 )
@@ -57,3 +58,20 @@ def test_checkmate_and_stalemate() -> None:
 
     stalemate_pos = from_fen("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1")
     assert game_status(stalemate_pos) == "stalemate"
+
+
+def test_insufficient_material() -> None:
+    position = from_fen("8/8/8/8/8/8/8/K6k w - - 0 1")
+    assert game_status(position) == "insufficient"
+
+
+def test_fifty_move_rule() -> None:
+    position = from_fen("8/8/8/8/8/8/7R/K6k w - - 100 1")
+    assert game_status(position) == "fifty_move"
+
+
+def test_threefold_repetition() -> None:
+    position = from_fen("8/8/8/8/8/8/7R/K6k w - - 0 1")
+    key = position_key(position)
+    history = [key, key, key]
+    assert game_status(position, history=history) == "threefold"

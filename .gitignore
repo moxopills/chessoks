@@ -36,6 +36,11 @@ Thumbs.db
 
 # Testing and Coverage
 .pytest_cache/
+.uv-cache/
+celerybeat-schedule
+celerybeat-schedule.*
+celerybeat-schedule-shm
+celerybeat-schedule-wal
 htmlcov/
 .coverage
 coverage.xml
@@ -49,3 +54,5 @@ dmypy.json
 
 # Ruff
 .ruff_cache/
+
+WORK_ITEMS.md
