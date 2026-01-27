@@ -56,6 +56,42 @@ services:
         reservations:
           memory: 512M
 
+  celery:
+    build: .
+    entrypoint: []
+    command: ["uv", "run", "celery", "-A", "config", "worker", "-l", "info"]
+    volumes:
+      - .:/app
+    env_file:
+      - .envs/.env.dev
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - DB_HOST=db
+      - REDIS_HOST=redis
+
+  celery-beat:
+    build: .
+    entrypoint: []
+    command: ["uv", "run", "celery", "-A", "config", "beat", "-l", "info"]
+    volumes:
+      - .:/app
+    env_file:
+      - .envs/.env.dev
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - DB_HOST=db
+      - REDIS_HOST=redis
+
   nginx:
     image: nginx:alpine
     volumes:
