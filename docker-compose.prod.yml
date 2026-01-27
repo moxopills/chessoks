@@ -55,7 +55,8 @@ services:
 
   celery:
     build: .
-    command: uv run celery -A config worker -l info
+    entrypoint: []
+    command: ["uv", "run", "celery", "-A", "config", "worker", "-l", "info"]
     volumes:
       - media_volume:/app/media
     env_file:
@@ -79,7 +80,8 @@ services:
 
   celery-beat:
     build: .
-    command: uv run celery -A config beat -l info
+    entrypoint: []
+    command: ["uv", "run", "celery", "-A", "config", "beat", "-l", "info"]
     env_file:
       - .envs/.env.prod
     depends_on:

@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from celery import shared_task
@@ -52,6 +52,27 @@ def cleanup_stale_waiting_rooms(timeout_minutes: int = 10) -> int:
         room_type="quick", status="waiting", guest__isnull=True, created_at__lt=cutoff
     ).delete()
     return deleted
+
+
+@shared_task
+def cleanup_inactive_rooms(stale_minutes: int = 30) -> dict:
+    """유휴/비정상 방 정리"""
+    now = timezone.now()
+    cutoff = now - timedelta(minutes=stale_minutes)
+
+    stale_rooms = Room.objects.filter(
+        status__in=["waiting", "ready"], updated_at__lt=cutoff
+    ).filter(models.Q(guest__isnull=True) | models.Q(room_type="quick"))
+    stale_deleted, _ = stale_rooms.delete()
+
+    abnormal_rooms = (
+        Room.objects.filter(status="playing", started_at__lt=cutoff)
+        .exclude(games__result="playing")
+        .distinct()
+    )
+    abnormal_updated = abnormal_rooms.update(status="finished", finished_at=now)
+
+    return {"stale_deleted": stale_deleted, "abnormal_updated": abnormal_updated}
 
 
 @shared_task

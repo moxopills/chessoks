@@ -42,9 +42,46 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - DEBUG=True
       - DB_HOST=db
+      - REDIS_HOST=redis
+
+  celery:
+    build: .
+    entrypoint: []
+    command: ["uv", "run", "celery", "-A", "config", "worker", "-l", "info"]
+    volumes:
+      - .:/app
+    env_file:
+      - .envs/.env.local
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - REDIS_HOST=redis
+
+  celery-beat:
+    build: .
+    entrypoint: []
+    command: ["uv", "run", "celery", "-A", "config", "beat", "-l", "info"]
+    volumes:
+      - .:/app
+    env_file:
+      - .envs/.env.local
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - REDIS_HOST=redis
 
 volumes:
   postgres_data:

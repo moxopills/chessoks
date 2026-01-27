@@ -266,12 +266,12 @@ LOGGING = {
 
 # 이메일 설정
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
-EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.naver.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "moxopills@gmail.com")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "qkralstn8070@naver.com")
 
 # 도메인/프론트엔드 URL (이메일 링크용)
 DOMAIN = os.getenv("DOMAIN", "")
@@ -309,24 +309,4 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
-
-# Celery Beat 스케줄 (정기 작업)
-CELERY_BEAT_SCHEDULE = {
-    "cleanup-expired-tokens": {
-        "task": "apps.accounts.tasks.cleanup_expired_tokens",
-        "schedule": 60 * 60 * 24,  # 매일 (24시간마다)
-    },
-    "cleanup-deleted-accounts": {
-        "task": "apps.accounts.tasks.cleanup_deleted_accounts",
-        "schedule": 60 * 60 * 24,  # 매일 (24시간마다)
-    },
-    "chess-handle-timeouts": {
-        "task": "apps.chess.tasks.handle_timeouts",
-        "schedule": 10,  # 10초마다
-    },
-    "chess-cleanup-lobby-messages": {
-        "task": "apps.chess.tasks.cleanup_lobby_messages",
-        "schedule": 60 * 60 * 24,  # 매일 (24시간마다)
-        "args": [3],
-    },
-}
+# Beat 스케줄은 config/celery.py에서 관리
