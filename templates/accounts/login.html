@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}로그인 - ChessOK{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <!-- Header -->
+        <div class="auth-header">
+            <div class="auth-logo">
+                <span class="logo-icon">&#9822;</span>
+            </div>
+            <h1 class="auth-title">로그인</h1>
+            <p class="auth-subtitle">체스 대전을 시작하세요</p>
+        </div>
+
+        <!-- Login Form -->
+        <form id="login-form" class="auth-form" novalidate>
+            <div class="form-group">
+                <label for="email" class="form-label">이메일</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    class="form-input"
+                    placeholder="example@email.com"
+                    autocomplete="email"
+                    required
+                >
+                <div class="form-error" id="email-error"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">비밀번호</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    class="form-input"
+                    placeholder="비밀번호 입력"
+                    autocomplete="current-password"
+                    required
+                >
+                <div class="form-error" id="password-error"></div>
+            </div>
+
+            <div class="form-error" id="form-error"></div>
+
+            <button type="submit" class="btn btn-primary btn-arcade btn-block" id="login-btn">
+                <span class="btn-text">로그인</span>
+                <span class="btn-loading hidden">
+                    <span class="spinner spinner-sm"></span>
+                </span>
+            </button>
+        </form>
+
+        <!-- Links -->
+        <div class="auth-links">
+            <a href="/password-reset/" class="auth-link">비밀번호를 잊으셨나요?</a>
+        </div>
+
+        <!-- Footer -->
+        <div class="auth-footer">
+            <span>계정이 없으신가요?</span>
+            <a href="/signup/" class="auth-link">회원가입</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pages/login.js' %}"></script>
+{% endblock %}

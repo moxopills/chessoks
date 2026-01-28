@@ -1,0 +1,53 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="실시간 체스 멀티플레이 게임">
+    <title>{% block title %}ChessOK{% endblock %}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="{% static 'images/icons/favicon.svg' %}">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    {% include 'components/navbar.html' %}
+
+    <!-- Flash Messages -->
+    <div id="toast-container"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <span class="footer-logo">ChessOK</span>
+            <span class="footer-copy">&copy; 2025</span>
+        </div>
+    </footer>
+
+    <!-- CSRF Token -->
+    <script>
+        window.CSRF_TOKEN = '{{ csrf_token }}';
+    </script>
+
+    <!-- Core Scripts -->
+    <script src="{% static 'js/core/api.js' %}"></script>
+    <script src="{% static 'js/core/utils.js' %}"></script>
+    <script src="{% static 'js/components/toast.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
