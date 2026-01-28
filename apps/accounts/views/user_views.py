@@ -32,6 +32,8 @@ from apps.accounts.serializers import (
     PasswordResetRequestSerializer,
     ProfileUpdateSerializer,
     PublicUserSerializer,
+    SignupEmailConfirmSerializer,
+    SignupEmailRequestSerializer,
     UserSerializer,
     UserSignUpSerializer,
 )
@@ -86,7 +88,7 @@ class LogoutView(APIView):
 
 
 class SignUpView(APIView):
-    """회원가입 - 이메일 인증 필수"""
+    """회원가입 - 이메일 인증 완료 후 가입"""
 
     permission_classes = [AllowAny]
     throttle_classes = [AnonRateThrottle]
@@ -104,6 +106,50 @@ class SignUpView(APIView):
     def post(self, request):
         serializer = UserSignUpSerializer(data=request.data)
         result = UserProfileService.signup(serializer)
+        return Response(result.data, status=result.status)
+
+
+class SignupEmailRequestView(APIView):
+    """회원가입 이메일 인증 요청"""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    @extend_schema(
+        request=SignupEmailRequestSerializer,
+        responses={
+            200: {
+                "type": "object",
+                "properties": {"message": {"type": "string"}, "email": {"type": "string"}},
+            }
+        },
+        tags=["인증"],
+    )
+    def post(self, request):
+        serializer = SignupEmailRequestSerializer(data=request.data)
+        result = UserProfileService.signup_email_request(serializer)
+        return Response(result.data, status=result.status)
+
+
+class SignupEmailConfirmView(APIView):
+    """회원가입 이메일 인증 확인"""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    @extend_schema(
+        request=SignupEmailConfirmSerializer,
+        responses={
+            200: {
+                "type": "object",
+                "properties": {"message": {"type": "string"}, "email": {"type": "string"}},
+            }
+        },
+        tags=["인증"],
+    )
+    def post(self, request):
+        serializer = SignupEmailConfirmSerializer(data=request.data)
+        result = UserProfileService.signup_email_confirm(serializer)
         return Response(result.data, status=result.status)
 
 
@@ -190,7 +236,7 @@ class PasswordChangeView(APIView):
     )
     def post(self, request):
         serializer = PasswordChangeSerializer(data=request.data, context={"request": request})
-        result = UserProfileService.password_change(serializer, request.user)
+        result = UserProfileService.password_change(serializer, request.user, request)
         return Response(result.data, status=result.status)
 
 
@@ -422,7 +468,11 @@ class LeaderboardView(APIView):
 
         my_rank = None
         if request.user.is_authenticated:
-            my_rank = RankingService.get_my_rank_data(request.user.pk)
+            my_rank_cache_key = f"my_rank_v{version}_{request.user.pk}"
+            my_rank = cache.get(my_rank_cache_key)
+            if my_rank is None:
+                my_rank = RankingService.get_my_rank_data(request.user.pk)
+                cache.set(my_rank_cache_key, my_rank, self.CACHE_TTL)
 
         return Response(
             {
@@ -471,24 +521,40 @@ class UserProfileView(APIView):
     """상대 프로필 + 최근 전적"""
 
     permission_classes = [AllowAny]
+    CACHE_TTL = 300  # 5분 캐싱
 
     @extend_schema(responses={200: OpponentProfileSerializer}, tags=["유저"])
     def get(self, request, user_id: int):
-        user = User.objects.select_related("stats").filter(pk=user_id).first()
-        if user is None:
-            return Response({"message": "유저 정보를 찾을 수 없습니다."}, status=404)
+        cache_key = f"user_profile_{user_id}"
+        cached_data = cache.get(cache_key)
 
-        recent_games = GameQueryService.list_recent_for_user(user, limit=20)
+        user = None
+        if cached_data is None:
+            user = User.objects.select_related("stats").filter(pk=user_id).first()
+            if user is None:
+                return Response({"message": "유저 정보를 찾을 수 없습니다."}, status=404)
+
+            recent_games = GameQueryService.list_recent_for_user(user, limit=20)
+            cached_data = {
+                "user": PublicUserSerializer(user).data,
+                "recent_games": GameHistorySerializer(recent_games, many=True).data,
+            }
+            cache.set(cache_key, cached_data, self.CACHE_TTL)
+
         vs_summary = None
-        if request.user.is_authenticated and request.user.pk != user.pk:
-            vs_summary = GameQueryService.head_to_head_summary(request.user, user)
+        if request.user.is_authenticated and request.user.pk != user_id:
+            if user is None:
+                user = User.objects.filter(pk=user_id).first()
+            if user:
+                vs_summary = GameQueryService.head_to_head_summary(request.user, user)
 
-        data = {
-            "user": PublicUserSerializer(user).data,
-            "recent_games": GameHistorySerializer(recent_games, many=True).data,
-            "vs_summary": vs_summary,
-        }
-        return Response(data)
+        return Response(
+            {
+                "user": cached_data["user"],
+                "recent_games": cached_data["recent_games"],
+                "vs_summary": vs_summary,
+            }
+        )
 
 
 class UserDashboardView(APIView):

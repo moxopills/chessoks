@@ -24,6 +24,8 @@ from apps.accounts.views.user_views import (
     PasswordResetConfirmView,
     PasswordResetRequestView,
     ProfileUpdateView,
+    SignupEmailConfirmView,
+    SignupEmailRequestView,
     SignUpView,
     UserAvatarUpdateView,
     UserDashboardView,
@@ -35,6 +37,8 @@ app_name = "accounts"
 urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
+    path("signup/email/request/", SignupEmailRequestView.as_view(), name="signup-email-request"),
+    path("signup/email/confirm/", SignupEmailConfirmView.as_view(), name="signup-email-confirm"),
     path("signup/", SignUpView.as_view(), name="signup"),
     path("me/", CurrentUserView.as_view(), name="current-user"),
     path("profile/", ProfileUpdateView.as_view(), name="profile-update"),

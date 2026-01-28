@@ -6,16 +6,10 @@
 
 배포 워크플로우가 작동하려면 다음 GitHub Secrets를 설정해야 합니다:
 
-### AWS 설정 (선택사항)
-- `AWS_ACCESS_KEY_ID`: AWS 액세스 키 ID
-- `AWS_SECRET_ACCESS_KEY`: AWS 시크릿 액세스 키
-- `AWS_REGION`: AWS 리전 (예: ap-northeast-2)
-
-### EC2 SSH 설정
-- `EC2_HOST`: EC2 인스턴스의 공용 IP 또는 도메인
-- `EC2_USERNAME`: SSH 사용자명 (예: ubuntu, ec2-user)
-- `EC2_SSH_KEY`: EC2 인스턴스 접속용 SSH 프라이빗 키 (PEM 파일 내용)
-- `EC2_SSH_PORT`: SSH 포트 (기본값: 22)
+### GCP SSH 설정
+- `GCP_HOST`: GCP Compute Engine 공용 IP 또는 도메인
+- `GCP_USER`: SSH 사용자명 (예: gcp)
+- `GCP_SSH_KEY`: GCP 인스턴스 접속용 SSH 프라이빗 키 (Base64 인코딩)
 
 ### 애플리케이션 설정
 - `PROJECT_PATH`: EC2 인스턴스 내 프로젝트 경로 (예: /home/ubuntu/DjangoProject)
@@ -29,9 +23,9 @@
 4. `New repository secret` 버튼 클릭
 5. Secret 이름과 값을 입력하고 저장
 
-## EC2 인스턴스 초기 설정
+## GCP Compute Engine 초기 설정
 
-배포하기 전에 EC2 인스턴스에 다음을 설정해야 합니다:
+배포하기 전에 GCP 인스턴스에 다음을 설정해야 합니다:
 
 ### 1. Docker 설치
 
