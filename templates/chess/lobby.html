@@ -1,0 +1,301 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}로비 - ChessOK{% endblock %}
+
+{% block content %}
+<div class="lobby-container">
+    <!-- Hero Section -->
+    <section class="lobby-hero">
+        <h1 class="hero-title"><span class="hero-logo">♞</span>ChessOK</h1>
+        <p class="hero-subtitle">실시간 체스 대전</p>
+
+        <div class="hero-actions">
+            <button class="btn btn-primary btn-arcade btn-lg" id="quick-match-btn">
+                <span class="btn-text"><span class="btn-icon">⚔</span> 빠른대전</span>
+                <span class="btn-loading hidden">
+                    <span class="spinner"></span>
+                    <span>매칭중...</span>
+                </span>
+            </button>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="lobby-content">
+        <!-- Left: Room List Preview -->
+        <section class="lobby-section">
+            <div class="section-header">
+                <h2 class="section-title">☗ 게임방</h2>
+                <a href="/rooms/" class="section-link">전체 보기</a>
+            </div>
+            <div class="room-list" id="room-list">
+                <div class="loading-placeholder">
+                    <span class="spinner"></span>
+                    <span>로딩 중...</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right: Lobby Chat -->
+        <section class="lobby-section lobby-chat-section">
+            <div class="section-header">
+                <h2 class="section-title">💬 로비채팅</h2>
+            </div>
+            <div class="chat-container" id="lobby-chat">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="chat-notice">로그인 후 채팅에 참여할 수 있습니다.</div>
+                </div>
+                <form class="chat-form" id="chat-form">
+                    <input
+                        type="text"
+                        class="chat-input"
+                        id="chat-input"
+                        placeholder="메시지 입력..."
+                        maxlength="500"
+                        disabled
+                    >
+                    <button type="submit" class="btn btn-primary btn-sm" disabled>전송</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Lobby Styles */
+.lobby-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Hero */
+.lobby-hero {
+    text-align: center;
+    padding: var(--space-2xl) 0;
+    margin-bottom: var(--space-xl);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.hero-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--color-accent-primary);
+    margin-bottom: var(--space-sm);
+    text-shadow: 0 0 20px rgba(233, 69, 96, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
+}
+
+.hero-logo {
+    font-size: 1.3em;
+    line-height: 1;
+}
+
+.hero-subtitle {
+    font-family: var(--font-display);
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    word-spacing: -4px;
+    margin-bottom: var(--space-xl);
+}
+
+.hero-actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+}
+
+/* Content Grid */
+.lobby-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+}
+
+@media (max-width: 768px) {
+    .lobby-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Section */
+.lobby-section {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.section-title {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    word-spacing: -4px;
+    margin-bottom: 0;
+}
+
+.section-link {
+    font-size: 0.75rem;
+    color: var(--color-accent-secondary);
+}
+
+/* Room List */
+.room-list {
+    min-height: 200px;
+}
+
+.room-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-sm);
+    transition: border-color var(--transition-fast);
+}
+
+.room-item:hover {
+    border-color: var(--color-accent-secondary);
+}
+
+.room-info {
+    flex: 1;
+}
+
+.room-title {
+    font-weight: 500;
+    margin-bottom: var(--space-xs);
+}
+
+.room-meta {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.room-status {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.625rem;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+}
+
+.room-status.waiting {
+    background-color: rgba(39, 174, 96, 0.2);
+    color: var(--color-accent-success);
+}
+
+.room-status.playing {
+    background-color: rgba(243, 156, 18, 0.2);
+    color: var(--color-accent-warning);
+}
+
+.room-empty {
+    text-align: center;
+    padding: var(--space-xl);
+    color: var(--color-text-muted);
+}
+
+.loading-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-xl);
+    color: var(--color-text-muted);
+}
+
+/* Chat */
+.lobby-chat-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 300px;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-sm);
+    background-color: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+    min-height: 200px;
+    max-height: 300px;
+}
+
+.chat-message {
+    margin-bottom: var(--space-sm);
+    font-size: 0.875rem;
+}
+
+.chat-nickname {
+    font-weight: 500;
+    color: var(--color-accent-secondary);
+}
+
+.chat-text {
+    color: var(--color-text-primary);
+}
+
+.chat-time {
+    font-size: 0.625rem;
+    color: var(--color-text-muted);
+    margin-left: var(--space-sm);
+}
+
+.chat-notice {
+    text-align: center;
+    padding: var(--space-lg);
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+}
+
+.chat-form {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.chat-input {
+    flex: 1;
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.875rem;
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+}
+
+.chat-input:focus {
+    outline: none;
+    border-color: var(--color-accent-secondary);
+}
+
+.chat-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pages/lobby.js' %}"></script>
+{% endblock %}

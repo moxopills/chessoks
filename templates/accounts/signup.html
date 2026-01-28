@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}회원가입 - ChessOK{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/auth.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <!-- Header -->
+        <div class="auth-header">
+            <div class="auth-logo">
+                <span class="logo-icon">&#9822;</span>
+            </div>
+            <h1 class="auth-title">회원가입</h1>
+            <p class="auth-subtitle">새로운 체스 여정을 시작하세요</p>
+        </div>
+
+        <!-- Signup Form -->
+        <form id="signup-form" class="auth-form" novalidate>
+            <div class="form-group">
+                <label for="email" class="form-label">이메일</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    class="form-input"
+                    placeholder="example@email.com"
+                    autocomplete="email"
+                    required
+                >
+                <div class="form-error" id="email-error"></div>
+            </div>
+
+            <div class="form-group form-inline">
+                <button type="button" class="btn btn-outline btn-block" id="send-email-btn">
+                    인증번호 받기
+                </button>
+                <div class="form-hint" id="email-status"></div>
+            </div>
+
+            <div class="form-group" id="token-group">
+                <label for="signup-code" class="form-label">인증 코드</label>
+                <input
+                    type="text"
+                    id="signup-code"
+                    name="signup_code"
+                    class="form-input"
+                    placeholder="이메일로 받은 6자리 코드"
+                    autocomplete="off"
+                >
+                <div class="form-error" id="signup-code-error"></div>
+                <button type="button" class="btn btn-secondary btn-block" id="confirm-email-btn">
+                    이메일 인증 완료
+                </button>
+            </div>
+
+            <div class="form-group">
+                <label for="nickname" class="form-label">닉네임</label>
+                <input
+                    type="text"
+                    id="nickname"
+                    name="nickname"
+                    class="form-input"
+                    placeholder="2-20자 닉네임"
+                    minlength="2"
+                    maxlength="20"
+                    autocomplete="username"
+                    required
+                >
+                <div class="form-error" id="nickname-error"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">비밀번호</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    class="form-input"
+                    placeholder="8자 이상 (영문 대소문자, 숫자, 특수문자)"
+                    autocomplete="new-password"
+                    required
+                >
+                <div class="password-strength">
+                    <div class="strength-bar">
+                        <div class="strength-fill" id="strength-fill"></div>
+                    </div>
+                    <span class="strength-text" id="strength-text"></span>
+                </div>
+                <div class="form-error" id="password-error"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="password2" class="form-label">비밀번호 확인</label>
+                <input
+                    type="password"
+                    id="password2"
+                    name="password2"
+                    class="form-input"
+                    placeholder="비밀번호 재입력"
+                    autocomplete="new-password"
+                    required
+                >
+                <div class="form-error" id="password2-error"></div>
+            </div>
+
+            <div class="form-error" id="form-error"></div>
+
+            <button type="submit" class="btn btn-primary btn-arcade btn-block" id="signup-btn">
+                <span class="btn-text">가입하기</span>
+                <span class="btn-loading hidden">
+                    <span class="spinner spinner-sm"></span>
+                </span>
+            </button>
+        </form>
+
+        <!-- Footer -->
+        <div class="auth-footer">
+            <span>이미 계정이 있으신가요?</span>
+            <a href="/login/" class="auth-link">로그인</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pages/signup.js' %}"></script>
+{% endblock %}
