@@ -240,13 +240,14 @@
     margin-bottom: var(--space-md);
     min-height: 200px;
     max-height: 300px;
+    display: flex;
+    flex-direction: column;
 }
 
 .chat-message {
     display: flex;
     flex-direction: column;
     margin-bottom: var(--space-md);
-    max-width: 80%;
 }
 
 .chat-message.mine {
@@ -276,6 +277,7 @@
     font-size: 0.875rem;
     line-height: 1.4;
     word-break: break-word;
+    max-width: 70%;
 }
 
 .chat-message.mine .chat-bubble {
