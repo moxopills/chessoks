@@ -65,6 +65,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    "apps.core.middleware.RequestIDMiddleware",
+    "apps.core.middleware.RequestTimingMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -243,15 +245,14 @@ LOGGING = {
             "format": "[{levelname}] {asctime} {name} {message}",
             "style": "{",
         },
-        "simple": {
-            "format": "[{levelname}] {message}",
-            "style": "{",
+        "json": {
+            "()": "apps.core.logging.JsonFormatter",
         },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "verbose",
+            "formatter": "json" if not DEBUG else "verbose",
         },
     },
     "root": {
@@ -274,7 +275,22 @@ LOGGING = {
             "level": LOG_LEVEL,
             "propagate": False,
         },
+        "apps.core": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "apps.notifications": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
         "django.security": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "django.request": {
             "handlers": ["console"],
             "level": "WARNING",
             "propagate": False,
