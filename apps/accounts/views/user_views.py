@@ -424,15 +424,17 @@ class LeaderboardView(APIView):
         if request.user.is_authenticated:
             my_rank = RankingService.get_my_rank_data(request.user.pk)
 
-        return Response({
-            "count": cached_data["count"],
-            "total_pages": cached_data["total_pages"],
-            "current_page": cached_data["current_page"],
-            "next": cached_data["next"],
-            "previous": cached_data["previous"],
-            "results": cached_data["entries"],
-            "my_rank": my_rank,
-        })
+        return Response(
+            {
+                "count": cached_data["count"],
+                "total_pages": cached_data["total_pages"],
+                "current_page": cached_data["current_page"],
+                "next": cached_data["next"],
+                "previous": cached_data["previous"],
+                "results": cached_data["entries"],
+                "my_rank": my_rank,
+            }
+        )
 
 
 class MyRankView(APIView):

@@ -339,7 +339,9 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             )
         except DatabaseError as exc:
             logger.error("Database error in LobbyChatConsumer: %s", exc)
-            await self.send_json({"type": "error", "message": "메시지 저장 중 오류가 발생했습니다."})
+            await self.send_json(
+                {"type": "error", "message": "메시지 저장 중 오류가 발생했습니다."}
+            )
 
     async def broadcast(self, event):
         try:
