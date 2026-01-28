@@ -1,7 +1,8 @@
 import logging
 from datetime import timedelta
 
-from django.db import models, transaction
+from django.core.exceptions import ObjectDoesNotExist
+from django.db import DatabaseError, models, transaction
 from django.utils import timezone
 
 from celery import shared_task
@@ -38,8 +39,10 @@ def handle_timeouts() -> int:
                 try:
                     GameService.apply_timeout(game, game.current_turn, now)
                     updated += 1
-                except Exception as exc:
-                    logger.warning("Timeout failed for game %s: %s", game.id, exc)
+                except ObjectDoesNotExist as exc:
+                    logger.warning("Game %s not found during timeout: %s", game.id, exc)
+                except DatabaseError as exc:
+                    logger.error("Database error during timeout for game %s: %s", game.id, exc)
 
     return updated
 
