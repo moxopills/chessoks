@@ -3,6 +3,9 @@
 import logging
 import uuid
 
+from django.contrib.auth import update_session_auth_hash
+from django.core.cache import cache
+
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
@@ -11,11 +14,15 @@ from apps.accounts.services.base_service import ServiceResult, _ok, _validate_se
 from apps.accounts.services.session_service import AccountService, PasswordService
 from apps.accounts.utils import (
     check_passwords_match,
+    create_signup_email_token,
     create_token,
     get_user_or_timing_safe_response,
+    mark_signup_token_as_used,
     mark_token_as_used,
     send_password_reset_email,
+    send_signup_verification_email,
     send_verification_email,
+    validate_signup_email_code,
     validate_token,
 )
 from apps.core.S3.constants import FileType, S3Constants
@@ -27,6 +34,7 @@ logger = logging.getLogger(__name__)
 # 상수 정의
 EMAIL_VERIFICATION_HOURS = 24
 PASSWORD_RESET_HOURS = 1
+SIGNUP_EMAIL_CACHE_TTL = 600
 
 
 def _check_availability(user: User | None, field_name: str) -> dict:
@@ -89,25 +97,72 @@ class UserProfileService:
             serializer.validated_data["password2"],
         )
 
+        email = serializer.validated_data["email"]
+        cache_key = f"signup_email_verified:{email}"
+        if not cache.get(cache_key):
+            raise ValidationError({"email": ["이메일 인증을 먼저 완료해주세요."]})
+
         UserProfileService._validate_availability(
-            serializer.validated_data["email"],
+            email,
             serializer.validated_data["nickname"],
         )
 
         user = serializer.save()
-        token = create_token(
-            token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
-            user=user,
-            expiry_hours=EMAIL_VERIFICATION_HOURS,
-        )
-        send_verification_email(user.email, token.token)
+        AccountService.verify_email(user)
+        cache.delete(cache_key)
 
         return _ok(
             {
-                "message": "회원가입 성공! 이메일로 전송된 인증 링크를 확인해주세요.",
+                "message": "회원가입이 완료되었습니다.",
                 "email": user.email,
             },
             status.HTTP_201_CREATED,
+        )
+
+    @staticmethod
+    def signup_email_request(serializer) -> ServiceResult:
+        _validate_serializer(serializer)
+
+        email = serializer.validated_data["email"]
+        email_user = User.objects.filter(email=email).first()
+        result = AccountService.check_availability(email_user, "이메일")
+        if not result["available"]:
+            raise ValidationError({"email": [result["message"]]})
+
+        token, code = create_signup_email_token(email=email, expiry_hours=EMAIL_VERIFICATION_HOURS)
+        send_signup_verification_email(email, code)
+
+        return _ok(
+            {
+                "message": "인증 이메일을 전송했습니다.",
+                "email": email,
+            },
+            status.HTTP_200_OK,
+        )
+
+    @staticmethod
+    def signup_email_confirm(serializer) -> ServiceResult:
+        _validate_serializer(serializer)
+
+        email = serializer.validated_data["email"]
+        code = serializer.validated_data["code"]
+        token, error_response = validate_signup_email_code(
+            email,
+            code,
+            error_messages={
+                "not_found": "인증 요청을 먼저 진행해주세요.",
+                "invalid": "만료되었거나 이미 사용된 인증입니다.",
+                "mismatch": "인증 코드가 일치하지 않습니다.",
+            },
+        )
+        if error_response:
+            raise ValidationError(error_response.data)
+
+        mark_signup_token_as_used(token)
+        cache.set(f"signup_email_verified:{email}", True, timeout=SIGNUP_EMAIL_CACHE_TTL)
+        return _ok(
+            {"message": "이메일 인증이 완료되었습니다.", "email": email},
+            status.HTTP_200_OK,
         )
 
     @staticmethod
@@ -157,7 +212,7 @@ class UserProfileService:
         return _ok({"message": "비밀번호가 재설정되었습니다."}, status.HTTP_200_OK)
 
     @staticmethod
-    def password_change(serializer, user: User) -> ServiceResult:
+    def password_change(serializer, user: User, request=None) -> ServiceResult:
         _validate_serializer(serializer)
 
         current_password = serializer.validated_data["current_password"]
@@ -179,6 +234,11 @@ class UserProfileService:
             )
 
         PasswordService.change_password(user, new_password)
+
+        # 현재 세션 유지, 다른 세션 무효화
+        if request:
+            update_session_auth_hash(request, user)
+
         return _ok({"message": "비밀번호가 변경되었습니다."}, status.HTTP_200_OK)
 
     @staticmethod

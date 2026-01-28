@@ -13,9 +13,10 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIClient, APIRequestFactory, APITestCase
 
-from apps.accounts.models import AuthToken
+from apps.accounts.models import AuthToken, SignupEmailToken
 from apps.accounts.serializers import ProfileUpdateSerializer, UserSignUpSerializer
 from apps.accounts.services import UserProfileService
+from apps.accounts.utils import hash_signup_code_for_test
 
 User = get_user_model()
 
@@ -70,6 +71,10 @@ class BaseTestCase(ErrorResponseMixin, TestCase):
             "password2": TEST_PASSWORD,
         }
 
+    def setUp(self):
+        self.valid_signup_data = self.valid_signup_data.copy()
+        self._mark_signup_verified(self.valid_signup_data["email"])
+
     def create_user(
         self,
         email=TEST_EMAIL,
@@ -91,6 +96,9 @@ class BaseTestCase(ErrorResponseMixin, TestCase):
         return self.create_user(
             email=email, nickname=nickname, password=password, email_verified=True
         )
+
+    def _mark_signup_verified(self, email: str) -> None:
+        cache.set(f"signup_email_verified:{email}", True, timeout=600)
 
     def create_test_image(self, filename="test.png"):
         """테스트용 이미지 파일 생성"""
@@ -149,6 +157,9 @@ class AuthE2ETestCase(ErrorResponseMixin, LiveServerTestCase):
         cache.clear()
         User.objects.all().delete()
 
+    def _mark_signup_verified(self, email: str) -> None:
+        cache.set(f"signup_email_verified:{email}", True, timeout=600)
+
     def test_complete_auth_flow(self):
         """완전한 인증 플로우 E2E 테스트: 회원가입 → 로그인 → 유저 정보 조회 → 로그아웃"""
 
@@ -159,17 +170,13 @@ class AuthE2ETestCase(ErrorResponseMixin, LiveServerTestCase):
             "password": "TestPass123!",
             "password2": "TestPass123!",
         }
+        self._mark_signup_verified("e2e@test.com")
         response = self.client.post("/api/accounts/signup/", signup_data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("message", response.data)
         self.assertIn("email", response.data)
         self.assertEqual(response.data["email"], signup_data["email"])
-
-        # 이메일 인증 설정 (E2E 테스트를 위해)
-        user = User.objects.get(email="e2e@test.com")
-        user.email_verified = True
-        user.save()
 
         # 2. 로그인
         login_data = {"email": "e2e@test.com", "password": "TestPass123!"}
@@ -238,6 +245,34 @@ class AuthE2ETestCase(ErrorResponseMixin, LiveServerTestCase):
         # 로그인 성공 확인 (이메일 인증이 안되어 있으면 403일 수 있음)
         self.assertIn(response.status_code, [status.HTTP_200_OK, status.HTTP_403_FORBIDDEN])
 
+
+class SignupEmailFlowTestCase(BaseAPITestCase):
+    """회원가입 이메일 인증 플로우 테스트"""
+
+    @patch("apps.accounts.services.profile_service.send_signup_verification_email")
+    def test_signup_email_request_and_confirm(self, mock_send_email):
+        response = self.client.post(
+            "/api/accounts/signup/email/request/",
+            {"email": "verify@test.com"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["email"], "verify@test.com")
+        self.assertTrue(SignupEmailToken.objects.filter(email="verify@test.com").exists())
+        mock_send_email.assert_called_once()
+
+        SignupEmailToken.objects.filter(email="verify@test.com").update(
+            code_hash=hash_signup_code_for_test("verify@test.com", "654321")
+        )
+        code = "654321"
+        response = self.client.post(
+            "/api/accounts/signup/email/confirm/",
+            {"email": "verify@test.com", "code": code},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["email"], "verify@test.com")
+
     def test_duplicate_signup_prevention(self):
         """중복 회원가입 방지 E2E 테스트"""
 
@@ -247,12 +282,14 @@ class AuthE2ETestCase(ErrorResponseMixin, LiveServerTestCase):
             "password": "TestPass123!",
             "password2": "TestPass123!",
         }
+        self._mark_signup_verified("duplicate@test.com")
 
         # 1. 첫 번째 회원가입 성공
         response = self.client.post("/api/accounts/signup/", signup_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         # 2. 같은 이메일로 재가입 시도 → 실패
+        self._mark_signup_verified("duplicate@test.com")
         response = self.client.post("/api/accounts/signup/", signup_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFieldError(response, "email")
@@ -264,6 +301,7 @@ class AuthE2ETestCase(ErrorResponseMixin, LiveServerTestCase):
             "password": "TestPass123!",
             "password2": "TestPass123!",
         }
+        self._mark_signup_verified("another@test.com")
         response = self.client.post("/api/accounts/signup/", signup_data2, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFieldError(response, "nickname")
@@ -277,27 +315,52 @@ class AuthE2ETestCase(ErrorResponseMixin, LiveServerTestCase):
         }
 
         # 1. 8자 미만
-        data = {**base_data, "password": "Test1!", "password2": "Test1!"}
+        data = {
+            **base_data,
+            "password": "Test1!",
+            "password2": "Test1!",
+        }
+        self._mark_signup_verified("pwtest@test.com")
         response = self.client.post("/api/accounts/signup/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         # 2. 대문자 없음
-        data = {**base_data, "password": "testpass123!", "password2": "testpass123!"}
+        data = {
+            **base_data,
+            "password": "testpass123!",
+            "password2": "testpass123!",
+        }
+        self._mark_signup_verified("pwtest@test.com")
         response = self.client.post("/api/accounts/signup/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         # 3. 특수문자 없음
-        data = {**base_data, "password": "TestPass123", "password2": "TestPass123"}
+        data = {
+            **base_data,
+            "password": "TestPass123",
+            "password2": "TestPass123",
+        }
+        self._mark_signup_verified("pwtest@test.com")
         response = self.client.post("/api/accounts/signup/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         # 4. 비밀번호 불일치
-        data = {**base_data, "password": "TestPass123!", "password2": "Different!"}
+        data = {
+            **base_data,
+            "password": "TestPass123!",
+            "password2": "Different!",
+        }
+        self._mark_signup_verified("pwtest@test.com")
         response = self.client.post("/api/accounts/signup/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         # 5. 모든 조건 만족 → 성공
-        data = {**base_data, "password": "TestPass123!", "password2": "TestPass123!"}
+        data = {
+            **base_data,
+            "password": "TestPass123!",
+            "password2": "TestPass123!",
+        }
+        self._mark_signup_verified("pwtest@test.com")
         response = self.client.post("/api/accounts/signup/", data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
@@ -311,12 +374,8 @@ class AuthE2ETestCase(ErrorResponseMixin, LiveServerTestCase):
             "password": "TestPass123!",
             "password2": "TestPass123!",
         }
+        self._mark_signup_verified("session@test.com")
         self.client.post("/api/accounts/signup/", signup_data, format="json")
-
-        # 이메일 인증 설정 (E2E 테스트를 위해)
-        user = User.objects.get(email="session@test.com")
-        user.email_verified = True
-        user.save()
 
         # 2. 로그인
         login_data = {"email": "session@test.com", "password": "TestPass123!"}
@@ -375,6 +434,7 @@ class UserSignUpSerializerTest(BaseTestCase):
         self.create_user(email="dup@test.com")
         data = self.valid_signup_data.copy()
         data["email"] = "dup@test.com"
+        self._mark_signup_verified("dup@test.com")
         serializer = UserSignUpSerializer(data=data)
         self.assertTrue(serializer.is_valid())  # 포맷 검증은 통과
         with self.assertRaises(ValidationError) as context:
@@ -401,6 +461,7 @@ class UserSignUpSerializerTest(BaseTestCase):
 
         data = self.valid_signup_data.copy()
         data["email"] = "scheduled@test.com"
+        self._mark_signup_verified("scheduled@test.com")
         serializer = UserSignUpSerializer(data=data)
         self.assertTrue(serializer.is_valid())  # 포맷 검증은 통과
         with self.assertRaises(ValidationError) as context:
@@ -408,8 +469,7 @@ class UserSignUpSerializerTest(BaseTestCase):
         self.assertIn("email", context.exception.detail)
         self.assertIn("탈퇴 예약", str(context.exception.detail["email"][0]))
 
-    @patch("apps.accounts.services.profile_service.send_verification_email")
-    def test_signup_with_expired_scheduled_deletion_email(self, mock_send_email):
+    def test_signup_with_expired_scheduled_deletion_email(self):
         """유예 기간 만료된 이메일로 회원가입 - 기존 계정 삭제 후 허용 (서비스 레이어)"""
         old_user = self.create_user(email="expired@test.com", nickname="expireduser")
         old_user.is_active = False
@@ -420,6 +480,7 @@ class UserSignUpSerializerTest(BaseTestCase):
         data = self.valid_signup_data.copy()
         data["email"] = "expired@test.com"
         data["nickname"] = "newuser123"
+        self._mark_signup_verified("expired@test.com")
         serializer = UserSignUpSerializer(data=data)
         self.assertTrue(serializer.is_valid())  # 포맷 검증은 통과
         result = UserProfileService.signup(serializer)  # 서비스 호출로 삭제 트리거
@@ -428,8 +489,7 @@ class UserSignUpSerializerTest(BaseTestCase):
         # 기존 계정이 삭제되었는지 확인
         self.assertFalse(User.objects.filter(id=old_user_id).exists())
 
-    @patch("apps.accounts.services.profile_service.send_verification_email")
-    def test_signup_with_expired_scheduled_deletion_nickname(self, mock_send_email):
+    def test_signup_with_expired_scheduled_deletion_nickname(self):
         """유예 기간 만료된 닉네임으로 회원가입 - 기존 계정 삭제 후 허용 (서비스 레이어)"""
         old_user = self.create_user(email="old@test.com", nickname="expirednick")
         old_user.is_active = False
@@ -440,6 +500,7 @@ class UserSignUpSerializerTest(BaseTestCase):
         data = self.valid_signup_data.copy()
         data["email"] = "newuser@test.com"
         data["nickname"] = "expirednick"
+        self._mark_signup_verified("newuser@test.com")
         serializer = UserSignUpSerializer(data=data)
         self.assertTrue(serializer.is_valid())  # 포맷 검증은 통과
         result = UserProfileService.signup(serializer)  # 서비스 호출로 삭제 트리거
@@ -992,7 +1053,7 @@ class EmailVerificationTestCase(BaseAPITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFieldError(response, "token", "유효하지 않은")
+        self.assertErrorMessage(response, "유효하지 않은")
 
     def test_email_verification_expired_token(self):
         """만료된 토큰"""
@@ -1008,7 +1069,7 @@ class EmailVerificationTestCase(BaseAPITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFieldError(response, "token", "만료")
+        self.assertErrorMessage(response, "만료")
 
     def test_email_resend_success(self):
         """이메일 재전송 성공"""

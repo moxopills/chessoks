@@ -45,3 +45,23 @@ ChessOK 팀
     """
 
     send_email_task.delay(user_email, subject, message)
+
+
+def send_signup_verification_email(user_email: str, token: str) -> None:
+    """회원가입 이메일 인증 메일 발송 (Celery 비동기)"""
+
+    subject = "[ChessOK] 회원가입 이메일 인증"
+    message = f"""
+안녕하세요,
+
+ChessOK 회원가입을 진행 중입니다.
+아래 인증 코드를 입력하여 이메일 인증을 완료해주세요. (24시간 유효)
+
+인증 코드: {token}
+
+인증을 완료하시면 회원가입을 이어서 진행할 수 있습니다.
+
+ChessOK 팀
+    """
+
+    send_email_task.delay(user_email, subject, message)
