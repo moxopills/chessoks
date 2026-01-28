@@ -1,10 +1,13 @@
 """랭킹 서비스"""
 
+from django.core.cache import cache
 from django.db.models import F, Q
 from django.db.models.expressions import Window
 from django.db.models.functions import Rank
 
 from apps.accounts.models import User
+
+LEADERBOARD_VERSION_KEY = "leaderboard_version"
 
 
 class RankingService:
@@ -76,3 +79,17 @@ class RankingService:
                 F("id").asc(),
             ],
         )
+
+    @staticmethod
+    def get_cache_version() -> int:
+        """리더보드 캐시 버전 조회"""
+        version = cache.get(LEADERBOARD_VERSION_KEY)
+        return version if version is not None else 0
+
+    @staticmethod
+    def invalidate_leaderboard_cache():
+        """리더보드 캐시 무효화 (레이팅 변경 시 버전 증가)"""
+        try:
+            cache.incr(LEADERBOARD_VERSION_KEY)
+        except ValueError:
+            cache.set(LEADERBOARD_VERSION_KEY, 1)

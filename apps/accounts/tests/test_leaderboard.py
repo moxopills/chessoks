@@ -1,3 +1,5 @@
+from django.core.cache import cache
+
 from rest_framework import status
 
 from apps.accounts.tests.test_auth import BaseAPITestCase
@@ -5,6 +7,7 @@ from apps.accounts.tests.test_auth import BaseAPITestCase
 
 class LeaderboardAPITestCase(BaseAPITestCase):
     def setUp(self):
+        cache.clear()  # 테스트 격리를 위한 캐시 초기화
         self.user_a = self.create_user(email="a@example.com", nickname="A")
         self.user_b = self.create_user(email="b@example.com", nickname="B")
         self.user_c = self.create_user(email="c@example.com", nickname="C")

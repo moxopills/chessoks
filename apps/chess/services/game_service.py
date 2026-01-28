@@ -9,6 +9,7 @@ from django.utils import timezone
 
 import chess
 from apps.accounts.models import UserStats
+from apps.accounts.services import RankingService
 from apps.chess.engine import board as rule_engine
 from apps.chess.models import Game, Move
 from apps.chess.services.rating_service import RatingService
@@ -341,6 +342,7 @@ class GameService:
         RatingService.update_ratings_and_stats(white_stats, black_stats, game.result)
         white_stats.save()
         black_stats.save()
+        RankingService.invalidate_leaderboard_cache()
         return {
             "white": {
                 "before": white_before,
