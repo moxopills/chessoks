@@ -1,6 +1,7 @@
 import logging
 
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
+from django.db import DatabaseError
 from django.utils import timezone
 
 from channels.db import database_sync_to_async
@@ -83,9 +84,13 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 await self.send_json({"type": "error", "message": "지원하지 않는 액션입니다."})
         except ValidationError as exc:
             await self.send_json({"type": "error", "message": self._format_error(exc)})
-        except Exception as exc:
-            logger.exception("WebSocket error: %s", exc)
-            await self.send_json({"type": "error", "message": "서버 오류가 발생했습니다."})
+        except ObjectDoesNotExist:
+            await self.send_json({"type": "error", "message": "게임을 찾을 수 없습니다."})
+        except PermissionDenied as exc:
+            await self.send_json({"type": "error", "message": str(exc) or "권한이 없습니다."})
+        except DatabaseError as exc:
+            logger.error("Database error in ChessConsumer: %s", exc)
+            await self.send_json({"type": "error", "message": "데이터베이스 오류가 발생했습니다."})
 
     async def _handle_move(self, content):
         if not self.is_player:
@@ -332,9 +337,11 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             await self.channel_layer.group_send(
                 self.group_name, {"type": "broadcast", "payload": payload}
             )
-        except Exception as exc:
-            logger.exception("Lobby chat error: %s", exc)
-            await self.send_json({"type": "error", "message": "서버 오류가 발생했습니다."})
+        except DatabaseError as exc:
+            logger.error("Database error in LobbyChatConsumer: %s", exc)
+            await self.send_json(
+                {"type": "error", "message": "메시지 저장 중 오류가 발생했습니다."}
+            )
 
     async def broadcast(self, event):
         try:

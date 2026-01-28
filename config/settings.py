@@ -38,9 +38,10 @@ def _env_list(name: str, default: str = "") -> list[str]:
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key")
 
 # 보안 경고: 프로덕션 환경에서는 DEBUG를 켜지 말 것!
-DEBUG = _env_bool("DEBUG", True)
+DEBUG = _env_bool("DEBUG", False)
 
 ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS", "localhost,127.0.0.1" if DEBUG else "")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 
 # 애플리케이션 정의
@@ -188,6 +189,13 @@ SECURE_PROXY_SSL_HEADER = (
 SECURE_SSL_REDIRECT = _env_bool("SECURE_SSL_REDIRECT", not DEBUG)
 SESSION_COOKIE_SECURE = _env_bool("SESSION_COOKIE_SECURE", not DEBUG)
 CSRF_COOKIE_SECURE = _env_bool("CSRF_COOKIE_SECURE", not DEBUG)
+SESSION_COOKIE_HTTPONLY = _env_bool("SESSION_COOKIE_HTTPONLY", True)
+CSRF_COOKIE_HTTPONLY = _env_bool("CSRF_COOKIE_HTTPONLY", False)
+SESSION_COOKIE_SAMESITE = os.getenv("SESSION_COOKIE_SAMESITE", "Lax")
+CSRF_COOKIE_SAMESITE = os.getenv("CSRF_COOKIE_SAMESITE", "Lax")
+SECURE_CONTENT_TYPE_NOSNIFF = _env_bool("SECURE_CONTENT_TYPE_NOSNIFF", True)
+SECURE_CROSS_ORIGIN_OPENER_POLICY = os.getenv("SECURE_CROSS_ORIGIN_OPENER_POLICY", "same-origin")
+X_FRAME_OPTIONS = os.getenv("X_FRAME_OPTIONS", "DENY")
 SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0" if DEBUG else "3600"))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG)
 SECURE_HSTS_PRELOAD = _env_bool("SECURE_HSTS_PRELOAD", not DEBUG)
@@ -248,17 +256,27 @@ LOGGING = {
     },
     "root": {
         "handlers": ["console"],
-        "level": "INFO",
+        "level": LOG_LEVEL,
     },
     "loggers": {
         "django": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": LOG_LEVEL,
             "propagate": False,
         },
         "apps.accounts": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "apps.chess": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.security": {
+            "handlers": ["console"],
+            "level": "WARNING",
             "propagate": False,
         },
     },

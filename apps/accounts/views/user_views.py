@@ -1,5 +1,7 @@
 """사용자 인증 및 프로필 관련 View"""
 
+from django.core.cache import cache
+
 from drf_spectacular.utils import extend_schema
 from rest_framework.generics import RetrieveAPIView, UpdateAPIView
 from rest_framework.parsers import MultiPartParser
@@ -388,6 +390,7 @@ class LeaderboardView(APIView):
 
     permission_classes = [AllowAny]
     throttle_classes = [AnonRateThrottle]
+    CACHE_TTL = 60  # 1분 캐싱
 
     @extend_schema(
         parameters=[],
@@ -397,16 +400,41 @@ class LeaderboardView(APIView):
     def get(self, request):
         from apps.accounts.pagination import LeaderboardPagination
 
-        queryset = RankingService.get_leaderboard_queryset()
-        paginator = LeaderboardPagination()
-        page = paginator.paginate_queryset(queryset, request)
-        serializer = LeaderboardEntrySerializer(page, many=True)
+        version = RankingService.get_cache_version()
+        page_num = request.query_params.get("page", "1")
+        page_size = request.query_params.get("page_size", "20")
+        cache_key = f"leaderboard_v{version}_p{page_num}_s{page_size}"
+
+        cached_data = cache.get(cache_key)
+        if cached_data is None:
+            queryset = RankingService.get_leaderboard_queryset()
+            paginator = LeaderboardPagination()
+            page = paginator.paginate_queryset(queryset, request)
+            cached_data = {
+                "entries": LeaderboardEntrySerializer(page, many=True).data,
+                "count": paginator.page.paginator.count,
+                "total_pages": paginator.page.paginator.num_pages,
+                "current_page": paginator.page.number,
+                "next": paginator.get_next_link(),
+                "previous": paginator.get_previous_link(),
+            }
+            cache.set(cache_key, cached_data, self.CACHE_TTL)
 
         my_rank = None
         if request.user.is_authenticated:
             my_rank = RankingService.get_my_rank_data(request.user.pk)
 
-        return paginator.get_paginated_response(serializer.data, my_rank=my_rank)
+        return Response(
+            {
+                "count": cached_data["count"],
+                "total_pages": cached_data["total_pages"],
+                "current_page": cached_data["current_page"],
+                "next": cached_data["next"],
+                "previous": cached_data["previous"],
+                "results": cached_data["entries"],
+                "my_rank": my_rank,
+            }
+        )
 
 
 class MyRankView(APIView):
