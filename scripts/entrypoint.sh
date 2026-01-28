@@ -7,6 +7,9 @@ echo "PostgreSQL is ready (healthcheck passed)"
 echo "Running migrations..."
 uv run python manage.py migrate --noinput
 
+echo "Collecting static files..."
+uv run python manage.py collectstatic --noinput
+
 echo "Creating superuser if not exists..."
 uv run python manage.py shell -c "
 from django.contrib.auth import get_user_model

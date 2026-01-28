@@ -16,6 +16,7 @@
 
     let isMatching = false;
     let lobbySocket = null;
+    let currentUserId = null;
 
     // 초기화
     init();
@@ -73,7 +74,8 @@
      */
     async function checkAuthAndSetupChat() {
         try {
-            await API.get('/accounts/me/');
+            const user = await API.get('/accounts/me/');
+            currentUserId = user.id;
             setupChat();
             setupQuickMatch();
         } catch (error) {
@@ -245,6 +247,9 @@
     function handleChatMessage(data) {
         if (data.type === 'chat') {
             addChatMessage(data);
+        } else if (data.type === 'recent_messages') {
+            // 최근 메시지 로드
+            data.messages.forEach(msg => addChatMessage(msg));
         } else if (data.type === 'error') {
             Toast.error(data.message);
         }
@@ -254,11 +259,12 @@
      * 채팅 메시지 추가
      */
     function addChatMessage(data) {
+        const isMine = data.user_id === currentUserId;
         const messageEl = document.createElement('div');
-        messageEl.className = 'chat-message';
+        messageEl.className = `chat-message ${isMine ? 'mine' : 'others'}`;
         messageEl.innerHTML = `
             <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
-            <span class="chat-text">${Utils.escapeHtml(data.message)}</span>
+            <div class="chat-bubble">${Utils.escapeHtml(data.message)}</div>
             <span class="chat-time">${formatChatTime(data.sent_at)}</span>
         `;
         chatMessages.appendChild(messageEl);
