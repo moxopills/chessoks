@@ -32,6 +32,8 @@ from .user_serializer import (
     PasswordResetRequestSerializer,
     ProfileUpdateSerializer,
     PublicUserSerializer,
+    SignupEmailConfirmSerializer,
+    SignupEmailRequestSerializer,
     UserSerializer,
     UserSignUpSerializer,
 )
@@ -48,6 +50,8 @@ __all__ = [
     "OpponentSummarySerializer",
     "OpponentProfileSerializer",
     "DashboardSummarySerializer",
+    "SignupEmailConfirmSerializer",
+    "SignupEmailRequestSerializer",
     "DashboardSerializer",
     "SocialLoginSerializer",
     "SocialUserSerializer",

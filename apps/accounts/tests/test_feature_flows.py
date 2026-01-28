@@ -1,11 +1,14 @@
-from unittest.mock import patch
+from datetime import timedelta
 
 from django.test import TestCase
+from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.test import APIClient
 
+from apps.accounts.models import SignupEmailToken
 from apps.accounts.tests.test_auth import User
+from apps.accounts.utils import hash_signup_code_for_test
 from apps.notifications.models import Notification
 
 
@@ -14,18 +17,26 @@ class AccountAndSocialFlowsTestCase(TestCase):
         self.client = APIClient()
 
     def test_account_flow_signup_profile_logout(self):
-        with patch("apps.accounts.services.profile_service.send_verification_email"):
-            response = self.client.post(
-                "/api/accounts/signup/",
-                {
-                    "email": "flow@test.com",
-                    "nickname": "플로우",
-                    "bio": "소개",
-                    "password": "Pass123!",
-                    "password2": "Pass123!",
-                },
-                format="json",
-            )
+        SignupEmailToken.objects.create(
+            email="flow@test.com",
+            token=SignupEmailToken.generate_token(),
+            code_hash=hash_signup_code_for_test("flow@test.com", "123456"),
+            expires_at=timezone.now() + timedelta(hours=24),
+        )
+        from django.core.cache import cache
+
+        cache.set("signup_email_verified:flow@test.com", True, timeout=600)
+        response = self.client.post(
+            "/api/accounts/signup/",
+            {
+                "email": "flow@test.com",
+                "nickname": "플로우",
+                "bio": "소개",
+                "password": "Pass123!",
+                "password2": "Pass123!",
+            },
+            format="json",
+        )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         self.assertTrue(self.client.login(email="flow@test.com", password="Pass123!"))

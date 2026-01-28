@@ -176,6 +176,19 @@ class UserSignUpSerializer(serializers.ModelSerializer):
         return user
 
 
+class SignupEmailRequestSerializer(serializers.Serializer):
+    """회원가입 이메일 인증 요청"""
+
+    email = serializers.EmailField(help_text="회원가입 이메일")
+
+
+class SignupEmailConfirmSerializer(serializers.Serializer):
+    """회원가입 이메일 인증 확인"""
+
+    email = serializers.EmailField(help_text="회원가입 이메일")
+    code = serializers.CharField(help_text="이메일로 받은 인증 코드")
+
+
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     """프로필 수정용 Serializer"""
 

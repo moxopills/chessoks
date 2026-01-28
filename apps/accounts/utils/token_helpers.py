@@ -1,13 +1,17 @@
 """토큰 생성 및 검증 헬퍼 함수"""
 
+import hashlib
+import hmac
+import secrets
 from datetime import timedelta
 
+from django.conf import settings
 from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.response import Response
 
-from apps.accounts.models import AuthToken
+from apps.accounts.models import AuthToken, SignupEmailToken
 
 
 def create_token(
@@ -80,13 +84,13 @@ def validate_token(
         token = AuthToken.objects.select_related("user").get(**filters)
     except AuthToken.DoesNotExist:
         return None, Response(
-            {"token": [default_messages["not_found"]]},
+            {"code": [default_messages["not_found"]]},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
     if not token.is_valid:
         return None, Response(
-            {"token": [default_messages["invalid"]]},
+            {"code": [default_messages["invalid"]]},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -102,6 +106,117 @@ def mark_token_as_used(token: AuthToken) -> None:
     token.is_used = True
     token.used_at = timezone.now()
     token.save(update_fields=["is_used", "used_at"])
+
+
+def create_signup_email_token(
+    email: str,
+    expiry_hours: int,
+    invalidate_existing: bool = True,
+) -> tuple[SignupEmailToken, str]:
+    """회원가입 이메일 인증 토큰 생성 (코드 반환)
+
+    Args:
+        email: 인증 대상 이메일
+        expiry_hours: 토큰 만료 시간 (시간 단위)
+        invalidate_existing: 기존 미사용 토큰 무효화 여부
+
+    Returns:
+        (토큰 인스턴스, 코드 문자열)
+    """
+    if invalidate_existing:
+        SignupEmailToken.objects.invalidate_existing(email=email)
+
+    code = f"{secrets.randbelow(1000000):06d}"
+    token = SignupEmailToken.objects.create(
+        email=email,
+        token=SignupEmailToken.generate_token(),
+        code_hash=_hash_signup_code(email, code),
+        expires_at=timezone.now() + timedelta(hours=expiry_hours),
+    )
+
+    return token, code
+
+
+def validate_signup_email_code(
+    email: str,
+    code: str,
+    error_messages: dict[str, str] | None = None,
+    max_attempts: int = 5,
+) -> tuple[SignupEmailToken | None, Response | None]:
+    """회원가입 이메일 코드 검증
+
+    Args:
+        email: 인증 이메일
+        code: 인증 코드
+        error_messages: 커스텀 에러 메시지 dict
+            - "not_found": 인증 요청이 없을 때
+            - "invalid": 토큰이 만료/사용됨일 때
+            - "mismatch": 코드가 일치하지 않을 때
+
+    Returns:
+        (token_instance, error_response) 튜플
+        - 성공 시: (token, None)
+        - 실패 시: (None, Response)
+    """
+    default_messages = {
+        "not_found": "인증 요청을 먼저 진행해주세요.",
+        "invalid": "만료되었거나 이미 사용된 인증입니다.",
+        "mismatch": "인증 코드가 일치하지 않습니다.",
+    }
+
+    if error_messages:
+        default_messages.update(error_messages)
+
+    token = (
+        SignupEmailToken.objects.filter(email=email, is_used=False).order_by("-created_at").first()
+    )
+    if token is None:
+        return None, Response(
+            {"code": [default_messages["not_found"]]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not token.is_valid:
+        return None, Response(
+            {"code": [default_messages["invalid"]]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not _verify_signup_code(email, code, token.code_hash):
+        token.attempts += 1
+        if token.attempts >= max_attempts:
+            token.is_used = True
+            token.used_at = timezone.now()
+        token.save(update_fields=["attempts", "is_used", "used_at"])
+        return None, Response(
+            {"code": [default_messages["mismatch"]]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return token, None
+
+
+def mark_signup_token_as_used(token: SignupEmailToken) -> None:
+    """회원가입 이메일 토큰을 사용 완료 상태로 표시"""
+    token.is_used = True
+    token.used_at = timezone.now()
+    token.save(update_fields=["is_used", "used_at"])
+
+
+def _hash_signup_code(email: str, code: str) -> str:
+    key = settings.SECRET_KEY.encode()
+    msg = f"{email}:{code}".encode()
+    return hmac.new(key, msg, hashlib.sha256).hexdigest()
+
+
+def _verify_signup_code(email: str, code: str, code_hash: str) -> bool:
+    expected = _hash_signup_code(email, code)
+    return hmac.compare_digest(expected, code_hash)
+
+
+def hash_signup_code_for_test(email: str, code: str) -> str:
+    """테스트 전용: 코드 해시 생성"""
+    return _hash_signup_code(email, code)
 
 
 def get_user_or_timing_safe_response(

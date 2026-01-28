@@ -25,12 +25,36 @@ class RankingService:
 
     @staticmethod
     def get_user_with_rank(user_id: int):
-        """특정 유저의 랭킹 정보 조회"""
+        """특정 유저의 랭킹 정보 조회 (COUNT 기반 랭킹 계산)"""
         user = User.objects.filter(pk=user_id, is_active=True).select_related("stats").first()
         if user is None or not hasattr(user, "stats") or user.stats is None:
             return None
 
-        user.rank = RankingService._calculate_rank(user)
+        # 해당 유저보다 높은 순위의 유저 수 + 1 = 해당 유저의 랭킹
+        # 정렬 기준: rating DESC, games_played DESC, id ASC
+        higher_rank_count = (
+            User.objects.filter(
+                is_active=True,
+                stats__isnull=False,
+            )
+            .filter(
+                # rating이 더 높거나
+                Q(stats__rating__gt=user.stats.rating)
+                # rating이 같고 games_played가 더 많거나
+                | Q(
+                    stats__rating=user.stats.rating, stats__games_played__gt=user.stats.games_played
+                )
+                # 둘 다 같고 id가 더 작은 경우
+                | Q(
+                    stats__rating=user.stats.rating,
+                    stats__games_played=user.stats.games_played,
+                    id__lt=user.id,
+                )
+            )
+            .count()
+        )
+
+        user.rank = higher_rank_count + 1
         return user
 
     @staticmethod
@@ -51,22 +75,6 @@ class RankingService:
             "rank_tier": user.stats.rank_tier,
             "rank": user.rank,
         }
-
-    @staticmethod
-    def _calculate_rank(user: User) -> int:
-        """유저의 랭킹 계산 (자신보다 높은 유저 수 + 1)"""
-        rating = user.stats.rating
-        games_played = user.stats.games_played
-        higher_count = (
-            User.objects.filter(is_active=True)
-            .filter(
-                Q(stats__rating__gt=rating)
-                | Q(stats__rating=rating, stats__games_played__gt=games_played)
-                | Q(stats__rating=rating, stats__games_played=games_played, id__lt=user.id)
-            )
-            .count()
-        )
-        return higher_count + 1
 
     @staticmethod
     def _rank_window():
