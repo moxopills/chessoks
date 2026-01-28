@@ -301,6 +301,7 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
         await self._set_user_online()
+        await self._send_recent_messages()
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
@@ -352,3 +353,25 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def _save_lobby_message(self, message: str) -> None:
         LobbyMessage.objects.create(user=self.scope["user"], message=message)
+
+    async def _send_recent_messages(self):
+        """연결 시 최근 메시지 전송"""
+        messages = await self._get_recent_messages()
+        if messages:
+            await self.send_json({"type": "recent_messages", "messages": messages})
+
+    @database_sync_to_async
+    def _get_recent_messages(self, limit: int = 50) -> list:
+        """최근 로비 메시지 조회"""
+        messages = LobbyMessage.objects.select_related("user").order_by("-created_at")[:limit]
+        return [
+            {
+                "type": "chat",
+                "scope": "lobby",
+                "user_id": msg.user_id,
+                "nickname": msg.user.nickname,
+                "message": msg.message,
+                "sent_at": msg.created_at.isoformat(),
+            }
+            for msg in reversed(messages)
+        ]
