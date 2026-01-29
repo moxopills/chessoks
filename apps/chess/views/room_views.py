@@ -33,6 +33,7 @@ class RoomListView(APIView):
         status = request.query_params.get("status")
 
         total, rooms = RoomQueryService.list_rooms(
+            user=request.user,
             room_type=room_type,
             status=status,
             limit=limit,

@@ -106,6 +106,20 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         payload = self._game_payload(result.game)
         payload["type"] = "move"
         payload["move"] = result.move.san if result.move else None
+        if result.move:
+            payload["last_move"] = {
+                "from": result.move.from_square,
+                "to": result.move.to_square,
+                "uci": result.move.uci,
+                "san": result.move.san,
+                "is_check": result.move.is_check,
+                "is_checkmate": result.move.is_checkmate,
+            }
+            if result.captured_letter and result.captured_color:
+                payload["last_move"]["capture"] = {
+                    "piece": result.captured_letter,
+                    "color": result.captured_color,
+                }
         await self._broadcast(payload)
 
     async def _handle_resign(self, content):

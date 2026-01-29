@@ -114,7 +114,7 @@ class Room(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                condition=models.Q(time_limit__gt=0), name="time_limit_positive"
+                condition=models.Q(time_limit__gte=0), name="time_limit_nonnegative"
             ),
             models.CheckConstraint(
                 condition=models.Q(increment_seconds__gte=0), name="increment_seconds_nonnegative"
@@ -131,8 +131,8 @@ class Room(models.Model):
         super().clean()
         if self.is_private and not self.password:
             raise ValidationError("비공개방은 비밀번호가 필요합니다")
-        if self.time_limit <= 0:
-            raise ValidationError("시간 제한은 양수여야 합니다")
+        if self.time_limit < 0:
+            raise ValidationError("시간 제한은 음수일 수 없습니다")
         if self.host == self.guest:
             raise ValidationError("호스트와 게스트가 동일할 수 없습니다")
 
