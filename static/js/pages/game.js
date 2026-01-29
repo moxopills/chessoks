@@ -74,6 +74,7 @@
         setupChat();
         setupActions();
         setupModals();
+        setupExitGuard();
         connectWebSocket();
     }
 
@@ -657,6 +658,17 @@
         resignBtn.addEventListener('click', () => {
             if (!confirm('정말 기권하시겠습니까?')) return;
             socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
+        });
+    }
+
+    function setupExitGuard() {
+        const logo = document.querySelector('.navbar-logo');
+        if (!logo) return;
+        logo.addEventListener('click', (e) => {
+            const leave = confirm('게임을 나가시겠습니까?');
+            if (!leave) {
+                e.preventDefault();
+            }
         });
     }
 

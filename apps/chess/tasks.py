@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import DatabaseError, models, transaction
 from django.utils import timezone
@@ -34,6 +35,28 @@ def handle_timeouts() -> int:
                 if game.current_turn == "white"
                 else game.black_time_remaining
             ) - elapsed
+
+            disconnected = False
+            for color in ("white", "black"):
+                key = GameService._disconnect_key(game.id, color)
+                ts = cache.get(key)
+                if ts is None:
+                    continue
+                if now.timestamp() - ts >= GameService.DISCONNECT_GRACE_SECONDS:
+                    try:
+                        GameService.apply_disconnect_forfeit(game, color, now)
+                        updated += 1
+                        disconnected = True
+                        break
+                    except ObjectDoesNotExist as exc:
+                        logger.warning("Game %s not found during disconnect: %s", game.id, exc)
+                    except DatabaseError as exc:
+                        logger.error(
+                            "Database error during disconnect for game %s: %s", game.id, exc
+                        )
+
+            if disconnected:
+                continue
 
             if remaining <= 0:
                 try:
