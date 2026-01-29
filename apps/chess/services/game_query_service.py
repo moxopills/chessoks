@@ -4,7 +4,7 @@ from django.db.models import Q
 
 from rest_framework.exceptions import NotFound, ValidationError
 
-from apps.chess.engine import board as rule_engine
+import chess
 from apps.chess.models import Game, Move
 
 
@@ -76,13 +76,12 @@ class GameQueryService:
             return []
 
         player_color = "white" if user == game.white_player else "black"
-        position = rule_engine.from_fen(game.fen)
-        if position.turn != player_color:
+        board = chess.Board(game.fen)
+        expected = chess.WHITE if player_color == "white" else chess.BLACK
+        if board.turn != expected:
             return []
 
-        legal_moves = [
-            rule_engine.move_to_uci(m) for m in rule_engine.generate_legal_moves(position)
-        ]
+        legal_moves = [move.uci() for move in board.legal_moves]
         if from_square:
             from_square = from_square.strip().lower()
             if len(from_square) != 2:
