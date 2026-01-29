@@ -91,5 +91,9 @@ class CoreFlowApiTestCase(TestCase):
 
         # black resigns -> game ends
         GameService.resign(game.id, game.black_player)
-        game.refresh_from_db()
-        self.assertNotEqual(game.result, "playing")
+        if Game.objects.filter(pk=game.id).exists():
+            game.refresh_from_db()
+            self.assertNotEqual(game.result, "playing")
+        else:
+            # 빠른대전은 종료 시 방/게임이 즉시 삭제됨
+            self.assertFalse(Room.objects.filter(pk=response_b.data["room_id"]).exists())
