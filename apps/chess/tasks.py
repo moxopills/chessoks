@@ -6,7 +6,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import DatabaseError, models, transaction
 from django.utils import timezone
 
+from asgiref.sync import async_to_sync
 from celery import shared_task
+from channels.layers import get_channel_layer
 
 from apps.chess.models import Game, LobbyMessage, Room
 from apps.chess.services import GameService
@@ -19,6 +21,7 @@ def handle_timeouts() -> int:
     """진행 중 게임의 타임아웃 처리"""
     now = timezone.now()
     updated = 0
+    channel_layer = get_channel_layer()
 
     with transaction.atomic():
         # skip_locked=True: 이미 락된 게임은 건너뜀 (다음 태스크에서 처리)
@@ -45,6 +48,30 @@ def handle_timeouts() -> int:
                 if now.timestamp() - ts >= GameService.DISCONNECT_GRACE_SECONDS:
                     try:
                         GameService.apply_disconnect_forfeit(game, color, now)
+                        if channel_layer:
+                            payload = {
+                                "type": "game_end",
+                                "game_id": game.id,
+                                "result": game.result,
+                                "fen": game.fen,
+                                "pgn": game.pgn,
+                                "current_turn": game.current_turn,
+                                "white_time_remaining": game.white_time_remaining,
+                                "black_time_remaining": game.black_time_remaining,
+                                "turn_started_at": (
+                                    game.turn_started_at.isoformat()
+                                    if game.turn_started_at
+                                    else None
+                                ),
+                            }
+                            async_to_sync(channel_layer.group_send)(
+                                f"chess_room_{game.room_id}",
+                                {"type": "broadcast", "payload": payload},
+                            )
+                            async_to_sync(channel_layer.group_send)(
+                                f"chess_room_{game.room_id}_spectators",
+                                {"type": "broadcast", "payload": payload},
+                            )
                         updated += 1
                         disconnected = True
                         break
@@ -61,6 +88,28 @@ def handle_timeouts() -> int:
             if remaining <= 0:
                 try:
                     GameService.apply_timeout(game, game.current_turn, now)
+                    if channel_layer:
+                        payload = {
+                            "type": "game_end",
+                            "game_id": game.id,
+                            "result": game.result,
+                            "fen": game.fen,
+                            "pgn": game.pgn,
+                            "current_turn": game.current_turn,
+                            "white_time_remaining": game.white_time_remaining,
+                            "black_time_remaining": game.black_time_remaining,
+                            "turn_started_at": (
+                                game.turn_started_at.isoformat() if game.turn_started_at else None
+                            ),
+                        }
+                        async_to_sync(channel_layer.group_send)(
+                            f"chess_room_{game.room_id}",
+                            {"type": "broadcast", "payload": payload},
+                        )
+                        async_to_sync(channel_layer.group_send)(
+                            f"chess_room_{game.room_id}_spectators",
+                            {"type": "broadcast", "payload": payload},
+                        )
                     updated += 1
                 except ObjectDoesNotExist as exc:
                     logger.warning("Game %s not found during timeout: %s", game.id, exc)
@@ -71,7 +120,7 @@ def handle_timeouts() -> int:
 
 
 @shared_task
-def cleanup_stale_waiting_rooms(timeout_minutes: int = 5) -> int:
+def cleanup_stale_waiting_rooms(timeout_minutes: int = 3) -> int:
     """오래된 빠른 대전 대기방 정리"""
     cutoff = timezone.now() - timedelta(minutes=timeout_minutes)
     deleted, _ = Room.objects.filter(
