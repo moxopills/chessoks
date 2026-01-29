@@ -349,9 +349,8 @@
             hasShownStartGuide = true;
         }
 
-        if (lastTurnColor !== game.current_turn) {
+        if (!lastTurnColor) {
             lastTurnColor = game.current_turn;
-            showStatusModal(`지금은 ${currentName}님의 차례입니다.`, 1500);
         }
     }
 

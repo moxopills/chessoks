@@ -359,12 +359,22 @@
 
 .piece.white {
     color: #fff;
-    text-shadow: 0 0 3px #000, 0 0 3px #000;
+    text-shadow:
+        1px 0 0 #0b0f1f,
+        -1px 0 0 #0b0f1f,
+        0 1px 0 #0b0f1f,
+        0 -1px 0 #0b0f1f,
+        2px 2px 0 rgba(0, 0, 0, 0.35);
 }
 
 .piece.black {
     color: #000;
-    text-shadow: 0 0 3px #fff;
+    text-shadow:
+        1px 0 0 #0b0f1f,
+        -1px 0 0 #0b0f1f,
+        0 1px 0 #0b0f1f,
+        0 -1px 0 #0b0f1f,
+        2px 2px 0 rgba(0, 0, 0, 0.35);
 }
 
 /* Board Labels */
