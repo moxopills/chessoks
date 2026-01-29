@@ -93,7 +93,13 @@
                 return;
             }
 
-            const gameId = room.current_game_id;
+            let gameId = room.current_game_id;
+            if (!gameId) {
+                const history = await API.get(`/chess/games/history/`, { result: 'playing', limit: 20 });
+                const matches = history.results || [];
+                const found = matches.find(item => item.room_id === roomId);
+                gameId = found?.id;
+            }
             if (!gameId) {
                 Toast.error('게임을 찾을 수 없습니다.');
                 window.location.href = `/rooms/${roomId}/`;
@@ -748,9 +754,19 @@
             title = isWin ? '승리!' : '패배';
             resultText = '체크메이트';
         } else if (result.includes('resignation')) {
-            icon = isWin ? '🏆' : '🏳️';
-            title = isWin ? '승리!' : '패배';
-            resultText = '상대 기권';
+            if (outcome === 'win') {
+                icon = '🏆';
+                title = '승리!';
+                resultText = '상대 기권';
+            } else if (outcome === 'loss') {
+                icon = '🏳️';
+                title = '패배';
+                resultText = '내 기권';
+            } else {
+                icon = '🏳️';
+                title = '패배';
+                resultText = '기권';
+            }
         } else if (result.includes('timeout')) {
             icon = isWin ? '⏰' : '⏱️';
             title = isWin ? '승리!' : '패배';

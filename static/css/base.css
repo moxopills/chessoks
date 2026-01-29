@@ -27,6 +27,7 @@
     /* Typography */
     --font-display: 'Press Start 2P', cursive;
     --font-body: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-chat: var(--font-body);
 
     /* Spacing */
     --space-xs: 0.25rem;
@@ -81,6 +82,18 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+/* Chat uses body font for readability */
+.chat-container,
+.chat-messages,
+.chat-message,
+.chat-nickname,
+.chat-bubble,
+.chat-input,
+.chat-time,
+.chat-notice {
+    font-family: var(--font-chat);
 }
 
 /* Typography */
