@@ -304,6 +304,7 @@
     position: relative;
     padding-left: 24px;
     padding-bottom: 24px;
+    display: inline-block;
 }
 
 .chess-board {
@@ -426,6 +427,7 @@
     font-size: 0.6rem;
     letter-spacing: 0;
     color: var(--color-text-muted);
+    line-height: 1;
 }
 
 .board-labels-ranks {
@@ -441,6 +443,7 @@
     font-size: 0.6rem;
     letter-spacing: 0;
     color: var(--color-text-muted);
+    line-height: 1;
 }
 
 /* Game Actions */
@@ -656,6 +659,29 @@
     display: flex;
     justify-content: center;
     gap: var(--space-md);
+    flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+    .game-end-modal {
+        max-width: 90vw;
+    }
+
+    .game-end-content {
+        padding: var(--space-lg);
+    }
+
+    .game-end-icon {
+        font-size: 3rem;
+    }
+
+    .game-end-result {
+        font-size: 1rem;
+    }
+
+    .game-end-actions {
+        gap: var(--space-sm);
+    }
 }
 
 /* Promotion Modal */
