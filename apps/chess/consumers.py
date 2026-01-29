@@ -57,8 +57,12 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_add(group, self.channel_name)
         await self.accept()
         await self._set_user_online()
+        if self.is_player:
+            await self._clear_disconnect_marker()
 
     async def disconnect(self, close_code):
+        if getattr(self, "is_player", False):
+            await self._mark_disconnect()
         if hasattr(self, "player_group"):
             await self.channel_layer.group_discard(self.player_group, self.channel_name)
         if hasattr(self, "spectator_group"):
@@ -240,6 +244,58 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             return None
         except Room.DoesNotExist:
             return None
+
+    @database_sync_to_async
+    def _mark_disconnect(self) -> None:
+        from django.core.cache import cache
+
+        room = Room.objects.filter(pk=self.room_id).prefetch_related("games").first()
+        if not room:
+            return
+        game = (
+            room.games.filter(result="playing")
+            .only("id", "white_player_id", "black_player_id")
+            .first()
+        )
+        if not game:
+            return
+        user_id = self.scope["user"].id
+        color = (
+            "white"
+            if game.white_player_id == user_id
+            else "black" if game.black_player_id == user_id else None
+        )
+        if not color:
+            return
+        cache.set(
+            GameService._disconnect_key(game.id, color),
+            timezone.now().timestamp(),
+            timeout=GameService.DISCONNECT_GRACE_SECONDS,
+        )
+
+    @database_sync_to_async
+    def _clear_disconnect_marker(self) -> None:
+        from django.core.cache import cache
+
+        room = Room.objects.filter(pk=self.room_id).prefetch_related("games").first()
+        if not room:
+            return
+        game = (
+            room.games.filter(result="playing")
+            .only("id", "white_player_id", "black_player_id")
+            .first()
+        )
+        if not game:
+            return
+        user_id = self.scope["user"].id
+        color = (
+            "white"
+            if game.white_player_id == user_id
+            else "black" if game.black_player_id == user_id else None
+        )
+        if not color:
+            return
+        cache.delete(GameService._disconnect_key(game.id, color))
 
     @database_sync_to_async
     def _make_move(self, game_id, uci, promotion):
