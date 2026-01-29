@@ -22,6 +22,9 @@
     const mobileTabbar = document.getElementById('mobile-tabbar');
     const chatBadge = document.getElementById('chat-badge');
     const chatSection = document.querySelector('.room-chat-section');
+    const statusModal = document.getElementById('status-modal');
+    const statusModalMessage = document.getElementById('status-modal-message');
+    const statusModalOk = document.getElementById('status-modal-ok');
 
     // State
     const roomId = Utils.getPathParam(/\/rooms\/(\d+)/);
@@ -33,6 +36,7 @@
     let roomPollInterval = null;
     let chatUnread = 0;
     let isChatOpen = true;
+    let lastRoomState = null;
 
     // Init
     init();
@@ -53,6 +57,7 @@
         }
 
         await loadRoom();
+        setupStatusModal();
         setupLeaveButton();
         setupChat();
         setupExitGuard();
@@ -66,9 +71,8 @@
      */
     async function loadRoom() {
         try {
-            room = await API.get(`/chess/rooms/${roomId}/`);
-            isHost = room.host?.id === currentUser.id;
-            renderRoom();
+            const newRoom = await API.get(`/chess/rooms/${roomId}/`);
+            applyRoomUpdate(newRoom);
         } catch (error) {
             Toast.error('방을 찾을 수 없습니다.');
             window.location.href = '/rooms/';
@@ -114,6 +118,39 @@
         if (room.status === 'playing') {
             Toast.success('게임이 시작됩니다!');
             window.location.href = `/games/${roomId}/`;
+        }
+    }
+
+    function applyRoomUpdate(newRoom) {
+        const prev = room;
+        room = newRoom;
+        isHost = room.host?.id === currentUser.id;
+        if (prev) {
+            handleRoomStateChange(prev, room);
+        }
+        renderRoom();
+        lastRoomState = {
+            host_ready: room.host_ready,
+            guest_ready: room.guest_ready,
+            host_start_confirmed: room.host_start_confirmed,
+            guest_start_confirmed: room.guest_start_confirmed,
+        };
+    }
+
+    function handleRoomStateChange(prev, next) {
+        const opponent = isHost ? next.guest : next.host;
+        if (!opponent) return;
+
+        const prevOpponentReady = isHost ? prev.guest_ready : prev.host_ready;
+        const nextOpponentReady = isHost ? next.guest_ready : next.host_ready;
+        if (prevOpponentReady === false && nextOpponentReady === true) {
+            showStatusModal('상대가 준비 완료했습니다.');
+        }
+
+        const prevOpponentConfirm = isHost ? prev.guest_start_confirmed : prev.host_start_confirmed;
+        const nextOpponentConfirm = isHost ? next.guest_start_confirmed : next.host_start_confirmed;
+        if (prevOpponentConfirm === false && nextOpponentConfirm === true) {
+            showStatusModal('상대가 게임 시작을 눌렀습니다. 시작 버튼을 눌러주세요.');
         }
     }
 
@@ -260,6 +297,19 @@
         });
     }
 
+    function setupStatusModal() {
+        if (!statusModalOk) return;
+        statusModalOk.addEventListener('click', () => {
+            statusModal.classList.add('hidden');
+        });
+    }
+
+    function showStatusModal(message) {
+        if (!statusModal || !statusModalMessage) return;
+        statusModalMessage.textContent = message;
+        statusModal.classList.remove('hidden');
+    }
+
     /**
      * WebSocket 연결
      */
@@ -302,8 +352,7 @@
                 break;
             case 'room_update':
                 // 방 상태 업데이트
-                Object.assign(room, data.room);
-                renderRoom();
+                applyRoomUpdate(data.room);
                 break;
             case 'game_start':
                 Toast.success('게임이 시작됩니다!');

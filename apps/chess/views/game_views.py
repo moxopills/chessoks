@@ -34,3 +34,19 @@ class GameMoveListView(APIView):
         )
         total, moves = GameQueryService.list_moves(game_id, request.user, limit, offset)
         return Response({"count": total, "results": MoveSerializer(moves, many=True).data})
+
+
+class GameLegalMoveView(APIView):
+    """게임 합법 수 조회"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        responses={200: None},
+        tags=["게임"],
+        description="현재 턴 기준 합법 수 UCI 목록 반환",
+    )
+    def get(self, request, game_id: int):
+        from_square = request.query_params.get("from")
+        moves = GameQueryService.list_legal_moves(game_id, request.user, from_square)
+        return Response({"moves": moves})

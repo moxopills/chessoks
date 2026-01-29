@@ -4,6 +4,7 @@ from django.db.models import Q
 
 from rest_framework.exceptions import NotFound, ValidationError
 
+from apps.chess.engine import board as rule_engine
 from apps.chess.models import Game, Move
 
 
@@ -64,6 +65,30 @@ class GameQueryService:
         )
         total = queryset.count()
         return total, list(queryset[offset : offset + limit])
+
+    @staticmethod
+    def list_legal_moves(game_id: int, user, from_square: str | None) -> list[str]:
+        game = GameQueryService.get_game_for_user(game_id, user)
+        if game.result != "playing":
+            raise ValidationError({"game": "진행 중인 게임이 아닙니다."})
+
+        if user != game.white_player and user != game.black_player:
+            return []
+
+        player_color = "white" if user == game.white_player else "black"
+        position = rule_engine.from_fen(game.fen)
+        if position.turn != player_color:
+            return []
+
+        legal_moves = [
+            rule_engine.move_to_uci(m) for m in rule_engine.generate_legal_moves(position)
+        ]
+        if from_square:
+            from_square = from_square.strip().lower()
+            if len(from_square) != 2:
+                raise ValidationError({"from": "잘못된 좌표입니다."})
+            legal_moves = [m for m in legal_moves if m.startswith(from_square)]
+        return legal_moves
 
     @staticmethod
     def _has_access(game: Game, user) -> bool:

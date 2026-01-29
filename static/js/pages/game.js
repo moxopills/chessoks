@@ -26,6 +26,7 @@
     const opponentTimer = document.getElementById('opponent-timer');
     const myTimer = document.getElementById('my-timer');
     const moveList = document.getElementById('move-list');
+    const turnIndicator = document.getElementById('turn-indicator');
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
@@ -52,10 +53,12 @@
     let myColor = null; // 'white' or 'black'
     let isMyTurn = false;
     let selectedSquare = null;
+    let selectedDisplaySquare = null;
     let validMoves = [];
     let pendingPromotion = null;
     let timerInterval = null;
     let heartbeatInterval = null;
+    let hasShownStartGuide = false;
     let isChatOpen = false;
     let chatUnread = 0;
 
@@ -322,6 +325,18 @@
         if (!myColor) {
             gameActions.style.display = 'none';
         }
+
+        if (turnIndicator) {
+            const whiteName = game.white_player?.nickname || '화이트';
+            const blackName = game.black_player?.nickname || '블랙';
+            const currentName = game.current_turn === 'white' ? whiteName : blackName;
+            if (!hasShownStartGuide && game.move_count === 0) {
+                turnIndicator.textContent = `${currentName}님부터 시작합니다. 번갈아가며 한 번씩 수를 둡니다.`;
+                hasShownStartGuide = true;
+            } else {
+                turnIndicator.textContent = `지금은 ${currentName}님의 차례입니다.`;
+            }
+        }
     }
 
     /**
@@ -381,13 +396,14 @@
     /**
      * 칸 클릭 핸들러
      */
-    function handleSquareClick(squareName) {
+    async function handleSquareClick(squareName) {
         if (!isMyTurn || !myColor) return;
 
         if (selectedSquare) {
             // 이동 시도
-            if (validMoves.includes(squareName)) {
-                makeMove(selectedSquare, squareName);
+            const targetSquare = toActualSquare(squareName);
+            if (validMoves.includes(targetSquare)) {
+                makeMove(selectedSquare, targetSquare);
             }
             clearSelection();
         } else {
@@ -400,7 +416,7 @@
                 const isMyPiece = (myColor === 'white' && isWhitePiece) || (myColor === 'black' && !isWhitePiece);
 
                 if (isMyPiece) {
-                    selectSquare(squareName);
+                    await selectSquare(squareName);
                 }
             }
         }
@@ -422,20 +438,20 @@
     /**
      * 칸 선택
      */
-    function selectSquare(squareName) {
+    async function selectSquare(squareName) {
         clearSelection();
-        selectedSquare = squareName;
+        selectedDisplaySquare = squareName;
+        selectedSquare = toActualSquare(squareName);
 
         const squareEl = document.querySelector(`[data-square="${squareName}"]`);
         squareEl?.classList.add('selected');
 
-        // 유효한 수 계산 (간단한 구현 - 실제로는 서버에서 받아야 함)
-        // 여기서는 모든 칸을 유효한 이동으로 표시 (서버에서 검증)
-        validMoves = getAllSquares();
+        validMoves = await fetchLegalMoves(selectedSquare);
 
         validMoves.forEach(sq => {
-            const el = document.querySelector(`[data-square="${sq}"]`);
-            if (el && sq !== squareName) {
+            const displaySquare = toDisplaySquare(sq);
+            const el = document.querySelector(`[data-square="${displaySquare}"]`);
+            if (el && sq !== selectedSquare) {
                 const hasPiece = el.querySelector('.piece');
                 el.classList.add(hasPiece ? 'valid-capture' : 'valid-move');
             }
@@ -447,6 +463,7 @@
      */
     function clearSelection() {
         selectedSquare = null;
+        selectedDisplaySquare = null;
         validMoves = [];
 
         document.querySelectorAll('.square').forEach(sq => {
@@ -467,6 +484,38 @@
         return squares;
     }
 
+    function toActualSquare(square) {
+        if (myColor !== 'black') return square;
+        return flipSquare(square);
+    }
+
+    function toDisplaySquare(square) {
+        if (myColor !== 'black') return square;
+        return flipSquare(square);
+    }
+
+    function flipSquare(square) {
+        if (!square || square.length < 2) return square;
+        const file = square[0];
+        const rank = square[1];
+        const fileIdx = FILES.indexOf(file);
+        const rankIdx = RANKS.indexOf(rank);
+        if (fileIdx < 0 || rankIdx < 0) return square;
+        return FILES[7 - fileIdx] + RANKS[7 - rankIdx];
+    }
+
+    async function fetchLegalMoves(fromSquare) {
+        if (!game || !fromSquare) return [];
+        try {
+            const data = await API.get(`/chess/games/${game.id}/legal-moves/`, { from: fromSquare });
+            const moves = data.moves || [];
+            return moves.map(move => move.slice(2, 4));
+        } catch (error) {
+            console.error('Failed to load legal moves:', error);
+            return [];
+        }
+    }
+
     /**
      * 수 두기
      */
@@ -474,7 +523,7 @@
         const uci = from + to;
 
         // 프로모션 체크
-        const fromEl = document.querySelector(`[data-square="${from}"]`);
+        const fromEl = document.querySelector(`[data-square="${toDisplaySquare(from)}"]`);
         const piece = fromEl?.querySelector('.piece');
 
         if (piece) {
