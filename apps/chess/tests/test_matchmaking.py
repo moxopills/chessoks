@@ -25,6 +25,19 @@ class MatchmakingServiceTestCase(TestCase):
         self.assertIsNone(game)
         self.assertEqual(room.status, "waiting")
 
+    def test_repeated_quick_match_does_not_create_duplicate_room(self):
+        room1, game1, status1 = MatchmakingService.quick_match(self.user1)
+        room2, game2, status2 = MatchmakingService.quick_match(self.user1)
+
+        self.assertEqual(status1, "waiting")
+        self.assertEqual(status2, "waiting")
+        self.assertIsNone(game1)
+        self.assertIsNone(game2)
+        self.assertEqual(room1.id, room2.id)
+        self.assertEqual(
+            Room.objects.filter(room_type="quick", host=self.user1, status="waiting").count(), 1
+        )
+
     def test_second_user_matches_existing_room(self):
         MatchmakingService.quick_match(self.user1)
         room, game, status = MatchmakingService.quick_match(self.user2)

@@ -48,7 +48,7 @@ def handle_timeouts() -> int:
 
 
 @shared_task
-def cleanup_stale_waiting_rooms(timeout_minutes: int = 10) -> int:
+def cleanup_stale_waiting_rooms(timeout_minutes: int = 5) -> int:
     """오래된 빠른 대전 대기방 정리"""
     cutoff = timezone.now() - timedelta(minutes=timeout_minutes)
     deleted, _ = Room.objects.filter(

@@ -48,3 +48,31 @@ class RoomQueryService:
     @staticmethod
     def _has_access(room: Room, user) -> bool:
         return room.host_id == user.id or room.guest_id == user.id
+
+    @staticmethod
+    def create_room(
+        user,
+        *,
+        room_type: str = "custom",
+        title: str = "",
+        time_limit: int = 15,
+        increment_seconds: int = 10,
+        password: str = "",
+        allow_spectators: bool = True,
+    ) -> Room:
+        """방 생성"""
+        room = Room(
+            host=user,
+            room_type=room_type,
+            title=title or "",
+            time_limit=time_limit,
+            increment_seconds=increment_seconds,
+            is_private=bool(password),
+            allow_spectators=allow_spectators,
+        )
+
+        if password:
+            room.set_password(password)
+
+        room.save()
+        return room

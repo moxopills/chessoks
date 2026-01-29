@@ -22,18 +22,18 @@ app.conf.beat_schedule = {
     },
     "cleanup-stale-waiting-rooms": {
         "task": "apps.chess.tasks.cleanup_stale_waiting_rooms",
-        "schedule": 180.0,  # 3분마다
-        "args": [10],  # 10분 이상 대기방 정리
+        "schedule": 60.0,  # 1분마다
+        "args": [5],  # 5분 이상 대기방 정리
     },
     "cleanup-inactive-rooms": {
         "task": "apps.chess.tasks.cleanup_inactive_rooms",
         "schedule": 300.0,  # 5분마다
-        "args": [30],  # 30분 이상 유휴 방 정리
+        "args": [15],  # 15분 이상 유휴 방 정리
     },
     "cleanup-lobby-messages": {
         "task": "apps.chess.tasks.cleanup_lobby_messages",
         "schedule": 86400.0,  # 매일 (24시간)
-        "args": [3],  # 3일 이상 메시지 삭제
+        "args": [1],  # 1일 이상 메시지 삭제
     },
     # === 계정 관련 ===
     "cleanup-expired-tokens": {

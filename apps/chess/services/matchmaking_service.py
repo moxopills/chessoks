@@ -29,6 +29,14 @@ class MatchmakingService:
     @staticmethod
     @transaction.atomic
     def quick_match(user) -> tuple[Room, Game | None, str]:
+        existing = (
+            Room.objects.select_for_update(skip_locked=True)
+            .filter(room_type="quick", host=user, status="waiting", guest__isnull=True)
+            .first()
+        )
+        if existing is not None:
+            return existing, None, "waiting"
+
         stats, _ = UserStats.objects.get_or_create(user=user)
         rating = stats.rating
         room = MatchmakingService._find_best_room(user, rating)

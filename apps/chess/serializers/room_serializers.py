@@ -25,3 +25,12 @@ class RoomSerializer(serializers.Serializer):
 class PagedRoomSerializer(serializers.Serializer):
     count = serializers.IntegerField(read_only=True)
     results = RoomSerializer(many=True, read_only=True)
+
+
+class RoomCreateRequestSerializer(serializers.Serializer):
+    room_type = serializers.ChoiceField(choices=["quick", "custom"], default="custom")
+    title = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    time_limit = serializers.IntegerField(min_value=1, max_value=60, default=15)
+    increment_seconds = serializers.IntegerField(min_value=0, max_value=60, default=10)
+    password = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    allow_spectators = serializers.BooleanField(default=True)
