@@ -291,6 +291,7 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     """로비 채팅 WebSocket Consumer"""
 
     group_name = "chess_lobby"
+    lobby_users_key = "lobby_online_users"
 
     async def connect(self):
         user = self.scope["user"]
@@ -301,9 +302,14 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
         await self._set_user_online()
+        await self._add_to_lobby()
         await self._send_recent_messages()
+        await self._send_lobby_users()
+        await self._broadcast_user_joined()
 
     async def disconnect(self, close_code):
+        await self._remove_from_lobby()
+        await self._broadcast_user_left()
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     async def receive_json(self, content, **kwargs):
@@ -375,3 +381,66 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             }
             for msg in reversed(messages)
         ]
+
+    @database_sync_to_async
+    def _add_to_lobby(self):
+        """로비 접속자 목록에 추가"""
+        from django.core.cache import cache
+
+        user = self.scope["user"]
+        users = cache.get(self.lobby_users_key, {})
+        users[str(user.id)] = {
+            "id": user.id,
+            "nickname": user.nickname,
+            "avatar_url": user.avatar_url,
+        }
+        cache.set(self.lobby_users_key, users, timeout=3600)
+
+    @database_sync_to_async
+    def _remove_from_lobby(self):
+        """로비 접속자 목록에서 제거"""
+        from django.core.cache import cache
+
+        user = self.scope["user"]
+        users = cache.get(self.lobby_users_key, {})
+        users.pop(str(user.id), None)
+        cache.set(self.lobby_users_key, users, timeout=3600)
+
+    @database_sync_to_async
+    def _get_lobby_users(self) -> list:
+        """로비 접속자 목록 조회"""
+        from django.core.cache import cache
+
+        users = cache.get(self.lobby_users_key, {})
+        return list(users.values())
+
+    async def _send_lobby_users(self):
+        """연결 시 현재 접속자 목록 전송"""
+        users = await self._get_lobby_users()
+        await self.send_json({"type": "lobby_users", "users": users})
+
+    async def _broadcast_user_joined(self):
+        """유저 입장 브로드캐스트"""
+        user = self.scope["user"]
+        payload = {
+            "type": "user_joined",
+            "user": {
+                "id": user.id,
+                "nickname": user.nickname,
+                "avatar_url": user.avatar_url,
+            },
+        }
+        await self.channel_layer.group_send(
+            self.group_name, {"type": "broadcast", "payload": payload}
+        )
+
+    async def _broadcast_user_left(self):
+        """유저 퇴장 브로드캐스트"""
+        user = self.scope["user"]
+        payload = {
+            "type": "user_left",
+            "user_id": user.id,
+        }
+        await self.channel_layer.group_send(
+            self.group_name, {"type": "broadcast", "payload": payload}
+        )

@@ -141,6 +141,10 @@ class LobbyChatConsumerTestCase(TransactionTestCase):
             if not connected:
                 return None
 
+            # 연결 시 전송되는 초기 메시지들 소비 (lobby_users, user_joined)
+            await communicator.receive_json_from()  # lobby_users
+            await communicator.receive_json_from()  # user_joined
+
             await communicator.send_json_to({"action": "chat", "message": "로비 채팅"})
             message = await communicator.receive_json_from()
             await communicator.disconnect()
