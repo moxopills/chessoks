@@ -75,4 +75,7 @@ class RoomQueryService:
             room.set_password(password)
 
         room.save()
+        from apps.chess.utils import broadcast_room_update
+
+        broadcast_room_update(room)
         return room

@@ -21,6 +21,7 @@
     let currentUserId = null;
     let lobbyUsers = {};
     let lobbyRooms = [];
+    let roomRefreshInterval = null;
 
     // 초기화
     init();
@@ -28,6 +29,7 @@
     async function init() {
         await loadRooms();
         await checkAuthAndSetupChat();
+        startRoomAutoRefresh();
     }
 
     /**
@@ -68,10 +70,54 @@
         // 방 클릭 이벤트
         roomList.querySelectorAll('.room-item').forEach(item => {
             item.addEventListener('click', () => {
-                const roomId = item.dataset.roomId;
-                window.location.href = `/rooms/${roomId}/`;
+                handleRoomClick(item);
             });
         });
+    }
+
+    function startRoomAutoRefresh() {
+        roomRefreshInterval = setInterval(() => {
+            loadRooms();
+        }, 5000);
+
+        window.addEventListener('beforeunload', () => {
+            if (roomRefreshInterval) clearInterval(roomRefreshInterval);
+        });
+    }
+
+    async function handleRoomClick(item) {
+        const roomId = parseInt(item.dataset.roomId, 10);
+        if (!roomId) return;
+
+        const room = lobbyRooms.find(r => r.id === roomId);
+        if (!room) {
+            window.location.href = `/rooms/${roomId}/`;
+            return;
+        }
+
+        if (room.status === 'playing') {
+            window.location.href = `/games/${roomId}/`;
+            return;
+        }
+
+        if (room.guest || room.player_count >= 2) {
+            Toast.error('이미 인원이 찬 방입니다.');
+            return;
+        }
+
+        let payload = {};
+        if (room.is_private) {
+            const password = prompt('비밀번호를 입력하세요:');
+            if (!password) return;
+            payload = { password };
+        }
+
+        try {
+            await API.post(`/chess/rooms/${roomId}/join/`, payload);
+            window.location.href = `/rooms/${roomId}/`;
+        } catch (error) {
+            Toast.error(error.data?.message || '입장에 실패했습니다.');
+        }
     }
 
     /**
