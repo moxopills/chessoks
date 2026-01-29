@@ -13,10 +13,13 @@
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
+    const usersList = document.getElementById('users-list');
+    const userCount = document.getElementById('user-count');
 
     let isMatching = false;
     let lobbySocket = null;
     let currentUserId = null;
+    let lobbyUsers = {};
 
     // 초기화
     init();
@@ -250,6 +253,21 @@
         } else if (data.type === 'recent_messages') {
             // 최근 메시지 로드
             data.messages.forEach(msg => addChatMessage(msg));
+        } else if (data.type === 'lobby_users') {
+            // 접속자 목록 초기화
+            lobbyUsers = {};
+            data.users.forEach(user => {
+                lobbyUsers[user.id] = user;
+            });
+            renderUsers();
+        } else if (data.type === 'user_joined') {
+            // 유저 입장
+            lobbyUsers[data.user.id] = data.user;
+            renderUsers();
+        } else if (data.type === 'user_left') {
+            // 유저 퇴장
+            delete lobbyUsers[data.user_id];
+            renderUsers();
         } else if (data.type === 'error') {
             Toast.error(data.message);
         }
@@ -287,5 +305,32 @@
     function formatChatTime(isoString) {
         const date = new Date(isoString);
         return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    /**
+     * 접속자 목록 렌더링
+     */
+    function renderUsers() {
+        const users = Object.values(lobbyUsers);
+        userCount.textContent = users.length;
+
+        if (users.length === 0) {
+            usersList.innerHTML = '<div class="users-empty">접속자가 없습니다.</div>';
+            return;
+        }
+
+        usersList.innerHTML = users.map(user => `
+            <div class="user-item" data-user-id="${user.id}">
+                <div class="user-avatar">
+                    ${user.avatar_url
+                        ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="">`
+                        : '👤'}
+                </div>
+                <div class="user-info">
+                    <div class="user-nickname">${Utils.escapeHtml(user.nickname)}</div>
+                    <div class="user-status">온라인</div>
+                </div>
+            </div>
+        `).join('');
     }
 })();
