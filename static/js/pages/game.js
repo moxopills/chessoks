@@ -788,6 +788,7 @@
         loadRatingChange();
 
         gameEndModal.classList.remove('hidden');
+        gameEndModal.style.display = 'flex';
     }
 
     function showPendingEnd(message) {
@@ -805,6 +806,7 @@
         if (ratingEl) ratingEl.textContent = '';
 
         gameEndModal.classList.remove('hidden');
+        gameEndModal.style.display = 'flex';
     }
 
     function getOutcome(result, color) {
