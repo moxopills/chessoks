@@ -122,6 +122,7 @@ class RoomCreateApiTestCase(TestCase):
                 "title": "테스트 방",
                 "time_limit": 10,
             },
+            format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["title"], "테스트 방")
@@ -139,6 +140,7 @@ class RoomCreateApiTestCase(TestCase):
                 "title": "비공개 방",
                 "password": "secret123",
             },
+            format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data["is_private"])
@@ -150,7 +152,7 @@ class RoomCreateApiTestCase(TestCase):
     def test_create_room_default_values(self):
         """기본값으로 방 생성"""
         self.client.force_authenticate(user=self.user)
-        response = self.client.post("/api/chess/rooms/", {})
+        response = self.client.post("/api/chess/rooms/", {}, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["room_type"], "custom")
         self.assertEqual(response.data["time_limit"], 15)
@@ -164,6 +166,7 @@ class RoomCreateApiTestCase(TestCase):
             {
                 "allow_spectators": False,
             },
+            format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertFalse(response.data["allow_spectators"])
@@ -175,8 +178,9 @@ class RoomCreateApiTestCase(TestCase):
             {
                 "title": "테스트",
             },
+            format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_create_room_invalid_time_limit(self):
         """잘못된 시간 제한"""
@@ -186,6 +190,7 @@ class RoomCreateApiTestCase(TestCase):
             {
                 "time_limit": 0,
             },
+            format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -194,6 +199,7 @@ class RoomCreateApiTestCase(TestCase):
             {
                 "time_limit": 100,
             },
+            format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -205,5 +211,6 @@ class RoomCreateApiTestCase(TestCase):
             {
                 "room_type": "invalid",
             },
+            format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
