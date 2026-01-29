@@ -1,4 +1,4 @@
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from asgiref.sync import async_to_sync
@@ -29,6 +29,17 @@ class MatchmakingService:
     @staticmethod
     @transaction.atomic
     def quick_match(user) -> tuple[Room, Game | None, str]:
+        playing = (
+            Room.objects.select_for_update(skip_locked=True)
+            .filter(room_type="quick", status="playing")
+            .filter(models.Q(host=user) | models.Q(guest=user))
+            .prefetch_related("games")
+            .first()
+        )
+        if playing is not None:
+            game = playing.games.filter(result="playing").only("id").first()
+            return playing, game, "matched"
+
         existing = (
             Room.objects.select_for_update(skip_locked=True)
             .filter(room_type="quick", host=user, status="waiting", guest__isnull=True)
