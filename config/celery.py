@@ -23,7 +23,7 @@ app.conf.beat_schedule = {
     "cleanup-stale-waiting-rooms": {
         "task": "apps.chess.tasks.cleanup_stale_waiting_rooms",
         "schedule": 60.0,  # 1분마다
-        "args": [5],  # 5분 이상 대기방 정리
+        "args": [3],  # 3분 이상 대기방 정리
     },
     "cleanup-inactive-rooms": {
         "task": "apps.chess.tasks.cleanup_inactive_rooms",

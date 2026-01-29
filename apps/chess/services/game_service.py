@@ -470,6 +470,19 @@ class GameService:
                     payload={"before": tier_before, "after": tier_after, "game_id": game.id},
                 )
 
+        from apps.chess.utils import broadcast_room_removed, broadcast_room_update
+
+        room = game.room
+        if room.room_type == "quick":
+            room_id = room.id
+            room.delete()
+            broadcast_room_removed(room_id)
+        else:
+            room.status = "finished"
+            room.finished_at = game.finished_at or timezone.now()
+            room.save(update_fields=["status", "finished_at"])
+            broadcast_room_update(room)
+
     @staticmethod
     def _notify_rematch(
         game: Game, *, status: str, sender_color: str, rematch_game_id: int | None = None
