@@ -4,7 +4,12 @@ from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
 from apps.chess.models import Game, Room
-from apps.chess.utils import assign_colors, broadcast_room_removed, broadcast_room_update
+from apps.chess.utils import (
+    assign_colors,
+    broadcast_room_removed,
+    broadcast_room_state,
+    broadcast_room_update,
+)
 
 
 class RoomFlowService:
@@ -42,6 +47,7 @@ class RoomFlowService:
             ]
         )
         broadcast_room_update(room)
+        broadcast_room_state(room)
         return room
 
     @staticmethod
@@ -81,6 +87,7 @@ class RoomFlowService:
             update_fields=["host_start_confirmed", "guest_start_confirmed", "status", "started_at"]
         )
         broadcast_room_update(room)
+        broadcast_room_state(room)
         return room, game
 
     @staticmethod
@@ -117,6 +124,7 @@ class RoomFlowService:
             ]
         )
         broadcast_room_update(room)
+        broadcast_room_state(room)
         return room
 
     @staticmethod
@@ -156,6 +164,7 @@ class RoomFlowService:
             ]
         )
         broadcast_room_update(room)
+        broadcast_room_state(room)
         return False, room
 
     @staticmethod

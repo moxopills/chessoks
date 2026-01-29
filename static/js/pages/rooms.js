@@ -23,6 +23,7 @@
     let currentPage = 1;
     const pageSize = 10;
     let totalCount = 0;
+    let refreshInterval = null;
 
     // Init
     init();
@@ -32,6 +33,7 @@
         setupFilters();
         setupModal();
         setupCreateForm();
+        startAutoRefresh();
     }
 
     /**
@@ -189,6 +191,16 @@
         filterSort.addEventListener('change', () => {
             currentPage = 1;
             loadRooms();
+        });
+    }
+
+    function startAutoRefresh() {
+        refreshInterval = setInterval(() => {
+            loadRooms();
+        }, 5000);
+
+        window.addEventListener('beforeunload', () => {
+            if (refreshInterval) clearInterval(refreshInterval);
         });
     }
 
