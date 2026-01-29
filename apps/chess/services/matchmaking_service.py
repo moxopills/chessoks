@@ -50,14 +50,14 @@ class MatchmakingService:
             .filter(room_type="quick", host=user, status="waiting", guest__isnull=True)
             .first()
         )
-        if existing is not None:
-            return existing, None, "waiting"
 
         stats, _ = UserStats.objects.get_or_create(user=user)
         rating = stats.rating
         room = MatchmakingService._find_best_room(user, rating)
 
         if room is None:
+            if existing is not None:
+                return existing, None, "waiting"
             room = Room.objects.create(
                 room_type="quick",
                 title="",
@@ -73,6 +73,11 @@ class MatchmakingService:
         room.started_at = timezone.now()
         room.save(update_fields=["guest", "status", "started_at"])
         broadcast_room_update(room)
+
+        if existing is not None and existing.id != room.id:
+            existing_id = existing.id
+            existing.delete()
+            broadcast_room_removed(existing_id)
 
         white_player, black_player = assign_colors(room.host, room.guest)
         game = Game.objects.create(room=room, white_player=white_player, black_player=black_player)
