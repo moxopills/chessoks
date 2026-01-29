@@ -102,9 +102,7 @@ class GameService:
         result = GameService._determine_result(board)
         if result == "playing" and not any(board.legal_moves):
             if board.is_check():
-                result = (
-                    "checkmate_black" if board.turn == chess.WHITE else "checkmate_white"
-                )
+                result = "checkmate_black" if board.turn == chess.WHITE else "checkmate_white"
             else:
                 result = "stalemate"
 
