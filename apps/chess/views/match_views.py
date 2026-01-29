@@ -5,8 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.chess.serializers import CancelMatchResponseSerializer, QuickMatchResponseSerializer
 from apps.chess.models import Game
+from apps.chess.serializers import CancelMatchResponseSerializer, QuickMatchResponseSerializer
 from apps.chess.services import MatchmakingService
 from apps.chess.utils import assign_colors
 

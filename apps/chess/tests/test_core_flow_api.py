@@ -83,9 +83,7 @@ class CoreFlowApiTestCase(TestCase):
         if game_id:
             game = Game.objects.get(pk=game_id)
         else:
-            game = Game.objects.filter(
-                room_id=response_b.data["room_id"], result="playing"
-            ).first()
+            game = Game.objects.filter(room_id=response_b.data["room_id"], result="playing").first()
         self.assertIsNotNone(game)
 
         # white makes a move
