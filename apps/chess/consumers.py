@@ -303,7 +303,6 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self.accept()
         await self._set_user_online()
         await self._add_to_lobby()
-        await self._send_recent_messages()
         await self._send_lobby_users()
         await self._broadcast_user_joined()
 
@@ -367,7 +366,7 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             await self.send_json({"type": "recent_messages", "messages": messages})
 
     @database_sync_to_async
-    def _get_recent_messages(self, limit: int = 50) -> list:
+    def _get_recent_messages(self, limit: int = 100) -> list:
         """최근 로비 메시지 조회"""
         messages = LobbyMessage.objects.select_related("user").order_by("-created_at")[:limit]
         return [

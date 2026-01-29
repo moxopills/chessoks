@@ -1,0 +1,384 @@
+/**
+ * Room Waiting Page Logic
+ * - 방 정보 로드/실시간 업데이트
+ * - 준비/시작 플로우
+ * - 대기실 채팅
+ */
+
+(function() {
+    'use strict';
+
+    // DOM Elements
+    const roomTitle = document.getElementById('room-title');
+    const roomTime = document.getElementById('room-time');
+    const roomSpectators = document.getElementById('room-spectators');
+    const hostSlot = document.getElementById('host-slot');
+    const guestSlot = document.getElementById('guest-slot');
+    const actionButtons = document.getElementById('action-buttons');
+    const leaveBtn = document.getElementById('leave-btn');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+
+    // State
+    const roomId = Utils.getPathParam(/\/rooms\/(\d+)/);
+    let room = null;
+    let currentUser = null;
+    let socket = null;
+    let isHost = false;
+    let heartbeatInterval = null;
+
+    // Init
+    init();
+
+    async function init() {
+        if (!roomId) {
+            Toast.error('잘못된 접근입니다.');
+            window.location.href = '/rooms/';
+            return;
+        }
+
+        try {
+            currentUser = await API.get('/accounts/me/');
+        } catch {
+            Toast.error('로그인이 필요합니다.');
+            window.location.href = '/login/';
+            return;
+        }
+
+        await loadRoom();
+        setupLeaveButton();
+        setupChat();
+        connectWebSocket();
+    }
+
+    /**
+     * 방 정보 로드
+     */
+    async function loadRoom() {
+        try {
+            room = await API.get(`/chess/rooms/${roomId}/`);
+            isHost = room.host?.id === currentUser.id;
+            renderRoom();
+        } catch (error) {
+            Toast.error('방을 찾을 수 없습니다.');
+            window.location.href = '/rooms/';
+        }
+    }
+
+    /**
+     * 방 정보 렌더링
+     */
+    function renderRoom() {
+        // Header
+        roomTitle.textContent = room.title || '빠른 대전';
+        roomTime.textContent = `⏱ ${room.time_limit ? room.time_limit + '분' : '무제한'}`;
+        roomSpectators.textContent = room.allow_spectators ? '👁 관전 가능' : '👁 관전 불가';
+
+        // Host
+        renderPlayer(hostSlot, room.host, room.host_ready, room.host_start_confirmed, true);
+
+        // Guest
+        if (room.guest) {
+            renderPlayer(guestSlot, room.guest, room.guest_ready, room.guest_start_confirmed, false);
+        } else {
+            guestSlot.innerHTML = `
+                <div class="player-card empty">
+                    <div class="avatar avatar-lg">
+                        <span class="avatar-placeholder">?</span>
+                    </div>
+                    <div class="player-info">
+                        <div class="player-name">상대 대기 중...</div>
+                        <div class="player-rating">--</div>
+                    </div>
+                    <div class="player-status">
+                        <span class="status-badge">--</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Action Buttons
+        renderActionButtons();
+
+        // 게임 시작 체크
+        if (room.status === 'playing') {
+            Toast.success('게임이 시작됩니다!');
+            window.location.href = `/games/${roomId}/`;
+        }
+    }
+
+    /**
+     * 플레이어 렌더링
+     */
+    function renderPlayer(slot, player, isReady, isConfirmed, isHostPlayer) {
+        const cardClass = isConfirmed ? 'confirmed' : (isReady ? 'ready' : '');
+        const statusClass = isConfirmed ? 'confirmed' : (isReady ? 'ready' : '');
+        const statusText = isConfirmed ? '시작 확인' : (isReady ? '준비 완료' : '대기');
+
+        slot.innerHTML = `
+            <div class="player-card ${cardClass}">
+                <div class="avatar avatar-lg">
+                    ${player?.avatar_url
+                        ? `<img src="${Utils.escapeHtml(player.avatar_url)}" alt="">`
+                        : '<span class="avatar-placeholder">?</span>'}
+                </div>
+                <div class="player-info">
+                    <div class="player-name">${Utils.escapeHtml(player?.nickname || '플레이어')}</div>
+                    <div class="player-rating">${player?.rating || 1500} ${player?.rank_tier ? '(' + player.rank_tier + ')' : ''}</div>
+                </div>
+                <div class="player-status">
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * 액션 버튼 렌더링
+     */
+    function renderActionButtons() {
+        const isGuest = room.guest?.id === currentUser.id;
+        const isPlayer = isHost || isGuest;
+        const myReady = isHost ? room.host_ready : room.guest_ready;
+        const bothReady = room.host_ready && room.guest_ready;
+        const myConfirmed = isHost ? room.host_start_confirmed : room.guest_start_confirmed;
+
+        let html = '';
+
+        if (!isPlayer) {
+            // 관전자
+            html = '<span class="text-muted">관전 중입니다</span>';
+        } else if (!room.guest) {
+            // 게스트 없음
+            html = '<span class="text-muted">상대를 기다리는 중...</span>';
+        } else if (!bothReady) {
+            // 준비 단계
+            if (myReady) {
+                html = `<button class="btn btn-secondary btn-lg" id="unready-btn">준비 취소</button>`;
+            } else {
+                html = `<button class="btn btn-success btn-arcade btn-lg" id="ready-btn">준비</button>`;
+            }
+        } else {
+            // 시작 확인 단계
+            if (myConfirmed) {
+                html = `<span class="text-muted">상대의 시작 확인을 기다리는 중...</span>`;
+            } else {
+                html = `<button class="btn btn-primary btn-arcade btn-lg" id="start-btn">게임 시작</button>`;
+            }
+        }
+
+        actionButtons.innerHTML = html;
+
+        // 이벤트 바인딩
+        const readyBtn = document.getElementById('ready-btn');
+        const unreadyBtn = document.getElementById('unready-btn');
+        const startBtn = document.getElementById('start-btn');
+
+        if (readyBtn) {
+            readyBtn.addEventListener('click', () => setReady(true));
+        }
+        if (unreadyBtn) {
+            unreadyBtn.addEventListener('click', () => setReady(false));
+        }
+        if (startBtn) {
+            startBtn.addEventListener('click', confirmStart);
+        }
+    }
+
+    /**
+     * 준비 상태 설정
+     */
+    async function setReady(ready) {
+        try {
+            const result = await API.post(`/chess/rooms/${roomId}/ready/`, { ready });
+            room.host_ready = result.host_ready;
+            room.guest_ready = result.guest_ready;
+            room.status = result.status;
+            renderRoom();
+            Toast.info(ready ? '준비 완료!' : '준비 취소');
+        } catch (error) {
+            Toast.error(error.data?.message || '준비 상태 변경에 실패했습니다.');
+        }
+    }
+
+    /**
+     * 게임 시작 확인
+     */
+    async function confirmStart() {
+        try {
+            const result = await API.post(`/chess/rooms/${roomId}/start/`);
+            room.host_start_confirmed = result.host_start_confirmed;
+            room.guest_start_confirmed = result.guest_start_confirmed;
+            room.status = result.status;
+
+            if (result.game_id) {
+                Toast.success('게임이 시작됩니다!');
+                window.location.href = `/games/${roomId}/`;
+            } else {
+                renderRoom();
+                Toast.info('상대의 시작 확인을 기다리는 중...');
+            }
+        } catch (error) {
+            Toast.error(error.data?.message || '게임 시작에 실패했습니다.');
+        }
+    }
+
+    /**
+     * 나가기 버튼 설정
+     */
+    function setupLeaveButton() {
+        leaveBtn.addEventListener('click', async () => {
+            if (!confirm('정말 방을 나가시겠습니까?')) return;
+
+            try {
+                await API.post(`/chess/rooms/${roomId}/leave/`);
+                Toast.info('방을 나갔습니다.');
+                window.location.href = '/rooms/';
+            } catch (error) {
+                Toast.error(error.data?.message || '나가기에 실패했습니다.');
+            }
+        });
+    }
+
+    /**
+     * 채팅 설정
+     */
+    function setupChat() {
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            sendChatMessage();
+        });
+    }
+
+    /**
+     * WebSocket 연결
+     */
+    function connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/chess/${roomId}/`;
+
+        socket = new WebSocket(wsUrl);
+
+        socket.onopen = () => {
+            addChatNotice('연결되었습니다.');
+            startHeartbeat();
+        };
+
+        socket.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            handleSocketMessage(data);
+        };
+
+        socket.onclose = () => {
+            addChatNotice('연결이 끊어졌습니다.');
+            stopHeartbeat();
+            // 재연결 시도
+            setTimeout(connectWebSocket, 3000);
+        };
+
+        socket.onerror = () => {
+            addChatNotice('연결 오류가 발생했습니다.');
+        };
+    }
+
+    /**
+     * WebSocket 메시지 처리
+     */
+    function handleSocketMessage(data) {
+        switch (data.type) {
+            case 'chat':
+                addChatMessage(data);
+                break;
+            case 'room_update':
+                // 방 상태 업데이트
+                Object.assign(room, data.room);
+                renderRoom();
+                break;
+            case 'game_start':
+                Toast.success('게임이 시작됩니다!');
+                window.location.href = `/games/${roomId}/`;
+                break;
+            case 'player_joined':
+                Toast.info(`${data.player.nickname}님이 입장했습니다.`);
+                loadRoom(); // 방 정보 새로고침
+                break;
+            case 'player_left':
+                Toast.info('상대가 나갔습니다.');
+                loadRoom();
+                break;
+            case 'error':
+                Toast.error(data.message);
+                break;
+            case 'heartbeat_ack':
+                // Heartbeat 응답
+                break;
+        }
+    }
+
+    /**
+     * 채팅 메시지 전송
+     */
+    function sendChatMessage() {
+        const message = chatInput.value.trim();
+        if (!message || !socket || socket.readyState !== WebSocket.OPEN) return;
+
+        socket.send(JSON.stringify({
+            action: 'chat',
+            message: message
+        }));
+
+        chatInput.value = '';
+    }
+
+    /**
+     * 채팅 메시지 추가
+     */
+    function addChatMessage(data) {
+        const isMine = data.user_id === currentUser.id;
+        const messageEl = document.createElement('div');
+        messageEl.className = `chat-message ${isMine ? 'mine' : 'others'}`;
+        messageEl.innerHTML = `
+            <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
+            <div class="chat-bubble">${Utils.escapeHtml(data.message)}</div>
+        `;
+        chatMessages.appendChild(messageEl);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    /**
+     * 채팅 알림 추가
+     */
+    function addChatNotice(text) {
+        const noticeEl = document.createElement('div');
+        noticeEl.className = 'chat-notice';
+        noticeEl.textContent = text;
+        chatMessages.appendChild(noticeEl);
+    }
+
+    /**
+     * Heartbeat
+     */
+    function startHeartbeat() {
+        heartbeatInterval = setInterval(() => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ action: 'heartbeat' }));
+            }
+        }, 30000);
+    }
+
+    function stopHeartbeat() {
+        if (heartbeatInterval) {
+            clearInterval(heartbeatInterval);
+            heartbeatInterval = null;
+        }
+    }
+
+    // 페이지 떠날 때 정리
+    window.addEventListener('beforeunload', () => {
+        stopHeartbeat();
+        if (socket) {
+            socket.close();
+        }
+    });
+})();

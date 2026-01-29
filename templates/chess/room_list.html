@@ -1,0 +1,477 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}게임방 - ChessOK{% endblock %}
+
+{% block content %}
+<div class="rooms-container">
+    <!-- Header -->
+    <div class="rooms-header">
+        <h1 class="page-title">게임방</h1>
+        <button class="btn btn-primary btn-arcade" id="create-room-btn">
+            <span class="btn-icon">+</span> 방 만들기
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="rooms-filters">
+        <div class="filter-group">
+            <label class="filter-label">상태</label>
+            <select class="filter-select" id="filter-status">
+                <option value="">전체</option>
+                <option value="waiting">대기 중</option>
+                <option value="playing">게임 중</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">정렬</label>
+            <select class="filter-select" id="filter-sort">
+                <option value="latest">최신순</option>
+                <option value="rating">레이팅순</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Room List -->
+    <div class="rooms-list" id="rooms-list">
+        <div class="loading-placeholder">
+            <span class="spinner"></span>
+            <span>로딩 중...</span>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="pagination"></div>
+</div>
+
+<!-- Create Room Modal -->
+<div class="modal-overlay hidden" id="create-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">방 만들기</h2>
+            <button class="modal-close" id="modal-close">&times;</button>
+        </div>
+        <form class="modal-body" id="create-room-form">
+            <div class="form-group">
+                <label class="form-label">방 제목 (선택)</label>
+                <input type="text" class="form-input" id="room-title" placeholder="빠른 대전" maxlength="50">
+            </div>
+            <div class="form-group">
+                <label class="form-label">시간 제한</label>
+                <div class="time-options" id="time-options">
+                    <label class="time-option">
+                        <input type="radio" name="time_limit" value="5" checked>
+                        <span class="time-label">5분</span>
+                    </label>
+                    <label class="time-option">
+                        <input type="radio" name="time_limit" value="10">
+                        <span class="time-label">10분</span>
+                    </label>
+                    <label class="time-option">
+                        <input type="radio" name="time_limit" value="15">
+                        <span class="time-label">15분</span>
+                    </label>
+                    <label class="time-option">
+                        <input type="radio" name="time_limit" value="0">
+                        <span class="time-label">무제한</span>
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">비밀번호 (선택)</label>
+                <input type="password" class="form-input" id="room-password" placeholder="비밀번호 설정 시 비공개 방">
+            </div>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="allow-spectators" checked>
+                    <span>관전 허용</span>
+                </label>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="modal-cancel">취소</button>
+                <button type="submit" class="btn btn-primary">생성</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Rooms Container */
+.rooms-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Header */
+.rooms-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xl);
+}
+
+.page-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    margin: 0;
+}
+
+/* Filters */
+.rooms-filters {
+    display: flex;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+    padding: var(--space-md);
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.filter-label {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.filter-select {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.875rem;
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    cursor: pointer;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--color-accent-secondary);
+}
+
+/* Room List */
+.rooms-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    min-height: 300px;
+}
+
+.room-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    padding: var(--space-lg);
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.room-card:hover {
+    border-color: var(--color-accent-secondary);
+    transform: translateY(-2px);
+}
+
+.room-card.is-full {
+    opacity: 0.7;
+}
+
+.room-card.is-playing {
+    border-left: 3px solid var(--color-accent-warning);
+}
+
+.room-host {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    min-width: 80px;
+}
+
+.room-host .avatar {
+    width: 48px;
+    height: 48px;
+}
+
+.room-host-name {
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.room-host-rating {
+    font-size: 0.625rem;
+    color: var(--color-text-muted);
+}
+
+.room-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.room-title {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: var(--space-xs);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.room-title .icon-private {
+    font-size: 0.875rem;
+    color: var(--color-accent-warning);
+}
+
+.room-meta {
+    display: flex;
+    gap: var(--space-md);
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.room-meta-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.room-status {
+    padding: var(--space-xs) var(--space-md);
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+}
+
+.room-status.waiting {
+    background-color: rgba(39, 174, 96, 0.2);
+    color: var(--color-accent-success);
+}
+
+.room-status.playing {
+    background-color: rgba(243, 156, 18, 0.2);
+    color: var(--color-accent-warning);
+}
+
+.room-status.ready {
+    background-color: rgba(15, 155, 142, 0.2);
+    color: var(--color-accent-secondary);
+}
+
+.loading-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-2xl);
+    color: var(--color-text-muted);
+}
+
+.rooms-empty {
+    text-align: center;
+    padding: var(--space-2xl);
+    color: var(--color-text-muted);
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-xs);
+    margin-top: var(--space-xl);
+}
+
+.pagination-btn {
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.875rem;
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.pagination-btn:hover:not(:disabled) {
+    border-color: var(--color-accent-secondary);
+}
+
+.pagination-btn.active {
+    background-color: var(--color-accent-primary);
+    border-color: var(--color-accent-primary);
+    color: white;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal {
+    width: 90%;
+    max-width: 450px;
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.modal-title {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--color-text-primary);
+}
+
+.modal-body {
+    padding: var(--space-lg);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+}
+
+/* Time Options */
+.time-options {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-sm);
+}
+
+.time-option {
+    position: relative;
+    cursor: pointer;
+}
+
+.time-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.time-label {
+    display: block;
+    padding: var(--space-sm) var(--space-md);
+    text-align: center;
+    font-size: 0.875rem;
+    background-color: var(--color-bg-secondary);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.time-option input:checked + .time-label {
+    border-color: var(--color-accent-primary);
+    background-color: rgba(233, 69, 96, 0.1);
+    color: var(--color-accent-primary);
+}
+
+.time-option:hover .time-label {
+    border-color: var(--color-accent-secondary);
+}
+
+/* Checkbox */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-accent-primary);
+}
+
+@media (max-width: 768px) {
+    .rooms-header {
+        flex-direction: column;
+        gap: var(--space-md);
+        align-items: stretch;
+    }
+
+    .rooms-filters {
+        flex-direction: column;
+    }
+
+    .room-card {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .room-host {
+        min-width: auto;
+    }
+
+    .room-meta {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .time-options {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pages/rooms.js' %}"></script>
+{% endblock %}
