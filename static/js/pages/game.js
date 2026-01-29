@@ -39,6 +39,7 @@
     const drawModal = document.getElementById('draw-modal');
     const rematchModal = document.getElementById('rematch-modal');
     const promotionModal = document.getElementById('promotion-modal');
+    let pendingEnd = false;
 
     // State
     const roomId = Utils.getPathParam(/\/games\/(\d+)/);
@@ -665,6 +666,7 @@
         resignBtn.addEventListener('click', () => {
             if (!confirm('정말 기권하시겠습니까?')) return;
             socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
+            showPendingEnd('기권 처리 중...');
         });
 
         if (leaveBtn) {
@@ -672,6 +674,7 @@
                 if (myColor) {
                     if (!confirm('나가면 기권 처리됩니다. 나가시겠습니까?')) return;
                     socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
+                    showPendingEnd('나가기 처리 중...');
                 } else {
                     window.location.href = '/';
                 }
@@ -735,6 +738,7 @@
         if (timerInterval) {
             clearInterval(timerInterval);
         }
+        pendingEnd = false;
 
         const iconEl = document.getElementById('game-end-icon');
         const titleEl = document.getElementById('game-end-title');
@@ -782,6 +786,23 @@
         resultEl.textContent = resultText;
 
         loadRatingChange();
+
+        gameEndModal.classList.remove('hidden');
+    }
+
+    function showPendingEnd(message) {
+        if (pendingEnd) return;
+        pendingEnd = true;
+
+        const iconEl = document.getElementById('game-end-icon');
+        const titleEl = document.getElementById('game-end-title');
+        const resultEl = document.getElementById('game-end-result');
+        const ratingEl = document.getElementById('game-end-rating');
+
+        iconEl.textContent = '⏳';
+        titleEl.textContent = '처리 중...';
+        resultEl.textContent = message;
+        if (ratingEl) ratingEl.textContent = '';
 
         gameEndModal.classList.remove('hidden');
     }
