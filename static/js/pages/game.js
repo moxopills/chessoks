@@ -29,6 +29,9 @@
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
+    const chatSection = document.getElementById('game-chat-section');
+    const mobileTabbar = document.getElementById('mobile-tabbar');
+    const chatBadge = document.getElementById('chat-badge');
     const gameActions = document.getElementById('game-actions');
     const drawBtn = document.getElementById('draw-btn');
     const resignBtn = document.getElementById('resign-btn');
@@ -53,6 +56,8 @@
     let pendingPromotion = null;
     let timerInterval = null;
     let heartbeatInterval = null;
+    let isChatOpen = false;
+    let chatUnread = 0;
 
     // Init
     init();
@@ -71,9 +76,10 @@
             currentUser = null;
         }
 
-        await loadGame();
         setupBoard();
+        await loadGame();
         setupChat();
+        setupMobileTabs();
         setupActions();
         setupModals();
         setupExitGuard();
@@ -641,6 +647,48 @@
         `;
         chatMessages.appendChild(messageEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+        handleChatBadge(data);
+    }
+
+    function setupMobileTabs() {
+        if (!mobileTabbar) return;
+        document.body.classList.add('has-mobile-tabbar');
+        const tabs = mobileTabbar.querySelectorAll('.mobile-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.dataset.tab;
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                if (target === 'chat') {
+                    isChatOpen = true;
+                    if (chatSection) chatSection.classList.remove('is-hidden');
+                    resetChatBadge();
+                } else {
+                    isChatOpen = false;
+                    if (chatSection) chatSection.classList.add('is-hidden');
+                }
+            });
+        });
+        isChatOpen = false;
+        if (chatSection) chatSection.classList.add('is-hidden');
+    }
+
+    function handleChatBadge(data) {
+        if (isChatOpen) return;
+        if (currentUser && data.user_id === currentUser.id) return;
+        chatUnread += 1;
+        if (chatBadge) {
+            chatBadge.textContent = chatUnread;
+            chatBadge.classList.remove('hidden');
+        }
+    }
+
+    function resetChatBadge() {
+        chatUnread = 0;
+        if (chatBadge) {
+            chatBadge.textContent = '0';
+            chatBadge.classList.add('hidden');
+        }
     }
 
     /**
