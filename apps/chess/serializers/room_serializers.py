@@ -17,6 +17,8 @@ class RoomSerializer(serializers.Serializer):
     guest = PlayerSerializer(read_only=True, allow_null=True)
     host_ready = serializers.BooleanField(read_only=True)
     guest_ready = serializers.BooleanField(read_only=True)
+    host_start_confirmed = serializers.BooleanField(read_only=True)
+    guest_start_confirmed = serializers.BooleanField(read_only=True)
     player_count = serializers.IntegerField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
     started_at = serializers.DateTimeField(read_only=True, allow_null=True)
