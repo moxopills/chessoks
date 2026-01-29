@@ -77,6 +77,23 @@
             </div>
         </div>
 
+        <!-- Captured Pieces -->
+        <div class="panel-section captured-section" id="captured-section">
+            <div class="panel-header">
+                <h3 class="panel-title">잡힌 기물</h3>
+            </div>
+            <div class="captured-list">
+                <div class="captured-group">
+                    <span class="captured-label">화이트</span>
+                    <div class="captured-pieces" id="captured-white"></div>
+                </div>
+                <div class="captured-group">
+                    <span class="captured-label">블랙</span>
+                    <div class="captured-pieces" id="captured-black"></div>
+                </div>
+            </div>
+        </div>
+
         <!-- Chat -->
         <div class="panel-section game-chat-section" id="game-chat-section">
             <div class="panel-header">
@@ -110,8 +127,27 @@
             <p class="game-end-result" id="game-end-result">--</p>
             <div class="game-end-rating" id="game-end-rating"></div>
             <div class="game-end-actions">
+                <button class="btn btn-secondary" id="replay-btn">기보 다시보기</button>
                 <button class="btn btn-primary btn-arcade" id="rematch-btn">리매치</button>
                 <button class="btn btn-secondary" id="lobby-btn">로비로</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Replay Modal -->
+<div class="modal-overlay hidden" id="replay-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title">기보 다시보기</h2>
+        </div>
+        <div class="modal-body">
+            <div class="replay-status" id="replay-status">시작 위치</div>
+            <div class="modal-actions replay-actions">
+                <button class="btn btn-secondary btn-sm" id="replay-prev">이전</button>
+                <button class="btn btn-primary btn-sm" id="replay-play">재생</button>
+                <button class="btn btn-secondary btn-sm" id="replay-next">다음</button>
+                <button class="btn btn-secondary btn-sm" id="replay-close">닫기</button>
             </div>
         </div>
     </div>
@@ -275,7 +311,7 @@
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
     width: 100%;
-    max-width: 560px;
+    max-width: 640px;
     aspect-ratio: 1;
     border: 2px solid var(--color-border);
     border-radius: var(--radius-sm);
@@ -288,6 +324,8 @@
     color: var(--color-text-secondary);
     padding: var(--space-sm) 0;
     min-height: 24px;
+    letter-spacing: 0;
+    word-spacing: 0;
 }
 
 .square {
@@ -381,11 +419,12 @@
 .board-labels-files {
     position: absolute;
     bottom: 0;
-    left: 20px;
+    left: 22px;
     right: 0;
     display: flex;
     justify-content: space-around;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
+    letter-spacing: 0;
     color: var(--color-text-muted);
 }
 
@@ -393,13 +432,14 @@
     position: absolute;
     top: 0;
     left: 0;
-    bottom: 20px;
+    bottom: 22px;
     display: flex;
     flex-direction: column;
     justify-content: space-around;
     align-items: center;
-    width: 20px;
-    font-size: 0.65rem;
+    width: 22px;
+    font-size: 0.6rem;
+    letter-spacing: 0;
     color: var(--color-text-muted);
 }
 
@@ -433,6 +473,50 @@
     font-family: var(--font-display);
     font-size: 0.625rem;
     margin: 0;
+}
+
+.captured-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+}
+
+.captured-group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.captured-label {
+    font-size: 0.625rem;
+    color: var(--color-text-muted);
+    min-width: 48px;
+}
+
+.captured-pieces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.captured-piece {
+    font-size: 1.1rem;
+    line-height: 1;
+    font-family: 'Noto Sans Symbols 2', 'Noto Sans Symbols2', 'Apple Symbols', 'Symbola', 'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Sans KR', sans-serif;
+    text-shadow:
+        1px 0 0 #0b0f1f,
+        -1px 0 0 #0b0f1f,
+        0 1px 0 #0b0f1f,
+        0 -1px 0 #0b0f1f;
+}
+
+.captured-piece.white {
+    color: #fff;
+}
+
+.captured-piece.black {
+    color: #000;
 }
 
 /* Move List */
@@ -639,6 +723,7 @@
 
 .modal-body {
     padding: var(--space-lg);
+    font-family: var(--font-body);
 }
 
 .modal-actions {
@@ -651,6 +736,17 @@
 .modal-body p {
     letter-spacing: 0;
     word-spacing: 0;
+}
+
+.replay-status {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-md);
+}
+
+.replay-actions {
+    justify-content: space-between;
+    flex-wrap: wrap;
 }
 
 /* Chat Message Styles */

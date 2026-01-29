@@ -28,6 +28,8 @@
     const moveList = document.getElementById('move-list');
     const turnIndicator = document.getElementById('turn-indicator');
     const moveSection = document.getElementById('game-moves-section');
+    const capturedWhite = document.getElementById('captured-white');
+    const capturedBlack = document.getElementById('captured-black');
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
@@ -38,6 +40,7 @@
     const drawBtn = document.getElementById('draw-btn');
     const resignBtn = document.getElementById('resign-btn');
     const leaveBtn = document.getElementById('leave-btn');
+    const replayBtn = document.getElementById('replay-btn');
 
     // Modals
     const gameEndModal = document.getElementById('game-end-modal');
@@ -47,6 +50,12 @@
     const statusModal = document.getElementById('status-modal');
     const statusModalMessage = document.getElementById('status-modal-message');
     const statusModalOk = document.getElementById('status-modal-ok');
+    const replayModal = document.getElementById('replay-modal');
+    const replayStatus = document.getElementById('replay-status');
+    const replayPrev = document.getElementById('replay-prev');
+    const replayNext = document.getElementById('replay-next');
+    const replayPlay = document.getElementById('replay-play');
+    const replayClose = document.getElementById('replay-close');
     let pendingEnd = false;
 
     // State
@@ -64,6 +73,14 @@
     let heartbeatInterval = null;
     let hasShownStartGuide = false;
     let lastTurnColor = null;
+    let lastMove = null;
+    let replayMoves = [];
+    let replayIndex = 0;
+    let replayTimer = null;
+    let replayActive = false;
+    let liveFen = null;
+    let liveLastMove = null;
+    let captured = { white: [], black: [] };
     let isChatOpen = false;
     let chatUnread = 0;
 
@@ -91,6 +108,7 @@
         setupActions();
         setupModals();
         setupStatusModal();
+        setupReplayControls();
         setupExitGuard();
         connectWebSocket();
     }
@@ -135,8 +153,14 @@
             renderPlayerBars();
             renderBoard();
             renderMoveList();
+            await loadCapturedPieces();
+            renderCapturedPieces();
             updateTurn();
             startTimer();
+            if (game.move_count > 0) {
+                await loadLastMove();
+                renderBoard();
+            }
         } catch (error) {
             console.error('Failed to load game:', error);
             Toast.error('게임 정보를 불러올 수 없습니다.');
@@ -250,6 +274,8 @@
                 }
             }
         }
+
+        applyLastMoveHighlight();
 
         // 마지막 수 하이라이트
         if (game.pgn) {
@@ -542,6 +568,61 @@
         }
     }
 
+    function applyLastMoveHighlight() {
+        document.querySelectorAll('.square.last-move').forEach(sq => {
+            sq.classList.remove('last-move');
+        });
+        if (!lastMove) return;
+        const fromSquare = toDisplaySquare(lastMove.from);
+        const toSquare = toDisplaySquare(lastMove.to);
+        const fromEl = document.querySelector(`[data-square="${fromSquare}"]`);
+        const toEl = document.querySelector(`[data-square="${toSquare}"]`);
+        fromEl?.classList.add('last-move');
+        toEl?.classList.add('last-move');
+    }
+
+    async function loadCapturedPieces() {
+        try {
+            const data = await API.get(`/chess/games/${game.id}/captured/`);
+            captured = {
+                white: (data.white || []).map(letter => pieceSymbolFromLetter(letter, 'white')).filter(Boolean),
+                black: (data.black || []).map(letter => pieceSymbolFromLetter(letter, 'black')).filter(Boolean),
+            };
+        } catch (error) {
+            console.error('Failed to load captured pieces:', error);
+        }
+    }
+
+    function updateCapturedFromMove(data) {
+        const capture = data?.last_move?.capture;
+        if (!capture) return;
+        const symbol = pieceSymbolFromLetter(capture.piece, capture.color);
+        if (!symbol) return;
+        captured[capture.color].push(symbol);
+    }
+
+    function renderCapturedPieces() {
+        if (!capturedWhite || !capturedBlack) return;
+        capturedWhite.innerHTML = captured.white
+            .map(symbol => `<span class="captured-piece white">${symbol}</span>`)
+            .join('');
+        capturedBlack.innerHTML = captured.black
+            .map(symbol => `<span class="captured-piece black">${symbol}</span>`)
+            .join('');
+    }
+
+    function pieceSymbolFromLetter(letter, color) {
+        const map = {
+            K: color === 'white' ? '♔' : '♚',
+            Q: color === 'white' ? '♕' : '♛',
+            R: color === 'white' ? '♖' : '♜',
+            B: color === 'white' ? '♗' : '♝',
+            N: color === 'white' ? '♘' : '♞',
+            P: color === 'white' ? '♙' : '♟',
+        };
+        return map[letter] || null;
+    }
+
     /**
      * 수 두기
      */
@@ -644,13 +725,27 @@
                 game.white_time_remaining = data.white_time_remaining;
                 game.black_time_remaining = data.black_time_remaining;
                 game.turn_started_at = data.turn_started_at;
+                if (data.last_move) {
+                    lastMove = data.last_move;
+                    if (data.last_move.is_check && data.result === 'playing') {
+                        showStatusModal('체크입니다. 왕을 보호하세요.', 1500);
+                    }
+                    if (data.last_move.is_checkmate) {
+                        showStatusModal('체크메이트입니다.', 1500);
+                    }
+                }
 
                 renderBoard();
                 renderMoveList();
+                updateCapturedFromMove(data);
+                renderCapturedPieces();
                 updateTurn();
                 clearSelection();
 
-                if (data.result !== 'playing') {
+                if (data.last_move?.is_checkmate && data.result !== 'playing') {
+                    showStatusModal('체크메이트입니다!', 1200);
+                    setTimeout(() => showGameEndModal(data.result), 1200);
+                } else if (data.result !== 'playing') {
                     showGameEndModal(data.result);
                 }
                 break;
@@ -687,6 +782,9 @@
 
             case 'error':
                 Toast.error(data.message);
+                if (data.message && data.message.includes('허용되지 않는 수')) {
+                    showStatusModal('허용되지 않는 수입니다. 체크 상태라면 체크를 해제하는 수만 가능합니다.', 2000);
+                }
                 break;
 
             case 'heartbeat_ack':
@@ -872,6 +970,105 @@
             setTimeout(() => {
                 statusModal.classList.add('hidden');
             }, autoCloseMs);
+        }
+    }
+
+    async function loadLastMove() {
+        try {
+            const offset = Math.max(0, (game.move_count || 0) - 1);
+            const data = await API.get(`/chess/games/${game.id}/moves/`, { limit: 1, offset });
+            const last = data.results?.[0];
+            if (last) {
+                lastMove = { from: last.from_square, to: last.to_square };
+            }
+        } catch (error) {
+            console.error('Failed to load last move:', error);
+        }
+    }
+
+    function setupReplayControls() {
+        if (!replayBtn) return;
+        replayBtn.addEventListener('click', async () => {
+            await openReplay();
+        });
+        replayPrev?.addEventListener('click', () => stepReplay(-1));
+        replayNext?.addEventListener('click', () => stepReplay(1));
+        replayPlay?.addEventListener('click', () => toggleReplay());
+        replayClose?.addEventListener('click', () => closeReplay());
+    }
+
+    async function openReplay() {
+        if (!replayModal) return;
+        if (!replayMoves.length) {
+            const data = await API.get(`/chess/games/${game.id}/moves/`, { limit: 200, offset: 0 });
+            replayMoves = data.results || [];
+        }
+        liveFen = game.fen;
+        liveLastMove = lastMove;
+        replayIndex = 0;
+        replayActive = true;
+        updateReplayBoard();
+        replayModal.classList.remove('hidden');
+    }
+
+    function closeReplay() {
+        if (!replayModal) return;
+        if (replayTimer) {
+            clearInterval(replayTimer);
+            replayTimer = null;
+        }
+        replayActive = false;
+        replayModal.classList.add('hidden');
+        if (liveFen) {
+            game.fen = liveFen;
+            lastMove = liveLastMove;
+            renderBoard();
+        }
+    }
+
+    function toggleReplay() {
+        if (!replayActive) return;
+        if (replayTimer) {
+            clearInterval(replayTimer);
+            replayTimer = null;
+            if (replayPlay) replayPlay.textContent = '재생';
+            return;
+        }
+        if (replayPlay) replayPlay.textContent = '일시정지';
+        replayTimer = setInterval(() => {
+            if (replayIndex >= replayMoves.length) {
+                clearInterval(replayTimer);
+                replayTimer = null;
+                if (replayPlay) replayPlay.textContent = '재생';
+                return;
+            }
+            replayIndex += 1;
+            updateReplayBoard();
+        }, 900);
+    }
+
+    function stepReplay(direction) {
+        if (!replayActive) return;
+        replayIndex = Math.max(0, Math.min(replayMoves.length, replayIndex + direction));
+        updateReplayBoard();
+    }
+
+    function updateReplayBoard() {
+        const total = replayMoves.length;
+        const statusText = replayIndex === 0
+            ? '시작 위치'
+            : `${replayIndex}/${total} 수`;
+        if (replayStatus) replayStatus.textContent = statusText;
+
+        const fen = replayIndex === 0
+            ? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+            : replayMoves[replayIndex - 1]?.fen_after_move;
+        if (fen) {
+            game.fen = fen;
+            lastMove = replayIndex === 0
+                ? null
+                : { from: replayMoves[replayIndex - 1].from_square, to: replayMoves[replayIndex - 1].to_square };
+            renderBoard();
         }
     }
 

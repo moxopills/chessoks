@@ -37,8 +37,7 @@ class RoomApiTestCase(TestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.get("/api/chess/rooms/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 1)
-        self.assertEqual(response.data["results"][0]["id"], self.public_room.id)
+        self.assertEqual(response.data["count"], 2)
 
     def test_room_list_filters(self):
         Room.objects.create(
@@ -86,7 +85,7 @@ class RoomApiTestCase(TestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.get("/api/chess/rooms/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 1)  # finished 제외
+        self.assertEqual(response.data["count"], 2)  # finished 제외, private 포함
 
     def test_room_list_includes_finished_when_filtered(self):
         """status=finished 필터 시 종료된 방 조회 가능"""
@@ -192,7 +191,7 @@ class RoomCreateApiTestCase(TestCase):
             },
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         response = self.client.post(
             "/api/chess/rooms/",

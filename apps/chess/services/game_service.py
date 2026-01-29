@@ -20,6 +20,8 @@ from apps.notifications.services import NotificationService
 class MoveResult:
     game: Game
     move: Move | None
+    captured_letter: str | None = None
+    captured_color: str | None = None
 
 
 class GameService:
@@ -80,6 +82,17 @@ class GameService:
         is_capture = board.is_capture(move)
         is_castling = board.is_castling(move)
         is_en_passant = board.is_en_passant(move)
+        captured_letter = None
+        captured_color = None
+        if is_capture:
+            capture_square = move.to_square
+            if is_en_passant:
+                offset = -8 if board.turn == chess.WHITE else 8
+                capture_square = move.to_square + offset
+            captured_piece = board.piece_at(capture_square)
+            if captured_piece:
+                captured_letter = captured_piece.symbol().upper()
+                captured_color = "white" if captured_piece.color == chess.WHITE else "black"
 
         board.push(move)
         new_fen = board.fen()
@@ -87,6 +100,11 @@ class GameService:
         is_check = board.is_check()
         is_checkmate = board.is_checkmate()
         result = GameService._determine_result(board)
+        if result == "playing" and not any(board.legal_moves):
+            if board.is_check():
+                result = "checkmate_black" if board.turn == chess.WHITE else "checkmate_white"
+            else:
+                result = "stalemate"
 
         move_number = (game.move_count // 2) + 1
         move_obj = Move.objects.create(
@@ -142,7 +160,12 @@ class GameService:
         game.save(update_fields=update_fields)
         if rating_info:
             GameService._notify_game_end(game, rating_info)
-        return MoveResult(game=game, move=move_obj)
+        return MoveResult(
+            game=game,
+            move=move_obj,
+            captured_letter=captured_letter,
+            captured_color=captured_color,
+        )
 
     @staticmethod
     @transaction.atomic
