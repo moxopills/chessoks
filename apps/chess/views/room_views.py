@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from apps.chess.serializers import (
     PagedRoomSerializer,
+    RoomCreateRequestSerializer,
     RoomJoinRequestSerializer,
     RoomReadyRequestSerializer,
     RoomReadyResponseSerializer,
@@ -18,7 +19,7 @@ from apps.chess.utils import parse_int
 
 
 class RoomListView(APIView):
-    """방 목록 조회 (공개방)"""
+    """방 목록 조회/생성"""
 
     permission_classes = [IsAuthenticated]
 
@@ -39,6 +40,28 @@ class RoomListView(APIView):
         )
         data = RoomSerializer(rooms, many=True).data
         return Response({"count": total, "results": data})
+
+    @extend_schema(
+        request=RoomCreateRequestSerializer,
+        responses={201: RoomSerializer},
+        tags=["방"],
+    )
+    def post(self, request):
+        """방 생성"""
+        serializer = RoomCreateRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        room = RoomQueryService.create_room(
+            request.user,
+            room_type=data.get("room_type", "custom"),
+            title=data.get("title", ""),
+            time_limit=data.get("time_limit", 15),
+            increment_seconds=data.get("increment_seconds", 10),
+            password=data.get("password", ""),
+            allow_spectators=data.get("allow_spectators", True),
+        )
+        return Response(RoomSerializer(room).data, status=201)
 
 
 class RoomDetailView(APIView):

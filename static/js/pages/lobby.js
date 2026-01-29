@@ -20,6 +20,7 @@
     let lobbySocket = null;
     let currentUserId = null;
     let lobbyUsers = {};
+    let lobbyRooms = [];
 
     // 초기화
     init();
@@ -35,7 +36,8 @@
     async function loadRooms() {
         try {
             const data = await API.get('/chess/rooms/', { status: 'waiting', limit: 5 });
-            renderRooms(data.results || data);
+            lobbyRooms = data.results || data || [];
+            renderRooms(lobbyRooms);
         } catch (error) {
             roomList.innerHTML = '<div class="room-empty">방 목록을 불러올 수 없습니다.</div>';
         }
@@ -56,7 +58,7 @@
                     <div class="room-title">${Utils.escapeHtml(room.title || '빠른 대전')}</div>
                     <div class="room-meta">
                         ${Utils.escapeHtml(room.host?.nickname || '호스트')} ·
-                        ${room.time_limit ? Utils.formatTime(room.time_limit) : '무제한'}
+                        ${room.time_limit ? `${room.time_limit}분` : '무제한'}
                     </div>
                 </div>
                 <span class="room-status ${room.status}">${room.status === 'waiting' ? '대기 중' : '게임 중'}</span>
@@ -251,8 +253,8 @@
         if (data.type === 'chat') {
             addChatMessage(data);
         } else if (data.type === 'recent_messages') {
-            // 최근 메시지 로드
-            data.messages.forEach(msg => addChatMessage(msg));
+            // 최근 메시지는 표시하지 않음
+            return;
         } else if (data.type === 'lobby_users') {
             // 접속자 목록 초기화
             lobbyUsers = {};
@@ -263,11 +265,15 @@
         } else if (data.type === 'user_joined') {
             // 유저 입장
             lobbyUsers[data.user.id] = data.user;
-            renderUsers();
+            addUserToList(data.user);
         } else if (data.type === 'user_left') {
             // 유저 퇴장
             delete lobbyUsers[data.user_id];
-            renderUsers();
+            removeUserFromList(data.user_id);
+        } else if (data.type === 'room_update') {
+            upsertRoom(data.room);
+        } else if (data.type === 'room_removed') {
+            removeRoom(data.room_id);
         } else if (data.type === 'error') {
             Toast.error(data.message);
         }
@@ -319,7 +325,37 @@
             return;
         }
 
-        usersList.innerHTML = users.map(user => `
+        usersList.innerHTML = users.map(user => userRowHtml(user)).join('');
+    }
+
+    function addUserToList(user) {
+        const existing = usersList.querySelector(`[data-user-id="${user.id}"]`);
+        if (existing) return;
+
+        const empty = usersList.querySelector('.users-empty');
+        if (empty) {
+            usersList.innerHTML = '';
+        }
+
+        usersList.insertAdjacentHTML('beforeend', userRowHtml(user));
+        userCount.textContent = Object.keys(lobbyUsers).length;
+    }
+
+    function removeUserFromList(userId) {
+        const userEl = usersList.querySelector(`[data-user-id="${userId}"]`);
+        if (userEl) {
+            userEl.remove();
+        }
+
+        const remaining = Object.keys(lobbyUsers).length;
+        userCount.textContent = remaining;
+        if (remaining === 0) {
+            usersList.innerHTML = '<div class="users-empty">접속자가 없습니다.</div>';
+        }
+    }
+
+    function userRowHtml(user) {
+        return `
             <div class="user-item" data-user-id="${user.id}">
                 <div class="user-avatar">
                     ${user.avatar_url
@@ -331,6 +367,30 @@
                     <div class="user-status">온라인</div>
                 </div>
             </div>
-        `).join('');
+        `;
+    }
+
+    function upsertRoom(room) {
+        if (!room || room.status !== 'waiting') {
+            removeRoom(room?.id);
+            return;
+        }
+
+        const index = lobbyRooms.findIndex(item => item.id === room.id);
+        if (index === -1) {
+            lobbyRooms.unshift(room);
+        } else {
+            lobbyRooms[index] = room;
+        }
+        lobbyRooms = lobbyRooms.slice(0, 5);
+        renderRooms(lobbyRooms);
+    }
+
+    function removeRoom(roomId) {
+        if (!roomId) return;
+        const nextRooms = lobbyRooms.filter(room => room.id !== roomId);
+        if (nextRooms.length === lobbyRooms.length) return;
+        lobbyRooms = nextRooms;
+        renderRooms(lobbyRooms);
     }
 })();

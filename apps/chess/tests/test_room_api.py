@@ -101,3 +101,109 @@ class RoomApiTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["id"], finished_room.id)
+
+
+class RoomCreateApiTestCase(TestCase):
+    """방 생성 API 테스트"""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            email="creator@test.com", nickname="생성자", password="Pass123!"
+        )
+
+    def test_create_room_basic(self):
+        """기본 방 생성"""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(
+            "/api/chess/rooms/",
+            {
+                "room_type": "custom",
+                "title": "테스트 방",
+                "time_limit": 10,
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["title"], "테스트 방")
+        self.assertEqual(response.data["time_limit"], 10)
+        self.assertEqual(response.data["host"]["id"], self.user.id)
+        self.assertFalse(response.data["is_private"])
+
+    def test_create_room_with_password(self):
+        """비밀번호 있는 비공개 방 생성"""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(
+            "/api/chess/rooms/",
+            {
+                "room_type": "custom",
+                "title": "비공개 방",
+                "password": "secret123",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data["is_private"])
+
+        # DB에서 확인
+        room = Room.objects.get(pk=response.data["id"])
+        self.assertTrue(room.check_password("secret123"))
+
+    def test_create_room_default_values(self):
+        """기본값으로 방 생성"""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post("/api/chess/rooms/", {})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["room_type"], "custom")
+        self.assertEqual(response.data["time_limit"], 15)
+        self.assertTrue(response.data["allow_spectators"])
+
+    def test_create_room_spectator_disabled(self):
+        """관전 비허용 방 생성"""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(
+            "/api/chess/rooms/",
+            {
+                "allow_spectators": False,
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(response.data["allow_spectators"])
+
+    def test_create_room_unauthenticated(self):
+        """비로그인 시 방 생성 불가"""
+        response = self.client.post(
+            "/api/chess/rooms/",
+            {
+                "title": "테스트",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_create_room_invalid_time_limit(self):
+        """잘못된 시간 제한"""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(
+            "/api/chess/rooms/",
+            {
+                "time_limit": 0,
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.post(
+            "/api/chess/rooms/",
+            {
+                "time_limit": 100,
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_room_invalid_room_type(self):
+        """잘못된 방 타입"""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(
+            "/api/chess/rooms/",
+            {
+                "room_type": "invalid",
+            },
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

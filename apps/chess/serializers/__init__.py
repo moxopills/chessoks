@@ -17,7 +17,11 @@ from apps.chess.serializers.room_action_serializers import (
     RoomReadyResponseSerializer,
     RoomStartConfirmResponseSerializer,
 )
-from apps.chess.serializers.room_serializers import PagedRoomSerializer, RoomSerializer
+from apps.chess.serializers.room_serializers import (
+    PagedRoomSerializer,
+    RoomCreateRequestSerializer,
+    RoomSerializer,
+)
 from apps.chess.serializers.spectator_serializers import SpectatorListSerializer
 
 __all__ = [
@@ -31,6 +35,7 @@ __all__ = [
     "PagedMoveSerializer",
     "PagedGameHistorySerializer",
     "RoomSerializer",
+    "RoomCreateRequestSerializer",
     "PagedRoomSerializer",
     "RoomReadyRequestSerializer",
     "RoomReadyResponseSerializer",
