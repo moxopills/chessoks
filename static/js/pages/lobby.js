@@ -15,6 +15,9 @@
     const chatInput = document.getElementById('chat-input');
     const usersList = document.getElementById('users-list');
     const userCount = document.getElementById('user-count');
+    const mobileTabbar = document.getElementById('mobile-tabbar');
+    const chatBadge = document.getElementById('chat-badge');
+    const chatSection = document.querySelector('.lobby-chat-section');
 
     let isMatching = false;
     let lobbySocket = null;
@@ -22,6 +25,8 @@
     let lobbyUsers = {};
     let lobbyRooms = [];
     let roomRefreshInterval = null;
+    let chatUnread = 0;
+    let isChatOpen = true;
 
     // 초기화
     init();
@@ -30,6 +35,7 @@
         await loadRooms();
         await checkAuthAndSetupChat();
         startRoomAutoRefresh();
+        setupMobileTabs();
     }
 
     /**
@@ -302,6 +308,7 @@
     function handleChatMessage(data) {
         if (data.type === 'chat') {
             addChatMessage(data);
+            handleChatBadge(data);
         } else if (data.type === 'recent_messages') {
             // 최근 메시지 로드
             data.messages.forEach(msg => addChatMessage(msg));
@@ -343,6 +350,47 @@
         `;
         chatMessages.appendChild(messageEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function setupMobileTabs() {
+        if (!mobileTabbar) return;
+        document.body.classList.add('has-mobile-tabbar');
+        const tabs = mobileTabbar.querySelectorAll('.mobile-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.dataset.tab;
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                if (target === 'chat') {
+                    isChatOpen = true;
+                    if (chatSection) chatSection.classList.remove('is-hidden');
+                    resetChatBadge();
+                } else {
+                    isChatOpen = false;
+                    if (chatSection) chatSection.classList.add('is-hidden');
+                }
+            });
+        });
+        isChatOpen = false;
+        if (chatSection) chatSection.classList.add('is-hidden');
+    }
+
+    function handleChatBadge(data) {
+        if (isChatOpen) return;
+        if (data.user_id === currentUserId) return;
+        chatUnread += 1;
+        if (chatBadge) {
+            chatBadge.textContent = chatUnread;
+            chatBadge.classList.remove('hidden');
+        }
+    }
+
+    function resetChatBadge() {
+        chatUnread = 0;
+        if (chatBadge) {
+            chatBadge.textContent = '0';
+            chatBadge.classList.add('hidden');
+        }
     }
 
     /**

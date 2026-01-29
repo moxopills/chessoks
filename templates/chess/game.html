@@ -67,7 +67,7 @@
     <!-- Right: Side Panel -->
     <div class="game-side-panel">
         <!-- Move List -->
-        <div class="panel-section">
+        <div class="panel-section game-chat-section" id="game-chat-section">
             <div class="panel-header">
                 <h3 class="panel-title">기보</h3>
             </div>
@@ -90,6 +90,14 @@
             </div>
         </div>
     </div>
+</div>
+
+<div class="mobile-tabbar" id="mobile-tabbar">
+    <button class="mobile-tab active" data-tab="main">게임</button>
+    <button class="mobile-tab" data-tab="chat">
+        채팅
+        <span class="mobile-tab-badge hidden" id="chat-badge">0</span>
+    </button>
 </div>
 
 <!-- Game End Modal -->
@@ -161,6 +169,7 @@
 
 {% block extra_css %}
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols+2&display=swap');
 /* Game Container */
 .game-container {
     display: grid;
@@ -305,7 +314,7 @@
     line-height: 1;
     cursor: grab;
     transition: transform 0.1s;
-    font-family: 'Noto Sans Symbols2', 'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Sans KR', sans-serif;
+    font-family: 'Noto Sans Symbols 2', 'Noto Sans Symbols2', 'Apple Symbols', 'Symbola', 'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Sans KR', sans-serif;
 }
 
 .piece:active {
@@ -646,6 +655,12 @@
     padding: var(--space-xs);
     color: var(--color-text-muted);
     font-size: 0.625rem;
+}
+
+@media (max-width: 768px) {
+    .game-chat-section.is-hidden {
+        display: none;
+    }
 }
 
 /* Responsive */
