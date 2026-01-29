@@ -253,8 +253,8 @@
         if (data.type === 'chat') {
             addChatMessage(data);
         } else if (data.type === 'recent_messages') {
-            // 최근 메시지는 표시하지 않음
-            return;
+            // 최근 메시지 로드
+            data.messages.forEach(msg => addChatMessage(msg));
         } else if (data.type === 'lobby_users') {
             // 접속자 목록 초기화
             lobbyUsers = {};

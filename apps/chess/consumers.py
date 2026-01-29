@@ -303,6 +303,7 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self.accept()
         await self._set_user_online()
         await self._add_to_lobby()
+        await self._send_recent_messages()
         await self._send_lobby_users()
         await self._broadcast_user_joined()
 
