@@ -386,6 +386,7 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     def _add_to_lobby(self):
         """로비 접속자 목록에 추가"""
         from django.core.cache import cache
+
         user = self.scope["user"]
         users = cache.get(self.lobby_users_key, {})
         users[str(user.id)] = {
@@ -399,6 +400,7 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     def _remove_from_lobby(self):
         """로비 접속자 목록에서 제거"""
         from django.core.cache import cache
+
         user = self.scope["user"]
         users = cache.get(self.lobby_users_key, {})
         users.pop(str(user.id), None)
@@ -408,6 +410,7 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     def _get_lobby_users(self) -> list:
         """로비 접속자 목록 조회"""
         from django.core.cache import cache
+
         users = cache.get(self.lobby_users_key, {})
         return list(users.values())
 
