@@ -8,6 +8,7 @@ class RoomSerializer(serializers.Serializer):
     room_type = serializers.CharField(read_only=True)
     title = serializers.CharField(read_only=True)
     status = serializers.CharField(read_only=True)
+    current_game_id = serializers.SerializerMethodField()
     is_private = serializers.BooleanField(read_only=True)
     allow_spectators = serializers.BooleanField(read_only=True)
     time_limit = serializers.IntegerField(read_only=True)
@@ -20,6 +21,10 @@ class RoomSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField(read_only=True)
     started_at = serializers.DateTimeField(read_only=True, allow_null=True)
     finished_at = serializers.DateTimeField(read_only=True, allow_null=True)
+
+    def get_current_game_id(self, room):
+        game = room.games.filter(result="playing").only("id").first()
+        return game.id if game else None
 
 
 class PagedRoomSerializer(serializers.Serializer):

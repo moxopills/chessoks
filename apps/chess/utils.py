@@ -35,6 +35,22 @@ def broadcast_room_update(room) -> None:
     )
 
 
+def broadcast_room_state(room) -> None:
+    """방 대기실/관전용 업데이트 브로드캐스트"""
+    from apps.chess.serializers import RoomSerializer
+
+    channel_layer = get_channel_layer()
+    if channel_layer is None:
+        return
+    payload = {"type": "room_update", "room": RoomSerializer(room).data}
+    async_to_sync(channel_layer.group_send)(
+        f"chess_room_{room.id}", {"type": "broadcast", "payload": payload}
+    )
+    async_to_sync(channel_layer.group_send)(
+        f"chess_room_{room.id}_spectators", {"type": "broadcast", "payload": payload}
+    )
+
+
 def broadcast_room_removed(room_id: int) -> None:
     """방 삭제 브로드캐스트"""
     channel_layer = get_channel_layer()

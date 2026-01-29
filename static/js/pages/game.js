@@ -91,16 +91,13 @@
                 return;
             }
 
-            // 게임 상세 정보
-            const games = await API.get(`/chess/games/history/`, { limit: 1 });
-            if (games.results && games.results.length > 0) {
-                const latestGame = games.results[0];
-                game = await API.get(`/chess/games/${latestGame.id}/`);
-            } else {
-                // 게임 ID를 room에서 찾아야 함
+            const gameId = room.current_game_id;
+            if (!gameId) {
                 Toast.error('게임을 찾을 수 없습니다.');
+                window.location.href = `/rooms/${roomId}/`;
                 return;
             }
+            game = await API.get(`/chess/games/${gameId}/`);
 
             // 내 색상 결정
             if (currentUser) {
