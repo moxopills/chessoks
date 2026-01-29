@@ -76,6 +76,14 @@
         </div>
     </div>
 </div>
+
+<div class="mobile-tabbar" id="mobile-tabbar">
+    <button class="mobile-tab active" data-tab="main">대기실</button>
+    <button class="mobile-tab" data-tab="chat">
+        채팅
+        <span class="mobile-tab-badge hidden" id="chat-badge">0</span>
+    </button>
+</div>
 {% endblock %}
 
 {% block extra_css %}
@@ -232,6 +240,12 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     padding: var(--space-lg);
+}
+
+@media (max-width: 768px) {
+    .room-chat-section.is-hidden {
+        display: none;
+    }
 }
 
 .section-header {
