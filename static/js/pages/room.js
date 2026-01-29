@@ -27,6 +27,7 @@
     let socket = null;
     let isHost = false;
     let heartbeatInterval = null;
+    let roomPollInterval = null;
 
     // Init
     init();
@@ -50,6 +51,7 @@
         setupLeaveButton();
         setupChat();
         setupExitGuard();
+        startRoomPolling();
         connectWebSocket();
     }
 
@@ -373,6 +375,16 @@
             clearInterval(heartbeatInterval);
             heartbeatInterval = null;
         }
+    }
+
+    function startRoomPolling() {
+        roomPollInterval = setInterval(() => {
+            loadRoom();
+        }, 3000);
+
+        window.addEventListener('beforeunload', () => {
+            if (roomPollInterval) clearInterval(roomPollInterval);
+        });
     }
 
     function setupExitGuard() {
