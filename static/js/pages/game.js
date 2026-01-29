@@ -27,6 +27,7 @@
     const myTimer = document.getElementById('my-timer');
     const moveList = document.getElementById('move-list');
     const turnIndicator = document.getElementById('turn-indicator');
+    const moveSection = document.getElementById('game-moves-section');
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
@@ -43,6 +44,9 @@
     const drawModal = document.getElementById('draw-modal');
     const rematchModal = document.getElementById('rematch-modal');
     const promotionModal = document.getElementById('promotion-modal');
+    const statusModal = document.getElementById('status-modal');
+    const statusModalMessage = document.getElementById('status-modal-message');
+    const statusModalOk = document.getElementById('status-modal-ok');
     let pendingEnd = false;
 
     // State
@@ -59,6 +63,7 @@
     let timerInterval = null;
     let heartbeatInterval = null;
     let hasShownStartGuide = false;
+    let lastTurnColor = null;
     let isChatOpen = false;
     let chatUnread = 0;
 
@@ -85,6 +90,7 @@
         setupMobileTabs();
         setupActions();
         setupModals();
+        setupStatusModal();
         setupExitGuard();
         connectWebSocket();
     }
@@ -326,16 +332,26 @@
             gameActions.style.display = 'none';
         }
 
+        const whiteName = game.white_player?.nickname || '화이트';
+        const blackName = game.black_player?.nickname || '블랙';
+        const currentName = game.current_turn === 'white' ? whiteName : blackName;
+
         if (turnIndicator) {
-            const whiteName = game.white_player?.nickname || '화이트';
-            const blackName = game.black_player?.nickname || '블랙';
-            const currentName = game.current_turn === 'white' ? whiteName : blackName;
             if (!hasShownStartGuide && game.move_count === 0) {
                 turnIndicator.textContent = `${currentName}님부터 시작합니다. 번갈아가며 한 번씩 수를 둡니다.`;
-                hasShownStartGuide = true;
             } else {
                 turnIndicator.textContent = `지금은 ${currentName}님의 차례입니다.`;
             }
+        }
+
+        if (!hasShownStartGuide && game.move_count === 0) {
+            showStatusModal(`${currentName}님부터 시작합니다. 번갈아가며 한 번씩 수를 둡니다.`, 2500);
+            hasShownStartGuide = true;
+        }
+
+        if (lastTurnColor !== game.current_turn) {
+            lastTurnColor = game.current_turn;
+            showStatusModal(`지금은 ${currentName}님의 차례입니다.`, 1500);
         }
     }
 
@@ -402,6 +418,17 @@
         if (selectedSquare) {
             // 이동 시도
             const targetSquare = toActualSquare(squareName);
+            const targetEl = document.querySelector(`[data-square="${squareName}"]`);
+            const targetPiece = targetEl?.querySelector('.piece');
+            if (targetPiece) {
+                const isWhitePiece = targetPiece.classList.contains('white');
+                const isMyPiece = (myColor === 'white' && isWhitePiece) || (myColor === 'black' && !isWhitePiece);
+                if (isMyPiece) {
+                    clearSelection();
+                    await selectSquare(squareName);
+                    return;
+                }
+            }
             if (validMoves.includes(targetSquare)) {
                 makeMove(selectedSquare, targetSquare);
             }
@@ -711,15 +738,18 @@
                 if (target === 'chat') {
                     isChatOpen = true;
                     if (chatSection) chatSection.classList.remove('is-hidden');
+                    if (moveSection) moveSection.classList.add('is-hidden');
                     resetChatBadge();
                 } else {
                     isChatOpen = false;
                     if (chatSection) chatSection.classList.add('is-hidden');
+                    if (moveSection) moveSection.classList.remove('is-hidden');
                 }
             });
         });
         isChatOpen = false;
         if (chatSection) chatSection.classList.add('is-hidden');
+        if (moveSection) moveSection.classList.remove('is-hidden');
     }
 
     function handleChatBadge(data) {
@@ -826,6 +856,24 @@
             socket.send(JSON.stringify({ action: 'decline_rematch', game_id: game.id }));
             rematchModal.classList.add('hidden');
         });
+    }
+
+    function setupStatusModal() {
+        if (!statusModalOk) return;
+        statusModalOk.addEventListener('click', () => {
+            statusModal.classList.add('hidden');
+        });
+    }
+
+    function showStatusModal(message, autoCloseMs = null) {
+        if (!statusModal || !statusModalMessage) return;
+        statusModalMessage.textContent = message;
+        statusModal.classList.remove('hidden');
+        if (autoCloseMs) {
+            setTimeout(() => {
+                statusModal.classList.add('hidden');
+            }, autoCloseMs);
+        }
     }
 
     /**
