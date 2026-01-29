@@ -296,18 +296,26 @@
             if (!password) return;
 
             try {
-                await API.post(`/chess/rooms/${roomId}/join/`, { password });
+            const joined = await API.post(`/chess/rooms/${roomId}/join/`, { password });
+            if (joined.room_type === 'quick' || joined.status === 'playing') {
+                window.location.href = `/games/${roomId}/`;
+            } else {
                 window.location.href = `/rooms/${roomId}/`;
-            } catch (error) {
-                Toast.error(error.data?.message || '입장에 실패했습니다.');
             }
-            return;
+        } catch (error) {
+            Toast.error(error.data?.message || '입장에 실패했습니다.');
+        }
+        return;
         }
 
         // 일반 입장
         try {
-            await API.post(`/chess/rooms/${roomId}/join/`);
-            window.location.href = `/rooms/${roomId}/`;
+            const joined = await API.post(`/chess/rooms/${roomId}/join/`);
+            if (joined.room_type === 'quick' || joined.status === 'playing') {
+                window.location.href = `/games/${roomId}/`;
+            } else {
+                window.location.href = `/rooms/${roomId}/`;
+            }
         } catch (error) {
             Toast.error(error.data?.message || '입장에 실패했습니다.');
         }

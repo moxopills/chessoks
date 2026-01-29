@@ -113,8 +113,12 @@
         }
 
         try {
-            await API.post(`/chess/rooms/${roomId}/join/`, payload);
-            window.location.href = `/rooms/${roomId}/`;
+            const joined = await API.post(`/chess/rooms/${roomId}/join/`, payload);
+            if (joined.room_type === 'quick' || joined.status === 'playing') {
+                window.location.href = `/games/${roomId}/`;
+            } else {
+                window.location.href = `/rooms/${roomId}/`;
+            }
         } catch (error) {
             Toast.error(error.data?.message || '입장에 실패했습니다.');
         }

@@ -27,6 +27,7 @@ class GameService:
 
     DRAW_OFFER_TTL = 300
     REMATCH_OFFER_TTL = 90
+    DISCONNECT_GRACE_SECONDS = 180
     TIER_ORDER = {
         "Beginner": 0,
         "Junior": 1,
@@ -157,6 +158,7 @@ class GameService:
         game.save(update_fields=["result", "finished_at"])
         GameService._notify_game_end(game, rating_info)
         GameService._clear_draw_offers(game.id)
+        GameService._clear_disconnects(game.id)
         return game
 
     @staticmethod
@@ -307,6 +309,21 @@ class GameService:
         GameService._notify_game_end(game, rating_info)
         GameService._clear_draw_offers(game.id)
         GameService._clear_rematch_offers(game.id)
+        GameService._clear_disconnects(game.id)
+
+    @staticmethod
+    def apply_disconnect_forfeit(game: Game, player_color: str, now) -> None:
+        if player_color == "white":
+            game.result = "resignation_white"
+        else:
+            game.result = "resignation_black"
+        rating_info = GameService._apply_rating_update(game)
+        game.finished_at = now
+        game.save(update_fields=["result", "finished_at"])
+        GameService._notify_game_end(game, rating_info)
+        GameService._clear_draw_offers(game.id)
+        GameService._clear_rematch_offers(game.id)
+        GameService._clear_disconnects(game.id)
 
     @staticmethod
     def _determine_result(board: chess.Board) -> str:
@@ -374,6 +391,15 @@ class GameService:
     def _clear_draw_offers(game_id: int) -> None:
         cache.delete(GameService._draw_offer_key(game_id, "white"))
         cache.delete(GameService._draw_offer_key(game_id, "black"))
+
+    @staticmethod
+    def _disconnect_key(game_id: int, player_color: str) -> str:
+        return f"chess:disconnect:{game_id}:{player_color}"
+
+    @staticmethod
+    def _clear_disconnects(game_id: int) -> None:
+        cache.delete(GameService._disconnect_key(game_id, "white"))
+        cache.delete(GameService._disconnect_key(game_id, "black"))
 
     @staticmethod
     def _rematch_offer_key(game_id: int, player_color: str) -> str:

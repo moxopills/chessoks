@@ -49,6 +49,7 @@
         await loadRoom();
         setupLeaveButton();
         setupChat();
+        setupExitGuard();
         connectWebSocket();
     }
 
@@ -372,6 +373,17 @@
             clearInterval(heartbeatInterval);
             heartbeatInterval = null;
         }
+    }
+
+    function setupExitGuard() {
+        const logo = document.querySelector('.navbar-logo');
+        if (!logo) return;
+        logo.addEventListener('click', (e) => {
+            const leave = confirm('대기실을 나가시겠습니까?');
+            if (!leave) {
+                e.preventDefault();
+            }
+        });
     }
 
     // 페이지 떠날 때 정리
