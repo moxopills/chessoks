@@ -79,7 +79,13 @@ class CoreFlowApiTestCase(TestCase):
         self.assertEqual(response_b.status_code, status.HTTP_200_OK)
         self.assertEqual(response_b.data["status"], "matched")
 
-        game = Game.objects.filter(room_id=response_b.data["room_id"], result="playing").first()
+        game_id = response_b.data.get("game_id")
+        if game_id:
+            game = Game.objects.get(pk=game_id)
+        else:
+            game = Game.objects.filter(
+                room_id=response_b.data["room_id"], result="playing"
+            ).first()
         self.assertIsNotNone(game)
 
         # white makes a move
