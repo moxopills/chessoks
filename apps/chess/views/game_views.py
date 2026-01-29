@@ -50,3 +50,14 @@ class GameLegalMoveView(APIView):
         from_square = request.query_params.get("from")
         moves = GameQueryService.list_legal_moves(game_id, request.user, from_square)
         return Response({"moves": moves})
+
+
+class GameCapturedView(APIView):
+    """잡힌 기물 요약"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: None}, tags=["게임"])
+    def get(self, request, game_id: int):
+        captured = GameQueryService.captured_summary(game_id, request.user)
+        return Response(captured)

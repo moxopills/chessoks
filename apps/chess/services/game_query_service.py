@@ -90,6 +90,30 @@ class GameQueryService:
         return legal_moves
 
     @staticmethod
+    def captured_summary(game_id: int, user) -> dict:
+        game = GameQueryService.get_game_for_user(game_id, user)
+        moves = (
+            Move.objects.filter(game=game)
+            .order_by("move_number", "player_color", "id")
+            .only("uci", "is_capture", "is_en_passant")
+        )
+        board = chess.Board()
+        captured = {"white": [], "black": []}
+        for move in moves:
+            if move.is_capture:
+                move_obj = chess.Move.from_uci(move.uci)
+                capture_square = move_obj.to_square
+                if move.is_en_passant:
+                    offset = -8 if board.turn == chess.WHITE else 8
+                    capture_square = move_obj.to_square + offset
+                captured_piece = board.piece_at(capture_square)
+                if captured_piece:
+                    color = "white" if captured_piece.color == chess.WHITE else "black"
+                    captured[color].append(captured_piece.symbol().upper())
+            board.push(chess.Move.from_uci(move.uci))
+        return captured
+
+    @staticmethod
     def _has_access(game: Game, user) -> bool:
         room = game.room
         if user == game.white_player or user == game.black_player:

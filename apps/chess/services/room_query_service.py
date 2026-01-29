@@ -11,12 +11,10 @@ class RoomQueryService:
 
     @staticmethod
     def list_rooms(
-        *, room_type: str | None, status: str | None, limit: int, offset: int
+        *, user, room_type: str | None, status: str | None, limit: int, offset: int
     ) -> tuple[int, list[Room]]:
-        queryset = (
-            Room.objects.filter(is_private=False)
-            .select_related("host__stats", "guest__stats")
-            .order_by("-created_at")
+        queryset = Room.objects.select_related("host__stats", "guest__stats").order_by(
+            "-created_at"
         )
 
         if room_type:

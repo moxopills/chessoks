@@ -257,7 +257,7 @@
         try {
             const data = {
                 room_type: 'custom',
-                time_limit: timeLimit || null,
+                time_limit: timeLimit,
                 allow_spectators: allowSpectators
             };
 

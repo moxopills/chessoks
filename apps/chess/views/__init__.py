@@ -1,4 +1,9 @@
-from apps.chess.views.game_views import GameDetailView, GameLegalMoveView, GameMoveListView
+from apps.chess.views.game_views import (
+    GameCapturedView,
+    GameDetailView,
+    GameLegalMoveView,
+    GameMoveListView,
+)
 from apps.chess.views.history_views import GameHistoryView
 from apps.chess.views.match_views import CancelMatchView, QuickMatchView
 from apps.chess.views.room_views import (
@@ -19,6 +24,7 @@ __all__ = [
     "QuickMatchView",
     "CancelMatchView",
     "GameDetailView",
+    "GameCapturedView",
     "GameLegalMoveView",
     "GameMoveListView",
     "GameHistoryView",
