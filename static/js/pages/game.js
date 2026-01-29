@@ -728,10 +728,12 @@
                 if (data.last_move) {
                     lastMove = data.last_move;
                     if (data.last_move.is_check && data.result === 'playing') {
-                        showStatusModal('체크입니다. 왕을 보호하세요.', 1500);
+                        if (myColor && myColor === data.current_turn) {
+                            showStatusModal('체크입니다. 왕을 보호하세요.');
+                        }
                     }
                     if (data.last_move.is_checkmate) {
-                        showStatusModal('체크메이트입니다.', 1500);
+                        showStatusModal('체크메이트입니다.');
                     }
                 }
 
