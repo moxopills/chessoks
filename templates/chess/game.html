@@ -68,7 +68,7 @@
     <!-- Right: Side Panel -->
     <div class="game-side-panel">
         <!-- Move List -->
-        <div class="panel-section game-chat-section" id="game-chat-section">
+        <div class="panel-section game-moves-section" id="game-moves-section">
             <div class="panel-header">
                 <h3 class="panel-title">기보</h3>
             </div>
@@ -78,7 +78,7 @@
         </div>
 
         <!-- Chat -->
-        <div class="panel-section">
+        <div class="panel-section game-chat-section" id="game-chat-section">
             <div class="panel-header">
                 <h3 class="panel-title">채팅</h3>
             </div>
@@ -144,6 +144,20 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" id="decline-rematch-btn">거절</button>
                 <button class="btn btn-primary" id="accept-rematch-btn">수락</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay hidden" id="status-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 class="modal-title" id="status-modal-title">알림</h2>
+        </div>
+        <div class="modal-body">
+            <p id="status-modal-message">게임이 시작됩니다.</p>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="status-modal-ok">확인</button>
             </div>
         </div>
     </div>
@@ -680,6 +694,10 @@
 
 @media (max-width: 768px) {
     .game-chat-section.is-hidden {
+        display: none;
+    }
+
+    .game-moves-section.is-hidden {
         display: none;
     }
 }
