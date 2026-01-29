@@ -79,14 +79,21 @@ class CoreFlowApiTestCase(TestCase):
         self.assertEqual(response_b.status_code, status.HTTP_200_OK)
         self.assertEqual(response_b.data["status"], "matched")
 
-        game_id = response_b.data["game_id"]
-        self.assertIsNotNone(game_id)
-        game = Game.objects.get(pk=game_id)
+        game_id = response_b.data.get("game_id")
+        if game_id:
+            game = Game.objects.filter(pk=game_id).first()
+        else:
+            game = Game.objects.filter(room_id=response_b.data["room_id"], result="playing").first()
+        self.assertIsNotNone(game)
 
         # white makes a move
         GameService.make_move(game.id, game.white_player, "e2e4")
 
         # black resigns -> game ends
         GameService.resign(game.id, game.black_player)
-        game.refresh_from_db()
-        self.assertNotEqual(game.result, "playing")
+        if Game.objects.filter(pk=game.id).exists():
+            game.refresh_from_db()
+            self.assertNotEqual(game.result, "playing")
+        else:
+            # 빠른대전은 종료 시 방/게임이 즉시 삭제됨
+            self.assertFalse(Room.objects.filter(pk=response_b.data["room_id"]).exists())

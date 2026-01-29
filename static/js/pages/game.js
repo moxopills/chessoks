@@ -32,6 +32,7 @@
     const gameActions = document.getElementById('game-actions');
     const drawBtn = document.getElementById('draw-btn');
     const resignBtn = document.getElementById('resign-btn');
+    const leaveBtn = document.getElementById('leave-btn');
 
     // Modals
     const gameEndModal = document.getElementById('game-end-modal');
@@ -659,6 +660,17 @@
             if (!confirm('정말 기권하시겠습니까?')) return;
             socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
         });
+
+        if (leaveBtn) {
+            leaveBtn.addEventListener('click', () => {
+                if (myColor) {
+                    if (!confirm('나가면 기권 처리됩니다. 나가시겠습니까?')) return;
+                    socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
+                } else {
+                    window.location.href = '/';
+                }
+            });
+        }
     }
 
     function setupExitGuard() {
@@ -727,10 +739,9 @@
         let resultText = result;
 
         // 결과에 따른 표시
-        const isWin = (result.includes('white') && myColor === 'white') ||
-                      (result.includes('black') && myColor === 'black');
-        const isLoss = (result.includes('white') && myColor === 'black') ||
-                       (result.includes('black') && myColor === 'white');
+        const outcome = getOutcome(result, myColor);
+        const isWin = outcome === 'win';
+        const isLoss = outcome === 'loss';
 
         if (result.includes('checkmate')) {
             icon = isWin ? '👑' : '💀';
@@ -754,7 +765,28 @@
         titleEl.textContent = title;
         resultEl.textContent = resultText;
 
+        loadRatingChange();
+
         gameEndModal.classList.remove('hidden');
+    }
+
+    function getOutcome(result, color) {
+        if (!color) return null;
+        const whiteWin = ['white_win', 'checkmate_white', 'timeout_black', 'resignation_black'];
+        const blackWin = ['black_win', 'checkmate_black', 'timeout_white', 'resignation_white'];
+        const draws = [
+            'draw',
+            'draw_agreement',
+            'draw_repetition',
+            'draw_fifty_move',
+            'draw_insufficient',
+            'stalemate'
+        ];
+
+        if (draws.includes(result)) return 'draw';
+        if (whiteWin.includes(result)) return color === 'white' ? 'win' : 'loss';
+        if (blackWin.includes(result)) return color === 'black' ? 'win' : 'loss';
+        return null;
     }
 
     /**
@@ -769,6 +801,38 @@
      */
     function showRematchOfferModal() {
         rematchModal.classList.remove('hidden');
+    }
+
+    async function loadRatingChange() {
+        const ratingEl = document.getElementById('game-end-rating');
+        if (!ratingEl || !currentUser || !game) return;
+
+        try {
+            const data = await API.get('/notifications/', { limit: 10, offset: 0 });
+            const items = data.results || [];
+            const target = items.find(
+                (item) =>
+                    item.type === 'rating_change' &&
+                    item.payload &&
+                    item.payload.game_id === game.id
+            );
+
+            if (!target) {
+                setTimeout(loadRatingChange, 1000);
+                return;
+            }
+
+            const before = target.payload.before;
+            const after = target.payload.after;
+            const delta = target.payload.delta ?? (after - before);
+            const deltaClass = delta >= 0 ? 'positive' : 'negative';
+            ratingEl.innerHTML = `
+                <span>${before} → ${after}</span>
+                <span class="${deltaClass}">(${delta >= 0 ? '+' : ''}${delta})</span>
+            `;
+        } catch {
+            // ignore fetch errors
+        }
     }
 
     /**

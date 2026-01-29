@@ -38,6 +38,11 @@ class MatchmakingService:
         )
         if playing is not None:
             game = playing.games.filter(result="playing").only("id").first()
+            if game is None and playing.host_id and playing.guest_id:
+                white_player, black_player = assign_colors(playing.host, playing.guest)
+                game = Game.objects.create(
+                    room=playing, white_player=white_player, black_player=black_player
+                )
             return playing, game, "matched"
 
         existing = (

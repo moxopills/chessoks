@@ -5,8 +5,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.chess.models import Game
 from apps.chess.serializers import CancelMatchResponseSerializer, QuickMatchResponseSerializer
 from apps.chess.services import MatchmakingService
+from apps.chess.utils import assign_colors
 
 
 class QuickMatchView(APIView):
@@ -21,6 +23,13 @@ class QuickMatchView(APIView):
     )
     def post(self, request):
         room, game, status = MatchmakingService.quick_match(request.user)
+        if status == "matched" and game is None:
+            game = room.games.filter(result="playing").first()
+            if game is None:
+                white_player, black_player = assign_colors(room.host, room.guest)
+                game = Game.objects.create(
+                    room=room, white_player=white_player, black_player=black_player
+                )
         data = {
             "status": status,
             "room_id": room.id,
