@@ -69,3 +69,50 @@ def cleanup_deleted_accounts() -> int:
     deleted_count, _ = expired_accounts.delete()
     logger.info(f"탈퇴 계정 {deleted_count}개 삭제 완료")
     return deleted_count
+
+
+@shared_task
+def cleanup_expired_sanctions() -> dict:
+    """만료된 정지/뮤트 자동 해제"""
+    now = timezone.now()
+    unmuted = 0
+    unsuspended = 0
+
+    muted_users = User.objects.filter(muted_until__isnull=False, muted_until__lte=now)
+    for user in muted_users:
+        user.muted_until = None
+        user.mute_reason = ""
+        user.save(update_fields=["muted_until", "mute_reason"])
+        from apps.notifications.services import NotificationService
+
+        NotificationService.create_notification(
+            user=user,
+            type="chat_unmute",
+            title="채팅 제한 해제",
+            message="채팅 제한이 해제되었습니다.",
+            payload={},
+        )
+        unmuted += 1
+
+    suspended_users = User.objects.filter(suspended_until__isnull=False, suspended_until__lte=now)
+    for user in suspended_users:
+        user.suspended_until = None
+        user.suspension_reason = ""
+        user.save(update_fields=["suspended_until", "suspension_reason"])
+        from apps.notifications.services import NotificationService
+
+        NotificationService.create_notification(
+            user=user,
+            type="account_unsuspended",
+            title="계정 정지 해제",
+            message="계정 정지가 해제되었습니다.",
+            payload={},
+        )
+        unsuspended += 1
+
+    logger.info(
+        "정지/뮤트 자동 해제 완료: chat_unmute=%s, account_unsuspended=%s",
+        unmuted,
+        unsuspended,
+    )
+    return {"unmuted": unmuted, "unsuspended": unsuspended}

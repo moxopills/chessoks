@@ -211,6 +211,10 @@
     flex-wrap: wrap;
 }
 
+.form-actions-spaced {
+    margin-bottom: var(--space-md);
+}
+
 .helper-text {
     font-size: 0.75rem;
     color: var(--color-text-muted);

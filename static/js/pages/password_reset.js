@@ -14,7 +14,7 @@
         e.preventDefault();
         try {
             const result = await API.post('/accounts/password-reset/request/', { email: resetEmail.value.trim() });
-            Toast.success(result.message || '재설정 메일을 발송했습니다.');
+            Toast.success(result.message || '재설정 인증번호를 발송했습니다.');
         } catch (error) {
             Toast.error(error.data?.message || '요청에 실패했습니다.');
         }
@@ -25,7 +25,7 @@
         formError.textContent = '';
         try {
             const payload = {
-                token: resetToken.value.trim(),
+                code: resetToken.value.trim(),
                 new_password: resetPassword.value,
                 new_password2: resetPassword2.value,
             };

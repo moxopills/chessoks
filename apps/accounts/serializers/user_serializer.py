@@ -20,6 +20,8 @@ class UserSerializer(serializers.ModelSerializer):
     """사용자 정보 조회용 Serializer"""
 
     stats = UserStatsSerializer(read_only=True)
+    is_muted = serializers.SerializerMethodField()
+    is_suspended = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -30,12 +32,24 @@ class UserSerializer(serializers.ModelSerializer):
             "avatar_url",
             "bio",
             "created_at",
+            "suspended_until",
+            "suspension_reason",
+            "muted_until",
+            "mute_reason",
+            "is_muted",
+            "is_suspended",
             "stats",
         )
         read_only_fields = (
             "id",
             "created_at",
         )
+
+    def get_is_muted(self, obj):
+        return obj.is_muted
+
+    def get_is_suspended(self, obj):
+        return obj.is_suspended
 
 
 class PublicUserSerializer(serializers.ModelSerializer):
@@ -215,7 +229,7 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 class PasswordResetConfirmSerializer(serializers.Serializer):
     """비밀번호 재설정 확인"""
 
-    token = serializers.CharField(help_text="이메일로 받은 토큰")
+    code = serializers.CharField(min_length=6, max_length=6, help_text="이메일로 받은 인증번호")
     new_password = serializers.CharField(
         write_only=True, help_text="새 비밀번호 (최소 8자, 대소문자, 숫자, 특수문자 각 1개 이상)"
     )
@@ -296,4 +310,4 @@ class EmailChangeRequestSerializer(serializers.Serializer):
 class EmailChangeConfirmSerializer(serializers.Serializer):
     """이메일 변경 확인"""
 
-    token = serializers.CharField(help_text="이메일로 받은 인증 토큰")
+    code = serializers.CharField(min_length=6, max_length=6, help_text="이메일로 받은 인증번호")

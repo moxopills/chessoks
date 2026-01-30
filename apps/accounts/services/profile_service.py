@@ -20,7 +20,8 @@ from apps.accounts.utils import (
     get_user_or_timing_safe_response,
     mark_signup_token_as_used,
     mark_token_as_used,
-    send_password_reset_email,
+    send_email_change_code,
+    send_password_reset_code,
     send_signup_verification_email,
     send_verification_email,
     validate_signup_email_code,
@@ -36,6 +37,16 @@ logger = logging.getLogger(__name__)
 EMAIL_VERIFICATION_HOURS = 24
 PASSWORD_RESET_HOURS = 1
 SIGNUP_EMAIL_CACHE_TTL = 600
+EMAIL_CHANGE_CODE_TTL = EMAIL_VERIFICATION_HOURS * 60 * 60
+PASSWORD_RESET_CODE_TTL = PASSWORD_RESET_HOURS * 60 * 60
+
+
+def _email_change_code_key(user_id: int, code: str) -> str:
+    return f"email_change_code:{user_id}:{code}"
+
+
+def _password_reset_code_key(code: str) -> str:
+    return f"password_reset_code:{code}"
 
 
 def _check_availability(user: User | None, field_name: str) -> dict:
@@ -170,7 +181,7 @@ class UserProfileService:
         _validate_serializer(serializer)
 
         email = serializer.validated_data["email"]
-        success_message = "비밀번호 재설정 링크를 이메일로 전송했습니다."
+        success_message = "비밀번호 재설정 인증번호를 이메일로 전송했습니다."
 
         user, error_response = get_user_or_timing_safe_response(
             email=email, success_message=success_message, is_active_only=True
@@ -183,7 +194,9 @@ class UserProfileService:
             user=user,
             expiry_hours=PASSWORD_RESET_HOURS,
         )
-        send_password_reset_email(user.email, token.token)
+        code = f"{uuid.uuid4().int % 1_000_000:06d}"
+        cache.set(_password_reset_code_key(code), token.token, timeout=PASSWORD_RESET_CODE_TTL)
+        send_password_reset_code(user.email, code)
 
         return _ok({"message": success_message}, status.HTTP_200_OK)
 
@@ -197,7 +210,10 @@ class UserProfileService:
             field_name="new_password",
         )
 
-        token_str = serializer.validated_data["token"]
+        code = serializer.validated_data["code"]
+        token_str = cache.get(_password_reset_code_key(code))
+        if not token_str:
+            raise ValidationError({"code": ["유효하지 않은 인증번호입니다."]})
         new_password = serializer.validated_data["new_password"]
 
         token, error_response = validate_token(
@@ -208,6 +224,7 @@ class UserProfileService:
 
         PasswordService.change_password(token.user, new_password)
         mark_token_as_used(token)
+        cache.delete(_password_reset_code_key(code))
 
         return _ok({"message": "비밀번호가 재설정되었습니다."}, status.HTTP_200_OK)
 
@@ -387,33 +404,38 @@ class UserProfileService:
             expiry_hours=EMAIL_VERIFICATION_HOURS,
             new_email=new_email,
         )
-        send_verification_email(new_email, token.token)
+        code = f"{uuid.uuid4().int % 1_000_000:06d}"
+        cache.set(_email_change_code_key(user.id, code), token.token, timeout=EMAIL_CHANGE_CODE_TTL)
+        send_email_change_code(new_email, code)
 
-        return _ok({"message": f"인증 이메일을 {new_email}로 전송했습니다."}, status.HTTP_200_OK)
+        return _ok({"message": f"인증번호를 {new_email}로 전송했습니다."}, status.HTTP_200_OK)
 
     @staticmethod
     def email_change_confirm(serializer, user: User) -> ServiceResult:
         _validate_serializer(serializer)
 
-        token_str = serializer.validated_data["token"]
+        code = serializer.validated_data["code"]
+        token_str = cache.get(_email_change_code_key(user.id, code))
+        if not token_str:
+            raise ValidationError({"code": ["유효하지 않은 인증번호입니다."]})
         token, error_response = validate_token(
             token_str,
             token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
             error_messages={
-                "not_found": "유효하지 않은 인증 토큰입니다.",
-                "invalid": "만료되었거나 이미 사용된 토큰입니다.",
+                "not_found": "유효하지 않은 인증번호입니다.",
+                "invalid": "만료되었거나 이미 사용된 인증번호입니다.",
             },
         )
         if error_response:
             raise ValidationError(error_response.data)
 
         if token.user_id != user.id:
-            raise ValidationError({"token": ["본인의 인증 토큰이 아닙니다."]})
+            raise ValidationError({"code": ["본인의 인증번호가 아닙니다."]})
 
         new_email = token.new_email
         if not new_email:
             raise ValidationError(
-                {"token": ["이메일 변경 요청이 만료되었습니다. 다시 시도해주세요."]}
+                {"code": ["이메일 변경 요청이 만료되었습니다. 다시 시도해주세요."]}
             )
 
         if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
@@ -423,4 +445,5 @@ class UserProfileService:
         user.save(update_fields=["email"])
 
         mark_token_as_used(token)
+        cache.delete(_email_change_code_key(user.id, code))
         return _ok({"message": f"이메일이 {new_email}로 변경되었습니다."}, status.HTTP_200_OK)

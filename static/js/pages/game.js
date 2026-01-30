@@ -41,6 +41,7 @@
     const resignBtn = document.getElementById('resign-btn');
     const leaveBtn = document.getElementById('leave-btn');
     const replayBtn = document.getElementById('replay-btn');
+    const rematchBtn = document.getElementById('rematch-btn');
 
     // Modals
     const gameEndModal = document.getElementById('game-end-modal');
@@ -67,6 +68,8 @@
     let game = null;
     let currentUser = null;
     let socket = null;
+    let notificationSocket = null;
+    let isSuspended = false;
     let myColor = null; // 'white' or 'black'
     let isMyTurn = false;
     let selectedSquare = null;
@@ -84,6 +87,7 @@
     let replayActive = false;
     let liveFen = null;
     let liveLastMove = null;
+    let replayGameId = null;
     let captured = { white: [], black: [] };
     let isChatOpen = false;
     let chatUnread = 0;
@@ -101,6 +105,13 @@
 
         try {
             currentUser = await API.get('/accounts/me/');
+            if (currentUser?.is_muted) {
+                setChatMutedState(true, currentUser.mute_reason || '');
+            }
+            if (currentUser?.is_suspended) {
+                setSuspendedState(true, currentUser.suspension_reason || '');
+            }
+            connectNotificationSocket();
         } catch {
             // 관전자로 처리
             currentUser = null;
@@ -215,13 +226,34 @@
         hasShownStartGuide = false;
         lastTurnColor = null;
 
-        try {
-            game = await API.get(`/chess/games/${rematchGameId}/`);
-        } catch (error) {
+        let fetched = null;
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            try {
+                fetched = await API.get(`/chess/games/${rematchGameId}/`);
+                break;
+            } catch (error) {
+                if (attempt === 2) {
+                    break;
+                }
+                await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+        }
+        if (!fetched) {
+            try {
+                const room = await API.get(`/chess/rooms/${targetRoomId}/`);
+                if (room?.current_game_id) {
+                    fetched = await API.get(`/chess/games/${room.current_game_id}/`);
+                }
+            } catch (error) {
+                // fallback handled below
+            }
+        }
+        if (!fetched) {
             Toast.error('리매치 정보를 불러오지 못했습니다.');
             window.location.href = `/games/${targetRoomId}/`;
             return;
         }
+        game = fetched;
 
         if (currentUser) {
             if (game.white_player?.id === currentUser.id) {
@@ -914,6 +946,65 @@
         });
     }
 
+    function connectNotificationSocket() {
+        if (notificationSocket || !currentUser) return;
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/notifications/`;
+        notificationSocket = new WebSocket(wsUrl);
+        notificationSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === 'chat_mute') {
+                setChatMutedState(true, data.payload?.reason || '');
+                Toast.error(data.message || '채팅이 제한되었습니다.');
+            } else if (data.type === 'account_suspended') {
+                setSuspendedState(true, data.payload?.reason || '');
+                Toast.error(data.message || '계정이 정지되었습니다.');
+            } else if (data.type === 'chat_unmute') {
+                setChatMutedState(false);
+                Toast.success(data.message || '채팅 제한이 해제되었습니다.');
+            } else if (data.type === 'account_unsuspended') {
+                setSuspendedState(false);
+                Toast.success(data.message || '계정 정지가 해제되었습니다.');
+            }
+        };
+    }
+
+    function setChatMutedState(muted, reason = '') {
+        if (!chatInput || !chatForm) return;
+        if (muted) {
+            chatInput.disabled = true;
+            chatForm.querySelector('button').disabled = true;
+            if (reason) {
+                addChatNotice(`채팅 제한됨: ${reason}`);
+            } else {
+                addChatNotice('채팅이 제한되었습니다.');
+            }
+        } else {
+            chatInput.disabled = false;
+            chatForm.querySelector('button').disabled = false;
+        }
+    }
+
+    function setSuspendedState(suspended, reason = '') {
+        isSuspended = suspended;
+        if (suspended) {
+            drawBtn && (drawBtn.disabled = true);
+            resignBtn && (resignBtn.disabled = true);
+            leaveBtn && (leaveBtn.disabled = true);
+            rematchBtn && (rematchBtn.disabled = true);
+            if (reason) {
+                addChatNotice(`계정 정지됨: ${reason}`);
+            } else {
+                addChatNotice('계정이 정지되었습니다.');
+            }
+        } else {
+            drawBtn && (drawBtn.disabled = false);
+            resignBtn && (resignBtn.disabled = false);
+            leaveBtn && (leaveBtn.disabled = false);
+            rematchBtn && (rematchBtn.disabled = false);
+        }
+    }
+
     /**
      * 채팅 메시지 추가
      */
@@ -1106,12 +1197,28 @@
 
     async function openReplay() {
         if (!replayModal) return;
-        if (!replayMoves.length) {
+        if (gameEndModal) {
+            gameEndModal.classList.add('hidden');
+        }
+        replayMoves = [];
+        replayGameId = game?.id || null;
+        try {
+            const data = await API.get(`/chess/games/${game.id}/moves/`, { limit: 200, offset: 0 });
+            replayMoves = data.results || [];
+        } catch (error) {
             try {
-                const data = await API.get(`/chess/games/${game.id}/moves/`, { limit: 200, offset: 0 });
-                replayMoves = data.results || [];
-            } catch (error) {
-                console.error('Failed to load replay moves:', error);
+                const history = await API.get('/chess/games/history/', { limit: 20 });
+                const matches = history.results || [];
+                const fallback = matches.find(item => item.room_id === roomId);
+                if (fallback?.id) {
+                    const data = await API.get(`/chess/games/${fallback.id}/moves/`, { limit: 200, offset: 0 });
+                    replayMoves = data.results || [];
+                    replayGameId = fallback.id;
+                } else {
+                    throw error;
+                }
+            } catch (innerError) {
+                console.error('Failed to load replay moves:', innerError);
                 replayMoves = [];
                 if (replayStatus) replayStatus.textContent = '기보를 불러오지 못했습니다.';
             }
@@ -1132,6 +1239,9 @@
         }
         replayActive = false;
         replayModal.classList.add('hidden');
+        if (gameEndModal) {
+            gameEndModal.classList.remove('hidden');
+        }
         if (liveFen) {
             game.fen = liveFen;
             lastMove = liveLastMove;
