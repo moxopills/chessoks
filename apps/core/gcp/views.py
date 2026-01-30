@@ -1,4 +1,4 @@
-"""S3 이미지 업로드 및 삭제 View"""
+"""GCP 이미지 업로드 및 삭제 View"""
 
 import uuid
 
@@ -10,20 +10,20 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .constants import FileType, S3Constants
-from .uploader import s3_uploader
-from .validators import S3ImageValidator
+from .constants import FileType, GCPConstants
+from .uploader import gcp_uploader
+from .validators import GCPImageValidator
 
 
-class S3DirectUploadView(APIView):
-    """백엔드에서 직접 S3로 업로드 (multipart/form-data)"""
+class GCPDirectUploadView(APIView):
+    """백엔드에서 직접 GCP로 업로드 (multipart/form-data)"""
 
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser]
 
     @extend_schema(
         summary="이미지 직접 업로드",
-        description="S3 파일 업로드",
+        description="GCP 파일 업로드",
         request={
             "multipart/form-data": {
                 "type": "object",
@@ -45,14 +45,14 @@ class S3DirectUploadView(APIView):
                     "application/json": {
                         "example": {
                             "message": "업로드 성공",
-                            "file_url": "https://chessok.s3.ap-northeast-2.amazonaws.com/avatars/uuid.png",
+                            "file_url": "https://storage.googleapis.com/chessok/avatars/uuid.png",
                             "key": "avatars/uuid.png",
                         }
                     }
                 },
             }
         },
-        tags=["S3"],
+        tags=["GCP"],
     )
     def post(self, request: Request) -> Response:
         """파일 업로드"""
@@ -76,28 +76,20 @@ class S3DirectUploadView(APIView):
         content_type = file.content_type
 
         # 검증
-        S3ImageValidator.validate_file_name(file_name)
+        GCPImageValidator.validate_file_name(file_name)
         ext = file_name.rsplit(".", 1)[-1].lower()
-        S3ImageValidator.validate_extension(file_name, ext)
-        S3ImageValidator.validate_mime_type(ext, content_type)
-        S3ImageValidator.validate_file_size(file.size)
+        GCPImageValidator.validate_extension(file_name, ext)
+        GCPImageValidator.validate_mime_type(ext, content_type)
+        GCPImageValidator.validate_file_size(file.size)
 
-        # S3 키 생성
-        prefix = S3Constants.PATH_MAPPING.get(file_type_enum)
+        # GCP 키 생성
+        prefix = GCPConstants.PATH_MAPPING.get(file_type_enum)
         key = f"{prefix}/{uuid.uuid4()}.{ext}"
 
-        # S3 업로드
-        s3_client = s3_uploader.get_s3_client()
-        bucket = s3_uploader.get_bucket_name()
+        # 스토리지 업로드 (GCP)
+        gcp_uploader.upload_fileobj(file.file, key, content_type=content_type)
 
-        s3_client.upload_fileobj(
-            file.file,
-            bucket,
-            key,
-            ExtraArgs={"ContentType": content_type},
-        )
-
-        file_url = f"{s3_uploader.get_s3_base_url()}{key}"
+        file_url = f"{gcp_uploader.get_base_url()}{key}"
 
         return Response(
             {
@@ -109,14 +101,14 @@ class S3DirectUploadView(APIView):
         )
 
 
-class S3FileDeleteView(APIView):
-    """S3 이미지 삭제"""
+class GCPFileDeleteView(APIView):
+    """GCP 이미지 삭제"""
 
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        summary="S3 이미지 삭제",
-        description="S3 객체 키로 이미지를 삭제합니다.",
+        summary="GCP 이미지 삭제",
+        description="GCP 객체 키로 이미지를 삭제합니다.",
         request={
             "application/json": {
                 "type": "object",
@@ -164,9 +156,9 @@ class S3FileDeleteView(APIView):
                 },
             },
         },
-        tags=["S3"],
+        tags=["GCP"],
     )
     def delete(self, request: Request) -> Response:
         key = request.data.get("key", "")
-        result = s3_uploader.delete_file(key=key)
+        result = gcp_uploader.delete_file(key=key)
         return Response(result, status=status.HTTP_200_OK)

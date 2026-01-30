@@ -110,34 +110,22 @@ class BaseTestCase(ErrorResponseMixin, TestCase):
         return SimpleUploadedFile(filename, png_data, content_type="image/png")
 
     @contextmanager
-    def mock_s3(self):
-        """S3 mock context manager"""
-        from moto import mock_aws
+    def mock_gcp(self):
+        """GCP mock context manager"""
+        from unittest.mock import MagicMock
 
-        with patch("apps.core.S3.uploader.settings") as mock_settings:
-            mock_settings.AWS_S3_BUCKET_NAME = "test-bucket"
-            mock_settings.AWS_S3_REGION = "ap-northeast-2"
-            mock_settings.AWS_S3_ACCESS_KEY_ID = "test"
-            mock_settings.AWS_S3_SECRET_ACCESS_KEY = "test"
+        with patch("apps.core.gcp.uploader.settings") as mock_settings:
+            mock_settings.GCS_BUCKET_NAME = "test-bucket"
+            mock_settings.GCS_BASE_URL = "https://storage.googleapis.com/test-bucket/"
 
-            with mock_aws():
-                import boto3
+            client = MagicMock()
+            bucket = MagicMock()
+            blob = MagicMock()
+            client.bucket.return_value = bucket
+            bucket.blob.return_value = blob
 
-                s3_client = boto3.client(
-                    "s3",
-                    region_name="ap-northeast-2",
-                    aws_access_key_id="test",
-                    aws_secret_access_key="test",
-                )
-                s3_client.create_bucket(
-                    Bucket="test-bucket",
-                    CreateBucketConfiguration={"LocationConstraint": "ap-northeast-2"},
-                )
-
-                with patch(
-                    "apps.core.S3.uploader.s3_uploader.get_s3_client", return_value=s3_client
-                ):
-                    yield s3_client
+        with patch("apps.core.gcp.uploader.GCPUploader.get_client", return_value=client):
+            yield client, bucket, blob
 
 
 class BaseAPITestCase(APITestCase, BaseTestCase):
@@ -874,7 +862,7 @@ class AvatarUpdateAPITestCase(BaseAPITestCase):
 
     def test_avatar_update_success(self):
         """아바타 업데이트 - 성공"""
-        with self.mock_s3():
+        with self.mock_gcp():
             response = self.client.patch(
                 "/api/accounts/profile/avatar/",
                 {"avatar": self.create_test_image("avatar.png")},
@@ -889,12 +877,12 @@ class AvatarUpdateAPITestCase(BaseAPITestCase):
 
     def test_avatar_update_replaces_old(self):
         """아바타 업데이트 - 기존 아바타 자동 교체"""
-        self.user.avatar_url = "https://test-bucket.s3.ap-northeast-2.amazonaws.com/avatars/old.png"
+        self.user.avatar_url = "https://storage.googleapis.com/test-bucket/avatars/old.png"
         self.user.save()
         old_url = self.user.avatar_url
 
-        with self.mock_s3() as s3_client:
-            s3_client.put_object(Bucket="test-bucket", Key="avatars/old.png", Body=b"old")
+        with self.mock_gcp() as (_, __, blob):
+            blob.exists.return_value = True
 
             response = self.client.patch(
                 "/api/accounts/profile/avatar/",
@@ -942,13 +930,11 @@ class AvatarUpdateAPITestCase(BaseAPITestCase):
 
     def test_avatar_delete_success(self):
         """아바타 삭제 - 성공"""
-        self.user.avatar_url = (
-            "https://test-bucket.s3.ap-northeast-2.amazonaws.com/avatars/test.png"
-        )
+        self.user.avatar_url = "https://storage.googleapis.com/test-bucket/avatars/test.png"
         self.user.save()
 
-        with self.mock_s3() as s3_client:
-            s3_client.put_object(Bucket="test-bucket", Key="avatars/test.png", Body=b"test")
+        with self.mock_gcp() as (_, __, blob):
+            blob.exists.return_value = True
 
             response = self.client.delete("/api/accounts/profile/avatar/")
 

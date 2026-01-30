@@ -1,4 +1,4 @@
-"""S3 이미지 업로드 상수 및 설정"""
+"""GCP 이미지 업로드 상수 및 설정"""
 
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ class FileType(str, Enum):
     USER_AVATAR = "user_avatar"  # 유저 프로필 이미지
 
 
-class S3Constants:
-    """S3 이미지 업로드 상수"""
+class GCPConstants:
+    """GCP 이미지 업로드 상수"""
 
     # 파일 크기 제한
     MAX_FILE_SIZE_MB: ClassVar[int] = 10
@@ -32,7 +32,7 @@ class S3Constants:
         "webp": {"image/webp"},
     }
 
-    # S3 업로드 경로 매핑
+    # 업로드 경로 매핑
     PATH_MAPPING: ClassVar[dict[FileType, str]] = {
         FileType.USER_AVATAR: "avatars",
     }

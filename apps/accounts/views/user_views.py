@@ -314,7 +314,7 @@ class UserAvatarUpdateView(APIView):
                     "application/json": {
                         "example": {
                             "message": "아바타가 성공적으로 업데이트되었습니다.",
-                            "avatar_url": "https://chessok.s3.ap-northeast-2.amazonaws.com/avatars/uuid.png",
+                            "avatar_url": "https://storage.googleapis.com/chessok/avatars/uuid.png",
                         }
                     }
                 },
