@@ -302,8 +302,9 @@
 /* Chess Board */
 .chess-board-wrapper {
     position: relative;
-    padding-left: 24px;
-    padding-bottom: 24px;
+    --board-label-size: 24px;
+    padding-left: var(--board-label-size);
+    padding-bottom: var(--board-label-size);
     display: inline-block;
 }
 
@@ -420,30 +421,33 @@
 .board-labels-files {
     position: absolute;
     bottom: 0;
-    left: 22px;
+    left: var(--board-label-size);
     right: 0;
-    display: flex;
-    justify-content: space-around;
+    height: var(--board-label-size);
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    align-items: center;
     font-size: 0.6rem;
     letter-spacing: 0;
     color: var(--color-text-muted);
     line-height: 1;
+    pointer-events: none;
 }
 
 .board-labels-ranks {
     position: absolute;
     top: 0;
     left: 0;
-    bottom: 22px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
+    bottom: var(--board-label-size);
+    display: grid;
+    grid-template-rows: repeat(8, 1fr);
     align-items: center;
-    width: 22px;
+    width: var(--board-label-size);
     font-size: 0.6rem;
     letter-spacing: 0;
     color: var(--color-text-muted);
     line-height: 1;
+    pointer-events: none;
 }
 
 /* Game Actions */

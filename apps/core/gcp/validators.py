@@ -1,14 +1,14 @@
-"""S3 이미지 파일 검증"""
+"""GCP 이미지 파일 검증"""
 
 from __future__ import annotations
 
 from rest_framework.exceptions import ValidationError
 
-from .constants import S3Constants
+from .constants import GCPConstants
 
 
-class S3ImageValidator:
-    """S3 이미지 파일 검증 클래스 (간소화 버전)"""
+class GCPImageValidator:
+    """GCP 이미지 파일 검증 클래스 (간소화 버전)"""
 
     @staticmethod
     def validate_file_name(file_name: str) -> None:
@@ -21,9 +21,9 @@ class S3ImageValidator:
         """파일 확장자 검증 (파일명과 파라미터 일치 확인)"""
         ext = file_name.rsplit(".", 1)[-1].lower()
 
-        if ext not in S3Constants.ALLOWED_EXTENSIONS:
+        if ext not in GCPConstants.ALLOWED_EXTENSIONS:
             raise ValidationError(
-                f"허용된 확장자만 사용 가능합니다. ({', '.join(S3Constants.ALLOWED_EXTENSIONS)})"
+                f"허용된 확장자만 사용 가능합니다. ({', '.join(GCPConstants.ALLOWED_EXTENSIONS)})"
             )
 
         if ext != file_ext.lower():
@@ -39,7 +39,7 @@ class S3ImageValidator:
         if not content_type:
             raise ValidationError("Content-Type이 필요합니다.")
 
-        allowed_mimes = S3Constants.MIME_BY_EXT.get(ext)
+        allowed_mimes = GCPConstants.MIME_BY_EXT.get(ext)
         if not allowed_mimes or content_type not in allowed_mimes:
             raise ValidationError(
                 f"{ext} 확장자에 허용된 MIME 타입이 아닙니다. "
@@ -52,5 +52,5 @@ class S3ImageValidator:
         if file_size is None:
             raise ValidationError("파일 크기를 확인할 수 없습니다.")
 
-        if file_size > S3Constants.MAX_FILE_SIZE_BYTES:
-            raise ValidationError(f"{S3Constants.MAX_FILE_SIZE_MB}MB 이하만 업로드 가능합니다.")
+        if file_size > GCPConstants.MAX_FILE_SIZE_BYTES:
+            raise ValidationError(f"{GCPConstants.MAX_FILE_SIZE_MB}MB 이하만 업로드 가능합니다.")

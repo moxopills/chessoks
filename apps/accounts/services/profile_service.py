@@ -25,9 +25,9 @@ from apps.accounts.utils import (
     validate_signup_email_code,
     validate_token,
 )
-from apps.core.S3.constants import FileType, S3Constants
-from apps.core.S3.uploader import s3_uploader
-from apps.core.S3.validators import S3ImageValidator
+from apps.core.gcp.constants import FileType, GCPConstants
+from apps.core.gcp.uploader import gcp_uploader
+from apps.core.gcp.validators import GCPImageValidator
 
 logger = logging.getLogger(__name__)
 
@@ -44,32 +44,31 @@ def _check_availability(user: User | None, field_name: str) -> dict:
 
 def _validate_avatar_file(file) -> str:
     file_name = file.name
-    S3ImageValidator.validate_file_name(file_name)
+    GCPImageValidator.validate_file_name(file_name)
     ext = file_name.rsplit(".", 1)[-1].lower()
-    S3ImageValidator.validate_extension(file_name, ext)
-    S3ImageValidator.validate_mime_type(ext, file.content_type)
-    S3ImageValidator.validate_file_size(file.size)
+    GCPImageValidator.validate_extension(file_name, ext)
+    GCPImageValidator.validate_mime_type(ext, file.content_type)
+    GCPImageValidator.validate_file_size(file.size)
     return ext
 
 
 def _extract_old_avatar_key(user: User) -> str | None:
     if not user.avatar_url:
         return None
-    return s3_uploader.extract_key_from_url(user.avatar_url)
+    return gcp_uploader.extract_key_from_url(user.avatar_url)
 
 
 def _upload_new_avatar(file, ext: str) -> str:
-    prefix = S3Constants.PATH_MAPPING[FileType.USER_AVATAR]
+    prefix = GCPConstants.PATH_MAPPING[FileType.USER_AVATAR]
     key = f"{prefix}/{uuid.uuid4()}.{ext}"
 
-    s3_uploader.get_s3_client().upload_fileobj(
+    gcp_uploader.upload_fileobj(
         file.file,
-        s3_uploader.get_bucket_name(),
         key,
-        ExtraArgs={"ContentType": file.content_type},
+        content_type=file.content_type,
     )
 
-    return f"{s3_uploader.get_s3_base_url()}{key}"
+    return f"{gcp_uploader.get_base_url()}{key}"
 
 
 class UserProfileService:
@@ -303,7 +302,7 @@ class UserProfileService:
 
         if old_avatar_key:
             try:
-                s3_uploader.delete_file(old_avatar_key)
+                gcp_uploader.delete_file(old_avatar_key)
             except Exception as e:
                 logger.warning(f"이전 아바타 삭제 실패: {old_avatar_key}, error: {e}")
 
@@ -320,7 +319,7 @@ class UserProfileService:
         old_avatar_key = _extract_old_avatar_key(user)
         if old_avatar_key:
             try:
-                s3_uploader.delete_file(old_avatar_key)
+                gcp_uploader.delete_file(old_avatar_key)
             except Exception as e:
                 logger.warning(f"아바타 삭제 실패: {old_avatar_key}, error: {e}")
 

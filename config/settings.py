@@ -61,7 +61,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.chess",
     "apps.notifications",
-    "apps.core",  # S3 이미지 업로드
+    "apps.core",  # GCP 이미지 업로드
 ]
 
 MIDDLEWARE = [
@@ -345,11 +345,10 @@ NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID", "")
 NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET", "")
 NAVER_REDIRECT_URI = os.getenv("NAVER_REDIRECT_URI", f"{FRONTEND_URL}/auth/naver/callback")
 
-# AWS S3 설정 (이미지 업로드용)
-AWS_S3_ACCESS_KEY_ID = os.getenv("AWS_S3_ACCESS_KEY_ID", "")
-AWS_S3_SECRET_ACCESS_KEY = os.getenv("AWS_S3_SECRET_ACCESS_KEY", "")
-AWS_S3_BUCKET_NAME = os.getenv("AWS_S3_BUCKET_NAME", "")
-AWS_S3_REGION = os.getenv("AWS_S3_REGION", "ap-northeast-2")
+# GCS 설정 (이미지 업로드용)
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "")
+GCS_CREDENTIALS_JSON = os.getenv("GCS_CREDENTIALS_JSON", "")
+GCS_BASE_URL = os.getenv("GCS_BASE_URL", "")
 
 # Celery 설정
 CELERY_BROKER_URL = os.getenv(
