@@ -105,7 +105,12 @@ class GCPUploader:
         client = cls.get_client()
         bucket = client.bucket(cls.get_bucket_name())
         blob = bucket.blob(key)
-        blob.upload_from_file(file_obj, content_type=content_type)
+        blob.upload_from_file(file_obj, content_type=content_type, predefined_acl="publicRead")
+        try:
+            blob.make_public()
+        except Exception:
+            # 버킷 정책이 public ACL을 허용하지 않아도 업로드는 유지
+            logger.warning("GCS object is not public; check bucket IAM or ACL settings.")
 
     @classmethod
     @handle_gcp_errors("파일 삭제")
