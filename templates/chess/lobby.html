@@ -89,23 +89,7 @@
                     <span>로딩 중...</span>
                 </div>
             </div>
-            <div class="lobby-report">
-                <h3 class="report-title">🚩 신고</h3>
-                <form class="report-form" id="lobby-report-form">
-                    <select class="report-select" id="lobby-report-target">
-                        <option value="">신고할 유저 선택</option>
-                    </select>
-                    <select class="report-select" id="lobby-report-category">
-                        <option value="cheat">부정행위</option>
-                        <option value="abuse">욕설/비매너</option>
-                        <option value="spam">스팸</option>
-                        <option value="other">기타</option>
-                    </select>
-                    <input type="text" class="report-input" id="lobby-report-message" placeholder="사유를 입력하세요 (선택)" maxlength="200">
-                    <button type="submit" class="btn btn-secondary btn-sm">신고하기</button>
-                </form>
-                <div class="report-hint" id="lobby-report-hint">로비에서 보이는 유저만 신고할 수 있습니다.</div>
-            </div>
+            <div class="users-hint">우클릭(모바일: 터치)으로 신고·친구추가 메뉴가 열립니다.</div>
         </section>
     </div>
 </div>
@@ -538,42 +522,12 @@
     font-size: 0.875rem;
 }
 
-.lobby-report {
-    margin-top: var(--space-md);
-    padding-top: var(--space-md);
-    border-top: 1px solid var(--color-border);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-}
-
-.report-title {
-    font-size: 0.75rem;
-    color: var(--color-text-secondary);
-    margin-bottom: var(--space-xs);
-}
-
-.report-form {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-}
-
-.report-select,
-.report-input {
-    width: 100%;
-    background-color: var(--color-bg-secondary);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: var(--space-xs) var(--space-sm);
-    color: var(--color-text-primary);
-    font-size: 0.75rem;
-}
-
-.report-hint {
+.users-hint {
+    margin-top: var(--space-sm);
     font-size: 0.7rem;
     color: var(--color-text-muted);
 }
+
 </style>
 {% endblock %}
 

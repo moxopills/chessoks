@@ -836,6 +836,30 @@
     flex-wrap: wrap;
 }
 
+/* Replay modal docks to the right to avoid covering the board */
+#replay-modal {
+    justify-content: flex-end;
+    align-items: flex-start;
+    padding: calc(var(--navbar-height) + var(--space-lg)) var(--space-lg) var(--space-lg);
+    background-color: rgba(0, 0, 0, 0.45);
+}
+
+#replay-modal .modal {
+    width: 260px;
+}
+
+@media (max-width: 768px) {
+    #replay-modal {
+        justify-content: center;
+        align-items: center;
+        padding: var(--space-lg);
+    }
+
+    #replay-modal .modal {
+        width: min(90vw, 320px);
+    }
+}
+
 /* Chat Message Styles */
 .chat-message {
     display: flex;

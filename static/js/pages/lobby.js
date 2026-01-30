@@ -21,11 +21,6 @@
     const waitingRoomCard = document.getElementById('waiting-room-card');
     const waitingRoomInfo = document.getElementById('waiting-room-info');
     const waitingRoomEnter = document.getElementById('waiting-room-enter');
-    const reportForm = document.getElementById('lobby-report-form');
-    const reportTarget = document.getElementById('lobby-report-target');
-    const reportCategory = document.getElementById('lobby-report-category');
-    const reportMessage = document.getElementById('lobby-report-message');
-    const reportHint = document.getElementById('lobby-report-hint');
 
     let isMatching = false;
     let lobbySocket = null;
@@ -37,6 +32,9 @@
     let roomRefreshInterval = null;
     let chatUnread = 0;
     let isChatOpen = true;
+    let userContextMenu = null;
+    let longPressTimer = null;
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
     // 초기화
     init();
@@ -47,6 +45,7 @@
         await checkAuthAndSetupChat();
         startRoomAutoRefresh();
         setupMobileTabs();
+        setupUserContextMenu();
     }
 
     /**
@@ -176,7 +175,7 @@
             currentUserId = user.id;
             setupChat();
             setupQuickMatch();
-            setupLobbyReport();
+            // lobby report removed; using profile report actions instead
             if (user.is_muted) {
                 setChatMutedState(true, user.mute_reason || '');
             }
@@ -188,7 +187,6 @@
             // 비로그인 상태 - 채팅 비활성화
             chatInput.disabled = true;
             chatForm.querySelector('button').disabled = true;
-            setReportEnabled(false, '로그인 후 신고할 수 있습니다.');
         }
     }
 
@@ -374,17 +372,14 @@
                 lobbyUsers[user.id] = user;
             });
             renderUsers();
-            updateReportTargets();
         } else if (data.type === 'user_joined') {
             // 유저 입장
             lobbyUsers[data.user.id] = data.user;
             addUserToList(data.user);
-            updateReportTargets();
         } else if (data.type === 'user_left') {
             // 유저 퇴장
             delete lobbyUsers[data.user_id];
             removeUserFromList(data.user_id);
-            updateReportTargets();
         } else if (data.type === 'room_update') {
             upsertRoom(data.room);
         } else if (data.type === 'room_removed') {
@@ -463,60 +458,6 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function setupLobbyReport() {
-        if (!reportForm) return;
-        setReportEnabled(true);
-        updateReportTargets();
-
-        reportForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const targetId = reportTarget?.value;
-            if (!targetId) {
-                Toast.error('신고할 유저를 선택해주세요.');
-                return;
-            }
-            const category = reportCategory?.value || 'other';
-            const description = reportMessage?.value.trim() || '';
-            try {
-                await API.post('/reports/', {
-                    target_id: parseInt(targetId, 10),
-                    category,
-                    description
-                });
-                Toast.success('신고가 접수되었습니다.');
-                if (reportMessage) reportMessage.value = '';
-            } catch (error) {
-                Toast.error(error.data?.message || '신고에 실패했습니다.');
-            }
-        });
-    }
-
-    function updateReportTargets() {
-        if (!reportTarget) return;
-        if (!currentUserId) {
-            reportTarget.innerHTML = '<option value="">로그인 후 이용 가능</option>';
-            return;
-        }
-        const candidates = Object.values(lobbyUsers).filter(user => user.id !== currentUserId);
-        if (!candidates.length) {
-            reportTarget.innerHTML = '<option value="">신고할 유저 없음</option>';
-            return;
-        }
-        reportTarget.innerHTML = '<option value="">신고할 유저 선택</option>' + candidates.map(user => {
-            return `<option value="${user.id}">${Utils.escapeHtml(user.nickname)}</option>`;
-        }).join('');
-    }
-
-    function setReportEnabled(enabled, hintText = '') {
-        if (!reportForm) return;
-        const controls = reportForm.querySelectorAll('select, input, button');
-        controls.forEach(el => {
-            el.disabled = !enabled;
-        });
-        if (reportHint) {
-            reportHint.textContent = hintText || reportHint.textContent;
-        }
-    }
 
     function setupMobileTabs() {
         if (!mobileTabbar) return;
@@ -590,6 +531,127 @@
         }
 
         usersList.innerHTML = users.map(user => userRowHtml(user)).join('');
+
+        usersList.querySelectorAll('.user-item').forEach(item => {
+            const userId = parseInt(item.dataset.userId, 10);
+            if (!userId) return;
+            if (isTouchDevice) {
+                item.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    openUserContextMenu(event, userId);
+                });
+                item.addEventListener('touchstart', (event) => {
+                    longPressTimer = setTimeout(() => openUserContextMenu(event, userId), 450);
+                });
+                item.addEventListener('touchend', () => clearTimeout(longPressTimer));
+            } else {
+                item.addEventListener('contextmenu', (event) => {
+                    event.preventDefault();
+                    openUserContextMenu(event, userId);
+                });
+            }
+        });
+    }
+
+    function setupUserContextMenu() {
+        document.addEventListener('click', hideUserContextMenu);
+        document.addEventListener('scroll', hideUserContextMenu, true);
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') hideUserContextMenu();
+        });
+    }
+
+    function openUserContextMenu(event, userId) {
+        if (!userId) return;
+        if (!userContextMenu) {
+            userContextMenu = document.createElement('div');
+            userContextMenu.className = 'context-menu hidden';
+            document.body.appendChild(userContextMenu);
+            userContextMenu.addEventListener('click', (e) => {
+                const action = e.target.closest('.context-menu-item')?.dataset.action;
+                const targetId = parseInt(userContextMenu.dataset.userId, 10);
+                if (!action || !targetId) return;
+                if (action === 'profile') {
+                    window.location.href = `/users/${targetId}/`;
+                } else if (action === 'friend') {
+                    sendFriendRequest(targetId);
+                } else if (action === 'report') {
+                    openReportForUser(targetId);
+                }
+                hideUserContextMenu();
+            });
+        }
+
+        const canFriend = currentUserId && userId !== currentUserId;
+        const items = [
+            { action: 'profile', label: '프로필 보기' },
+            ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
+            { action: 'report', label: '신고하기' },
+        ];
+        userContextMenu.innerHTML = items.map(item => (
+            `<div class="context-menu-item" data-action="${item.action}">${item.label}</div>`
+        )).join('');
+
+        userContextMenu.dataset.userId = `${userId}`;
+        positionUserContextMenu(event);
+        userContextMenu.classList.remove('hidden');
+    }
+
+    function positionUserContextMenu(event) {
+        if (!userContextMenu) return;
+        const padding = 8;
+        const rect = userContextMenu.getBoundingClientRect();
+        const clientX = event.touches?.[0]?.clientX ?? event.clientX;
+        const clientY = event.touches?.[0]?.clientY ?? event.clientY;
+        const maxX = window.innerWidth - rect.width - padding;
+        const maxY = window.innerHeight - rect.height - padding;
+        const left = Math.min(clientX, maxX);
+        const top = Math.min(clientY, maxY);
+        userContextMenu.style.left = `${left}px`;
+        userContextMenu.style.top = `${top}px`;
+    }
+
+    function hideUserContextMenu() {
+        if (userContextMenu) userContextMenu.classList.add('hidden');
+    }
+
+    async function sendFriendRequest(targetId) {
+        if (!currentUserId) {
+            Toast.error('로그인 후 이용할 수 있습니다.');
+            return;
+        }
+        if (targetId === currentUserId) {
+            Toast.error('자기 자신에게 요청할 수 없습니다.');
+            return;
+        }
+        try {
+            const result = await API.post('/accounts/friends/requests/', { user_id: targetId });
+            if (result.status === 'accepted') {
+                Toast.success('친구 요청이 자동 수락되었습니다.');
+            } else {
+                Toast.success('친구 요청을 보냈습니다.');
+            }
+        } catch (error) {
+            Toast.error(error.data?.message || '친구 요청에 실패했습니다.');
+        }
+    }
+
+    async function openReportForUser(targetId) {
+        if (!currentUserId) {
+            Toast.error('로그인 후 이용할 수 있습니다.');
+            return;
+        }
+        const reason = prompt('신고 사유를 입력하세요 (선택)') || '';
+        try {
+            await API.post('/reports/', {
+                target_id: targetId,
+                category: 'other',
+                description: reason.trim(),
+            });
+            Toast.success('신고가 접수되었습니다.');
+        } catch (error) {
+            Toast.error(error.data?.message || '신고에 실패했습니다.');
+        }
     }
 
     function addUserToList(user) {

@@ -30,6 +30,7 @@ from apps.accounts.views.user_views import (
     UserAvatarUpdateView,
     UserDashboardView,
     UserProfileView,
+    UserSearchView,
 )
 
 app_name = "accounts"
@@ -70,6 +71,7 @@ urlpatterns = [
     path("leaderboard/me/", MyRankView.as_view(), name="leaderboard-me"),
     path("dashboard/", UserDashboardView.as_view(), name="dashboard"),
     path("users/<int:user_id>/profile/", UserProfileView.as_view(), name="user-profile"),
+    path("users/search/", UserSearchView.as_view(), name="user-search"),
     path("friends/", FriendListView.as_view(), name="friends"),
     path("friends/requests/", FriendRequestListCreateView.as_view(), name="friend-requests"),
     path(
