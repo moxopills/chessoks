@@ -108,7 +108,7 @@ class TestGCPUploader:
 
         blob.exists.return_value = True
 
-        with patch("apps.core.gcp.uploader.gcp_uploader.get_client", return_value=client):
+        with patch("apps.core.gcp.uploader.GCPUploader.get_client", return_value=client):
             result = gcp_uploader.delete_file("avatars/test.png")
             assert result["message"] == "파일이 성공적으로 삭제되었습니다."
             assert result["key"] == "avatars/test.png"
@@ -121,12 +121,12 @@ class TestGCPUploader:
 
         blob.exists.return_value = False
 
-        with patch("apps.core.gcp.uploader.gcp_uploader.get_client", return_value=client):
+        with patch("apps.core.gcp.uploader.GCPUploader.get_client", return_value=client):
             with pytest.raises(ValidationError) as exc_info:
                 gcp_uploader.delete_file("avatars/nonexistent.png")
             assert "존재하지 않습니다" in str(exc_info.value)
 
-    @patch("apps.core.gcp.uploader.gcp_uploader.get_client")
+    @patch("apps.core.gcp.uploader.GCPUploader.get_client")
     def test_credentials_error(self, mock_client):
         from google.auth.exceptions import DefaultCredentialsError
 
@@ -143,7 +143,7 @@ class TestGCPUploadAPI:
         mock_settings.GCS_BUCKET_NAME = "test-bucket"
         mock_settings.GCS_BASE_URL = "https://storage.googleapis.com/test-bucket/"
 
-        with patch("apps.core.gcp.uploader.gcp_uploader.upload_fileobj"):
+        with patch("apps.core.gcp.uploader.GCPUploader.upload_fileobj"):
             response = authenticated_client.post(
                 "/api/gcp/upload/",
                 {"file": image_file, "type": "user_avatar"},
@@ -176,7 +176,7 @@ class TestGCPUploadAPI:
 @pytest.mark.django_db
 class TestGCPDeleteAPI:
     def test_delete_image_success(self, authenticated_client):
-        with patch("apps.core.gcp.uploader.gcp_uploader.delete_file") as mock_delete:
+        with patch("apps.core.gcp.uploader.GCPUploader.delete_file") as mock_delete:
             mock_delete.return_value = {
                 "message": "파일이 성공적으로 삭제되었습니다.",
                 "key": "avatars/test.png",

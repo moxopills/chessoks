@@ -124,8 +124,8 @@ class BaseTestCase(ErrorResponseMixin, TestCase):
             client.bucket.return_value = bucket
             bucket.blob.return_value = blob
 
-            with patch("apps.core.gcp.uploader.gcp_uploader.get_client", return_value=client):
-                yield client, bucket, blob
+        with patch("apps.core.gcp.uploader.GCPUploader.get_client", return_value=client):
+            yield client, bucket, blob
 
 
 class BaseAPITestCase(APITestCase, BaseTestCase):
