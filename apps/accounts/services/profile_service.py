@@ -5,6 +5,7 @@ import uuid
 
 from django.contrib.auth import update_session_auth_hash
 from django.core.cache import cache
+from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
@@ -346,12 +347,22 @@ class UserProfileService:
 
         new_nickname = serializer.validated_data.get("nickname")
         if new_nickname and new_nickname != user.nickname:
+            if user.nickname_changed_at:
+                elapsed = timezone.now() - user.nickname_changed_at
+                if elapsed.total_seconds() < 24 * 60 * 60:
+                    raise ValidationError(
+                        {"nickname": ["닉네임은 24시간에 1회만 변경할 수 있습니다."]}
+                    )
             existing = User.objects.filter(nickname=new_nickname).exclude(pk=user.pk).first()
             result = AccountService.check_availability(existing, "닉네임")
             if not result["available"]:
                 raise ValidationError({"nickname": [result["message"]]})
 
+        old_nickname = user.nickname
         serializer.save()
+        if new_nickname and new_nickname != old_nickname:
+            user.nickname_changed_at = timezone.now()
+            user.save(update_fields=["nickname_changed_at"])
         return _ok({"message": "프로필이 업데이트되었습니다."}, status.HTTP_200_OK)
 
     @staticmethod

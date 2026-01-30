@@ -517,7 +517,11 @@ class ProfileUpdateSerializerTest(BaseTestCase):
         """닉네임 변경 성공"""
         serializer = self._get_serializer({"nickname": "새로운닉네임"})
         self.assertTrue(serializer.is_valid())
-        self.assertEqual(serializer.save().nickname, "새로운닉네임")
+        result = UserProfileService.profile_update(serializer, self.user)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.nickname, "새로운닉네임")
+        self.assertIsNotNone(self.user.nickname_changed_at)
+        self.assertEqual(result.data["message"], "프로필이 업데이트되었습니다.")
 
     def test_update_bio_and_avatar(self):
         """자기소개와 아바타 URL 변경"""
@@ -540,6 +544,16 @@ class ProfileUpdateSerializerTest(BaseTestCase):
         """자기 자신의 닉네임은 유지 가능"""
         serializer = self._get_serializer({"nickname": "원본닉네임"})
         self.assertTrue(serializer.is_valid())
+
+    def test_nickname_change_rate_limited(self):
+        """닉네임 변경은 24시간에 1회만 가능"""
+        self.user.nickname_changed_at = timezone.now()
+        self.user.save(update_fields=["nickname_changed_at"])
+        serializer = self._get_serializer({"nickname": "새로운닉네임"})
+        self.assertTrue(serializer.is_valid())
+        with self.assertRaises(ValidationError) as context:
+            UserProfileService.profile_update(serializer, self.user)
+        self.assertIn("nickname", context.exception.detail)
 
 
 class UserModelTest(BaseTestCase):
