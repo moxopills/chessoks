@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}프로필 수정 - ChessOK{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-header">
+    <div>
+        <h1 class="profile-title">프로필 수정</h1>
+        <p class="helper-text">아바타, 닉네임, 소개를 변경할 수 있습니다.</p>
+    </div>
+    <div class="profile-actions">
+        <a href="/profile/" class="btn btn-secondary btn-arcade">내 프로필</a>
+        <a href="/password-change/" class="btn btn-primary btn-arcade">비밀번호 변경</a>
+    </div>
+</div>
+
+<form class="profile-form" id="profile-edit-form">
+    <section class="form-section">
+        <h2 class="form-section-title">아바타</h2>
+        <div class="avatar-actions">
+            <div class="avatar-preview" id="avatar-preview">
+                <span class="profile-avatar-placeholder">?</span>
+            </div>
+            <div>
+                <input type="file" id="avatar-input" accept="image/*" class="form-input">
+                <div class="helper-text">JPG/PNG/WebP 최대 2MB</div>
+            </div>
+            <button type="button" class="btn btn-primary btn-arcade" id="avatar-upload-btn">업로드</button>
+            <button type="button" class="btn btn-secondary btn-arcade" id="avatar-delete-btn">삭제</button>
+        </div>
+    </section>
+
+    <section class="form-section">
+        <h2 class="form-section-title">기본 정보</h2>
+        <div class="form-group">
+            <label class="form-label" for="nickname">닉네임</label>
+            <input class="form-input" id="nickname" name="nickname" maxlength="20" required>
+            <div class="form-error" id="nickname-error"></div>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="bio">소개</label>
+            <textarea class="form-input" id="bio" name="bio" rows="4" maxlength="160"></textarea>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-arcade">저장</button>
+        </div>
+    </section>
+
+    <section class="form-section">
+        <h2 class="form-section-title">이메일 변경</h2>
+        <div class="form-group">
+            <label class="form-label" for="new-email">새 이메일</label>
+            <input class="form-input" id="new-email" type="email" placeholder="new@email.com">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="email-password">현재 비밀번호</label>
+            <input class="form-input" id="email-password" type="password" autocomplete="current-password">
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn btn-primary btn-arcade" id="email-change-btn">인증 메일 요청</button>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="email-token">인증 토큰</label>
+            <input class="form-input" id="email-token" placeholder="메일에 받은 토큰">
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary btn-arcade" id="email-confirm-btn">변경 확정</button>
+        </div>
+    </section>
+
+    <section class="form-section danger-zone">
+        <h2 class="form-section-title">회원 탈퇴</h2>
+        <div class="helper-text">탈퇴 시 1일 내 로그인하면 취소됩니다.</div>
+        <div class="form-group">
+            <label class="form-label" for="delete-password">비밀번호 확인</label>
+            <input class="form-input" id="delete-password" type="password" autocomplete="current-password">
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn btn-danger" id="delete-account-btn">회원 탈퇴</button>
+        </div>
+    </section>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pages/profile_edit.js' %}"></script>
+{% endblock %}

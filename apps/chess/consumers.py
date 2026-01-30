@@ -183,6 +183,9 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 {"type": "error", "message": "관전자는 플레이어 채팅을 사용할 수 없습니다."}
             )
             return
+        if self.scope["user"].is_muted:
+            await self.send_json({"type": "error", "message": "채팅이 제한된 계정입니다."})
+            return
         message = (content.get("message") or "").strip()
         if not message:
             await self.send_json({"type": "error", "message": "메시지를 입력해주세요."})
@@ -209,6 +212,9 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             await self.send_json(
                 {"type": "error", "message": "플레이어는 관전자 채팅을 사용할 수 없습니다."}
             )
+            return
+        if self.scope["user"].is_muted:
+            await self.send_json({"type": "error", "message": "채팅이 제한된 계정입니다."})
             return
         message = (content.get("message") or "").strip()
         if not message:
@@ -390,6 +396,9 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 return
             if action != "chat":
                 await self.send_json({"type": "error", "message": "지원하지 않는 액션입니다."})
+                return
+            if self.scope["user"].is_muted:
+                await self.send_json({"type": "error", "message": "채팅이 제한된 계정입니다."})
                 return
 
             message = (content.get("message") or "").strip()

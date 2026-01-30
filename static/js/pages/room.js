@@ -25,6 +25,7 @@
     const statusModal = document.getElementById('status-modal');
     const statusModalMessage = document.getElementById('status-modal-message');
     const statusModalOk = document.getElementById('status-modal-ok');
+    const lobbyWaitBtn = document.getElementById('lobby-wait-btn');
 
     // State
     const roomId = Utils.getPathParam(/\/rooms\/(\d+)/);
@@ -59,6 +60,7 @@
         await loadRoom();
         setupStatusModal();
         setupLeaveButton();
+        setupLobbyWait();
         setupChat();
         setupExitGuard();
         startRoomPolling();
@@ -284,6 +286,13 @@
             } catch (error) {
                 Toast.error(error.data?.message || '나가기에 실패했습니다.');
             }
+        });
+    }
+
+    function setupLobbyWait() {
+        if (!lobbyWaitBtn) return;
+        lobbyWaitBtn.addEventListener('click', () => {
+            window.location.href = '/';
         });
     }
 

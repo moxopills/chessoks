@@ -1,0 +1,128 @@
+.admin-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-xl);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-md);
+}
+
+.admin-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+}
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-lg);
+}
+
+.admin-panel {
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+}
+
+.admin-panel h2 {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    margin-bottom: var(--space-md);
+}
+
+.admin-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--space-md);
+}
+
+.stat-card {
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.stat-value {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    margin-top: var(--space-xs);
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.admin-table th,
+.admin-table td {
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--color-border);
+    text-align: left;
+}
+
+.admin-table tr:hover {
+    background-color: var(--color-bg-secondary);
+}
+
+.admin-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.form-row {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.form-row input,
+.form-row select {
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    color: var(--color-text-primary);
+    font-size: 0.8rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.admin-search {
+    display: flex;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+
+.admin-search input {
+    flex: 1;
+}
+
+.admin-section-note {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+@media (max-width: 1024px) {
+    .admin-grid {
+        grid-template-columns: 1fr;
+    }
+}

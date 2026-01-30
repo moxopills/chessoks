@@ -59,7 +59,10 @@
         <div class="action-buttons" id="action-buttons">
             <!-- 동적으로 버튼 생성 -->
         </div>
-        <button class="btn btn-secondary" id="leave-btn">나가기</button>
+        <div class="action-footer">
+            <button class="btn btn-secondary" id="lobby-wait-btn">로비에서 대기</button>
+            <button class="btn btn-secondary" id="leave-btn">나가기</button>
+        </div>
     </div>
 
     <!-- Room Chat -->
@@ -269,6 +272,13 @@
     gap: var(--space-md);
 }
 
+.action-footer {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
 /* Chat Section */
 .room-chat-section {
     background-color: var(--color-bg-card);
@@ -308,35 +318,6 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--space-lg);
-    border-bottom: 1px solid var(--color-border);
-}
-
-.modal-title {
-    font-family: var(--font-display);
-    font-size: 0.75rem;
-    margin: 0;
-}
-
-.modal-body {
-    padding: var(--space-lg);
-    font-family: var(--font-body);
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-sm);
-    margin-top: var(--space-lg);
-}
-
-.modal-body p {
     letter-spacing: 0;
     word-spacing: 0;
 }
@@ -353,10 +334,15 @@
     font-family: var(--font-display);
     font-size: 0.75rem;
     margin: 0;
+    letter-spacing: 0;
+    word-spacing: 0;
 }
 
 .modal-body {
     padding: var(--space-lg);
+    font-family: var(--font-body);
+    letter-spacing: 0;
+    word-spacing: 0;
 }
 
 .modal-actions {
@@ -365,7 +351,43 @@
     gap: var(--space-sm);
     margin-top: var(--space-lg);
 }
+
+.modal-body p {
+    letter-spacing: 0;
+    word-spacing: 0;
+    line-height: 1.5;
 }
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.modal-title {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    margin: 0;
+    letter-spacing: 0;
+    word-spacing: 0;
+}
+
+.modal-body {
+    padding: var(--space-lg);
+    font-family: var(--font-body);
+    letter-spacing: 0;
+    word-spacing: 0;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+}
+
 
 .section-header {
     margin-bottom: var(--space-md);
