@@ -49,10 +49,12 @@ class Report(models.Model):
 
     class Meta:
         db_table = "reports"
+        verbose_name = "Report"
+        verbose_name_plural = "Reports"
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["status", "created_at"]),
-            models.Index(fields=["target", "status"]),
+            models.Index(fields=["status", "created_at"], name="reports_status_created_idx"),
+            models.Index(fields=["target", "status"], name="reports_target_status_idx"),
         ]
 
     def mark_resolved(self, admin_user, status: str, note: str = "") -> None:
