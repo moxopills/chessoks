@@ -270,6 +270,23 @@
     background-color: rgba(15, 155, 142, 0.1);
 }
 
+.notification-item-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+}
+
+.notification-item-message {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-xs);
+}
+
+.notification-item-time {
+    font-size: 0.625rem;
+    color: var(--color-text-muted);
+}
+
 /* User Menu */
 .navbar-user {
     position: relative;
@@ -493,6 +510,10 @@ function showAuthenticatedUI(user) {
     if (userRating && user.stats) userRating.textContent = user.stats.rating;
     if (userAvatar && user.avatar_url) {
         userAvatar.innerHTML = `<img src="${user.avatar_url}" alt="${user.nickname}">`;
+    }
+
+    if (window.Notifications?.init) {
+        window.Notifications.init();
     }
 }
 

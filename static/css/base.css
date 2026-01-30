@@ -614,6 +614,36 @@ a:hover {
 
 .hidden { display: none !important; }
 
+/* Context Menu */
+.context-menu {
+    position: fixed;
+    z-index: 1200;
+    min-width: 160px;
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-xs);
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    color: var(--color-text-primary);
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+    white-space: nowrap;
+}
+
+.context-menu-item:hover {
+    background-color: var(--color-bg-tertiary);
+}
+
 /* ========================================
    Responsive
    ======================================== */

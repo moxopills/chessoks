@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}랭킹 - ChessOK{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/leaderboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="social-page">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">랭킹</h1>
+            <p class="page-subtitle">레이팅 기준 상위 유저 목록</p>
+        </div>
+        <div class="page-summary card" id="my-rank-card">
+            <div class="summary-title">내 순위</div>
+            <div class="summary-body" id="my-rank-body">로그인 후 확인할 수 있습니다.</div>
+        </div>
+    </div>
+
+    <div class="leaderboard-grid">
+        <section class="card leaderboard-card">
+            <div class="card-header">
+                <h2 class="card-title">랭킹 목록</h2>
+                <div class="card-actions">
+                    <button class="btn btn-secondary btn-sm" id="leaderboard-refresh">새로고침</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>유저</th>
+                            <th>레이팅</th>
+                            <th>전적</th>
+                            <th>티어</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body">
+                        <tr>
+                            <td colspan="5" class="table-empty">로딩 중...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination" id="leaderboard-pagination"></div>
+        </section>
+
+        <aside class="card profile-drawer hidden" id="profile-drawer">
+            <div class="profile-drawer-header">
+                <div class="profile-user">
+                    <div class="avatar avatar-lg" id="profile-avatar">
+                        <span class="avatar-placeholder">?</span>
+                    </div>
+                    <div class="profile-meta">
+                        <div class="profile-name" id="profile-name">-</div>
+                        <div class="profile-rating" id="profile-rating">-</div>
+                        <div class="profile-tier" id="profile-tier">-</div>
+                    </div>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="profile-close">닫기</button>
+            </div>
+
+            <div class="profile-actions">
+                <button class="btn btn-primary btn-sm" id="profile-friend-btn">친구 요청</button>
+                <button class="btn btn-secondary btn-sm" id="profile-report-toggle">신고</button>
+            </div>
+
+            <div class="profile-report hidden" id="profile-report">
+                <select class="form-input" id="profile-report-category">
+                    <option value="cheat">부정행위</option>
+                    <option value="abuse">욕설/비매너</option>
+                    <option value="spam">스팸</option>
+                    <option value="other">기타</option>
+                </select>
+                <input type="text" class="form-input" id="profile-report-message" placeholder="사유 (선택)" maxlength="200">
+                <button class="btn btn-secondary btn-sm" id="profile-report-submit">신고하기</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="profile-stats" id="profile-stats">
+                <div class="stat-item">
+                    <span>플레이</span>
+                    <strong id="stat-games">-</strong>
+                </div>
+                <div class="stat-item">
+                    <span>승</span>
+                    <strong id="stat-wins">-</strong>
+                </div>
+                <div class="stat-item">
+                    <span>패</span>
+                    <strong id="stat-losses">-</strong>
+                </div>
+                <div class="stat-item">
+                    <span>무</span>
+                    <strong id="stat-draws">-</strong>
+                </div>
+            </div>
+
+            <div class="profile-vs hidden" id="profile-vs">
+                <h3>상대 전적</h3>
+                <div class="vs-grid">
+                    <span>승</span><strong id="vs-wins">0</strong>
+                    <span>패</span><strong id="vs-losses">0</strong>
+                    <span>무</span><strong id="vs-draws">0</strong>
+                </div>
+            </div>
+
+            <div class="profile-recent">
+                <h3>최근 전적</h3>
+                <div class="recent-list" id="profile-recent-list">
+                    <div class="text-muted">데이터 없음</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pages/leaderboard.js' %}"></script>
+{% endblock %}

@@ -27,6 +27,26 @@ from apps.adminpanel.services import AdminPanelService
 from apps.notifications.services import NotificationService
 
 
+def _format_until(until: timezone.datetime | None) -> str:
+    if not until:
+        return ""
+    now = timezone.now()
+    remaining = max(until - now, timedelta())
+    total_minutes = int(remaining.total_seconds() // 60)
+    hours, minutes = divmod(total_minutes, 60)
+    days, hours = divmod(hours, 24)
+    parts = []
+    if days:
+        parts.append(f"{days}일")
+    if hours:
+        parts.append(f"{hours}시간")
+    if minutes and not days:
+        parts.append(f"{minutes}분")
+    remain_text = " ".join(parts) if parts else "곧 해제"
+    until_text = timezone.localtime(until).strftime("%Y-%m-%d %H:%M")
+    return f"해제: {until_text} (남은 {remain_text})"
+
+
 class AdminDashboardView(APIView):
     permission_classes = [IsAuthenticated, IsStaff]
 
@@ -90,6 +110,9 @@ class AdminUserSuspendView(APIView):
         message = "관리자에 의해 계정이 정지되었습니다."
         if reason:
             message = f"{message} (사유: {reason})"
+        until_text = _format_until(user.suspended_until)
+        if until_text:
+            message = f"{message} · {until_text}"
         NotificationService.create_notification(
             user=user,
             type="account_suspended",
@@ -135,6 +158,9 @@ class AdminUserMuteView(APIView):
         message = "관리자에 의해 채팅이 제한되었습니다."
         if reason:
             message = f"{message} (사유: {reason})"
+        until_text = _format_until(user.muted_until)
+        if until_text:
+            message = f"{message} · {until_text}"
         NotificationService.create_notification(
             user=user,
             type="chat_mute",
@@ -225,7 +251,7 @@ class AdminReportResolveView(APIView):
     def post(self, request, report_id: int):
         serializer = ReportResolveSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        report = Report.objects.select_related("target").get(pk=report_id)
+        report = Report.objects.select_related("target", "reporter").get(pk=report_id)
         report.mark_resolved(
             request.user,
             serializer.validated_data["status"],
@@ -238,4 +264,21 @@ class AdminReportResolveView(APIView):
             message="신고가 처리되었습니다.",
             payload={"status": report.status},
         )
+        if report.reporter:
+            status_label = "처리 완료" if report.status == "resolved" else "무효 처리"
+            note = report.resolution_note.strip()
+            message = f"신고가 {status_label}되었습니다."
+            if note:
+                message = f"{message} (사유: {note})"
+            NotificationService.create_notification(
+                user=report.reporter,
+                type="report_result_reporter",
+                title="신고 처리 결과",
+                message=message,
+                payload={
+                    "status": report.status,
+                    "report_id": report.id,
+                    "target_id": report.target_id,
+                },
+            )
         return Response(ReportSerializer(report).data)

@@ -1,0 +1,245 @@
+.social-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+}
+
+.page-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-lg);
+    align-items: center;
+}
+
+.page-title {
+    font-size: 1.25rem;
+    margin-bottom: var(--space-sm);
+}
+
+.page-subtitle {
+    font-family: var(--font-body);
+    color: var(--color-text-secondary);
+}
+
+.page-summary {
+    min-width: 220px;
+    padding: var(--space-md);
+}
+
+.summary-title {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-sm);
+}
+
+.summary-body {
+    font-size: 0.875rem;
+    color: var(--color-text-primary);
+}
+
+.leaderboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--space-lg);
+    align-items: start;
+}
+
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+    text-align: left;
+    padding: var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.leaderboard-table th {
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+}
+
+.leaderboard-row {
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.leaderboard-row:hover {
+    background-color: var(--color-bg-tertiary);
+}
+
+.leaderboard-row.is-me {
+    background-color: rgba(233, 69, 96, 0.12);
+}
+
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.user-name {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.user-tier {
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+}
+
+.table-empty {
+    text-align: center;
+    padding: var(--space-xl);
+    color: var(--color-text-muted);
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-top: var(--space-lg);
+}
+
+.pagination-info {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    padding: 0 var(--space-sm);
+}
+
+.profile-drawer {
+    position: sticky;
+    top: calc(var(--navbar-height) + var(--space-lg));
+    padding: var(--space-lg);
+}
+
+.profile-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-md);
+}
+
+.profile-user {
+    display: flex;
+    gap: var(--space-md);
+    align-items: center;
+}
+
+.profile-meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.profile-name {
+    font-size: 0.875rem;
+}
+
+.profile-rating,
+.profile-tier {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.profile-actions {
+    display: flex;
+    gap: var(--space-sm);
+    margin: var(--space-md) 0;
+}
+
+.profile-report {
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.profile-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-sm);
+    text-align: center;
+    font-family: var(--font-body);
+}
+
+.stat-item span {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--color-text-secondary);
+}
+
+.stat-item strong {
+    font-size: 0.85rem;
+}
+
+.profile-vs {
+    margin-top: var(--space-lg);
+    font-family: var(--font-body);
+}
+
+.profile-vs h3,
+.profile-recent h3 {
+    font-size: 0.75rem;
+    margin-bottom: var(--space-sm);
+    color: var(--color-text-secondary);
+}
+
+.vs-grid {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    gap: var(--space-sm);
+    font-size: 0.75rem;
+    color: var(--color-text-primary);
+}
+
+.profile-recent {
+    margin-top: var(--space-lg);
+    font-family: var(--font-body);
+}
+
+.recent-list {
+    display: grid;
+    gap: var(--space-sm);
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+
+.recent-item {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-sm);
+}
+
+@media (max-width: 1024px) {
+    .leaderboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-drawer {
+        position: static;
+    }
+}
+
+@media (max-width: 640px) {
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .profile-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

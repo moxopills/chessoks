@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}유저 프로필 - ChessOK{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/user_profile.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <div class="card profile-card" id="profile-card">
+        <div class="profile-header">
+            <div class="avatar avatar-lg" id="profile-avatar">
+                <span class="avatar-placeholder">?</span>
+            </div>
+            <div class="profile-meta">
+                <h1 id="profile-name">로딩중...</h1>
+                <div class="profile-rating" id="profile-rating">-</div>
+                <div class="profile-tier" id="profile-tier">-</div>
+            </div>
+            <div class="profile-actions">
+                <button class="btn btn-secondary btn-sm" id="friend-request-btn">친구 요청</button>
+                <button class="btn btn-secondary btn-sm" id="report-btn">신고하기</button>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="profile-stats" id="profile-stats">
+            <div class="stat-item">
+                <span>플레이</span>
+                <strong id="stat-games">0</strong>
+            </div>
+            <div class="stat-item">
+                <span>승</span>
+                <strong id="stat-wins">0</strong>
+            </div>
+            <div class="stat-item">
+                <span>패</span>
+                <strong id="stat-losses">0</strong>
+            </div>
+            <div class="stat-item">
+                <span>무</span>
+                <strong id="stat-draws">0</strong>
+            </div>
+        </div>
+
+        <div class="profile-vs hidden" id="profile-vs">
+            <h3>상대 전적</h3>
+            <div class="vs-grid">
+                <span>승</span><strong id="vs-wins">0</strong>
+                <span>패</span><strong id="vs-losses">0</strong>
+                <span>무</span><strong id="vs-draws">0</strong>
+            </div>
+        </div>
+
+        <div class="profile-recent">
+            <h3>최근 전적</h3>
+            <div class="recent-list" id="recent-list">
+                <div class="text-muted">로딩중...</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pages/user_profile.js' %}"></script>
+{% endblock %}

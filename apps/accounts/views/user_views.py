@@ -583,6 +583,30 @@ class UserDashboardView(APIView):
         return Response(data)
 
 
+class UserSearchView(APIView):
+    """유저 검색 (닉네임 기준)"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: PublicUserSerializer(many=True)}, tags=["유저"])
+    def get(self, request):
+        query = request.query_params.get("q", "").strip()
+        if not query:
+            return Response({"count": 0, "results": []})
+
+        queryset = (
+            User.objects.select_related("stats")
+            .filter(nickname__icontains=query)
+            .order_by("nickname")[:20]
+        )
+        return Response(
+            {
+                "count": len(queryset),
+                "results": PublicUserSerializer(queryset, many=True).data,
+            }
+        )
+
+
 def _parse_id_list(value: str) -> list[int]:
     if not value:
         return []
