@@ -107,6 +107,26 @@
                 </form>
             </div>
         </div>
+
+        <!-- Report -->
+        <div class="panel-section game-report-section" id="game-report-section">
+            <div class="panel-header">
+                <h3 class="panel-title">신고</h3>
+            </div>
+            <div class="panel-body">
+                <form class="report-form" id="report-form">
+                    <select class="report-select" id="report-category">
+                        <option value="cheat">부정행위</option>
+                        <option value="abuse">욕설/비매너</option>
+                        <option value="spam">스팸</option>
+                        <option value="other">기타</option>
+                    </select>
+                    <input type="text" class="report-input" id="report-message" placeholder="사유를 입력하세요 (선택)" maxlength="200">
+                    <button type="submit" class="btn btn-secondary btn-sm">신고하기</button>
+                </form>
+                <div class="report-hint" id="report-hint">상대 플레이어만 신고할 수 있습니다.</div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -303,6 +323,7 @@
 .chess-board-wrapper {
     position: relative;
     --board-label-size: 24px;
+    --board-border-size: 2px;
     padding-left: var(--board-label-size);
     padding-bottom: var(--board-label-size);
     display: inline-block;
@@ -420,9 +441,9 @@
 /* Board Labels */
 .board-labels-files {
     position: absolute;
-    bottom: 0;
-    left: var(--board-label-size);
-    right: 0;
+    bottom: var(--board-border-size);
+    left: calc(var(--board-label-size) + var(--board-border-size));
+    right: var(--board-border-size);
     height: var(--board-label-size);
     display: grid;
     grid-template-columns: repeat(8, 1fr);
@@ -436,9 +457,9 @@
 
 .board-labels-ranks {
     position: absolute;
-    top: 0;
+    top: var(--board-border-size);
     left: 0;
-    bottom: var(--board-label-size);
+    bottom: calc(var(--board-label-size) + var(--board-border-size));
     display: grid;
     grid-template-rows: repeat(8, 1fr);
     align-items: center;
@@ -448,6 +469,13 @@
     color: var(--color-text-muted);
     line-height: 1;
     pointer-events: none;
+}
+
+.board-labels-files span,
+.board-labels-ranks span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* Game Actions */
@@ -469,6 +497,28 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     overflow: hidden;
+}
+
+.report-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.report-select,
+.report-input {
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-primary);
+    padding: 8px 10px;
+    font-size: 0.8rem;
+}
+
+.report-hint {
+    margin-top: var(--space-sm);
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
 }
 
 .panel-header {

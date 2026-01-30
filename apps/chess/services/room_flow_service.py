@@ -18,6 +18,8 @@ class RoomFlowService:
     @staticmethod
     @transaction.atomic
     def set_ready(room_id: int, user, ready: bool) -> Room:
+        if user.is_suspended:
+            raise ValidationError("정지된 계정입니다.")
         try:
             room = Room.objects.select_for_update().get(pk=room_id)
         except Room.DoesNotExist:
@@ -53,6 +55,8 @@ class RoomFlowService:
     @staticmethod
     @transaction.atomic
     def confirm_start(room_id: int, user) -> tuple[Room, Game]:
+        if user.is_suspended:
+            raise ValidationError("정지된 계정입니다.")
         try:
             room = Room.objects.select_for_update().get(pk=room_id)
         except Room.DoesNotExist:
@@ -93,6 +97,8 @@ class RoomFlowService:
     @staticmethod
     @transaction.atomic
     def join_room(room_id: int, user, password: str | None = None) -> Room:
+        if user.is_suspended:
+            raise ValidationError("정지된 계정입니다.")
         try:
             room = Room.objects.select_for_update().get(pk=room_id)
         except Room.DoesNotExist:
@@ -133,6 +139,16 @@ class RoomFlowService:
         )
         broadcast_room_update(room)
         broadcast_room_state(room)
+        if room.host_id and room.host_id != user.id:
+            from apps.notifications.services import NotificationService
+
+            NotificationService.create_notification(
+                user=room.host,
+                type="room_joined",
+                title="게스트 입장",
+                message=f"{user.nickname}님이 방에 입장했습니다.",
+                payload={"room_id": room.id},
+            )
         return room
 
     @staticmethod

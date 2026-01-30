@@ -26,6 +26,12 @@
                 <span class="navbar-link-icon">&#9829;</span>
                 <span>친구</span>
             </a>
+            {% if request.user.is_authenticated and request.user.is_staff %}
+            <a href="/admin-panel/" class="navbar-link">
+                <span class="navbar-link-icon">&#9881;</span>
+                <span>관리</span>
+            </a>
+            {% endif %}
         </div>
 
         <!-- Right Section -->

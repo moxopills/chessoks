@@ -422,6 +422,13 @@ a:hover {
     margin-bottom: 0;
 }
 
+/* Divider */
+.divider {
+    height: 1px;
+    background-color: var(--color-border);
+    margin: var(--space-lg) 0;
+}
+
 /* Toast Container */
 #toast-container {
     position: fixed;

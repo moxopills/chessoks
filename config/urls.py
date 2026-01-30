@@ -23,6 +23,8 @@ from django.views.generic import TemplateView
 
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+from apps.adminpanel.views import AdminDashboardPageView
+
 urlpatterns = [
     # Admin
     path("admin/", admin.site.urls),
@@ -30,6 +32,8 @@ urlpatterns = [
     path("api/accounts/", include("apps.accounts.urls")),
     path("api/chess/", include("apps.chess.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
+    path("api/admin/", include("apps.adminpanel.urls")),
+    path("api/reports/", include("apps.adminpanel.public_urls")),
     path("api/", include("apps.core.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
@@ -43,6 +47,16 @@ urlpatterns = [
         name="password-reset",
     ),
     path("profile/", TemplateView.as_view(template_name="accounts/profile.html"), name="profile"),
+    path(
+        "profile/edit/",
+        TemplateView.as_view(template_name="accounts/profile_edit.html"),
+        name="profile-edit",
+    ),
+    path(
+        "password-change/",
+        TemplateView.as_view(template_name="accounts/password_change.html"),
+        name="password-change",
+    ),
     path("rooms/", TemplateView.as_view(template_name="chess/room_list.html"), name="room-list"),
     path(
         "rooms/<int:room_id>/",
@@ -68,6 +82,7 @@ urlpatterns = [
         TemplateView.as_view(template_name="accounts/user_profile.html"),
         name="user-profile",
     ),
+    path("admin-panel/", AdminDashboardPageView.as_view(), name="admin-panel"),
 ]
 
 if settings.DEBUG:

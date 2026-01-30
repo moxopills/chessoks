@@ -18,11 +18,25 @@
                     <span>매칭중...</span>
                 </span>
             </button>
+            <a class="btn btn-secondary btn-arcade btn-lg" href="/rooms/">
+                <span class="btn-text"><span class="btn-icon">＋</span> 방 만들기</span>
+            </a>
         </div>
     </section>
 
     <!-- Main Content -->
     <div class="lobby-content">
+        <!-- Waiting Room -->
+        <section class="lobby-section lobby-waiting-section hidden" id="waiting-room-card">
+            <div class="section-header">
+                <h2 class="section-title">⏳ 대기 중인 방</h2>
+            </div>
+            <div class="waiting-room-body">
+                <div class="waiting-room-info" id="waiting-room-info">로딩 중...</div>
+                <button class="btn btn-secondary btn-sm" id="waiting-room-enter">대기실로 이동</button>
+            </div>
+        </section>
+
         <!-- Left: Room List Preview -->
         <section class="lobby-section">
             <div class="section-header">
@@ -166,6 +180,38 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     padding: var(--space-lg);
+}
+
+.lobby-waiting-section {
+    grid-column: span 3;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.waiting-room-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+
+@media (max-width: 1024px) {
+    .lobby-waiting-section {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 768px) {
+    .lobby-waiting-section {
+        grid-column: span 1;
+    }
+    .waiting-room-body {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 
 .section-header {

@@ -76,6 +76,17 @@ class RoomDetailView(APIView):
         return Response(RoomSerializer(room).data)
 
 
+class RoomWaitingView(APIView):
+    """내 대기 방 조회"""
+
+    @extend_schema(responses={200: RoomSerializer}, tags=["방"])
+    def get(self, request):
+        room = RoomQueryService.get_waiting_room(request.user)
+        if not room:
+            return Response({"room": None})
+        return Response({"room": RoomSerializer(room).data})
+
+
 class RoomReadyView(APIView):
     """방 준비 상태 변경"""
 
