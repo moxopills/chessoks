@@ -140,6 +140,11 @@ def cleanup_inactive_rooms(stale_minutes: int = 30) -> dict:
     ).filter(models.Q(guest__isnull=True) | models.Q(room_type="quick"))
     stale_deleted, _ = stale_rooms.delete()
 
+    finished_quick_rooms = Room.objects.filter(
+        room_type="quick", status="finished", finished_at__lt=cutoff
+    )
+    finished_quick_deleted, _ = finished_quick_rooms.delete()
+
     abnormal_rooms = (
         Room.objects.filter(status="playing", started_at__lt=cutoff)
         .exclude(games__result="playing")
@@ -147,7 +152,11 @@ def cleanup_inactive_rooms(stale_minutes: int = 30) -> dict:
     )
     abnormal_updated = abnormal_rooms.update(status="finished", finished_at=now)
 
-    return {"stale_deleted": stale_deleted, "abnormal_updated": abnormal_updated}
+    return {
+        "stale_deleted": stale_deleted,
+        "finished_quick_deleted": finished_quick_deleted,
+        "abnormal_updated": abnormal_updated,
+    }
 
 
 @shared_task

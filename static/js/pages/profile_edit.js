@@ -124,13 +124,13 @@
         });
 
         emailConfirmBtn.addEventListener('click', async () => {
-            const token = emailTokenInput.value.trim();
-            if (!token) {
-                Toast.error('인증 토큰을 입력해주세요.');
+            const code = emailTokenInput.value.trim();
+            if (!code) {
+                Toast.error('인증번호를 입력해주세요.');
                 return;
             }
             try {
-                const result = await API.post('/accounts/email/change/confirm/', { token });
+                const result = await API.post('/accounts/email/change/confirm/', { code });
                 Toast.success(result.message || '이메일이 변경되었습니다.');
                 emailTokenInput.value = '';
             } catch (error) {

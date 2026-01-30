@@ -711,12 +711,14 @@ class PasswordResetE2ETest(BaseAPITestCase):
         # 2. 토큰 추출 (토큰이 생성되었는지 확인)
         token = AuthToken.objects.password_reset().first()
         self.assertIsNotNone(token)
+        code = "123456"
+        cache.set(f"password_reset_code:{code}", token.token, timeout=60)
 
         # 3. 비밀번호 재설정
         response = self.client.post(
             "/api/accounts/password-reset/confirm/",
             {
-                "token": token.token,
+                "code": code,
                 "new_password": "NewPass123!",
                 "new_password2": "NewPass123!",
             },
@@ -746,11 +748,13 @@ class PasswordResetE2ETest(BaseAPITestCase):
             token=AuthToken.generate_token(),
             expires_at=timezone.now() - timedelta(hours=1),
         )
+        expired_code = "654321"
+        cache.set(f"password_reset_code:{expired_code}", expired_token.token, timeout=60)
 
         response = self.client.post(
             "/api/accounts/password-reset/confirm/",
             {
-                "token": expired_token.token,
+                "code": expired_code,
                 "new_password": "NewPass123!",
                 "new_password2": "NewPass123!",
             },
@@ -767,12 +771,14 @@ class PasswordResetE2ETest(BaseAPITestCase):
             format="json",
         )
         token = AuthToken.objects.password_reset().first()
+        code = "111111"
+        cache.set(f"password_reset_code:{code}", token.token, timeout=60)
 
         # 첫 번째 사용
         self.client.post(
             "/api/accounts/password-reset/confirm/",
             {
-                "token": token.token,
+                "code": code,
                 "new_password": "NewPass123!",
                 "new_password2": "NewPass123!",
             },
@@ -783,7 +789,7 @@ class PasswordResetE2ETest(BaseAPITestCase):
         response = self.client.post(
             "/api/accounts/password-reset/confirm/",
             {
-                "token": token.token,
+                "code": code,
                 "new_password": "Another123!",
                 "new_password2": "Another123!",
             },
@@ -800,10 +806,12 @@ class PasswordResetE2ETest(BaseAPITestCase):
             format="json",
         )
         token1 = AuthToken.objects.password_reset().first()
+        code1 = "222222"
+        cache.set(f"password_reset_code:{code1}", token1.token, timeout=60)
 
         response = self.client.post(
             "/api/accounts/password-reset/confirm/",
-            {"token": token1.token, "new_password": "Short1!", "new_password2": "Short1!"},
+            {"code": code1, "new_password": "Short1!", "new_password2": "Short1!"},
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -815,11 +823,13 @@ class PasswordResetE2ETest(BaseAPITestCase):
             format="json",
         )
         token2 = AuthToken.objects.password_reset().filter(is_used=False).first()
+        code2 = "333333"
+        cache.set(f"password_reset_code:{code2}", token2.token, timeout=60)
 
         response = self.client.post(
             "/api/accounts/password-reset/confirm/",
             {
-                "token": token2.token,
+                "code": code2,
                 "new_password": "lowercase123!",
                 "new_password2": "lowercase123!",
             },
@@ -834,11 +844,13 @@ class PasswordResetE2ETest(BaseAPITestCase):
             format="json",
         )
         token3 = AuthToken.objects.password_reset().filter(is_used=False).first()
+        code3 = "444444"
+        cache.set(f"password_reset_code:{code3}", token3.token, timeout=60)
 
         response = self.client.post(
             "/api/accounts/password-reset/confirm/",
             {
-                "token": token3.token,
+                "code": code3,
                 "new_password": "NoSpecial123",
                 "new_password2": "NoSpecial123",
             },
@@ -854,11 +866,13 @@ class PasswordResetE2ETest(BaseAPITestCase):
             format="json",
         )
         token = AuthToken.objects.password_reset().first()
+        code = "555555"
+        cache.set(f"password_reset_code:{code}", token.token, timeout=60)
 
         response = self.client.post(
             "/api/accounts/password-reset/confirm/",
             {
-                "token": token.token,
+                "code": code,
                 "new_password": "NewPass123!",
                 "new_password2": "Different123!",
             },
@@ -1663,10 +1677,13 @@ class EmailChangeTestCase(BaseAPITestCase):
             expires_at=timezone.now() + timedelta(hours=24),
             new_email="changed@test.com",
         )
+        code = "123456"
+        cache_key = f"email_change_code:{self.user.id}:{code}"
+        cache.set(cache_key, token.token, timeout=60)
 
         response = self.client.post(
             "/api/accounts/email/change/confirm/",
-            {"token": token.token},
+            {"code": code},
             format="json",
         )
 
@@ -1687,15 +1704,18 @@ class EmailChangeTestCase(BaseAPITestCase):
             expires_at=timezone.now() + timedelta(hours=24),
             new_email=None,
         )
+        code = "654321"
+        cache_key = f"email_change_code:{self.user.id}:{code}"
+        cache.set(cache_key, token.token, timeout=60)
 
         response = self.client.post(
             "/api/accounts/email/change/confirm/",
-            {"token": token.token},
+            {"code": code},
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFieldError(response, "token")
+        self.assertFieldError(response, "code")
 
 
 class CleanupDeletedAccountsCommandTestCase(BaseTestCase):

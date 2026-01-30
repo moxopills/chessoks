@@ -1,7 +1,8 @@
 """계정 관련 유틸리티"""
 
 from .email import (
-    send_password_reset_email,
+    send_email_change_code,
+    send_password_reset_code,
     send_signup_verification_email,
     send_verification_email,
 )
@@ -18,7 +19,8 @@ from .token_helpers import (
 from .validators import check_passwords_match
 
 __all__ = [
-    "send_password_reset_email",
+    "send_password_reset_code",
+    "send_email_change_code",
     "send_signup_verification_email",
     "send_verification_email",
     "create_signup_email_token",
