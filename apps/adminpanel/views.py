@@ -84,14 +84,18 @@ class AdminUserSuspendView(APIView):
         if not until:
             until = timezone.now() + timedelta(days=serializer.validated_data["days"])
         user.suspended_until = until
-        user.suspension_reason = serializer.validated_data.get("reason", "")
+        reason = serializer.validated_data.get("reason", "")
+        user.suspension_reason = reason
         user.save(update_fields=["suspended_until", "suspension_reason"])
+        message = "관리자에 의해 계정이 정지되었습니다."
+        if reason:
+            message = f"{message} (사유: {reason})"
         NotificationService.create_notification(
             user=user,
             type="account_suspended",
             title="계정 정지",
-            message="관리자에 의해 계정이 정지되었습니다.",
-            payload={"until": user.suspended_until.isoformat()},
+            message=message,
+            payload={"until": user.suspended_until.isoformat(), "reason": reason},
         )
         return Response(AdminUserSerializer(user).data)
 
@@ -104,6 +108,13 @@ class AdminUserUnsuspendView(APIView):
         user.suspended_until = None
         user.suspension_reason = ""
         user.save(update_fields=["suspended_until", "suspension_reason"])
+        NotificationService.create_notification(
+            user=user,
+            type="account_unsuspended",
+            title="계정 정지 해제",
+            message="계정 정지가 해제되었습니다.",
+            payload={},
+        )
         return Response(AdminUserSerializer(user).data)
 
 
@@ -118,14 +129,18 @@ class AdminUserMuteView(APIView):
         if not until:
             until = timezone.now() + timedelta(minutes=serializer.validated_data["minutes"])
         user.muted_until = until
-        user.mute_reason = serializer.validated_data.get("reason", "")
+        reason = serializer.validated_data.get("reason", "")
+        user.mute_reason = reason
         user.save(update_fields=["muted_until", "mute_reason"])
+        message = "관리자에 의해 채팅이 제한되었습니다."
+        if reason:
+            message = f"{message} (사유: {reason})"
         NotificationService.create_notification(
             user=user,
             type="chat_mute",
             title="채팅 금지",
-            message="관리자에 의해 채팅이 제한되었습니다.",
-            payload={"until": user.muted_until.isoformat()},
+            message=message,
+            payload={"until": user.muted_until.isoformat(), "reason": reason},
         )
         return Response(AdminUserSerializer(user).data)
 
@@ -138,6 +153,13 @@ class AdminUserUnmuteView(APIView):
         user.muted_until = None
         user.mute_reason = ""
         user.save(update_fields=["muted_until", "mute_reason"])
+        NotificationService.create_notification(
+            user=user,
+            type="chat_unmute",
+            title="채팅 제한 해제",
+            message="채팅 제한이 해제되었습니다.",
+            payload={},
+        )
         return Response(AdminUserSerializer(user).data)
 
 

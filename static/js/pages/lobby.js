@@ -21,10 +21,17 @@
     const waitingRoomCard = document.getElementById('waiting-room-card');
     const waitingRoomInfo = document.getElementById('waiting-room-info');
     const waitingRoomEnter = document.getElementById('waiting-room-enter');
+    const reportForm = document.getElementById('lobby-report-form');
+    const reportTarget = document.getElementById('lobby-report-target');
+    const reportCategory = document.getElementById('lobby-report-category');
+    const reportMessage = document.getElementById('lobby-report-message');
+    const reportHint = document.getElementById('lobby-report-hint');
 
     let isMatching = false;
     let lobbySocket = null;
+    let notificationSocket = null;
     let currentUserId = null;
+    let isSuspended = false;
     let lobbyUsers = {};
     let lobbyRooms = [];
     let roomRefreshInterval = null;
@@ -118,6 +125,10 @@
     }
 
     async function handleRoomClick(item) {
+        if (isSuspended) {
+            Toast.error('계정이 정지되어 이용할 수 없습니다.');
+            return;
+        }
         const roomId = parseInt(item.dataset.roomId, 10);
         if (!roomId) return;
 
@@ -165,10 +176,19 @@
             currentUserId = user.id;
             setupChat();
             setupQuickMatch();
+            setupLobbyReport();
+            if (user.is_muted) {
+                setChatMutedState(true, user.mute_reason || '');
+            }
+            if (user.is_suspended) {
+                setSuspendedState(true, user.suspension_reason || '');
+            }
+            connectNotificationSocket();
         } catch (error) {
             // 비로그인 상태 - 채팅 비활성화
             chatInput.disabled = true;
             chatForm.querySelector('button').disabled = true;
+            setReportEnabled(false, '로그인 후 신고할 수 있습니다.');
         }
     }
 
@@ -177,6 +197,10 @@
      */
     function setupQuickMatch() {
         quickMatchBtn.addEventListener('click', async function() {
+            if (isSuspended) {
+                Toast.error('계정이 정지되어 이용할 수 없습니다.');
+                return;
+            }
             if (isMatching) {
                 await cancelMatch();
             } else {
@@ -337,7 +361,12 @@
             handleChatBadge(data);
         } else if (data.type === 'recent_messages') {
             // 최근 메시지 로드
-            data.messages.forEach(msg => addChatMessage(msg));
+            chatMessages.innerHTML = '';
+            const messages = (data.messages || []).slice().sort((a, b) => {
+                return new Date(a.sent_at) - new Date(b.sent_at);
+            });
+            messages.forEach(msg => addChatMessage(msg));
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         } else if (data.type === 'lobby_users') {
             // 접속자 목록 초기화
             lobbyUsers = {};
@@ -345,20 +374,76 @@
                 lobbyUsers[user.id] = user;
             });
             renderUsers();
+            updateReportTargets();
         } else if (data.type === 'user_joined') {
             // 유저 입장
             lobbyUsers[data.user.id] = data.user;
             addUserToList(data.user);
+            updateReportTargets();
         } else if (data.type === 'user_left') {
             // 유저 퇴장
             delete lobbyUsers[data.user_id];
             removeUserFromList(data.user_id);
+            updateReportTargets();
         } else if (data.type === 'room_update') {
             upsertRoom(data.room);
         } else if (data.type === 'room_removed') {
             removeRoom(data.room_id);
         } else if (data.type === 'error') {
             Toast.error(data.message);
+        }
+    }
+
+    function connectNotificationSocket() {
+        if (notificationSocket || !currentUserId) return;
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/notifications/`;
+        notificationSocket = new WebSocket(wsUrl);
+
+        notificationSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            if (data.type === 'chat_mute') {
+                setChatMutedState(true, data.payload?.reason || '');
+                Toast.error(data.message || '채팅이 제한되었습니다.');
+            } else if (data.type === 'account_suspended') {
+                setSuspendedState(true, data.payload?.reason || '');
+                Toast.error(data.message || '계정이 정지되었습니다.');
+            } else if (data.type === 'chat_unmute') {
+                setChatMutedState(false);
+                Toast.success(data.message || '채팅 제한이 해제되었습니다.');
+            } else if (data.type === 'account_unsuspended') {
+                setSuspendedState(false);
+                Toast.success(data.message || '계정 정지가 해제되었습니다.');
+            }
+        };
+    }
+
+    function setChatMutedState(muted, reason = '') {
+        if (muted) {
+            chatInput.disabled = true;
+            chatForm.querySelector('button').disabled = true;
+            if (reason) {
+                addChatNotice(`채팅 제한됨: ${reason}`);
+            } else {
+                addChatNotice('채팅이 제한되었습니다.');
+            }
+        } else {
+            chatInput.disabled = false;
+            chatForm.querySelector('button').disabled = false;
+        }
+    }
+
+    function setSuspendedState(suspended, reason = '') {
+        isSuspended = suspended;
+        if (suspended) {
+            quickMatchBtn?.classList.add('btn-disabled');
+            if (reason) {
+                addChatNotice(`계정 정지됨: ${reason}`);
+            } else {
+                addChatNotice('계정이 정지되었습니다.');
+            }
+        } else {
+            quickMatchBtn?.classList.remove('btn-disabled');
         }
     }
 
@@ -376,6 +461,61 @@
         `;
         chatMessages.appendChild(messageEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function setupLobbyReport() {
+        if (!reportForm) return;
+        setReportEnabled(true);
+        updateReportTargets();
+
+        reportForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const targetId = reportTarget?.value;
+            if (!targetId) {
+                Toast.error('신고할 유저를 선택해주세요.');
+                return;
+            }
+            const category = reportCategory?.value || 'other';
+            const description = reportMessage?.value.trim() || '';
+            try {
+                await API.post('/reports/', {
+                    target_id: parseInt(targetId, 10),
+                    category,
+                    description
+                });
+                Toast.success('신고가 접수되었습니다.');
+                if (reportMessage) reportMessage.value = '';
+            } catch (error) {
+                Toast.error(error.data?.message || '신고에 실패했습니다.');
+            }
+        });
+    }
+
+    function updateReportTargets() {
+        if (!reportTarget) return;
+        if (!currentUserId) {
+            reportTarget.innerHTML = '<option value="">로그인 후 이용 가능</option>';
+            return;
+        }
+        const candidates = Object.values(lobbyUsers).filter(user => user.id !== currentUserId);
+        if (!candidates.length) {
+            reportTarget.innerHTML = '<option value="">신고할 유저 없음</option>';
+            return;
+        }
+        reportTarget.innerHTML = '<option value="">신고할 유저 선택</option>' + candidates.map(user => {
+            return `<option value="${user.id}">${Utils.escapeHtml(user.nickname)}</option>`;
+        }).join('');
+    }
+
+    function setReportEnabled(enabled, hintText = '') {
+        if (!reportForm) return;
+        const controls = reportForm.querySelectorAll('select, input, button');
+        controls.forEach(el => {
+            el.disabled = !enabled;
+        });
+        if (reportHint) {
+            reportHint.textContent = hintText || reportHint.textContent;
+        }
     }
 
     function setupMobileTabs() {

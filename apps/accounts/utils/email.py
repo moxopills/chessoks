@@ -5,18 +5,17 @@ from django.conf import settings
 from apps.accounts.tasks import send_email_task
 
 
-def send_password_reset_email(user_email: str, token: str) -> None:
-    """비밀번호 재설정 이메일 발송 (Celery 비동기)"""
-    reset_url = f"{settings.FRONTEND_URL}/password-reset/confirm?token={token}"
+def send_password_reset_code(user_email: str, code: str) -> None:
+    """비밀번호 재설정 인증번호 발송 (Celery 비동기)"""
 
-    subject = "[ChessOK] 비밀번호 재설정 요청"
+    subject = "[ChessOK] 비밀번호 재설정 인증번호"
     message = f"""
 안녕하세요,
 
 비밀번호 재설정을 요청하셨습니다.
-아래 링크를 클릭하여 비밀번호를 재설정하세요. (1시간 유효)
+아래 인증번호를 입력하여 비밀번호를 재설정하세요. (1시간 유효)
 
-{reset_url}
+인증번호: {code}
 
 요청하지 않으셨다면 이 메일을 무시하세요.
 
@@ -40,6 +39,26 @@ ChessOK 회원가입을 환영합니다!
 {verification_url}
 
 인증을 완료하시면 로그인이 가능합니다.
+
+ChessOK 팀
+    """
+
+    send_email_task.delay(user_email, subject, message)
+
+
+def send_email_change_code(user_email: str, code: str) -> None:
+    """이메일 변경 인증번호 발송 (Celery 비동기)"""
+
+    subject = "[ChessOK] 이메일 변경 인증번호"
+    message = f"""
+안녕하세요,
+
+이메일 변경을 요청하셨습니다.
+아래 인증번호를 입력하여 변경을 완료해주세요. (24시간 유효)
+
+인증번호: {code}
+
+요청하지 않으셨다면 이 메일을 무시하세요.
 
 ChessOK 팀
     """

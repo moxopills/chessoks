@@ -44,4 +44,8 @@ app.conf.beat_schedule = {
         "task": "apps.accounts.tasks.cleanup_deleted_accounts",
         "schedule": 86400.0,  # 매일 (24시간)
     },
+    "cleanup-expired-sanctions": {
+        "task": "apps.accounts.tasks.cleanup_expired_sanctions",
+        "schedule": 60.0,  # 1분마다
+    },
 }
