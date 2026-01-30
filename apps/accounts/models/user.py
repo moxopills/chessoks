@@ -87,6 +87,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         null=True, blank=True, help_text="탈퇴 예정 시간 (이 시간 전에 로그인하면 취소)"
     )
 
+    # 닉네임 변경 제한
+    nickname_changed_at = models.DateTimeField(
+        null=True, blank=True, help_text="마지막 닉네임 변경 시간"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

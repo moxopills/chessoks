@@ -448,6 +448,10 @@ a:hover {
     box-shadow: var(--shadow-md);
     animation: slideIn 0.3s ease;
     max-width: 320px;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    word-break: break-word;
 }
 
 .toast-success {
