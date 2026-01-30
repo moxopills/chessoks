@@ -1619,7 +1619,7 @@ class EmailChangeTestCase(BaseAPITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("인증 이메일", response.data["message"])
+        self.assertIn("인증번호", response.data["message"])
         token = (
             AuthToken.objects.email_verification()
             .filter(user=self.user, is_used=False)
