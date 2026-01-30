@@ -1002,8 +1002,14 @@
     async function openReplay() {
         if (!replayModal) return;
         if (!replayMoves.length) {
-            const data = await API.get(`/chess/games/${game.id}/moves/`, { limit: 200, offset: 0 });
-            replayMoves = data.results || [];
+            try {
+                const data = await API.get(`/chess/games/${game.id}/moves/`, { limit: 200, offset: 0 });
+                replayMoves = data.results || [];
+            } catch (error) {
+                console.error('Failed to load replay moves:', error);
+                replayMoves = [];
+                if (replayStatus) replayStatus.textContent = '기보를 불러오지 못했습니다.';
+            }
         }
         liveFen = game.fen;
         liveLastMove = lastMove;
@@ -1056,6 +1062,17 @@
     }
 
     function updateReplayBoard() {
+        if (!replayMoves.length) {
+            if (replayStatus) replayStatus.textContent = '기보가 없습니다.';
+            replayPrev && (replayPrev.disabled = true);
+            replayNext && (replayNext.disabled = true);
+            replayPlay && (replayPlay.disabled = true);
+            return;
+        }
+        replayPrev && (replayPrev.disabled = false);
+        replayNext && (replayNext.disabled = false);
+        replayPlay && (replayPlay.disabled = false);
+
         const total = replayMoves.length;
         const statusText = replayIndex === 0
             ? '시작 위치'
