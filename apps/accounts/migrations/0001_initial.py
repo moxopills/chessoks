@@ -97,7 +97,7 @@ class Migration(migrations.Migration):
                 (
                     "avatar_url",
                     models.URLField(
-                        blank=True, help_text="S3 프로필 사진 URL", max_length=500, null=True
+                        blank=True, help_text="GCP 프로필 사진 URL", max_length=500, null=True
                     ),
                 ),
                 ("bio", models.TextField(blank=True, help_text="자기소개")),

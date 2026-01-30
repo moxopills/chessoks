@@ -61,7 +61,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     nickname = models.CharField(max_length=50, unique=True, help_text="게임 내 표시 이름")
     avatar_url = models.URLField(
-        max_length=500, blank=True, null=True, help_text="S3 프로필 사진 URL"
+        max_length=500, blank=True, null=True, help_text="GCP 프로필 사진 URL"
     )
     bio = models.TextField(blank=True, help_text="자기소개")
 
