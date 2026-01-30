@@ -103,12 +103,15 @@
             return;
         }
         reportTable.querySelector('tbody').innerHTML = reports.map(report => {
+            const description = report.description ? Utils.escapeHtml(report.description) : '';
+            const category = Utils.escapeHtml(report.category || '');
+            const summary = description ? `${category} · ${description}` : category;
             return `
                 <tr data-report-id="${report.id}">
                     <td>${report.id}</td>
                     <td>${Utils.escapeHtml(report.reporter_nickname || '-') }</td>
                     <td>${Utils.escapeHtml(report.target_nickname)}</td>
-                    <td>${Utils.escapeHtml(report.description || report.category)}</td>
+                    <td>${summary || '-'}</td>
                     <td>${report.status}</td>
                     <td>
                         <button class="btn btn-primary btn-sm" data-action="resolve">처리</button>
@@ -130,7 +133,13 @@
 
     async function resolveReport(reportId, status) {
         try {
-            await API.post(`/admin/reports/${reportId}/resolve/`, { status, resolution_note: '' });
+            let resolution_note = '';
+            if (status === 'dismissed') {
+                resolution_note = prompt('무효 처리 사유를 입력하세요 (선택)') || '';
+            } else {
+                resolution_note = prompt('처리 메모를 입력하세요 (선택)') || '';
+            }
+            await API.post(`/admin/reports/${reportId}/resolve/`, { status, resolution_note });
             Toast.success('신고가 처리되었습니다.');
             loadReports();
             loadStats();

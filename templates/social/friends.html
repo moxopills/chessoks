@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}친구 - ChessOK{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/friends.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="social-page">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">친구</h1>
+            <p class="page-subtitle">친구 요청과 온라인 상태를 관리하세요</p>
+        </div>
+    </div>
+
+    <div class="friends-grid">
+        <section class="card friends-card">
+            <div class="card-header">
+                <h2 class="card-title">친구 목록</h2>
+                <div class="card-actions">
+                    <button class="btn btn-secondary btn-sm" id="friends-refresh">새로고침</button>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="friends">친구</button>
+                <button class="tab-btn" data-tab="requests">요청</button>
+            </div>
+
+            <div class="tab-panel" id="friends-panel">
+                <div class="friend-list" id="friend-list">
+                    <div class="table-empty">로딩 중...</div>
+                </div>
+            </div>
+
+            <div class="tab-panel hidden" id="requests-panel">
+                <div class="request-section">
+                    <h3>받은 요청</h3>
+                    <div class="request-list" id="incoming-list">
+                        <div class="table-empty">로딩 중...</div>
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="request-section">
+                    <h3>보낸 요청</h3>
+                    <div class="request-list" id="outgoing-list">
+                        <div class="table-empty">로딩 중...</div>
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="request-section">
+                    <h3>닉네임으로 친구 찾기</h3>
+                    <div class="friend-search">
+                        <input class="form-input" id="friend-search-input" placeholder="닉네임 검색" maxlength="20">
+                        <button class="btn btn-secondary btn-sm" id="friend-search-btn">검색</button>
+                    </div>
+                    <div class="search-results" id="search-results"></div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="card profile-drawer hidden" id="profile-drawer">
+            <div class="profile-drawer-header">
+                <div class="profile-user">
+                    <div class="avatar avatar-lg" id="profile-avatar">
+                        <span class="avatar-placeholder">?</span>
+                    </div>
+                    <div class="profile-meta">
+                        <div class="profile-name" id="profile-name">-</div>
+                        <div class="profile-rating" id="profile-rating">-</div>
+                        <div class="profile-tier" id="profile-tier">-</div>
+                    </div>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="profile-close">닫기</button>
+            </div>
+
+            <div class="profile-actions">
+                <button class="btn btn-primary btn-sm" id="profile-friend-btn">친구 요청</button>
+                <button class="btn btn-secondary btn-sm" id="profile-report-toggle">신고</button>
+            </div>
+
+            <div class="profile-report hidden" id="profile-report">
+                <select class="form-input" id="profile-report-category">
+                    <option value="cheat">부정행위</option>
+                    <option value="abuse">욕설/비매너</option>
+                    <option value="spam">스팸</option>
+                    <option value="other">기타</option>
+                </select>
+                <input type="text" class="form-input" id="profile-report-message" placeholder="사유 (선택)" maxlength="200">
+                <button class="btn btn-secondary btn-sm" id="profile-report-submit">신고하기</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="profile-stats" id="profile-stats">
+                <div class="stat-item">
+                    <span>플레이</span>
+                    <strong id="stat-games">-</strong>
+                </div>
+                <div class="stat-item">
+                    <span>승</span>
+                    <strong id="stat-wins">-</strong>
+                </div>
+                <div class="stat-item">
+                    <span>패</span>
+                    <strong id="stat-losses">-</strong>
+                </div>
+                <div class="stat-item">
+                    <span>무</span>
+                    <strong id="stat-draws">-</strong>
+                </div>
+            </div>
+
+            <div class="profile-vs hidden" id="profile-vs">
+                <h3>상대 전적</h3>
+                <div class="vs-grid">
+                    <span>승</span><strong id="vs-wins">0</strong>
+                    <span>패</span><strong id="vs-losses">0</strong>
+                    <span>무</span><strong id="vs-draws">0</strong>
+                </div>
+            </div>
+
+            <div class="profile-recent">
+                <h3>최근 전적</h3>
+                <div class="recent-list" id="profile-recent-list">
+                    <div class="text-muted">데이터 없음</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pages/friends.js' %}"></script>
+{% endblock %}
