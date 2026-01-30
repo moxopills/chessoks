@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}내 프로필 - ChessOK{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-header">
+    <div>
+        <h1 class="profile-title">내 프로필</h1>
+        <p class="helper-text">내 정보와 최근 전적을 확인하세요.</p>
+    </div>
+    <div class="profile-actions">
+        <a href="/profile/edit/" class="btn btn-secondary btn-arcade">프로필 수정</a>
+        <a href="/password-change/" class="btn btn-primary btn-arcade">비밀번호 변경</a>
+    </div>
+</div>
+
+<div class="profile-layout">
+    <div class="card profile-card">
+        <div class="profile-avatar" id="profile-avatar">
+            <span class="profile-avatar-placeholder">?</span>
+        </div>
+        <div class="profile-meta">
+            <div class="profile-nickname" id="profile-nickname">로딩중...</div>
+            <div class="profile-email" id="profile-email"></div>
+            <div class="profile-tier" id="profile-tier">Tier</div>
+        </div>
+        <div class="profile-bio" id="profile-bio">소개가 없습니다.</div>
+
+        <div class="divider"></div>
+
+        <div class="profile-stats">
+            <div class="stat-card">
+                <div class="stat-label">레이팅</div>
+                <div class="stat-value" id="stat-rating">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">승률</div>
+                <div class="stat-value" id="stat-winrate">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">승리</div>
+                <div class="stat-value" id="stat-wins">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">패배</div>
+                <div class="stat-value" id="stat-losses">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">무승부</div>
+                <div class="stat-value" id="stat-draws">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">총 경기</div>
+                <div class="stat-value" id="stat-total">-</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">최근 경기</h2>
+        </div>
+        <div class="recent-games" id="recent-games">
+            <div class="helper-text">최근 전적을 불러오는 중...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pages/profile.js' %}"></script>
+{% endblock %}

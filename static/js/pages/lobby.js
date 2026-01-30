@@ -18,6 +18,9 @@
     const mobileTabbar = document.getElementById('mobile-tabbar');
     const chatBadge = document.getElementById('chat-badge');
     const chatSection = document.querySelector('.lobby-chat-section');
+    const waitingRoomCard = document.getElementById('waiting-room-card');
+    const waitingRoomInfo = document.getElementById('waiting-room-info');
+    const waitingRoomEnter = document.getElementById('waiting-room-enter');
 
     let isMatching = false;
     let lobbySocket = null;
@@ -33,6 +36,7 @@
 
     async function init() {
         await loadRooms();
+        await loadWaitingRoom();
         await checkAuthAndSetupChat();
         startRoomAutoRefresh();
         setupMobileTabs();
@@ -48,6 +52,27 @@
             renderRooms(lobbyRooms);
         } catch (error) {
             roomList.innerHTML = '<div class="room-empty">방 목록을 불러올 수 없습니다.</div>';
+        }
+    }
+
+    async function loadWaitingRoom() {
+        if (!waitingRoomCard) return;
+        try {
+            const data = await API.get('/chess/rooms/waiting/');
+            const room = data.room;
+            if (!room) {
+                waitingRoomCard.classList.add('hidden');
+                return;
+            }
+            waitingRoomCard.classList.remove('hidden');
+            const title = room.title || '빠른 대전';
+            const timeText = room.time_limit ? `${room.time_limit}분` : '무제한';
+            waitingRoomInfo.textContent = `${Utils.escapeHtml(title)} · ${timeText}`;
+            waitingRoomEnter.onclick = () => {
+                window.location.href = `/rooms/${room.id}/`;
+            };
+        } catch (error) {
+            waitingRoomCard.classList.add('hidden');
         }
     }
 
@@ -84,6 +109,7 @@
     function startRoomAutoRefresh() {
         roomRefreshInterval = setInterval(() => {
             loadRooms();
+            loadWaitingRoom();
         }, 5000);
 
         window.addEventListener('beforeunload', () => {

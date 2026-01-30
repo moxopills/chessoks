@@ -76,6 +76,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True, help_text="활성 계정")
     date_joined = models.DateTimeField(default=timezone.now, help_text="가입일")
 
+    # 제재 관련
+    suspended_until = models.DateTimeField(null=True, blank=True, help_text="계정 정지 종료 시각")
+    suspension_reason = models.CharField(max_length=200, blank=True, help_text="정지 사유")
+    muted_until = models.DateTimeField(null=True, blank=True, help_text="채팅 금지 종료 시각")
+    mute_reason = models.CharField(max_length=200, blank=True, help_text="채팅 금지 사유")
+
     # 회원 탈퇴 예약
     scheduled_deletion_at = models.DateTimeField(
         null=True, blank=True, help_text="탈퇴 예정 시간 (이 시간 전에 로그인하면 취소)"
@@ -102,3 +108,11 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.nickname} ({self.email})"
+
+    @property
+    def is_suspended(self) -> bool:
+        return bool(self.suspended_until and timezone.now() < self.suspended_until)
+
+    @property
+    def is_muted(self) -> bool:
+        return bool(self.muted_until and timezone.now() < self.muted_until)

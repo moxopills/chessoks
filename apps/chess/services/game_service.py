@@ -444,7 +444,31 @@ class GameService:
         # Room의 host/guest 업데이트
         room.host = white_player
         room.guest = black_player
-        room.save(update_fields=["host", "guest"])
+        room.status = "playing"
+        room.started_at = timezone.now()
+        room.finished_at = None
+        room.host_ready = True
+        room.guest_ready = True
+        room.host_start_confirmed = True
+        room.guest_start_confirmed = True
+        room.save(
+            update_fields=[
+                "host",
+                "guest",
+                "status",
+                "started_at",
+                "finished_at",
+                "host_ready",
+                "guest_ready",
+                "host_start_confirmed",
+                "guest_start_confirmed",
+            ]
+        )
+
+        from apps.chess.utils import broadcast_room_state, broadcast_room_update
+
+        broadcast_room_update(room)
+        broadcast_room_state(room)
 
         return Game.objects.create(room=room, white_player=white_player, black_player=black_player)
 

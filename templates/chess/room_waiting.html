@@ -59,7 +59,10 @@
         <div class="action-buttons" id="action-buttons">
             <!-- 동적으로 버튼 생성 -->
         </div>
-        <button class="btn btn-secondary" id="leave-btn">나가기</button>
+        <div class="action-footer">
+            <button class="btn btn-secondary" id="lobby-wait-btn">로비에서 대기</button>
+            <button class="btn btn-secondary" id="leave-btn">나가기</button>
+        </div>
     </div>
 
     <!-- Room Chat -->
@@ -269,6 +272,13 @@
     gap: var(--space-md);
 }
 
+.action-footer {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
 /* Chat Section */
 .room-chat-section {
     background-color: var(--color-bg-card);
@@ -365,7 +375,7 @@
     gap: var(--space-sm);
     margin-top: var(--space-lg);
 }
-}
+
 
 .section-header {
     margin-bottom: var(--space-md);

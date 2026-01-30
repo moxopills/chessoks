@@ -3,6 +3,7 @@ from django.utils import timezone
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import UserStats
 from apps.chess.models import Game, Room
@@ -29,6 +30,8 @@ class MatchmakingService:
     @staticmethod
     @transaction.atomic
     def quick_match(user) -> tuple[Room, Game | None, str]:
+        if user.is_suspended:
+            raise ValidationError("정지된 계정입니다.")
         playing = (
             Room.objects.select_for_update(skip_locked=True)
             .filter(room_type="quick", status="playing")

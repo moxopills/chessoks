@@ -44,6 +44,14 @@ class RoomQueryService:
         return room
 
     @staticmethod
+    def get_waiting_room(user) -> Room | None:
+        return (
+            Room.objects.select_related("host__stats", "guest__stats")
+            .filter(host=user, status__in=["waiting", "ready"], guest__isnull=True)
+            .first()
+        )
+
+    @staticmethod
     def _has_access(room: Room, user) -> bool:
         return room.host_id == user.id or room.guest_id == user.id
 
@@ -59,6 +67,8 @@ class RoomQueryService:
         allow_spectators: bool = True,
     ) -> Room:
         """방 생성"""
+        if user.is_suspended:
+            raise ValidationError("정지된 계정입니다.")
         room = Room(
             host=user,
             room_type=room_type,

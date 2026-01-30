@@ -56,6 +56,10 @@
     const replayNext = document.getElementById('replay-next');
     const replayPlay = document.getElementById('replay-play');
     const replayClose = document.getElementById('replay-close');
+    const reportForm = document.getElementById('report-form');
+    const reportCategory = document.getElementById('report-category');
+    const reportMessage = document.getElementById('report-message');
+    const reportHint = document.getElementById('report-hint');
     let pendingEnd = false;
 
     // State
@@ -83,6 +87,7 @@
     let captured = { white: [], black: [] };
     let isChatOpen = false;
     let chatUnread = 0;
+    let opponentUserId = null;
 
     // Init
     init();
@@ -109,6 +114,7 @@
         setupModals();
         setupStatusModal();
         setupReplayControls();
+        setupReport();
         setupExitGuard();
         connectWebSocket();
     }
@@ -149,6 +155,11 @@
                     myColor = 'black';
                 }
             }
+            if (currentUser && myColor === 'white') {
+                opponentUserId = game.black_player?.id || null;
+            } else if (currentUser && myColor === 'black') {
+                opponentUserId = game.white_player?.id || null;
+            }
 
             renderPlayerBars();
             renderBoard();
@@ -165,6 +176,101 @@
             console.error('Failed to load game:', error);
             Toast.error('게임 정보를 불러올 수 없습니다.');
         }
+    }
+
+    async function handleRematchCreated(data) {
+        Toast.success('리매치가 생성되었습니다!');
+        gameEndModal?.classList.add('hidden');
+        rematchModal?.classList.add('hidden');
+        await startRematch(data.game_id || data.rematch_game_id, data.room_id);
+    }
+
+    async function startRematch(rematchGameId, rematchRoomId) {
+        const targetRoomId = rematchRoomId || roomId;
+        if (!rematchGameId) {
+            window.location.href = `/games/${targetRoomId}/`;
+            return;
+        }
+
+        if (socket) {
+            socket.close();
+            socket = null;
+        }
+        stopHeartbeat();
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        pendingEnd = false;
+        selectedSquare = null;
+        selectedDisplaySquare = null;
+        validMoves = [];
+        pendingPromotion = null;
+        lastMove = null;
+        replayMoves = [];
+        replayIndex = 0;
+        replayActive = false;
+        captured = { white: [], black: [] };
+        hasShownStartGuide = false;
+        lastTurnColor = null;
+
+        try {
+            game = await API.get(`/chess/games/${rematchGameId}/`);
+        } catch (error) {
+            Toast.error('리매치 정보를 불러오지 못했습니다.');
+            window.location.href = `/games/${targetRoomId}/`;
+            return;
+        }
+
+        if (currentUser) {
+            if (game.white_player?.id === currentUser.id) {
+                myColor = 'white';
+            } else if (game.black_player?.id === currentUser.id) {
+                myColor = 'black';
+            } else {
+                myColor = null;
+            }
+        }
+        opponentUserId = null;
+        if (currentUser && myColor === 'white') {
+            opponentUserId = game.black_player?.id || null;
+        } else if (currentUser && myColor === 'black') {
+            opponentUserId = game.white_player?.id || null;
+        }
+
+        renderPlayerBars();
+        renderBoard();
+        renderMoveList();
+        renderCapturedPieces();
+        updateTurn();
+        startTimer();
+        connectWebSocket();
+    }
+
+    function setupReport() {
+        if (!reportForm) return;
+        if (!currentUser || !myColor) {
+            reportForm.querySelector('button').disabled = true;
+            if (reportHint) reportHint.textContent = '플레이어만 신고할 수 있습니다.';
+            return;
+        }
+        reportForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!opponentUserId) {
+                Toast.error('상대 정보를 찾을 수 없습니다.');
+                return;
+            }
+            const category = reportCategory.value;
+            const description = reportMessage.value.trim();
+            try {
+                await API.post('/reports/', { target_id: opponentUserId, category, description });
+                Toast.success('신고가 접수되었습니다.');
+                reportMessage.value = '';
+            } catch (error) {
+                Toast.error(error.data?.message || '신고에 실패했습니다.');
+            }
+        });
     }
 
     /**
@@ -714,7 +820,7 @@
     /**
      * WebSocket 메시지 처리
      */
-    function handleSocketMessage(data) {
+    async function handleSocketMessage(data) {
         switch (data.type) {
             case 'move':
                 // 게임 상태 업데이트
@@ -774,8 +880,7 @@
                 break;
 
             case 'rematch_created':
-                Toast.success('리매치가 생성되었습니다!');
-                window.location.href = `/games/${data.room_id}/`;
+                await handleRematchCreated(data);
                 break;
 
             case 'chat':

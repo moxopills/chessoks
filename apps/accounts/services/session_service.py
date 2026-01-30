@@ -218,6 +218,9 @@ class AccountSessionService:
         if not user.is_active:
             raise PermissionDenied(detail="비활성화된 계정입니다.")
 
+        if user.is_suspended:
+            raise PermissionDenied(detail="정지된 계정입니다.")
+
         if not user.email_verified:
             raise PermissionDenied(
                 detail="이메일 인증이 필요합니다. 가입 시 받은 이메일의 인증 링크를 확인해주세요."

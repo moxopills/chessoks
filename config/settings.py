@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     "apps.chess",
     "apps.notifications",
     "apps.core",  # GCP 이미지 업로드
+    "apps.adminpanel",
 ]
 
 MIDDLEWARE = [
