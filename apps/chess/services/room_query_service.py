@@ -45,6 +45,8 @@ class RoomQueryService:
 
     @staticmethod
     def get_waiting_room(user) -> Room | None:
+        if not user or not getattr(user, "is_authenticated", False):
+            return None
         return (
             Room.objects.select_related("host__stats", "guest__stats")
             .filter(host=user, status__in=["waiting", "ready"], guest__isnull=True)
