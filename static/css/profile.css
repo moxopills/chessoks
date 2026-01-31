@@ -26,6 +26,12 @@
     gap: var(--space-lg);
 }
 
+.profile-side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
 .profile-card {
     display: flex;
     flex-direction: column;
@@ -163,6 +169,39 @@
 .game-result.draw {
     color: var(--color-accent-warning);
     border-color: rgba(243, 156, 18, 0.4);
+}
+
+.guestbook-list {
+    display: grid;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.guestbook-item {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-sm);
+    font-size: 0.75rem;
+}
+
+.guestbook-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    margin-top: var(--space-xs);
+}
+
+.guestbook-form {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+@media (max-width: 1024px) {
+    .profile-layout {
+        grid-template-columns: 1fr;
+    }
 }
 
 .profile-form {

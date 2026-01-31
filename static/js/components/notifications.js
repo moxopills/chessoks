@@ -131,6 +131,12 @@
         state.socket.addEventListener('message', (event) => {
             try {
                 const payload = JSON.parse(event.data);
+                if (payload?.type === 'account_suspended') {
+                    const message = payload.message || '정지된 계정입니다.';
+                    Toast.error(message);
+                    forceLogout(message);
+                    return;
+                }
                 state.items.unshift(payload);
                 state.items = state.items.slice(0, 20);
                 renderList(listEl, countEl);
@@ -141,6 +147,16 @@
                 // ignore invalid payloads
             }
         });
+    }
+
+    async function forceLogout(message) {
+        try {
+            await API.post('/accounts/logout/', {});
+        } catch {
+            // ignore
+        }
+        const encoded = encodeURIComponent(message || '정지된 계정입니다.');
+        window.location.href = `/login/?reason=${encoded}`;
     }
 
     window.Notifications = { init };
