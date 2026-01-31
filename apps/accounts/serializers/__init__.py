@@ -8,6 +8,7 @@ from .friend_serializers import (
 from .message_serializers import (
     DirectMessageCreateSerializer,
     DirectMessageSerializer,
+    DirectMessageThreadSerializer,
     GuestbookCreateSerializer,
     GuestbookEntrySerializer,
 )
@@ -83,4 +84,5 @@ __all__ = [
     "GuestbookCreateSerializer",
     "DirectMessageSerializer",
     "DirectMessageCreateSerializer",
+    "DirectMessageThreadSerializer",
 ]

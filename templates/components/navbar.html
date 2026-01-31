@@ -36,6 +36,13 @@
 
         <!-- Right Section -->
         <div class="navbar-right">
+            <!-- Direct Messages (Authenticated) -->
+            <div class="navbar-messages auth-only hidden" id="message-link">
+                <a href="/messages/" class="message-btn" aria-label="1:1 메시지">
+                    <span class="message-icon">&#128172;</span>
+                </a>
+            </div>
+
             <!-- Notification Bell (Authenticated) -->
             <div class="navbar-notifications auth-only hidden" id="notification-bell">
                 <button class="notification-btn" id="notification-toggle" aria-label="알림">
@@ -174,6 +181,25 @@
     display: flex;
     align-items: center;
     gap: var(--space-md);
+}
+
+.navbar-messages {
+    position: relative;
+}
+
+.message-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-sm);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    font-size: 1.1rem;
+    transition: color var(--transition-fast);
+}
+
+.message-btn:hover {
+    color: var(--color-text-primary);
 }
 
 /* Notifications */

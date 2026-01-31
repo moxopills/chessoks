@@ -186,7 +186,7 @@
         }
         if (status?.is_request_sent) {
             friendBtn.disabled = true;
-            friendBtn.textContent = '요청 보냄';
+            friendBtn.textContent = '요청 중';
             return;
         }
         if (status?.is_request_received) {

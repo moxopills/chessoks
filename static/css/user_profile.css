@@ -125,9 +125,15 @@
 
 .recent-item {
     display: grid;
-    grid-template-columns: minmax(120px, 1fr) 36px minmax(160px, 1fr);
+    grid-template-columns: minmax(100px, 1fr) 32px minmax(0, 1fr);
     align-items: center;
     gap: var(--space-sm);
+}
+
+.recent-opponent {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .recent-result {
@@ -136,6 +142,9 @@
 
 .recent-meta {
     text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 @media (max-width: 640px) {

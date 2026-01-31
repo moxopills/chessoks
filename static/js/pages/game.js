@@ -1142,11 +1142,16 @@
      * 모달 설정
      */
     function setupModals() {
+        if (replayOnly) {
+            rematchBtn?.classList.add('hidden');
+        }
         // 리매치 버튼
-        document.getElementById('rematch-btn').addEventListener('click', () => {
-            socket.send(JSON.stringify({ action: 'rematch', game_id: game.id }));
-            Toast.info('리매치를 요청했습니다.');
-        });
+        if (!replayOnly && rematchBtn) {
+            rematchBtn.addEventListener('click', () => {
+                socket.send(JSON.stringify({ action: 'rematch', game_id: game.id }));
+                Toast.info('리매치를 요청했습니다.');
+            });
+        }
 
         // 로비 버튼
         document.getElementById('lobby-btn').addEventListener('click', () => {
@@ -1165,15 +1170,17 @@
         });
 
         // 리매치 수락/거절
-        document.getElementById('accept-rematch-btn').addEventListener('click', () => {
-            socket.send(JSON.stringify({ action: 'rematch', game_id: game.id }));
-            rematchModal.classList.add('hidden');
-        });
+        if (!replayOnly) {
+            document.getElementById('accept-rematch-btn').addEventListener('click', () => {
+                socket.send(JSON.stringify({ action: 'rematch', game_id: game.id }));
+                rematchModal.classList.add('hidden');
+            });
 
-        document.getElementById('decline-rematch-btn').addEventListener('click', () => {
-            socket.send(JSON.stringify({ action: 'decline_rematch', game_id: game.id }));
-            rematchModal.classList.add('hidden');
-        });
+            document.getElementById('decline-rematch-btn').addEventListener('click', () => {
+                socket.send(JSON.stringify({ action: 'decline_rematch', game_id: game.id }));
+                rematchModal.classList.add('hidden');
+            });
+        }
     }
 
     function setupStatusModal() {
