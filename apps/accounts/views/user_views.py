@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
-from apps.accounts.models import User
+from apps.accounts.models import Friend, FriendRequest, User
 from apps.accounts.serializers import (
     AccountDeleteSerializer,
     DashboardSerializer,
@@ -542,17 +542,28 @@ class UserProfileView(APIView):
             cache.set(cache_key, cached_data, self.CACHE_TTL)
 
         vs_summary = None
+        friend_status = None
         if request.user.is_authenticated and request.user.pk != user_id:
             if user is None:
                 user = User.objects.filter(pk=user_id).first()
             if user:
                 vs_summary = GameQueryService.head_to_head_summary(request.user, user)
+                friend_status = {
+                    "is_friend": Friend.objects.filter(user=request.user, friend=user).exists(),
+                    "is_request_sent": FriendRequest.objects.filter(
+                        from_user=request.user, to_user=user
+                    ).exists(),
+                    "is_request_received": FriendRequest.objects.filter(
+                        from_user=user, to_user=request.user
+                    ).exists(),
+                }
 
         return Response(
             {
                 "user": cached_data["user"],
                 "recent_games": cached_data["recent_games"],
                 "vs_summary": vs_summary,
+                "friend_status": friend_status,
             }
         )
 

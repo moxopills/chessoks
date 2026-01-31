@@ -35,6 +35,10 @@
     const reportCategory = document.getElementById('profile-report-category');
     const reportMessage = document.getElementById('profile-report-message');
     const reportSubmit = document.getElementById('profile-report-submit');
+    const chatBtn = document.getElementById('profile-chat-btn');
+    const guestbookList = document.getElementById('guestbook-list');
+    const guestbookInput = document.getElementById('guestbook-input');
+    const guestbookSubmit = document.getElementById('guestbook-submit');
 
     let currentUserId = null;
     let friendIds = new Set();
@@ -58,7 +62,12 @@
         reportToggle?.addEventListener('click', () => reportBox.classList.toggle('hidden'));
         reportSubmit?.addEventListener('click', submitReport);
         friendBtn?.addEventListener('click', sendFriendRequest);
+        chatBtn?.addEventListener('click', () => openDirectMessage(selectedUserId));
+        guestbookSubmit?.addEventListener('click', submitGuestbook);
         searchBtn?.addEventListener('click', searchUsers);
+        searchInput?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') searchUsers();
+        });
         document.addEventListener('click', hideContextMenu);
         document.addEventListener('scroll', hideContextMenu, true);
         document.addEventListener('keydown', (event) => {
@@ -301,13 +310,28 @@
         }
         try {
             const data = await API.get('/accounts/users/search/', { q: query });
-            renderSearchResults(data.results || []);
+            const results = data.results || [];
+            const statusMap = await fetchOnlineStatusMap(results.map((user) => user.id));
+            renderSearchResults(results, statusMap);
         } catch (error) {
             searchResultsEl.innerHTML = '<div class="table-empty">검색 실패</div>';
         }
     }
 
-    function renderSearchResults(results) {
+    async function fetchOnlineStatusMap(ids) {
+        if (!ids.length) return {};
+        try {
+            const data = await API.get('/accounts/online-status/', { ids: ids.join(',') });
+            return (data.results || []).reduce((acc, entry) => {
+                acc[entry.id] = entry.online;
+                return acc;
+            }, {});
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function renderSearchResults(results, statusMap = {}) {
         if (!results.length) {
             searchResultsEl.innerHTML = '<div class="table-empty">검색 결과가 없습니다.</div>';
             return;
@@ -316,6 +340,7 @@
             const isSelf = user.id === currentUserId;
             const isFriend = friendIds.has(user.id);
             const isPending = outgoingRequestUserIds.has(user.id);
+            const online = statusMap[user.id] === true;
             let buttonLabel = '친구 요청';
             let disabled = false;
             if (isSelf) {
@@ -334,7 +359,7 @@
                         <div class="avatar avatar-sm">${user.avatar_url ? `<img src="${user.avatar_url}" alt="${Utils.escapeHtml(user.nickname)}">` : '<span class="avatar-placeholder">?</span>'}</div>
                         <div class="friend-name">
                             <strong>${Utils.escapeHtml(user.nickname)}</strong>
-                            <small>레이팅 ${user.stats?.rating ?? '-'} · ${Utils.escapeHtml(user.stats?.rank_tier ?? '-') }</small>
+                            <small>레이팅 ${user.stats?.rating ?? '-'} · ${Utils.escapeHtml(user.stats?.rank_tier ?? '-')} · <span class="friend-status ${online ? 'online' : 'offline'}">${online ? '온라인' : '오프라인'}</span></small>
                         </div>
                     </div>
                     <button class="btn btn-secondary btn-sm" data-action="request" ${disabled ? 'disabled' : ''}>${buttonLabel}</button>
@@ -379,6 +404,85 @@
         }
     }
 
+    function openDirectMessage(userId) {
+        if (!userId) return;
+        window.location.href = `/messages/${userId}/`;
+    }
+
+    async function loadGuestbook(userId) {
+        if (!guestbookList) return;
+        guestbookList.innerHTML = '<div class="text-muted">불러오는 중...</div>';
+        try {
+            const data = await API.get(`/accounts/users/${userId}/guestbook/`);
+            renderGuestbook(data || []);
+        } catch (error) {
+            guestbookList.innerHTML = '<div class="text-muted">방명록을 불러오지 못했습니다.</div>';
+        }
+    }
+
+    function renderGuestbook(entries) {
+        if (!guestbookList) return;
+        if (!entries.length) {
+            guestbookList.innerHTML = '<div class="text-muted">방명록이 없습니다.</div>';
+            return;
+        }
+        guestbookList.innerHTML = entries.map((entry) => {
+            const canDelete = entry.author?.id === currentUserId || selectedUserId === currentUserId;
+            const time = formatDate(entry.created_at);
+            return `
+                <div class="guestbook-item" data-entry-id="${entry.id}">
+                    <div>${Utils.escapeHtml(entry.message)}</div>
+                    <div class="guestbook-meta">
+                        <span>${Utils.escapeHtml(entry.author?.nickname || '알 수 없음')}</span>
+                        <span>${time}</span>
+                    </div>
+                    ${canDelete ? '<button class="btn btn-secondary btn-sm" data-action="delete">삭제</button>' : ''}
+                </div>
+            `;
+        }).join('');
+
+        guestbookList.querySelectorAll('[data-action="delete"]').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const entryId = btn.closest('.guestbook-item')?.dataset.entryId;
+                if (!entryId) return;
+                await deleteGuestbook(entryId);
+            });
+        });
+    }
+
+    async function submitGuestbook() {
+        if (!guestbookInput || !selectedUserId) return;
+        const message = guestbookInput.value.trim();
+        if (!message) return;
+        try {
+            await API.post(`/accounts/users/${selectedUserId}/guestbook/`, { message });
+            guestbookInput.value = '';
+            await loadGuestbook(selectedUserId);
+        } catch (error) {
+            Toast.error(error.data?.message || '방명록 등록에 실패했습니다.');
+        }
+    }
+
+    async function deleteGuestbook(entryId) {
+        try {
+            await API.delete(`/accounts/guestbook/${entryId}/`);
+            await loadGuestbook(selectedUserId);
+        } catch (error) {
+            Toast.error(error.data?.message || '삭제에 실패했습니다.');
+        }
+    }
+
+    function formatDate(value) {
+        if (!value) return '-';
+        const d = new Date(value);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${y}-${m}-${day} ${hh}:${mm}`;
+    }
+
     async function openProfileDrawer(userId) {
         if (!userId) return;
         selectedUserId = userId;
@@ -392,6 +496,7 @@
             renderDrawerUser(user);
             renderDrawerStats(user.stats);
             renderRecentGames(data.recent_games || []);
+            await loadGuestbook(userId);
             if (data.vs_summary) {
                 vsBox.classList.remove('hidden');
                 vsWins.textContent = data.vs_summary.wins;
@@ -422,6 +527,8 @@
                     sendFriendRequestTo(targetId);
                 } else if (action === 'remove') {
                     removeFriend(targetId);
+                } else if (action === 'chat') {
+                    openDirectMessage(targetId);
                 } else if (action === 'report') {
                     openProfileDrawer(targetId);
                     reportBox.classList.remove('hidden');
@@ -435,6 +542,7 @@
             { action: 'profile', label: '프로필 보기' },
             ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
             ...(isFriend ? [{ action: 'remove', label: '친구 삭제' }] : []),
+            { action: 'chat', label: '1:1 채팅' },
             { action: 'report', label: '신고하기' },
         ];
         contextMenu.innerHTML = items.map(item => (
@@ -529,9 +637,9 @@
             const moveText = typeof game.move_count === 'number' ? `${game.move_count}수` : '';
             return `
                 <div class="recent-item">
-                    <span>${Utils.escapeHtml(opponent)}</span>
-                    <span>${resultLabel}</span>
-                    <span class="text-muted">${[playedAt, moveText].filter(Boolean).join(' · ')}</span>
+                    <span class="recent-opponent">${Utils.escapeHtml(opponent)}</span>
+                    <span class="recent-result">${resultLabel}</span>
+                    <span class="recent-meta text-muted">${[playedAt, moveText].filter(Boolean).join(' · ')}</span>
                 </div>
             `;
         }).join('');

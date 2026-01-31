@@ -66,6 +66,7 @@
 
             <div class="profile-actions">
                 <button class="btn btn-primary btn-sm" id="profile-friend-btn">친구 요청</button>
+                <button class="btn btn-secondary btn-sm" id="profile-chat-btn">1:1 채팅</button>
                 <button class="btn btn-secondary btn-sm" id="profile-report-toggle">신고</button>
             </div>
 
@@ -104,9 +105,20 @@
             <div class="profile-vs hidden" id="profile-vs">
                 <h3>상대 전적</h3>
                 <div class="vs-grid">
-                    <span>승</span><strong id="vs-wins">0</strong>
-                    <span>패</span><strong id="vs-losses">0</strong>
-                    <span>무</span><strong id="vs-draws">0</strong>
+                    <div class="vs-item"><span>승</span><strong id="vs-wins">0</strong></div>
+                    <div class="vs-item"><span>패</span><strong id="vs-losses">0</strong></div>
+                    <div class="vs-item"><span>무</span><strong id="vs-draws">0</strong></div>
+                </div>
+            </div>
+
+            <div class="profile-guestbook" id="profile-guestbook">
+                <h3>방명록</h3>
+                <div class="guestbook-list" id="guestbook-list">
+                    <div class="text-muted">데이터 없음</div>
+                </div>
+                <div class="guestbook-form">
+                    <input type="text" class="form-input" id="guestbook-input" placeholder="방명록 메시지 (최대 200자)" maxlength="200">
+                    <button class="btn btn-secondary btn-sm" id="guestbook-submit">등록</button>
                 </div>
             </div>
 

@@ -156,10 +156,34 @@ class GameQueryService:
                 queryset = queryset.filter(created_at__date__lte=end)
 
         if result:
-            valid_results = {choice[0] for choice in Game.RESULT_CHOICES}
-            if result not in valid_results:
-                raise ValidationError({"result": "유효하지 않은 결과입니다."})
-            queryset = queryset.filter(result=result)
+            if result in {"win", "lose", "draw"}:
+                draw_results = {
+                    "draw",
+                    "stalemate",
+                    "draw_agreement",
+                    "draw_repetition",
+                    "draw_fifty_move",
+                    "draw_insufficient",
+                }
+                white_win_results = GameQueryService.WHITE_WIN_RESULTS
+                black_win_results = GameQueryService.BLACK_WIN_RESULTS
+                if result == "draw":
+                    queryset = queryset.filter(result__in=draw_results)
+                elif result == "win":
+                    queryset = queryset.filter(
+                        (Q(white_player=user) & Q(result__in=white_win_results))
+                        | (Q(black_player=user) & Q(result__in=black_win_results))
+                    )
+                else:
+                    queryset = queryset.filter(
+                        (Q(white_player=user) & Q(result__in=black_win_results))
+                        | (Q(black_player=user) & Q(result__in=white_win_results))
+                    )
+            else:
+                valid_results = {choice[0] for choice in Game.RESULT_CHOICES}
+                if result not in valid_results:
+                    raise ValidationError({"result": "유효하지 않은 결과입니다."})
+                queryset = queryset.filter(result=result)
         else:
             queryset = queryset.exclude(result="playing")
 

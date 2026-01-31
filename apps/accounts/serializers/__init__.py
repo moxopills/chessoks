@@ -5,6 +5,12 @@ from .friend_serializers import (
     FriendRequestSerializer,
     FriendSerializer,
 )
+from .message_serializers import (
+    DirectMessageCreateSerializer,
+    DirectMessageSerializer,
+    GuestbookCreateSerializer,
+    GuestbookEntrySerializer,
+)
 from .online_serializers import OnlineStatusListSerializer, OnlineStatusSerializer
 from .social_serializer import (
     SocialAccountUnlinkSerializer,
@@ -73,4 +79,8 @@ __all__ = [
     "FriendRequestCreateSerializer",
     "FriendListSerializer",
     "FriendRequestListSerializer",
+    "GuestbookEntrySerializer",
+    "GuestbookCreateSerializer",
+    "DirectMessageSerializer",
+    "DirectMessageCreateSerializer",
 ]

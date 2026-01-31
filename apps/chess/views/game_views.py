@@ -1,5 +1,7 @@
 """게임 조회 View"""
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -75,4 +77,17 @@ class GameRematchView(APIView):
         if rematch_game:
             payload["rematch_game_id"] = rematch_game.id
             payload["room_id"] = rematch_game.room_id
+            channel_layer = get_channel_layer()
+            if channel_layer is not None:
+                async_to_sync(channel_layer.group_send)(
+                    f"chess_room_{rematch_game.room_id}",
+                    {
+                        "type": "broadcast",
+                        "payload": {
+                            "type": "rematch_created",
+                            "game_id": rematch_game.id,
+                            "room_id": rematch_game.room_id,
+                        },
+                    },
+                )
         return Response(payload)

@@ -15,7 +15,11 @@
     const vsDraws = document.getElementById('vs-draws');
     const recentList = document.getElementById('recent-list');
     const friendBtn = document.getElementById('friend-request-btn');
+    const directMessageBtn = document.getElementById('direct-message-btn');
     const reportBtn = document.getElementById('report-btn');
+    const guestbookList = document.getElementById('guestbook-list');
+    const guestbookInput = document.getElementById('guestbook-input');
+    const guestbookSubmit = document.getElementById('guestbook-submit');
 
     const userId = Utils.getPathParam('/users/(\\d+)/');
     let currentUserId = null;
@@ -45,6 +49,8 @@
             renderUser(user);
             renderStats(user.stats);
             renderRecent(data.recent_games || []);
+            await loadGuestbook();
+            updateFriendButtonState(data.friend_status);
             if (data.vs_summary) {
                 vsBox.classList.remove('hidden');
                 vsWins.textContent = data.vs_summary.wins;
@@ -96,9 +102,9 @@
             const moveText = typeof game.move_count === 'number' ? `${game.move_count}수` : '';
             return `
                 <div class="recent-item">
-                    <span>${Utils.escapeHtml(opponent)}</span>
-                    <span>${resultLabel}</span>
-                    <span class="text-muted">${[playedAt, moveText].filter(Boolean).join(' · ')}</span>
+                    <span class="recent-opponent">${Utils.escapeHtml(opponent)}</span>
+                    <span class="recent-result">${resultLabel}</span>
+                    <span class="recent-meta text-muted">${[playedAt, moveText].filter(Boolean).join(' · ')}</span>
                 </div>
             `;
         }).join('');
@@ -129,10 +135,18 @@
                 } else {
                     Toast.success('친구 요청을 보냈습니다.');
                 }
+                updateFriendButtonState({ is_friend: result.status === 'accepted', is_request_sent: result.status !== 'accepted' });
             } catch (error) {
                 Toast.error(error.data?.message || '친구 요청에 실패했습니다.');
             }
         });
+
+        directMessageBtn?.addEventListener('click', () => {
+            if (!userId) return;
+            window.location.href = `/messages/${userId}/`;
+        });
+
+        guestbookSubmit?.addEventListener('click', submitGuestbook);
 
         reportBtn?.addEventListener('click', async () => {
             if (!currentUserId) {
@@ -151,5 +165,114 @@
                 Toast.error(error.data?.message || '신고에 실패했습니다.');
             }
         });
+    }
+
+    function updateFriendButtonState(status) {
+        if (!friendBtn) return;
+        if (!currentUserId) {
+            friendBtn.disabled = true;
+            friendBtn.textContent = '로그인 필요';
+            return;
+        }
+        if (parseInt(userId, 10) === currentUserId) {
+            friendBtn.disabled = true;
+            friendBtn.textContent = '나';
+            return;
+        }
+        if (status?.is_friend) {
+            friendBtn.disabled = true;
+            friendBtn.textContent = '친구';
+            return;
+        }
+        if (status?.is_request_sent) {
+            friendBtn.disabled = true;
+            friendBtn.textContent = '요청 보냄';
+            return;
+        }
+        if (status?.is_request_received) {
+            friendBtn.disabled = true;
+            friendBtn.textContent = '요청 확인';
+            friendBtn.disabled = false;
+            friendBtn.addEventListener('click', () => {
+                window.location.href = '/friends/?tab=requests';
+            }, { once: true });
+            return;
+        }
+        friendBtn.disabled = false;
+        friendBtn.textContent = '친구 요청';
+    }
+
+    async function loadGuestbook() {
+        if (!guestbookList || !userId) return;
+        guestbookList.innerHTML = '<div class="text-muted">불러오는 중...</div>';
+        try {
+            const data = await API.get(`/accounts/users/${userId}/guestbook/`);
+            renderGuestbook(data || []);
+        } catch {
+            guestbookList.innerHTML = '<div class="text-muted">방명록을 불러오지 못했습니다.</div>';
+        }
+    }
+
+    function renderGuestbook(entries) {
+        if (!guestbookList) return;
+        if (!entries.length) {
+            guestbookList.innerHTML = '<div class="text-muted">방명록이 없습니다.</div>';
+            return;
+        }
+        guestbookList.innerHTML = entries.map((entry) => {
+            const canDelete = entry.author?.id === currentUserId || parseInt(userId, 10) === currentUserId;
+            const time = formatDate(entry.created_at);
+            return `
+                <div class="guestbook-item" data-entry-id="${entry.id}">
+                    <div>${Utils.escapeHtml(entry.message)}</div>
+                    <div class="guestbook-meta">
+                        <span>${Utils.escapeHtml(entry.author?.nickname || '알 수 없음')}</span>
+                        <span>${time}</span>
+                    </div>
+                    ${canDelete ? '<button class="btn btn-secondary btn-sm" data-action="delete">삭제</button>' : ''}
+                </div>
+            `;
+        }).join('');
+
+        guestbookList.querySelectorAll('[data-action="delete"]').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const entryId = btn.closest('.guestbook-item')?.dataset.entryId;
+                if (!entryId) return;
+                await deleteGuestbook(entryId);
+            });
+        });
+    }
+
+    async function submitGuestbook() {
+        if (!guestbookInput || !userId) return;
+        const message = guestbookInput.value.trim();
+        if (!message) return;
+        try {
+            await API.post(`/accounts/users/${userId}/guestbook/`, { message });
+            guestbookInput.value = '';
+            await loadGuestbook();
+        } catch (error) {
+            Toast.error(error.data?.message || '방명록 등록에 실패했습니다.');
+        }
+    }
+
+    async function deleteGuestbook(entryId) {
+        try {
+            await API.delete(`/accounts/guestbook/${entryId}/`);
+            await loadGuestbook();
+        } catch (error) {
+            Toast.error(error.data?.message || '삭제에 실패했습니다.');
+        }
+    }
+
+    function formatDate(value) {
+        if (!value) return '-';
+        const d = new Date(value);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${y}-${m}-${day} ${hh}:${mm}`;
     }
 })();

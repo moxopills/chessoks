@@ -27,6 +27,10 @@
     const reportCategory = document.getElementById('profile-report-category');
     const reportMessage = document.getElementById('profile-report-message');
     const reportSubmit = document.getElementById('profile-report-submit');
+    const chatBtn = document.getElementById('profile-chat-btn');
+    const guestbookList = document.getElementById('guestbook-list');
+    const guestbookInput = document.getElementById('guestbook-input');
+    const guestbookSubmit = document.getElementById('guestbook-submit');
 
     let currentPage = 1;
     let totalPages = 1;
@@ -48,6 +52,8 @@
         reportToggle?.addEventListener('click', () => reportBox.classList.toggle('hidden'));
         reportSubmit?.addEventListener('click', submitReport);
         friendBtn?.addEventListener('click', sendFriendRequest);
+        chatBtn?.addEventListener('click', () => openDirectMessage(selectedUserId));
+        guestbookSubmit?.addEventListener('click', submitGuestbook);
         document.addEventListener('click', hideContextMenu);
         document.addEventListener('scroll', hideContextMenu, true);
         document.addEventListener('keydown', (event) => {
@@ -168,6 +174,7 @@
             renderDrawerUser(user);
             renderDrawerStats(user.stats);
             renderRecentGames(data.recent_games || []);
+            await loadGuestbook(userId);
             if (data.vs_summary) {
                 vsBox.classList.remove('hidden');
                 vsWins.textContent = data.vs_summary.wins;
@@ -197,6 +204,8 @@
                     openProfileDrawer(targetId);
                 } else if (action === 'friend') {
                     sendFriendRequestTo(targetId);
+                } else if (action === 'chat') {
+                    openDirectMessage(targetId);
                 } else if (action === 'report') {
                     openProfileDrawer(targetId);
                     reportBox.classList.remove('hidden');
@@ -209,6 +218,7 @@
         const items = [
             { action: 'profile', label: '프로필 보기' },
             ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
+            { action: 'chat', label: '1:1 채팅' },
             { action: 'report', label: '신고하기' },
         ];
         contextMenu.innerHTML = items.map(item => (
@@ -292,9 +302,9 @@
             const moveText = typeof game.move_count === 'number' ? `${game.move_count}수` : '';
             return `
                 <div class="recent-item">
-                    <span>${Utils.escapeHtml(opponent)}</span>
-                    <span>${resultLabel}</span>
-                    <span class="text-muted">${[playedAt, moveText].filter(Boolean).join(' · ')}</span>
+                    <span class="recent-opponent">${Utils.escapeHtml(opponent)}</span>
+                    <span class="recent-result">${resultLabel}</span>
+                    <span class="recent-meta text-muted">${[playedAt, moveText].filter(Boolean).join(' · ')}</span>
                 </div>
             `;
         }).join('');
@@ -333,6 +343,85 @@
         } catch (error) {
             Toast.error(error.data?.message || '친구 요청에 실패했습니다.');
         }
+    }
+
+    function openDirectMessage(userId) {
+        if (!userId) return;
+        window.location.href = `/messages/${userId}/`;
+    }
+
+    async function loadGuestbook(userId) {
+        if (!guestbookList) return;
+        guestbookList.innerHTML = '<div class="text-muted">불러오는 중...</div>';
+        try {
+            const data = await API.get(`/accounts/users/${userId}/guestbook/`);
+            renderGuestbook(data || []);
+        } catch (error) {
+            guestbookList.innerHTML = '<div class="text-muted">방명록을 불러오지 못했습니다.</div>';
+        }
+    }
+
+    function renderGuestbook(entries) {
+        if (!guestbookList) return;
+        if (!entries.length) {
+            guestbookList.innerHTML = '<div class="text-muted">방명록이 없습니다.</div>';
+            return;
+        }
+        guestbookList.innerHTML = entries.map((entry) => {
+            const canDelete = entry.author?.id === currentUserId || selectedUserId === currentUserId;
+            const time = formatDate(entry.created_at);
+            return `
+                <div class="guestbook-item" data-entry-id="${entry.id}">
+                    <div>${Utils.escapeHtml(entry.message)}</div>
+                    <div class="guestbook-meta">
+                        <span>${Utils.escapeHtml(entry.author?.nickname || '알 수 없음')}</span>
+                        <span>${time}</span>
+                    </div>
+                    ${canDelete ? '<button class="btn btn-secondary btn-sm" data-action="delete">삭제</button>' : ''}
+                </div>
+            `;
+        }).join('');
+
+        guestbookList.querySelectorAll('[data-action="delete"]').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const entryId = btn.closest('.guestbook-item')?.dataset.entryId;
+                if (!entryId) return;
+                await deleteGuestbook(entryId);
+            });
+        });
+    }
+
+    async function submitGuestbook() {
+        if (!guestbookInput || !selectedUserId) return;
+        const message = guestbookInput.value.trim();
+        if (!message) return;
+        try {
+            await API.post(`/accounts/users/${selectedUserId}/guestbook/`, { message });
+            guestbookInput.value = '';
+            await loadGuestbook(selectedUserId);
+        } catch (error) {
+            Toast.error(error.data?.message || '방명록 등록에 실패했습니다.');
+        }
+    }
+
+    async function deleteGuestbook(entryId) {
+        try {
+            await API.delete(`/accounts/guestbook/${entryId}/`);
+            await loadGuestbook(selectedUserId);
+        } catch (error) {
+            Toast.error(error.data?.message || '삭제에 실패했습니다.');
+        }
+    }
+
+    function formatDate(value) {
+        if (!value) return '-';
+        const d = new Date(value);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${y}-${m}-${day} ${hh}:${mm}`;
     }
 
     async function submitReport() {
