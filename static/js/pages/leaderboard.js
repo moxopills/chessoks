@@ -282,10 +282,19 @@
             const isWhite = game.white_player.id === selectedUserId;
             const opponent = isWhite ? game.black_player.nickname : game.white_player.nickname;
             const resultLabel = getResultLabel(game.result, isWhite);
+            const playedAt = game.created_at ? Utils.formatDate(game.created_at, {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+            }).replace(/\./g, '').trim() : '';
+            const moveText = typeof game.move_count === 'number' ? `${game.move_count}수` : '';
             return `
                 <div class="recent-item">
                     <span>${Utils.escapeHtml(opponent)}</span>
                     <span>${resultLabel}</span>
+                    <span class="text-muted">${[playedAt, moveText].filter(Boolean).join(' · ')}</span>
                 </div>
             `;
         }).join('');

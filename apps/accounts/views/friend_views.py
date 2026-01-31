@@ -70,3 +70,25 @@ class FriendRequestRejectView(APIView):
     def post(self, request, request_id: int):
         FriendService.reject_request(request.user, request_id)
         return Response({"status": "rejected"})
+
+
+class FriendRequestCancelView(APIView):
+    """친구 요청 취소 (보낸 요청)"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: dict}, tags=["친구"])
+    def post(self, request, request_id: int):
+        FriendService.cancel_request(request.user, request_id)
+        return Response({"status": "cancelled"})
+
+
+class FriendRemoveView(APIView):
+    """친구 삭제"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: dict}, tags=["친구"])
+    def post(self, request, user_id: int):
+        FriendService.remove_friend(request.user, user_id)
+        return Response({"status": "removed"})

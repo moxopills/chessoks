@@ -88,6 +88,30 @@
                     await API.post('/notifications/read/', { ids: [id] });
                     item.is_read = true;
                     renderList(listEl, countEl);
+                    if (item.type === 'friend_request') {
+                        window.location.href = '/friends/?tab=requests';
+                        return;
+                    }
+                    if (item.type === 'rematch' && item.payload?.game_id) {
+                        try {
+                            const data = await API.post(`/chess/games/${item.payload.game_id}/rematch/`);
+                            if (data.room_id) {
+                                Toast.success('리매치가 시작됩니다.');
+                                window.location.href = `/games/${data.room_id}/`;
+                                return;
+                            }
+                        } catch {
+                            Toast.error('리매치에 실패했습니다.');
+                        }
+                    }
+                    if (item.payload?.room_id) {
+                        const roomId = item.payload.room_id;
+                        if (item.type === 'match_found' || item.type === 'rematch') {
+                            window.location.href = `/games/${roomId}/`;
+                        } else {
+                            window.location.href = `/rooms/${roomId}/`;
+                        }
+                    }
                 } catch (error) {
                     Toast.error(error.data?.message || '알림 읽음 처리에 실패했습니다.');
                 }

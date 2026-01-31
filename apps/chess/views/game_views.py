@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.chess.serializers import GameDetailSerializer, MoveSerializer, PagedMoveSerializer
-from apps.chess.services import GameQueryService
+from apps.chess.services import GameQueryService, GameService
 from apps.chess.utils import parse_int
 
 
@@ -61,3 +61,18 @@ class GameCapturedView(APIView):
     def get(self, request, game_id: int):
         captured = GameQueryService.captured_summary(game_id, request.user)
         return Response(captured)
+
+
+class GameRematchView(APIView):
+    """리매치 요청/수락 (REST)"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: None}, tags=["게임"])
+    def post(self, request, game_id: int):
+        rematch_game, status, _ = GameService.request_rematch(game_id, request.user)
+        payload = {"status": status}
+        if rematch_game:
+            payload["rematch_game_id"] = rematch_game.id
+            payload["room_id"] = rematch_game.room_id
+        return Response(payload)

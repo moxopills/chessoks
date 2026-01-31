@@ -48,6 +48,8 @@
         await loadCurrentUser();
         bindEvents();
         await refreshAll();
+        applyTabFromUrl();
+        startOnlineRefresh();
     }
 
     function bindEvents() {
@@ -72,6 +74,17 @@
                 requestsPanel.classList.toggle('hidden', tab !== 'requests');
             });
         });
+    }
+
+    function applyTabFromUrl() {
+        const params = Utils.getUrlParams();
+        if (params.tab === 'requests') {
+            tabButtons.forEach((item) => item.classList.remove('active'));
+            const targetBtn = document.querySelector('.tab-btn[data-tab=\"requests\"]');
+            targetBtn?.classList.add('active');
+            friendsPanel.classList.add('hidden');
+            requestsPanel.classList.remove('hidden');
+        }
     }
 
     async function loadCurrentUser() {
@@ -117,6 +130,25 @@
         } catch {
             friendListEl.dataset.statusMap = '{}';
         }
+    }
+
+    function startOnlineRefresh() {
+        setInterval(() => {
+            if (!currentUserId) return;
+            const friendIdsArr = Array.from(friendIds);
+            if (!friendIdsArr.length) return;
+            applyOnlineStatus(friendIdsArr).then(() => {
+                const rows = Array.from(friendListEl.querySelectorAll('.friend-item'));
+                if (!rows.length) return;
+                const statusMap = JSON.parse(friendListEl.dataset.statusMap || '{}');
+                rows.forEach((row) => {
+                    const userId = parseInt(row.dataset.userId, 10);
+                    const dot = row.querySelector('.status-dot');
+                    if (!dot) return;
+                    dot.classList.toggle('online', !!statusMap[userId]);
+                });
+            });
+        }, 5000);
     }
 
     function renderFriends(friends) {
@@ -178,7 +210,11 @@
                         <button class="btn btn-secondary btn-sm" data-action="reject" data-request-id="${req.id}">거절</button>
                     </div>
                 `
-                : '<span class="text-muted">대기 중</span>';
+                : `
+                    <div class="request-actions">
+                        <button class="btn btn-secondary btn-sm" data-action="cancel" data-request-id="${req.id}">요청 취소</button>
+                    </div>
+                `;
             return `
                 <div class="request-item">
                     <div class="friend-meta" data-user-id="${user.id}">
@@ -199,6 +235,7 @@
                 const requestId = btn.dataset.requestId;
                 if (action === 'accept') await acceptRequest(requestId);
                 if (action === 'reject') await rejectRequest(requestId);
+                if (action === 'cancel') await cancelRequest(requestId);
             });
         });
 
@@ -228,6 +265,27 @@
             await refreshAll();
         } catch (error) {
             Toast.error(error.data?.message || '거절에 실패했습니다.');
+        }
+    }
+
+    async function cancelRequest(requestId) {
+        try {
+            await API.post(`/accounts/friends/requests/${requestId}/cancel/`);
+            Toast.success('친구 요청을 취소했습니다.');
+            await refreshAll();
+        } catch (error) {
+            Toast.error(error.data?.message || '취소에 실패했습니다.');
+        }
+    }
+
+    async function removeFriend(userId) {
+        if (!confirm('친구를 삭제할까요?')) return;
+        try {
+            await API.post(`/accounts/friends/${userId}/remove/`);
+            Toast.success('친구가 삭제되었습니다.');
+            await refreshAll();
+        } catch (error) {
+            Toast.error(error.data?.message || '삭제에 실패했습니다.');
         }
     }
 
@@ -362,6 +420,8 @@
                     openProfileDrawer(targetId);
                 } else if (action === 'friend') {
                     sendFriendRequestTo(targetId);
+                } else if (action === 'remove') {
+                    removeFriend(targetId);
                 } else if (action === 'report') {
                     openProfileDrawer(targetId);
                     reportBox.classList.remove('hidden');
@@ -374,6 +434,7 @@
         const items = [
             { action: 'profile', label: '프로필 보기' },
             ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
+            ...(isFriend ? [{ action: 'remove', label: '친구 삭제' }] : []),
             { action: 'report', label: '신고하기' },
         ];
         contextMenu.innerHTML = items.map(item => (
@@ -458,10 +519,19 @@
         recentList.innerHTML = games.slice(0, 5).map((game) => {
             const opponent = game.white_player.id === selectedUserId ? game.black_player.nickname : game.white_player.nickname;
             const resultLabel = getResultLabel(game.result, game.white_player.id === selectedUserId);
+            const playedAt = game.created_at ? Utils.formatDate(game.created_at, {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+            }).replace(/\./g, '').trim() : '';
+            const moveText = typeof game.move_count === 'number' ? `${game.move_count}수` : '';
             return `
                 <div class="recent-item">
                     <span>${Utils.escapeHtml(opponent)}</span>
                     <span>${resultLabel}</span>
+                    <span class="text-muted">${[playedAt, moveText].filter(Boolean).join(' · ')}</span>
                 </div>
             `;
         }).join('');

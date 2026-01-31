@@ -83,6 +83,11 @@
             <div class="section-header">
                 <h2 class="section-title">👥 접속자 <span class="user-count" id="user-count">0</span></h2>
             </div>
+            <div class="users-search">
+                <input class="form-input" id="lobby-user-search-input" placeholder="닉네임 검색" maxlength="20">
+                <button class="btn btn-secondary btn-sm" id="lobby-user-search-btn">검색</button>
+                <button class="btn btn-secondary btn-sm" id="lobby-user-search-reset">초기화</button>
+            </div>
             <div class="users-list" id="users-list">
                 <div class="loading-placeholder">
                     <span class="spinner"></span>
@@ -450,6 +455,23 @@
     flex: 1;
     overflow-y: auto;
     max-height: 350px;
+}
+
+.users-search {
+    display: flex;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-sm);
+}
+
+.users-search .form-input {
+    flex: 1;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    padding: var(--space-xs) var(--space-sm);
+}
+
+.users-search .btn {
+    white-space: nowrap;
 }
 
 .user-item {
