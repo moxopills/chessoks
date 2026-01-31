@@ -226,6 +226,9 @@
     }
 
     function openModal() {
+        createRoomForm.reset();
+        document.getElementById('room-title').value = '';
+        document.getElementById('room-password').value = '';
         createModal.classList.remove('hidden');
         document.getElementById('room-title').focus();
     }

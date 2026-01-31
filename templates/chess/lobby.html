@@ -537,6 +537,14 @@
     background-color: var(--color-accent-success);
 }
 
+.user-status.offline {
+    color: var(--color-text-muted);
+}
+
+.user-status.offline::before {
+    background-color: var(--color-text-muted);
+}
+
 .users-empty {
     text-align: center;
     padding: var(--space-xl);
@@ -548,6 +556,9 @@
     margin-top: var(--space-sm);
     font-size: 0.7rem;
     color: var(--color-text-muted);
+    letter-spacing: 0;
+    word-spacing: 0;
+    font-family: var(--font-body);
 }
 
 </style>

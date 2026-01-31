@@ -540,7 +540,7 @@
             return;
         }
 
-        usersList.innerHTML = users.map(user => userRowHtml(user)).join('');
+        usersList.innerHTML = users.map(user => userRowHtml(user, true)).join('');
 
         usersList.querySelectorAll('.user-item').forEach(item => {
             const userId = parseInt(item.dataset.userId, 10);
@@ -585,6 +585,8 @@
                     window.location.href = `/users/${targetId}/`;
                 } else if (action === 'friend') {
                     sendFriendRequest(targetId);
+                } else if (action === 'chat') {
+                    window.location.href = `/messages/${targetId}/`;
                 } else if (action === 'report') {
                     openReportForUser(targetId);
                 }
@@ -596,6 +598,7 @@
         const items = [
             { action: 'profile', label: '프로필 보기' },
             ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
+            { action: 'chat', label: '1:1 채팅' },
             { action: 'report', label: '신고하기' },
         ];
         userContextMenu.innerHTML = items.map(item => (
@@ -674,7 +677,7 @@
             usersList.innerHTML = '';
         }
 
-        usersList.insertAdjacentHTML('beforeend', userRowHtml(user));
+        usersList.insertAdjacentHTML('beforeend', userRowHtml(user, true));
         userCount.textContent = Object.keys(lobbyUsers).length;
     }
 
@@ -692,7 +695,9 @@
         }
     }
 
-    function userRowHtml(user) {
+    function userRowHtml(user, online = true) {
+        const statusText = online ? '온라인' : '오프라인';
+        const statusClass = online ? 'online' : 'offline';
         return `
             <div class="user-item" data-user-id="${user.id}">
                 <div class="user-avatar">
@@ -702,7 +707,7 @@
                 </div>
                 <div class="user-info">
                     <div class="user-nickname">${Utils.escapeHtml(user.nickname)}</div>
-                    <div class="user-status">온라인</div>
+                    <div class="user-status ${statusClass}">${statusText}</div>
                 </div>
             </div>
         `;
@@ -732,7 +737,8 @@
                 usersList.innerHTML = '<div class="users-empty">검색 결과가 없습니다.</div>';
                 return;
             }
-            usersList.innerHTML = results.map(user => userRowHtml(user)).join('');
+            const statusMap = await fetchOnlineStatusMap(results.map(user => user.id));
+            usersList.innerHTML = results.map(user => userRowHtml(user, statusMap[user.id] === true)).join('');
             usersList.querySelectorAll('.user-item').forEach(item => {
                 const userId = parseInt(item.dataset.userId, 10);
                 if (!userId) return;
@@ -754,6 +760,19 @@
             });
         } catch (error) {
             Toast.error(error.data?.message || '검색에 실패했습니다.');
+        }
+    }
+
+    async function fetchOnlineStatusMap(ids) {
+        if (!ids.length) return {};
+        try {
+            const data = await API.get('/accounts/online-status/', { ids: ids.join(',') });
+            return (data.results || []).reduce((acc, entry) => {
+                acc[entry.id] = entry.online;
+                return acc;
+            }, {});
+        } catch (error) {
+            return {};
         }
     }
 

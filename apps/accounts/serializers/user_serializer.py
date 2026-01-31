@@ -126,6 +126,7 @@ class OpponentProfileSerializer(serializers.Serializer):
     user = PublicUserSerializer()
     recent_games = GameHistorySerializer(many=True)
     vs_summary = OpponentSummarySerializer(allow_null=True)
+    friend_status = serializers.DictField(required=False)
 
 
 class DashboardSummarySerializer(UserStatsSerializer):

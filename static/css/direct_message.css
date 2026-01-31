@@ -1,0 +1,94 @@
+.dm-page {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    max-width: 800px;
+    margin: 0 auto;
+    font-family: var(--font-body);
+}
+
+.dm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.dm-title {
+    font-size: 1.1rem;
+}
+
+.dm-subtitle {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+}
+
+.dm-card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    min-height: 420px;
+}
+
+.dm-messages {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.dm-message {
+    max-width: 70%;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.dm-message.me {
+    align-self: flex-end;
+    background: rgba(233, 69, 96, 0.2);
+    border: 1px solid rgba(233, 69, 96, 0.4);
+}
+
+.dm-message.other {
+    align-self: flex-start;
+    background: rgba(15, 155, 142, 0.2);
+    border: 1px solid rgba(15, 155, 142, 0.4);
+}
+
+.dm-message-time {
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    margin-top: 4px;
+}
+
+.dm-form {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.dm-input {
+    flex: 1;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
+    font-family: var(--font-body);
+    font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    .dm-card {
+        min-height: 60vh;
+    }
+    .dm-message {
+        max-width: 85%;
+    }
+}

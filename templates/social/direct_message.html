@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}1:1 채팅 - ChessOK{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/direct_message.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dm-page">
+    <div class="dm-header">
+        <div>
+            <h1 class="dm-title" id="dm-title">1:1 채팅</h1>
+            <p class="dm-subtitle" id="dm-subtitle">상대와 개인 대화를 나눌 수 있습니다.</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="dm-back">뒤로가기</button>
+    </div>
+
+    <div class="dm-card">
+        <div class="dm-messages" id="dm-messages"></div>
+        <form class="dm-form" id="dm-form" autocomplete="off">
+            <input type="text" class="dm-input" id="dm-input" name="dm_message" placeholder="메시지 입력..." maxlength="500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" enterkeyhint="send">
+            <button type="submit" class="btn btn-primary btn-sm">전송</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pages/direct_message.js' %}"></script>
+{% endblock %}

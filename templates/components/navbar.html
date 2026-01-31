@@ -429,13 +429,17 @@
     }
 
     .notification-dropdown {
-        width: min(90vw, 320px);
-        max-height: 60vh;
+        position: fixed;
+        top: calc(var(--navbar-height) + var(--space-sm));
+        left: var(--space-md);
         right: var(--space-md);
+        width: auto;
+        max-height: calc(100vh - var(--navbar-height) - 140px);
+        overflow-y: auto;
     }
 
     .notification-list {
-        max-height: 50vh;
+        max-height: none;
     }
 }
 </style>
