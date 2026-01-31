@@ -2,7 +2,9 @@ from django.urls import include, path
 
 from apps.accounts.views.friend_views import (
     FriendListView,
+    FriendRemoveView,
     FriendRequestAcceptView,
+    FriendRequestCancelView,
     FriendRequestListCreateView,
     FriendRequestRejectView,
 )
@@ -84,5 +86,11 @@ urlpatterns = [
         FriendRequestRejectView.as_view(),
         name="friend-request-reject",
     ),
+    path(
+        "friends/requests/<int:request_id>/cancel/",
+        FriendRequestCancelView.as_view(),
+        name="friend-request-cancel",
+    ),
+    path("friends/<int:user_id>/remove/", FriendRemoveView.as_view(), name="friend-remove"),
     path("social/", include("apps.accounts.urls.social_urls")),
 ]

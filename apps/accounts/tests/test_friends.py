@@ -73,6 +73,19 @@ class FriendApiTestCase(BaseTestCase):
         friends = self.client.get("/api/accounts/friends/")
         self.assertEqual(friends.data["count"], 0)
 
+    def test_cancel_friend_request(self):
+        """보낸 친구 요청 취소"""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(
+            "/api/accounts/friends/requests/", {"user_id": self.other.id}, format="json"
+        )
+        request_id = response.data["request_id"]
+        cancel = self.client.post(f"/api/accounts/friends/requests/{request_id}/cancel/")
+        self.assertEqual(cancel.status_code, status.HTTP_200_OK)
+
+        requests = self.client.get("/api/accounts/friends/requests/?type=outgoing")
+        self.assertEqual(requests.data["count"], 0)
+
     def test_duplicate_friend_request(self):
         """중복 친구 요청"""
         self.client.force_authenticate(user=self.user)

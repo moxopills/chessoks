@@ -67,6 +67,12 @@ class FriendService:
         request.delete()
 
     @staticmethod
+    @transaction.atomic
+    def cancel_request(user, request_id: int) -> None:
+        request = get_object_or_404(FriendRequest, pk=request_id, from_user=user)
+        request.delete()
+
+    @staticmethod
     def list_friends(user) -> list[Friend]:
         return list(Friend.objects.filter(user=user).select_related("friend", "friend__stats"))
 
@@ -82,3 +88,10 @@ class FriendService:
     def _create_friendship(user, friend) -> None:
         Friend.objects.get_or_create(user=user, friend=friend)
         Friend.objects.get_or_create(user=friend, friend=user)
+
+    @staticmethod
+    @transaction.atomic
+    def remove_friend(user, friend_id: int) -> None:
+        friend = get_object_or_404(User, pk=friend_id)
+        Friend.objects.filter(user=user, friend=friend).delete()
+        Friend.objects.filter(user=friend, friend=user).delete()
