@@ -1,5 +1,7 @@
 """게임 조회 View"""
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -8,8 +10,6 @@ from rest_framework.views import APIView
 from apps.chess.serializers import GameDetailSerializer, MoveSerializer, PagedMoveSerializer
 from apps.chess.services import GameQueryService, GameService
 from apps.chess.utils import parse_int
-from asgiref.sync import async_to_sync
-from channels.layers import get_channel_layer
 
 
 class GameDetailView(APIView):

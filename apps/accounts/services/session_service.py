@@ -1,11 +1,11 @@
 """로그인/세션/탈퇴 관련 서비스"""
 
+import math
 from datetime import timedelta
 
 from django.contrib.auth import authenticate, login, logout
 from django.core.cache import cache
 from django.utils import timezone
-import math
 
 from rest_framework import status
 from rest_framework.exceptions import (

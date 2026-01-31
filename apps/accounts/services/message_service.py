@@ -1,6 +1,6 @@
 from django.db import transaction
-from django.db.models import Q
-from rest_framework.exceptions import ValidationError, NotFound
+
+from rest_framework.exceptions import NotFound, ValidationError
 
 from apps.accounts.models import DirectMessage, DirectMessageThread, GuestbookEntry, User
 
@@ -27,9 +27,7 @@ class MessageService:
     @staticmethod
     def delete_guestbook_entry(entry_id: int, user: User) -> None:
         try:
-            entry = GuestbookEntry.objects.select_related("profile_user", "author").get(
-                pk=entry_id
-            )
+            entry = GuestbookEntry.objects.select_related("profile_user", "author").get(pk=entry_id)
         except GuestbookEntry.DoesNotExist:
             raise NotFound("방명록을 찾을 수 없습니다.") from None
 
@@ -49,7 +47,9 @@ class MessageService:
         return thread
 
     @staticmethod
-    def list_messages(user: User, other_id: int, limit: int, offset: int) -> tuple[int, list[DirectMessage]]:
+    def list_messages(
+        user: User, other_id: int, limit: int, offset: int
+    ) -> tuple[int, list[DirectMessage]]:
         other = User.objects.filter(pk=other_id).first()
         if not other:
             raise NotFound("유저 정보를 찾을 수 없습니다.")

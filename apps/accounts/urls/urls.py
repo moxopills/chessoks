@@ -8,6 +8,7 @@ from apps.accounts.views.friend_views import (
     FriendRequestListCreateView,
     FriendRequestRejectView,
 )
+from apps.accounts.views.message_views import DirectMessageView, GuestbookDeleteView, GuestbookView
 from apps.accounts.views.user_views import (
     AccountDeleteView,
     CurrentUserView,
@@ -34,7 +35,6 @@ from apps.accounts.views.user_views import (
     UserProfileView,
     UserSearchView,
 )
-from apps.accounts.views.message_views import GuestbookDeleteView, GuestbookView, DirectMessageView
 
 app_name = "accounts"
 

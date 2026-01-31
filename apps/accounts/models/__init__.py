@@ -1,7 +1,7 @@
 from .auth_token import AuthToken
+from .direct_message import DirectMessage, DirectMessageThread
 from .friend import Friend, FriendRequest
 from .guestbook import GuestbookEntry
-from .direct_message import DirectMessage, DirectMessageThread
 from .signup_email_token import SignupEmailToken
 from .social_user import SocialUser
 from .user import User

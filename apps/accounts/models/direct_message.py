@@ -17,9 +17,7 @@ class DirectMessageThread(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["user1", "user2"], name="unique_dm_thread")
-        ]
+        constraints = [models.UniqueConstraint(fields=["user1", "user2"], name="unique_dm_thread")]
 
     def __str__(self) -> str:
         return f"{self.user1_id}-{self.user2_id}"

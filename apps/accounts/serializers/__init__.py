@@ -5,17 +5,17 @@ from .friend_serializers import (
     FriendRequestSerializer,
     FriendSerializer,
 )
-from .online_serializers import OnlineStatusListSerializer, OnlineStatusSerializer
-from .social_serializer import (
-    SocialAccountUnlinkSerializer,
-    SocialLoginSerializer,
-    SocialUserSerializer,
-)
 from .message_serializers import (
     DirectMessageCreateSerializer,
     DirectMessageSerializer,
     GuestbookCreateSerializer,
     GuestbookEntrySerializer,
+)
+from .online_serializers import OnlineStatusListSerializer, OnlineStatusSerializer
+from .social_serializer import (
+    SocialAccountUnlinkSerializer,
+    SocialLoginSerializer,
+    SocialUserSerializer,
 )
 from .user_serializer import (
     AccountDeleteSerializer,
