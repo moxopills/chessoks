@@ -65,6 +65,10 @@
 
     // State
     const roomId = Utils.getPathParam(/\/games\/(\d+)/);
+    const urlParams = Utils.getUrlParams();
+    const replayParam = urlParams.replay_game_id || urlParams.replay;
+    const replayGameParamId = replayParam ? parseInt(replayParam, 10) : null;
+    const replayOnly = Boolean(replayGameParamId);
     let game = null;
     let currentUser = null;
     let socket = null;
@@ -127,7 +131,9 @@
         setupReplayControls();
         setupReport();
         setupExitGuard();
-        connectWebSocket();
+        if (!replayOnly) {
+            connectWebSocket();
+        }
     }
 
     /**
@@ -135,28 +141,32 @@
      */
     async function loadGame() {
         try {
-            // 방에서 현재 게임 가져오기
-            const room = await API.get(`/chess/rooms/${roomId}/`);
+            if (replayOnly && replayGameParamId) {
+                game = await API.get(`/chess/games/${replayGameParamId}/`);
+            } else {
+                // 방에서 현재 게임 가져오기
+                const room = await API.get(`/chess/rooms/${roomId}/`);
 
-            if (room.status !== 'playing') {
-                Toast.error('진행 중인 게임이 없습니다.');
-                window.location.href = `/rooms/${roomId}/`;
-                return;
-            }
+                if (room.status !== 'playing') {
+                    Toast.error('진행 중인 게임이 없습니다.');
+                    window.location.href = `/rooms/${roomId}/`;
+                    return;
+                }
 
-            let gameId = room.current_game_id;
-            if (!gameId) {
-                const history = await API.get(`/chess/games/history/`, { result: 'playing', limit: 20 });
-                const matches = history.results || [];
-                const found = matches.find(item => item.room_id === roomId);
-                gameId = found?.id;
+                let gameId = room.current_game_id;
+                if (!gameId) {
+                    const history = await API.get(`/chess/games/history/`, { result: 'playing', limit: 20 });
+                    const matches = history.results || [];
+                    const found = matches.find(item => item.room_id === roomId);
+                    gameId = found?.id;
+                }
+                if (!gameId) {
+                    Toast.error('게임을 찾을 수 없습니다.');
+                    window.location.href = `/rooms/${roomId}/`;
+                    return;
+                }
+                game = await API.get(`/chess/games/${gameId}/`);
             }
-            if (!gameId) {
-                Toast.error('게임을 찾을 수 없습니다.');
-                window.location.href = `/rooms/${roomId}/`;
-                return;
-            }
-            game = await API.get(`/chess/games/${gameId}/`);
 
             // 내 색상 결정
             if (currentUser) {
@@ -172,6 +182,12 @@
                 opponentUserId = game.white_player?.id || null;
             }
 
+            if (!myColor || replayOnly) {
+                gameActions?.classList.add('hidden');
+                const reportSection = document.getElementById('game-report-section');
+                reportSection?.classList.add('hidden');
+            }
+
             renderPlayerBars();
             renderBoard();
             renderMoveList();
@@ -182,6 +198,9 @@
             if (game.move_count > 0) {
                 await loadLastMove();
                 renderBoard();
+            }
+            if (replayOnly && replayGameParamId) {
+                await openReplay(replayGameParamId);
             }
         } catch (error) {
             console.error('Failed to load game:', error);
@@ -1079,6 +1098,10 @@
      * 액션 버튼 설정
      */
     function setupActions() {
+        if (!myColor || replayOnly) {
+            gameActions?.classList.add('hidden');
+            return;
+        }
         drawBtn.addEventListener('click', () => {
             if (!confirm('무승부를 제안하시겠습니까?')) return;
             socket.send(JSON.stringify({ action: 'draw', game_id: game.id }));
@@ -1195,15 +1218,15 @@
         replayClose?.addEventListener('click', () => closeReplay());
     }
 
-    async function openReplay() {
+    async function openReplay(targetGameId = null) {
         if (!replayModal) return;
         if (gameEndModal) {
             gameEndModal.classList.add('hidden');
         }
         replayMoves = [];
-        replayGameId = game?.id || null;
+        replayGameId = targetGameId || game?.id || null;
         try {
-            const data = await API.get(`/chess/games/${game.id}/moves/`, { limit: 200, offset: 0 });
+            const data = await API.get(`/chess/games/${replayGameId}/moves/`, { limit: 200, offset: 0 });
             replayMoves = data.results || [];
         } catch (error) {
             try {

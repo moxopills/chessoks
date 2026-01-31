@@ -19,6 +19,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from django.conf.urls import handler404, handler500
 from django.views.generic import TemplateView
 
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -67,11 +68,21 @@ urlpatterns = [
         "games/<int:room_id>/", TemplateView.as_view(template_name="chess/game.html"), name="game"
     ),
     path(
+        "games/<int:room_id>/spectate/",
+        TemplateView.as_view(template_name="chess/spectate.html"),
+        name="game-spectate",
+    ),
+    path(
         "leaderboard/",
         TemplateView.as_view(template_name="social/leaderboard.html"),
         name="leaderboard",
     ),
     path("friends/", TemplateView.as_view(template_name="social/friends.html"), name="friends"),
+    path(
+        "messages/<int:user_id>/",
+        TemplateView.as_view(template_name="social/direct_message.html"),
+        name="direct-message",
+    ),
     path(
         "history/",
         TemplateView.as_view(template_name="chess/game_history.html"),
@@ -84,6 +95,9 @@ urlpatterns = [
     ),
     path("admin-panel/", AdminDashboardPageView.as_view(), name="admin-panel"),
 ]
+
+handler404 = "config.views.page_not_found"
+handler500 = "config.views.server_error"
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

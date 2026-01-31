@@ -11,6 +11,12 @@ from .social_serializer import (
     SocialLoginSerializer,
     SocialUserSerializer,
 )
+from .message_serializers import (
+    DirectMessageCreateSerializer,
+    DirectMessageSerializer,
+    GuestbookCreateSerializer,
+    GuestbookEntrySerializer,
+)
 from .user_serializer import (
     AccountDeleteSerializer,
     DashboardSerializer,
@@ -73,4 +79,8 @@ __all__ = [
     "FriendRequestCreateSerializer",
     "FriendListSerializer",
     "FriendRequestListSerializer",
+    "GuestbookEntrySerializer",
+    "GuestbookCreateSerializer",
+    "DirectMessageSerializer",
+    "DirectMessageCreateSerializer",
 ]

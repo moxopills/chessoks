@@ -5,6 +5,7 @@ from datetime import timedelta
 from django.contrib.auth import authenticate, login, logout
 from django.core.cache import cache
 from django.utils import timezone
+import math
 
 from rest_framework import status
 from rest_framework.exceptions import (
@@ -219,7 +220,17 @@ class AccountSessionService:
             raise PermissionDenied(detail="비활성화된 계정입니다.")
 
         if user.is_suspended:
-            raise PermissionDenied(detail="정지된 계정입니다.")
+            remaining = ""
+            if user.suspended_until:
+                delta = user.suspended_until - timezone.now()
+                seconds = max(0, int(delta.total_seconds()))
+                days = math.ceil(seconds / 86400) if seconds else 0
+                if days >= 1:
+                    remaining = f" {days}일 남았습니다."
+                else:
+                    hours = max(1, math.ceil(seconds / 3600))
+                    remaining = f" {hours}시간 남았습니다."
+            raise PermissionDenied(detail=f"정지된 계정입니다.{remaining}")
 
         if not user.email_verified:
             raise PermissionDenied(

@@ -34,6 +34,7 @@ from apps.accounts.views.user_views import (
     UserProfileView,
     UserSearchView,
 )
+from apps.accounts.views.message_views import GuestbookDeleteView, GuestbookView, DirectMessageView
 
 app_name = "accounts"
 
@@ -73,6 +74,9 @@ urlpatterns = [
     path("leaderboard/me/", MyRankView.as_view(), name="leaderboard-me"),
     path("dashboard/", UserDashboardView.as_view(), name="dashboard"),
     path("users/<int:user_id>/profile/", UserProfileView.as_view(), name="user-profile"),
+    path("users/<int:user_id>/guestbook/", GuestbookView.as_view(), name="guestbook"),
+    path("guestbook/<int:entry_id>/", GuestbookDeleteView.as_view(), name="guestbook-delete"),
+    path("messages/<int:user_id>/", DirectMessageView.as_view(), name="direct-messages"),
     path("users/search/", UserSearchView.as_view(), name="user-search"),
     path("friends/", FriendListView.as_view(), name="friends"),
     path("friends/requests/", FriendRequestListCreateView.as_view(), name="friend-requests"),

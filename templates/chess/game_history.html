@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}게임 히스토리 - ChessOK{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/history.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="history-page">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">게임 히스토리</h1>
+            <p class="page-subtitle">내 경기 기록을 확인하고 기보를 다시 볼 수 있습니다.</p>
+        </div>
+    </div>
+
+    <div class="history-filters">
+        <div class="filter-group">
+            <label for="filter-result">결과</label>
+            <select id="filter-result" class="form-input">
+                <option value="">전체</option>
+                <option value="win">승</option>
+                <option value="draw">무</option>
+                <option value="lose">패</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="filter-start">기간 시작</label>
+            <input type="date" id="filter-start" class="form-input">
+        </div>
+        <div class="filter-group">
+            <label for="filter-end">기간 종료</label>
+            <input type="date" id="filter-end" class="form-input">
+        </div>
+        <div class="filter-actions">
+            <button class="btn btn-secondary btn-sm" id="filter-reset">초기화</button>
+            <button class="btn btn-primary btn-sm" id="filter-apply">적용</button>
+        </div>
+    </div>
+
+    <div class="history-list" id="history-list">
+        <div class="history-empty">게임 기록을 불러오는 중...</div>
+    </div>
+
+    <div class="history-pagination">
+        <button class="btn btn-secondary btn-sm" id="page-prev">이전</button>
+        <span class="page-indicator" id="page-indicator">1 / 1</span>
+        <button class="btn btn-secondary btn-sm" id="page-next">다음</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pages/game_history.js' %}"></script>
+{% endblock %}
