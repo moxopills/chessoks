@@ -8,7 +8,12 @@ from apps.accounts.views.friend_views import (
     FriendRequestListCreateView,
     FriendRequestRejectView,
 )
-from apps.accounts.views.message_views import DirectMessageView, GuestbookDeleteView, GuestbookView
+from apps.accounts.views.message_views import (
+    DirectMessageThreadView,
+    DirectMessageView,
+    GuestbookDeleteView,
+    GuestbookView,
+)
 from apps.accounts.views.user_views import (
     AccountDeleteView,
     CurrentUserView,
@@ -76,6 +81,7 @@ urlpatterns = [
     path("users/<int:user_id>/profile/", UserProfileView.as_view(), name="user-profile"),
     path("users/<int:user_id>/guestbook/", GuestbookView.as_view(), name="guestbook"),
     path("guestbook/<int:entry_id>/", GuestbookDeleteView.as_view(), name="guestbook-delete"),
+    path("messages/threads/", DirectMessageThreadView.as_view(), name="direct-message-threads"),
     path("messages/<int:user_id>/", DirectMessageView.as_view(), name="direct-messages"),
     path("users/search/", UserSearchView.as_view(), name="user-search"),
     path("friends/", FriendListView.as_view(), name="friends"),

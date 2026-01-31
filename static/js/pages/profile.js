@@ -15,13 +15,19 @@
     const drawsEl = document.getElementById('stat-draws');
     const totalEl = document.getElementById('stat-total');
     const recentEl = document.getElementById('recent-games');
+    const guestbookList = document.getElementById('guestbook-list');
+    const guestbookInput = document.getElementById('guestbook-input');
+    const guestbookSubmit = document.getElementById('guestbook-submit');
+    let currentUserId = null;
 
     init();
 
     async function init() {
         try {
             const me = await API.get('/accounts/me/');
+            currentUserId = me?.id;
             renderProfile(me);
+            await loadGuestbook();
         } catch (error) {
             Toast.error('프로필 정보를 불러올 수 없습니다.');
         }
@@ -32,6 +38,8 @@
         } catch (error) {
             if (recentEl) recentEl.textContent = '전적을 불러오지 못했습니다.';
         }
+
+        guestbookSubmit?.addEventListener('click', submitGuestbook);
     }
 
     function renderProfile(user) {
@@ -118,5 +126,79 @@
         const whiteWin = new Set(['white_win', 'checkmate_white', 'timeout_black', 'resignation_black']);
         const didWin = whiteWin.has(result) ? isWhite : !isWhite;
         return { className: didWin ? 'win' : 'lose', label: didWin ? '승리' : '패배' };
+    }
+
+    async function loadGuestbook() {
+        if (!guestbookList || !currentUserId) return;
+        guestbookList.innerHTML = '<div class="helper-text">불러오는 중...</div>';
+        try {
+            const data = await API.get(`/accounts/users/${currentUserId}/guestbook/`);
+            renderGuestbook(data || []);
+        } catch {
+            guestbookList.innerHTML = '<div class="helper-text">방명록을 불러오지 못했습니다.</div>';
+        }
+    }
+
+    function renderGuestbook(entries) {
+        if (!guestbookList) return;
+        if (!entries.length) {
+            guestbookList.innerHTML = '<div class="helper-text">방명록이 없습니다.</div>';
+            return;
+        }
+        guestbookList.innerHTML = entries.map((entry) => {
+            const canDelete = entry.author?.id === currentUserId;
+            const time = formatDate(entry.created_at);
+            return `
+                <div class="guestbook-item" data-entry-id="${entry.id}">
+                    <div>${Utils.escapeHtml(entry.message)}</div>
+                    <div class="guestbook-meta">
+                        <span>${Utils.escapeHtml(entry.author?.nickname || '알 수 없음')}</span>
+                        <span>${time}</span>
+                    </div>
+                    ${canDelete ? '<button class="btn btn-secondary btn-sm" data-action="delete">삭제</button>' : ''}
+                </div>
+            `;
+        }).join('');
+
+        guestbookList.querySelectorAll('[data-action="delete"]').forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const entryId = btn.closest('.guestbook-item')?.dataset.entryId;
+                if (!entryId) return;
+                await deleteGuestbook(entryId);
+            });
+        });
+    }
+
+    async function submitGuestbook() {
+        if (!guestbookInput || !currentUserId) return;
+        const message = guestbookInput.value.trim();
+        if (!message) return;
+        try {
+            await API.post(`/accounts/users/${currentUserId}/guestbook/`, { message });
+            guestbookInput.value = '';
+            await loadGuestbook();
+        } catch (error) {
+            Toast.error(error.data?.message || '방명록 등록에 실패했습니다.');
+        }
+    }
+
+    async function deleteGuestbook(entryId) {
+        try {
+            await API.delete(`/accounts/guestbook/${entryId}/`);
+            await loadGuestbook();
+        } catch (error) {
+            Toast.error(error.data?.message || '삭제에 실패했습니다.');
+        }
+    }
+
+    function formatDate(value) {
+        if (!value) return '-';
+        const d = new Date(value);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${y}-${m}-${day} ${hh}:${mm}`;
     }
 })();

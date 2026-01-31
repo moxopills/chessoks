@@ -56,10 +56,11 @@
     async function loadTargetInfo() {
         try {
             const data = await API.get(`/accounts/users/${targetUserId}/profile/`);
-            titleEl.textContent = `${data.nickname}님과의 채팅`;
+            const nickname = data?.nickname || data?.user?.nickname || '상대';
+            titleEl.textContent = `${nickname}님과의 채팅`;
             subtitleEl.textContent = `레이팅 ${data.stats?.rating ?? '-'} · ${data.stats?.rank_tier ?? '-'}`;
         } catch {
-            // ignore
+            titleEl.textContent = '상대님과의 채팅';
         }
     }
 

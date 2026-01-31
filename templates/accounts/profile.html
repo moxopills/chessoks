@@ -61,12 +61,27 @@
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">최근 경기</h2>
+    <div class="profile-side">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">최근 경기</h2>
+            </div>
+            <div class="recent-games" id="recent-games">
+                <div class="helper-text">최근 전적을 불러오는 중...</div>
+            </div>
         </div>
-        <div class="recent-games" id="recent-games">
-            <div class="helper-text">최근 전적을 불러오는 중...</div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">방명록</h2>
+            </div>
+            <div class="guestbook-list" id="guestbook-list">
+                <div class="helper-text">방명록을 불러오는 중...</div>
+            </div>
+            <div class="guestbook-form">
+                <input type="text" class="form-input" id="guestbook-input" placeholder="방명록 남기기" maxlength="200">
+                <button class="btn btn-secondary btn-sm" id="guestbook-submit">등록</button>
+            </div>
         </div>
     </div>
 </div>

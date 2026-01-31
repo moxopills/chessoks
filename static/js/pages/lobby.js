@@ -542,25 +542,7 @@
 
         usersList.innerHTML = users.map(user => userRowHtml(user, true)).join('');
 
-        usersList.querySelectorAll('.user-item').forEach(item => {
-            const userId = parseInt(item.dataset.userId, 10);
-            if (!userId) return;
-            if (isTouchDevice) {
-                item.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    openUserContextMenu(event, userId);
-                });
-                item.addEventListener('touchstart', (event) => {
-                    longPressTimer = setTimeout(() => openUserContextMenu(event, userId), 450);
-                });
-                item.addEventListener('touchend', () => clearTimeout(longPressTimer));
-            } else {
-                item.addEventListener('contextmenu', (event) => {
-                    event.preventDefault();
-                    openUserContextMenu(event, userId);
-                });
-            }
-        });
+        usersList.querySelectorAll('.user-item').forEach(bindUserItemEvents);
     }
 
     function setupUserContextMenu() {
@@ -678,7 +660,29 @@
         }
 
         usersList.insertAdjacentHTML('beforeend', userRowHtml(user, true));
+        const newItem = usersList.querySelector(`[data-user-id="${user.id}"]`);
+        if (newItem) bindUserItemEvents(newItem);
         userCount.textContent = Object.keys(lobbyUsers).length;
+    }
+
+    function bindUserItemEvents(item) {
+        const userId = parseInt(item.dataset.userId, 10);
+        if (!userId) return;
+        if (isTouchDevice) {
+            item.addEventListener('click', (event) => {
+                event.preventDefault();
+                openUserContextMenu(event, userId);
+            });
+            item.addEventListener('touchstart', (event) => {
+                longPressTimer = setTimeout(() => openUserContextMenu(event, userId), 450);
+            });
+            item.addEventListener('touchend', () => clearTimeout(longPressTimer));
+        } else {
+            item.addEventListener('contextmenu', (event) => {
+                event.preventDefault();
+                openUserContextMenu(event, userId);
+            });
+        }
     }
 
     function removeUserFromList(userId) {
@@ -739,25 +743,7 @@
             }
             const statusMap = await fetchOnlineStatusMap(results.map(user => user.id));
             usersList.innerHTML = results.map(user => userRowHtml(user, statusMap[user.id] === true)).join('');
-            usersList.querySelectorAll('.user-item').forEach(item => {
-                const userId = parseInt(item.dataset.userId, 10);
-                if (!userId) return;
-                if (isTouchDevice) {
-                    item.addEventListener('click', (event) => {
-                        event.preventDefault();
-                        openUserContextMenu(event, userId);
-                    });
-                    item.addEventListener('touchstart', (event) => {
-                        longPressTimer = setTimeout(() => openUserContextMenu(event, userId), 450);
-                    });
-                    item.addEventListener('touchend', () => clearTimeout(longPressTimer));
-                } else {
-                    item.addEventListener('contextmenu', (event) => {
-                        event.preventDefault();
-                        openUserContextMenu(event, userId);
-                    });
-                }
-            });
+            usersList.querySelectorAll('.user-item').forEach(bindUserItemEvents);
         } catch (error) {
             Toast.error(error.data?.message || '검색에 실패했습니다.');
         }

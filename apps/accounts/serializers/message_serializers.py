@@ -26,3 +26,10 @@ class DirectMessageSerializer(serializers.ModelSerializer):
 
 class DirectMessageCreateSerializer(serializers.Serializer):
     message = serializers.CharField(max_length=500)
+
+
+class DirectMessageThreadSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    other_user = PublicUserSerializer()
+    last_message = serializers.CharField(allow_blank=True, allow_null=True)
+    last_message_at = serializers.DateTimeField(allow_null=True)

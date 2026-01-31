@@ -78,6 +78,11 @@ urlpatterns = [
     ),
     path("friends/", TemplateView.as_view(template_name="social/friends.html"), name="friends"),
     path(
+        "messages/",
+        TemplateView.as_view(template_name="social/message_threads.html"),
+        name="message-threads",
+    ),
+    path(
         "messages/<int:user_id>/",
         TemplateView.as_view(template_name="social/direct_message.html"),
         name="direct-message",

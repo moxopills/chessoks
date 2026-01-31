@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from apps.accounts.serializers import (
     DirectMessageCreateSerializer,
     DirectMessageSerializer,
+    DirectMessageThreadSerializer,
     GuestbookCreateSerializer,
     GuestbookEntrySerializer,
 )
@@ -68,3 +69,29 @@ class DirectMessageView(APIView):
             request.user, user_id, serializer.validated_data["message"]
         )
         return Response(DirectMessageSerializer(message).data, status=201)
+
+
+class DirectMessageThreadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: DirectMessageThreadSerializer(many=True)}, tags=["유저"])
+    def get(self, request):
+        limit = parse_int(request.query_params.get("limit"), default=50, min_value=1, max_value=200)
+        offset = parse_int(
+            request.query_params.get("offset"), default=0, min_value=0, max_value=10_000
+        )
+        total, threads = MessageService.list_threads(request.user, limit, offset)
+        results = []
+        for thread in threads:
+            other_user = thread.user2 if thread.user1_id == request.user.id else thread.user1
+            results.append(
+                {
+                    "id": thread.id,
+                    "other_user": other_user,
+                    "last_message": getattr(thread, "last_message", None) or "",
+                    "last_message_at": getattr(thread, "last_message_at", None),
+                }
+            )
+        return Response(
+            {"count": total, "results": DirectMessageThreadSerializer(results, many=True).data}
+        )

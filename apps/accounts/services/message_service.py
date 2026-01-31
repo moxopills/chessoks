@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import OuterRef, Q, Subquery
 
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -61,6 +62,26 @@ class MessageService:
         return total, list(queryset.order_by("created_at")[offset : offset + limit])
 
     @staticmethod
+    def list_threads(user: User, limit: int, offset: int) -> tuple[int, list[DirectMessageThread]]:
+        last_message_qs = DirectMessage.objects.filter(thread=OuterRef("pk")).order_by(
+            "-created_at"
+        )
+        queryset = (
+            DirectMessageThread.objects.select_related(
+                "user1", "user1__stats", "user2", "user2__stats"
+            )
+            .filter(Q(user1=user) | Q(user2=user))
+            .annotate(
+                last_message=Subquery(last_message_qs.values("message")[:1]),
+                last_message_at=Subquery(last_message_qs.values("created_at")[:1]),
+                last_sender_id=Subquery(last_message_qs.values("sender_id")[:1]),
+            )
+            .order_by("-last_message_at", "-updated_at")
+        )
+        total = queryset.count()
+        return total, list(queryset[offset : offset + limit])
+
+    @staticmethod
     @transaction.atomic
     def send_message(user: User, other_id: int, message: str) -> DirectMessage:
         other = User.objects.filter(pk=other_id).first()
@@ -73,4 +94,8 @@ class MessageService:
         if not message.strip():
             raise ValidationError({"message": "메시지를 입력해주세요."})
         thread = MessageService.get_or_create_thread(user, other)
-        return DirectMessage.objects.create(thread=thread, sender=user, message=message.strip())
+        message_obj = DirectMessage.objects.create(
+            thread=thread, sender=user, message=message.strip()
+        )
+        DirectMessageThread.objects.filter(pk=thread.pk).update(updated_at=message_obj.created_at)
+        return message_obj
