@@ -152,6 +152,10 @@ body {
     body.has-mobile-tabbar .main-content {
         padding-bottom: 64px;
     }
+
+    .chat-input {
+        font-size: 16px;
+    }
 }
 
 /* Typography */

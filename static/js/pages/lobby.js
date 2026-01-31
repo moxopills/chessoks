@@ -15,6 +15,9 @@
     const chatInput = document.getElementById('chat-input');
     const usersList = document.getElementById('users-list');
     const userCount = document.getElementById('user-count');
+    const userSearchInput = document.getElementById('lobby-user-search-input');
+    const userSearchBtn = document.getElementById('lobby-user-search-btn');
+    const userSearchReset = document.getElementById('lobby-user-search-reset');
     const mobileTabbar = document.getElementById('mobile-tabbar');
     const chatBadge = document.getElementById('chat-badge');
     const chatSection = document.querySelector('.lobby-chat-section');
@@ -35,6 +38,7 @@
     let userContextMenu = null;
     let longPressTimer = null;
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    let isUserSearchMode = false;
 
     // 초기화
     init();
@@ -46,6 +50,7 @@
         startRoomAutoRefresh();
         setupMobileTabs();
         setupUserContextMenu();
+        setupUserSearch();
     }
 
     /**
@@ -75,6 +80,9 @@
             const timeText = room.time_limit ? `${room.time_limit}분` : '무제한';
             waitingRoomInfo.textContent = `${Utils.escapeHtml(title)} · ${timeText}`;
             waitingRoomEnter.onclick = () => {
+                window.location.href = `/rooms/${room.id}/`;
+            };
+            waitingRoomCard.onclick = () => {
                 window.location.href = `/rooms/${room.id}/`;
             };
         } catch (error) {
@@ -471,6 +479,7 @@
                 if (target === 'chat') {
                     isChatOpen = true;
                     if (chatSection) chatSection.classList.remove('is-hidden');
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
                     resetChatBadge();
                 } else {
                     isChatOpen = false;
@@ -522,6 +531,7 @@
      * 접속자 목록 렌더링
      */
     function renderUsers() {
+        if (isUserSearchMode) return;
         const users = Object.values(lobbyUsers);
         userCount.textContent = users.length;
 
@@ -655,6 +665,7 @@
     }
 
     function addUserToList(user) {
+        if (isUserSearchMode) return;
         const existing = usersList.querySelector(`[data-user-id="${user.id}"]`);
         if (existing) return;
 
@@ -668,6 +679,7 @@
     }
 
     function removeUserFromList(userId) {
+        if (isUserSearchMode) return;
         const userEl = usersList.querySelector(`[data-user-id="${userId}"]`);
         if (userEl) {
             userEl.remove();
@@ -694,6 +706,61 @@
                 </div>
             </div>
         `;
+    }
+
+    function setupUserSearch() {
+        if (!userSearchInput || !userSearchBtn || !userSearchReset) return;
+        userSearchBtn.addEventListener('click', () => runUserSearch());
+        userSearchInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') runUserSearch();
+        });
+        userSearchReset.addEventListener('click', () => resetUserSearch());
+    }
+
+    async function runUserSearch() {
+        const query = userSearchInput.value.trim();
+        if (!query) {
+            resetUserSearch();
+            return;
+        }
+        try {
+            const data = await API.get('/accounts/users/search/', { q: query });
+            const results = data.results || [];
+            isUserSearchMode = true;
+            userCount.textContent = results.length;
+            if (!results.length) {
+                usersList.innerHTML = '<div class="users-empty">검색 결과가 없습니다.</div>';
+                return;
+            }
+            usersList.innerHTML = results.map(user => userRowHtml(user)).join('');
+            usersList.querySelectorAll('.user-item').forEach(item => {
+                const userId = parseInt(item.dataset.userId, 10);
+                if (!userId) return;
+                if (isTouchDevice) {
+                    item.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        openUserContextMenu(event, userId);
+                    });
+                    item.addEventListener('touchstart', (event) => {
+                        longPressTimer = setTimeout(() => openUserContextMenu(event, userId), 450);
+                    });
+                    item.addEventListener('touchend', () => clearTimeout(longPressTimer));
+                } else {
+                    item.addEventListener('contextmenu', (event) => {
+                        event.preventDefault();
+                        openUserContextMenu(event, userId);
+                    });
+                }
+            });
+        } catch (error) {
+            Toast.error(error.data?.message || '검색에 실패했습니다.');
+        }
+    }
+
+    function resetUserSearch() {
+        isUserSearchMode = false;
+        if (userSearchInput) userSearchInput.value = '';
+        renderUsers();
     }
 
     function upsertRoom(room) {
