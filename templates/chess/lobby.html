@@ -9,9 +9,14 @@
     <section class="lobby-hero">
         <h1 class="hero-title"><span class="hero-logo">♞</span>ChessOK</h1>
         <p class="hero-subtitle">실시간 체스 대전</p>
-        <button class="hero-tier-toggle" id="tier-toggle" type="button" aria-expanded="false">
-            티어 기준 보기
-        </button>
+        <div class="hero-info-toggles">
+            <button class="hero-tier-toggle" id="tier-toggle" type="button" aria-expanded="false">
+                티어 기준 보기
+            </button>
+            <button class="hero-tier-toggle" id="mode-toggle" type="button" aria-expanded="false">
+                게임 시작 안내
+            </button>
+        </div>
         <div class="hero-tier-panel hidden" id="tier-panel">
             <div class="tier-row"><span class="tier-icon">🥉</span> Beginner: 0-999</div>
             <div class="tier-row"><span class="tier-icon">🥈</span> Junior: 1000-1499</div>
@@ -19,6 +24,13 @@
             <div class="tier-row"><span class="tier-icon">🔷</span> Advanced: 2000-2499</div>
             <div class="tier-row"><span class="tier-icon">💎</span> Expert: 2500-2999</div>
             <div class="tier-row"><span class="tier-icon">👑</span> Master: 3000+</div>
+        </div>
+        <div class="hero-tier-panel hidden" id="mode-panel">
+            <div class="tier-row">• 빠른대전: 레이팅에 맞춰 자동 매칭됩니다.</div>
+            <div class="tier-row">• 방 만들기: 방을 생성하고 상대가 입장해 게임합니다.</div>
+            <div class="tier-row">• 비밀번호 방: 친구와 비밀방을 만들어 플레이할 수 있습니다.</div>
+            <div class="tier-row">• 관전: 관전 허용 방만 입장 가능하며 비허용 방은 차단됩니다.</div>
+            <div class="tier-row">• 로비 1:1 신청: 접속자에서 1:1 채팅으로 신청 후 기존 방에서 게임합니다.</div>
         </div>
 
         <div class="hero-actions">
@@ -560,8 +572,16 @@
     vertical-align: middle;
 }
 
-.hero-tier-toggle {
+.hero-info-toggles {
     margin-top: -4px;
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-md);
+}
+
+.hero-tier-toggle {
     border: 1px solid var(--color-border);
     background: var(--color-bg-tertiary);
     color: var(--color-text-secondary);
@@ -590,6 +610,7 @@
     max-width: 360px;
     margin-left: auto;
     margin-right: auto;
+    margin-bottom: var(--space-md);
 }
 
 .hero-tier-panel .tier-row {

@@ -19,13 +19,17 @@
     async function fetchThreads() {
         listEl.innerHTML = '<div class="history-empty">불러오는 중...</div>';
         try {
-            const data = await API.get('/accounts/messages/threads/', { limit: 50, offset: 0 });
+            const [data, notifications] = await Promise.all([
+                API.get('/accounts/messages/threads/', { limit: 50, offset: 0 }),
+                API.get('/notifications/', { limit: 200, offset: 0 }),
+            ]);
             const threads = data.results || [];
             if (!threads.length) {
                 listEl.innerHTML = '<div class="history-empty">대화가 없습니다.</div>';
                 return;
             }
-            listEl.innerHTML = threads.map(renderThread).join('');
+            const unreadMap = buildUnreadMap(notifications.results || []);
+            listEl.innerHTML = threads.map((thread) => renderThread(thread, unreadMap)).join('');
             listEl.querySelectorAll('[data-action="open-thread"]').forEach((btn) => {
                 btn.addEventListener('click', () => {
                     const targetId = btn.dataset.userId;
@@ -37,7 +41,7 @@
         }
     }
 
-    function renderThread(thread) {
+    function renderThread(thread, unreadMap) {
         const user = thread.other_user || {};
         const nickname = user.nickname || '알 수 없음';
         const avatar = user.avatar_url
@@ -45,6 +49,7 @@
             : '<span>👤</span>';
         const time = thread.last_message_at ? formatTime(thread.last_message_at) : '';
         const message = thread.last_message || '대화를 시작해보세요.';
+        const unreadCount = unreadMap[user.id] || 0;
         return `
             <div class="thread-card">
                 <div class="thread-info">
@@ -56,10 +61,24 @@
                 </div>
                 <div class="thread-action">
                     <span class="thread-time">${time}</span>
-                    <button class="btn btn-secondary btn-xs" data-action="open-thread" data-user-id="${user.id}">열기</button>
+                    <button class="btn btn-secondary btn-xs" data-action="open-thread" data-user-id="${user.id}">
+                        열기
+                        ${unreadCount ? `<span class="thread-badge">${unreadCount}</span>` : ''}
+                    </button>
                 </div>
             </div>
         `;
+    }
+
+    function buildUnreadMap(items) {
+        return items
+            .filter((item) => item.type === 'direct_message' && !item.is_read)
+            .reduce((acc, item) => {
+                const senderId = item.payload?.sender_id;
+                if (!senderId) return acc;
+                acc[senderId] = (acc[senderId] || 0) + 1;
+                return acc;
+            }, {});
     }
 
     function formatTime(value) {
