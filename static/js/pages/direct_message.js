@@ -58,8 +58,10 @@
         try {
             const data = await API.get(`/accounts/users/${targetUserId}/profile/`);
             const nickname = data?.nickname || data?.user?.nickname || '상대';
+            const rating = data.stats?.rating ?? data.rating ?? data.user?.rating ?? '-';
+            const tier = data.stats?.rank_tier ?? data.rank_tier ?? data.user?.rank_tier ?? '-';
             titleEl.textContent = `${nickname}님과의 채팅`;
-            subtitleEl.textContent = `레이팅 ${data.stats?.rating ?? '-'} · ${data.stats?.rank_tier ?? '-'}`;
+            subtitleEl.textContent = `레이팅 ${rating} · ${tier}`;
         } catch {
             titleEl.textContent = '상대님과의 채팅';
         }
