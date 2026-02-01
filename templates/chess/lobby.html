@@ -9,6 +9,17 @@
     <section class="lobby-hero">
         <h1 class="hero-title"><span class="hero-logo">♞</span>ChessOK</h1>
         <p class="hero-subtitle">실시간 체스 대전</p>
+        <button class="hero-tier-toggle" id="tier-toggle" type="button" aria-expanded="false">
+            티어 기준 보기
+        </button>
+        <div class="hero-tier-panel hidden" id="tier-panel">
+            <div class="tier-row"><span class="tier-icon">🥉</span> Beginner: 0-999</div>
+            <div class="tier-row"><span class="tier-icon">🥈</span> Junior: 1000-1499</div>
+            <div class="tier-row"><span class="tier-icon">🥇</span> Intermediate: 1500-1999</div>
+            <div class="tier-row"><span class="tier-icon">🔷</span> Advanced: 2000-2499</div>
+            <div class="tier-row"><span class="tier-icon">💎</span> Expert: 2500-2999</div>
+            <div class="tier-row"><span class="tier-icon">👑</span> Master: 3000+</div>
+        </div>
 
         <div class="hero-actions">
             <button class="btn btn-primary btn-arcade btn-lg" id="quick-match-btn">
@@ -547,6 +558,48 @@
     margin-left: 6px;
     font-size: 0.7rem;
     vertical-align: middle;
+}
+
+.hero-tier-toggle {
+    margin-top: var(--space-xs);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.hero-tier-toggle:hover {
+    color: var(--color-text-primary);
+    border-color: var(--color-accent-secondary);
+}
+
+.hero-tier-panel {
+    margin-top: var(--space-sm);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    display: grid;
+    gap: 6px;
+    max-width: 360px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.hero-tier-panel .tier-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.hero-tier-panel .tier-icon {
+    font-size: 0.9rem;
 }
 
 .user-status {

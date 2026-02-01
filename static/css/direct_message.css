@@ -31,7 +31,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
-    min-height: 420px;
+    height: min(70vh, 560px);
 }
 
 .dm-messages {
@@ -40,6 +40,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
+    min-height: 0;
 }
 
 .dm-message {
@@ -86,7 +87,7 @@
 
 @media (max-width: 768px) {
     .dm-card {
-        min-height: 60vh;
+        height: 60vh;
     }
     .dm-message {
         max-width: 85%;
