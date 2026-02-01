@@ -37,6 +37,7 @@
     let currentUserId = null;
     let selectedUserId = null;
     let contextMenu = null;
+    let friendIds = new Set();
 
     init();
 
@@ -65,9 +66,25 @@
         try {
             const me = await API.get('/accounts/me/');
             currentUserId = me.id;
+            await loadFriendIds();
         } catch {
             currentUserId = null;
         }
+    }
+
+    async function loadFriendIds() {
+        if (!currentUserId) return;
+        try {
+            const data = await API.get('/accounts/friends/');
+            const friends = data.results || [];
+            friendIds = new Set(friends.map((item) => item.friend?.id).filter(Boolean));
+        } catch {
+            friendIds = new Set();
+        }
+    }
+
+    function isFriendUser(userId) {
+        return friendIds.has(userId);
     }
 
     async function loadLeaderboard(page = currentPage) {
@@ -214,11 +231,12 @@
             });
         }
 
-        const canFriend = currentUserId && userId !== currentUserId;
+        const canFriend = currentUserId && userId !== currentUserId && !isFriendUser(userId);
+        const canChat = currentUserId && userId !== currentUserId;
         const items = [
             { action: 'profile', label: '프로필 보기' },
             ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
-            { action: 'chat', label: '1:1 채팅' },
+            ...(canChat ? [{ action: 'chat', label: '1:1 채팅' }] : []),
             { action: 'report', label: '신고하기' },
         ];
         contextMenu.innerHTML = items.map(item => (
@@ -296,15 +314,12 @@
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
             }).replace(/\./g, '').trim() : '';
-            const moveText = typeof game.move_count === 'number' ? `${game.move_count}수` : '';
             return `
                 <div class="recent-item">
                     <span class="recent-opponent">${Utils.escapeHtml(opponent)}</span>
                     <span class="recent-result">${resultLabel}</span>
-                    <span class="recent-meta text-muted">${[playedAt, moveText].filter(Boolean).join(' · ')}</span>
+                    <span class="recent-meta text-muted">${playedAt}</span>
                 </div>
             `;
         }).join('');
@@ -336,6 +351,7 @@
         try {
             const result = await API.post('/accounts/friends/requests/', { user_id: userId });
             if (result.status === 'accepted') {
+                friendIds.add(userId);
                 Toast.success('친구 요청이 자동 수락되었습니다.');
             } else {
                 Toast.success('친구 요청을 보냈습니다.');

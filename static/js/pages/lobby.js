@@ -30,6 +30,7 @@
     let notificationSocket = null;
     let currentUserId = null;
     let isSuspended = false;
+    let friendIds = new Set();
     let lobbyUsers = {};
     let lobbyRooms = [];
     let roomRefreshInterval = null;
@@ -181,6 +182,7 @@
         try {
             const user = await API.get('/accounts/me/');
             currentUserId = user.id;
+            await loadFriendIds();
             setupChat();
             setupQuickMatch();
             // lobby report removed; using profile report actions instead
@@ -196,6 +198,21 @@
             chatInput.disabled = true;
             chatForm.querySelector('button').disabled = true;
         }
+    }
+
+    async function loadFriendIds() {
+        if (!currentUserId) return;
+        try {
+            const data = await API.get('/accounts/friends/');
+            const friends = data.results || data || [];
+            friendIds = new Set(friends.map((friend) => friend.friend?.id ?? friend.user?.id ?? friend.id).filter(Boolean));
+        } catch {
+            friendIds = new Set();
+        }
+    }
+
+    function isFriendUser(userId) {
+        return friendIds.has(userId);
     }
 
     /**
@@ -576,11 +593,12 @@
             });
         }
 
-        const canFriend = currentUserId && userId !== currentUserId;
+        const canFriend = currentUserId && userId !== currentUserId && !isFriendUser(userId);
+        const canChat = currentUserId && userId !== currentUserId;
         const items = [
             { action: 'profile', label: '프로필 보기' },
             ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
-            { action: 'chat', label: '1:1 채팅' },
+            ...(canChat ? [{ action: 'chat', label: '1:1 채팅' }] : []),
             { action: 'report', label: '신고하기' },
         ];
         userContextMenu.innerHTML = items.map(item => (
@@ -622,6 +640,7 @@
         try {
             const result = await API.post('/accounts/friends/requests/', { user_id: targetId });
             if (result.status === 'accepted') {
+                friendIds.add(targetId);
                 Toast.success('친구 요청이 자동 수락되었습니다.');
             } else {
                 Toast.success('친구 요청을 보냈습니다.');
