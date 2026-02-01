@@ -721,12 +721,15 @@
     function userRowHtml(user, online = true) {
         const statusText = online ? '온라인' : '오프라인';
         const statusClass = online ? 'online' : 'offline';
+        const tier = user.rank_tier || user.stats?.rank_tier || 'Junior';
+        const tierIcon = Utils.getTierIcon(tier);
         return `
             <div class="user-item" data-user-id="${user.id}">
                 <div class="user-avatar">
                     ${user.avatar_url
                         ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="">`
                         : '👤'}
+                    <span class="tier-badge" title="${Utils.escapeHtml(tier)}">${tierIcon}</span>
                 </div>
                 <div class="user-info">
                     <div class="user-nickname">${Utils.escapeHtml(user.nickname)}</div>

@@ -12,7 +12,9 @@
 }
 
 .page-title {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
     margin-bottom: var(--space-xs);
 }
 
@@ -23,12 +25,19 @@
 
 .history-filters {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: var(--space-md);
     background: var(--color-bg-card);
     padding: var(--space-md);
     border-radius: var(--radius-md);
     border: 1px solid var(--color-border);
+    overflow: hidden;
+}
+
+@media (max-width: 480px) {
+    .history-filters {
+        grid-template-columns: 1fr;
+    }
 }
 
 .filter-group {

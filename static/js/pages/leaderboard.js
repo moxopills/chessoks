@@ -116,7 +116,10 @@
                     <td>${row.rank}</td>
                     <td>
                         <div class="user-cell">
-                            <div class="avatar avatar-sm">${row.avatar_url ? `<img src="${row.avatar_url}" alt="${Utils.escapeHtml(row.nickname)}">` : '<span class="avatar-placeholder">?</span>'}</div>
+                            <div class="avatar avatar-sm">
+                                ${row.avatar_url ? `<img src="${row.avatar_url}" alt="${Utils.escapeHtml(row.nickname)}">` : '<span class="avatar-placeholder">?</span>'}
+                                <span class="tier-badge" title="${Utils.escapeHtml(row.rank_tier)}">${Utils.getTierIcon(row.rank_tier)}</span>
+                            </div>
                             <div class="user-name">
                                 <strong>${Utils.escapeHtml(row.nickname)}</strong>
                                 <span class="user-tier">승률 ${winRate}%</span>

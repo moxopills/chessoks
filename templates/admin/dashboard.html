@@ -77,6 +77,22 @@
         </section>
 
         <section class="admin-panel" style="grid-column: span 2;">
+            <h2>공지 발송</h2>
+            <div class="admin-actions">
+                <div class="form-row">
+                    <input type="text" id="notice-title" placeholder="공지 제목">
+                </div>
+                <div class="form-row">
+                    <input type="text" id="notice-message" placeholder="공지 내용">
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary btn-sm" id="notice-send-btn">전체 공지 발송</button>
+                </div>
+                <div class="admin-section-note">작성한 공지는 실시간 알림으로 전송됩니다.</div>
+            </div>
+        </section>
+
+        <section class="admin-panel" style="grid-column: span 2;">
             <h2>신고 목록</h2>
             <table class="admin-table" id="report-table">
                 <thead>
@@ -94,6 +110,14 @@
                 </tbody>
             </table>
         </section>
+    </div>
+</div>
+
+<div class="admin-modal-overlay hidden" id="admin-notice-modal">
+    <div class="admin-modal">
+        <h3 class="admin-modal-title">📣 공지 발송 완료</h3>
+        <p class="admin-modal-message" id="admin-notice-modal-message">공지 알림이 전송되었습니다.</p>
+        <button class="btn btn-primary btn-sm" id="admin-notice-modal-close">확인</button>
     </div>
 </div>
 {% endblock %}

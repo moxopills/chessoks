@@ -174,16 +174,22 @@ const Utils = (function() {
      * 랭크 티어 색상
      */
     function getTierColor(tier) {
-        const colors = {
-            'Bronze': '#cd7f32',
-            'Silver': '#c0c0c0',
-            'Gold': '#ffd700',
-            'Platinum': '#e5e4e2',
-            'Diamond': '#b9f2ff',
-            'Master': '#ff6b6b',
-            'Grandmaster': '#9b59b6',
+        return '#a0a0a0';
+    }
+
+    /**
+     * 랭크 티어 아이콘
+     */
+    function getTierIcon(tier) {
+        const icons = {
+            'Beginner': '🥉',
+            'Junior': '🥈',
+            'Intermediate': '🥇',
+            'Advanced': '🔷',
+            'Expert': '💎',
+            'Master': '👑',
         };
-        return colors[tier] || '#a0a0a0';
+        return icons[tier] || '♟️';
     }
 
     // Public API
@@ -203,5 +209,6 @@ const Utils = (function() {
         formatNumber,
         calculateWinRate,
         getTierColor,
+        getTierIcon,
     };
 })();

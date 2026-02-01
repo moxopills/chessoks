@@ -13,6 +13,12 @@
     const muteMinutes = document.getElementById('mute-minutes');
     const muteReason = document.getElementById('mute-reason');
     const promoteRole = document.getElementById('promote-role');
+    const noticeTitle = document.getElementById('notice-title');
+    const noticeMessage = document.getElementById('notice-message');
+    const noticeSendBtn = document.getElementById('notice-send-btn');
+    const noticeModal = document.getElementById('admin-notice-modal');
+    const noticeModalMessage = document.getElementById('admin-notice-modal-message');
+    const noticeModalClose = document.getElementById('admin-notice-modal-close');
 
     const suspendBtn = document.getElementById('suspend-btn');
     const unsuspendBtn = document.getElementById('unsuspend-btn');
@@ -208,5 +214,35 @@
             loadUsers(searchInput.value.trim());
             loadStats();
         });
+
+        noticeSendBtn?.addEventListener('click', async () => {
+            const title = noticeTitle?.value.trim() || '공지';
+            const message = noticeMessage?.value.trim();
+            if (!message) return Toast.error('공지 내용을 입력하세요.');
+            try {
+                await API.post('/admin/notices/', { title, message });
+                if (noticeTitle) noticeTitle.value = '';
+                if (noticeMessage) noticeMessage.value = '';
+                showNoticeModal(`${title} · ${message}`);
+            } catch (error) {
+                Toast.error(error.data?.message || '공지 발송에 실패했습니다.');
+            }
+        });
+
+        noticeModalClose?.addEventListener('click', () => hideNoticeModal());
+        noticeModal?.addEventListener('click', (event) => {
+            if (event.target === noticeModal) hideNoticeModal();
+        });
+    }
+
+    function showNoticeModal(message) {
+        if (noticeModalMessage) {
+            noticeModalMessage.textContent = message;
+        }
+        noticeModal?.classList.remove('hidden');
+    }
+
+    function hideNoticeModal() {
+        noticeModal?.classList.add('hidden');
     }
 })();
