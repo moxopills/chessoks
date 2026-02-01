@@ -65,18 +65,19 @@
 
     function renderList(listEl, countEl) {
         if (!listEl || !countEl) return;
-        const unreadCount = state.items.filter((item) => !item.is_read).length;
+        const visibleItems = state.items.filter((item) => item.type !== 'direct_message');
+        const unreadCount = visibleItems.filter((item) => !item.is_read).length;
         state.unreadCount = unreadCount;
         countEl.textContent = unreadCount;
         countEl.classList.toggle('hidden', unreadCount === 0);
         updateMessageBadge(document.getElementById('message-count'));
 
-        if (!state.items.length) {
+        if (!visibleItems.length) {
             listEl.innerHTML = '<div class="notification-empty">새 알림이 없습니다</div>';
             return;
         }
 
-        listEl.innerHTML = state.items.map((item) => {
+        listEl.innerHTML = visibleItems.map((item) => {
             const createdAt = item.created_at ? Utils.formatRelativeTime(item.created_at) : '';
             const safeTitle = Utils.escapeHtml(item.title || '알림');
             const safeMessage = Utils.escapeHtml(item.message || '');

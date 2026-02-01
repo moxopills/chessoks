@@ -361,12 +361,15 @@
         const bottomPlayer = isFlipped ? blackPlayer : whitePlayer;
 
         // 상대 (위)
+        const topTier = topPlayer?.rank_tier || 'Junior';
+        const bottomTier = bottomPlayer?.rank_tier || 'Junior';
         opponentBar.innerHTML = `
             <div class="player-bar-info">
                 <div class="avatar avatar-sm">
                     ${topPlayer?.avatar_url
                         ? `<img src="${Utils.escapeHtml(topPlayer.avatar_url)}" alt="">`
                         : '<span class="avatar-placeholder">?</span>'}
+                    <span class="tier-badge" title="${Utils.escapeHtml(topTier)}">${Utils.getTierIcon(topTier)}</span>
                 </div>
                 <div class="player-bar-details">
                     <span class="player-bar-name">${Utils.escapeHtml(topPlayer?.nickname || '상대')}</span>
@@ -383,6 +386,7 @@
                     ${bottomPlayer?.avatar_url
                         ? `<img src="${Utils.escapeHtml(bottomPlayer.avatar_url)}" alt="">`
                         : '<span class="avatar-placeholder">?</span>'}
+                    <span class="tier-badge" title="${Utils.escapeHtml(bottomTier)}">${Utils.getTierIcon(bottomTier)}</span>
                 </div>
                 <div class="player-bar-details">
                     <span class="player-bar-name">${Utils.escapeHtml(bottomPlayer?.nickname || '나')}</span>
