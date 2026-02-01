@@ -26,6 +26,15 @@
     <!-- Flash Messages -->
     <div id="toast-container"></div>
 
+    <!-- Global Notice Modal -->
+    <div class="notice-modal-overlay hidden" id="global-notice-modal">
+        <div class="notice-modal">
+            <h3 class="notice-modal-title" id="global-notice-title">📣 공지</h3>
+            <p class="notice-modal-message" id="global-notice-message"></p>
+            <button class="btn btn-primary btn-sm" id="global-notice-close">확인</button>
+        </div>
+    </div>
+
     <!-- Main Content -->
     <main class="main-content">
         {% block content %}{% endblock %}
@@ -50,6 +59,40 @@
     <script src="{% static 'js/core/utils.js' %}"></script>
     <script src="{% static 'js/components/toast.js' %}"></script>
     <script src="{% static 'js/components/notifications.js' %}"></script>
+    <script>
+        (function() {
+            const root = document.documentElement;
+            const toggle = document.getElementById('theme-toggle');
+            const icon = document.getElementById('theme-icon');
+            const STORAGE_KEY = 'chessok-theme';
+
+            function applyTheme(theme) {
+                if (theme === 'light') {
+                    root.setAttribute('data-theme', 'light');
+                    if (icon) icon.textContent = '🌙';
+                    if (toggle) toggle.setAttribute('aria-label', '다크 모드');
+                } else {
+                    root.removeAttribute('data-theme');
+                    if (icon) icon.textContent = '☀️';
+                    if (toggle) toggle.setAttribute('aria-label', '라이트 모드');
+                }
+            }
+
+            function initTheme() {
+                const saved = localStorage.getItem(STORAGE_KEY) || 'dark';
+                applyTheme(saved);
+            }
+
+            toggle?.addEventListener('click', () => {
+                const current = root.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+                const next = current === 'light' ? 'dark' : 'light';
+                localStorage.setItem(STORAGE_KEY, next);
+                applyTheme(next);
+            });
+
+            initTheme();
+        })();
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

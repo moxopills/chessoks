@@ -887,6 +887,9 @@
                 game.black_time_remaining = data.black_time_remaining;
                 game.turn_started_at = data.turn_started_at;
                 if (data.last_move) {
+                    Utils?.Sounds?.move?.();
+                }
+                if (data.last_move) {
                     lastMove = data.last_move;
                     if (data.last_move.is_check && data.result === 'playing') {
                         if (myColor && myColor === data.current_turn) {
@@ -1041,6 +1044,7 @@
         `;
         chatMessages.appendChild(messageEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (!isMine) Utils?.Sounds?.chat?.();
         handleChatBadge(data);
     }
 
@@ -1071,7 +1075,10 @@
     }
 
     function handleChatBadge(data) {
-        if (isChatOpen) return;
+        if (isChatOpen || !chatSection?.classList.contains('is-hidden')) {
+            resetChatBadge();
+            return;
+        }
         if (currentUser && data.user_id === currentUser.id) return;
         chatUnread += 1;
         if (chatBadge) {
