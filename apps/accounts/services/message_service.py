@@ -4,6 +4,7 @@ from django.db.models import OuterRef, Q, Subquery
 from rest_framework.exceptions import NotFound, ValidationError
 
 from apps.accounts.models import DirectMessage, DirectMessageThread, GuestbookEntry, User
+from apps.notifications.services import NotificationService
 
 
 class MessageService:
@@ -98,4 +99,11 @@ class MessageService:
             thread=thread, sender=user, message=message.strip()
         )
         DirectMessageThread.objects.filter(pk=thread.pk).update(updated_at=message_obj.created_at)
+        NotificationService.create_notification(
+            other,
+            type="direct_message",
+            title="1:1 채팅",
+            message=f"{user.nickname}: {message_obj.message}",
+            payload={"sender_id": user.id, "thread_id": thread.id},
+        )
         return message_obj
