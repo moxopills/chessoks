@@ -192,6 +192,7 @@
             renderDrawerStats(user.stats);
             renderRecentGames(data.recent_games || []);
             await loadGuestbook(userId);
+            updateFriendButtonState(userId, data.friend_status);
             if (data.vs_summary) {
                 vsBox.classList.remove('hidden');
                 vsWins.textContent = data.vs_summary.wins;
@@ -264,7 +265,7 @@
         if (contextMenu) contextMenu.classList.add('hidden');
     }
 
-    function updateFriendButtonState(userId) {
+    function updateFriendButtonState(userId, status = null) {
         if (!friendBtn) return;
         if (!currentUserId) {
             friendBtn.disabled = true;
@@ -276,6 +277,27 @@
             friendBtn.disabled = true;
             friendBtn.textContent = '나';
             reportToggle.disabled = true;
+            return;
+        }
+        if (status?.is_friend) {
+            friendBtn.disabled = true;
+            friendBtn.textContent = '친구';
+            reportToggle.disabled = false;
+            return;
+        }
+        if (status?.is_request_sent) {
+            friendBtn.disabled = true;
+            friendBtn.textContent = '요청 중';
+            reportToggle.disabled = false;
+            return;
+        }
+        if (status?.is_request_received) {
+            friendBtn.disabled = false;
+            friendBtn.textContent = '요청 확인';
+            friendBtn.addEventListener('click', () => {
+                window.location.href = '/friends/?tab=requests';
+            }, { once: true });
+            reportToggle.disabled = false;
             return;
         }
         friendBtn.disabled = false;
