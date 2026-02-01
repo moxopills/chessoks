@@ -204,7 +204,7 @@ const Utils = (function() {
             return ctx;
         }
 
-        function playTone(freq, duration = 0.12) {
+        function playTone(freq, duration = 0.12, volume = 0.12) {
             try {
                 const context = getContext();
                 if (!context) return;
@@ -217,7 +217,7 @@ const Utils = (function() {
                 osc.connect(gain);
                 gain.connect(context.destination);
                 osc.start();
-                gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.01);
+                gain.gain.exponentialRampToValueAtTime(volume, context.currentTime + 0.01);
                 gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + duration);
                 osc.stop(context.currentTime + duration + 0.02);
             } catch {
@@ -226,16 +226,16 @@ const Utils = (function() {
         }
 
         function notice() {
-            playTone(880, 0.16);
-            setTimeout(() => playTone(1320, 0.12), 90);
+            playTone(880, 0.16, 0.1);
+            setTimeout(() => playTone(1320, 0.12, 0.08), 90);
         }
 
         function chat() {
-            playTone(660, 0.12);
+            playTone(880, 0.12, 0.06);
         }
 
         function move() {
-            playTone(440, 0.08);
+            playTone(440, 0.08, 0.05);
         }
 
         return { notice, chat, move };
