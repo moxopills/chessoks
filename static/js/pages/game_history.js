@@ -150,29 +150,47 @@
 
     function getOpponent(game) {
         if (!currentUser) return null;
-        if (game.white_player?.id === currentUser.id) return game.black_player;
-        if (game.black_player?.id === currentUser.id) return game.white_player;
+        const meId = Number(currentUser.id);
+        const whiteId = Number(game.white_player?.id);
+        const blackId = Number(game.black_player?.id);
+        if (whiteId === meId) return game.black_player;
+        if (blackId === meId) return game.white_player;
         return game.white_player || game.black_player;
     }
 
     function getOutcome(game) {
         const result = game.result;
         if (!currentUser) return { className: '', label: result };
-        const isWhite = game.white_player?.id === currentUser.id;
-        const isBlack = game.black_player?.id === currentUser.id;
-        if (result === 'draw' || result.startsWith('draw') || result === 'stalemate') {
+        const meId = Number(currentUser.id);
+        const isWhite = Number(game.white_player?.id) === meId;
+        const isBlack = Number(game.black_player?.id) === meId;
+        const drawResults = new Set([
+            'draw',
+            'draw_agreement',
+            'draw_insufficient',
+            'draw_repetition',
+            'draw_fifty_move',
+            'stalemate',
+        ]);
+        const whiteWin = new Set([
+            'white_win',
+            'checkmate_white',
+            'timeout_black',
+            'resignation_black',
+        ]);
+        const blackWin = new Set([
+            'black_win',
+            'checkmate_black',
+            'timeout_white',
+            'resignation_white',
+        ]);
+        if (drawResults.has(result)) {
             return { className: 'draw', label: '무' };
         }
-        if (result.includes('white')) {
+        if (whiteWin.has(result)) {
             return { className: isWhite ? 'win' : 'lose', label: isWhite ? '승' : '패' };
         }
-        if (result.includes('black')) {
-            return { className: isBlack ? 'win' : 'lose', label: isBlack ? '승' : '패' };
-        }
-        if (result === 'white_win') {
-            return { className: isWhite ? 'win' : 'lose', label: isWhite ? '승' : '패' };
-        }
-        if (result === 'black_win') {
+        if (blackWin.has(result)) {
             return { className: isBlack ? 'win' : 'lose', label: isBlack ? '승' : '패' };
         }
         return { className: '', label: result };

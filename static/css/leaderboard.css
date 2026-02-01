@@ -102,6 +102,12 @@
     color: var(--color-text-muted);
 }
 
+.user-tier-icon {
+    margin-left: 6px;
+    font-size: 0.7rem;
+    vertical-align: middle;
+}
+
 .table-empty {
     text-align: center;
     padding: var(--space-xl);
