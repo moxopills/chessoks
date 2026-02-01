@@ -192,6 +192,55 @@ const Utils = (function() {
         return icons[tier] || '♟️';
     }
 
+    const Sounds = (() => {
+        let ctx = null;
+
+        function getContext() {
+            if (!ctx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return null;
+                ctx = new AudioContext();
+            }
+            return ctx;
+        }
+
+        function playTone(freq, duration = 0.12) {
+            try {
+                const context = getContext();
+                if (!context) return;
+                if (context.state === 'suspended') context.resume();
+                const osc = context.createOscillator();
+                const gain = context.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.value = 0.0001;
+                osc.connect(gain);
+                gain.connect(context.destination);
+                osc.start();
+                gain.gain.exponentialRampToValueAtTime(0.12, context.currentTime + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + duration);
+                osc.stop(context.currentTime + duration + 0.02);
+            } catch {
+                // ignore
+            }
+        }
+
+        function notice() {
+            playTone(880, 0.16);
+            setTimeout(() => playTone(1320, 0.12), 90);
+        }
+
+        function chat() {
+            playTone(660, 0.12);
+        }
+
+        function move() {
+            playTone(440, 0.08);
+        }
+
+        return { notice, chat, move };
+    })();
+
     // Public API
     return {
         $,
@@ -210,5 +259,6 @@ const Utils = (function() {
         calculateWinRate,
         getTierColor,
         getTierIcon,
+        Sounds,
     };
 })();
