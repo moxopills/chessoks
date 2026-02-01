@@ -65,7 +65,7 @@
     async function loadRooms() {
         try {
             const data = await API.get('/chess/rooms/', { status: 'waiting', limit: 5 });
-            lobbyRooms = data.results || data || [];
+            lobbyRooms = (data.results || data || []).filter((room) => room.room_type !== 'quick');
             renderRooms(lobbyRooms);
         } catch (error) {
             roomList.innerHTML = '<div class="room-empty">방 목록을 불러올 수 없습니다.</div>';
