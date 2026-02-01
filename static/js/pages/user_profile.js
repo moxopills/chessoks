@@ -96,15 +96,12 @@
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
             }).replace(/\./g, '').trim() : '';
-            const moveText = typeof game.move_count === 'number' ? `${game.move_count}수` : '';
             return `
                 <div class="recent-item">
                     <span class="recent-opponent">${Utils.escapeHtml(opponent)}</span>
                     <span class="recent-result">${resultLabel}</span>
-                    <span class="recent-meta text-muted">${[playedAt, moveText].filter(Boolean).join(' · ')}</span>
+                    <span class="recent-meta text-muted">${playedAt}</span>
                 </div>
             `;
         }).join('');
@@ -177,6 +174,9 @@
         if (parseInt(userId, 10) === currentUserId) {
             friendBtn.disabled = true;
             friendBtn.textContent = '나';
+            if (directMessageBtn) {
+                directMessageBtn.classList.add('hidden');
+            }
             return;
         }
         if (status?.is_friend) {

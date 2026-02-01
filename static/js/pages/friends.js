@@ -538,11 +538,12 @@
         }
 
         const canFriend = currentUserId && userId !== currentUserId && !isFriend && !isPending;
+        const canChat = currentUserId && userId !== currentUserId;
         const items = [
             { action: 'profile', label: '프로필 보기' },
             ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
             ...(isFriend ? [{ action: 'remove', label: '친구 삭제' }] : []),
-            { action: 'chat', label: '1:1 채팅' },
+            ...(canChat ? [{ action: 'chat', label: '1:1 채팅' }] : []),
             { action: 'report', label: '신고하기' },
         ];
         contextMenu.innerHTML = items.map(item => (
@@ -631,15 +632,12 @@
                 year: 'numeric',
                 month: '2-digit',
                 day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
             }).replace(/\./g, '').trim() : '';
-            const moveText = typeof game.move_count === 'number' ? `${game.move_count}수` : '';
             return `
                 <div class="recent-item">
                     <span class="recent-opponent">${Utils.escapeHtml(opponent)}</span>
                     <span class="recent-result">${resultLabel}</span>
-                    <span class="recent-meta text-muted">${[playedAt, moveText].filter(Boolean).join(' · ')}</span>
+                    <span class="recent-meta text-muted">${playedAt}</span>
                 </div>
             `;
         }).join('');
