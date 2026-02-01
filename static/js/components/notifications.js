@@ -36,6 +36,7 @@
         });
 
         dropdown?.addEventListener('click', (event) => event.stopPropagation());
+        setupGlobalNoticeModal();
 
         messageLink?.addEventListener('click', () => {
             if (messageBadge) {
@@ -149,6 +150,10 @@
                     forceLogout(message);
                     return;
                 }
+                if (payload?.type === 'admin_notice') {
+                    openGlobalNotice(payload);
+                    Utils?.Sounds?.notice?.();
+                }
                 state.items.unshift(payload);
                 state.items = state.items.slice(0, 20);
                 renderList(listEl, countEl);
@@ -171,6 +176,33 @@
         messageBadge.classList.toggle('hidden', dmCount === 0);
     }
 
+    async function markDirectMessageRead({ senderId = null, threadId = null } = {}) {
+        if (!state.initialized) init();
+        const messageBadge = document.getElementById('message-count');
+        const ids = state.items
+            .filter((item) => item.type === 'direct_message' && !item.is_read)
+            .filter((item) => {
+                if (!senderId && !threadId) return true;
+                if (senderId && item.payload?.sender_id === senderId) return true;
+                if (threadId && item.payload?.thread_id === threadId) return true;
+                return false;
+            })
+            .map((item) => item.id);
+        if (!ids.length) {
+            updateMessageBadge(messageBadge);
+            return;
+        }
+        try {
+            await API.post('/notifications/read/', { ids });
+            state.items = state.items.map((item) =>
+                ids.includes(item.id) ? { ...item, is_read: true } : item
+            );
+            updateMessageBadge(messageBadge);
+        } catch {
+            // ignore
+        }
+    }
+
     async function forceLogout(message) {
         try {
             await API.post('/accounts/logout/', {});
@@ -181,5 +213,26 @@
         window.location.href = `/login/?reason=${encoded}`;
     }
 
-    window.Notifications = { init };
+    function setupGlobalNoticeModal() {
+        const modal = document.getElementById('global-notice-modal');
+        const closeBtn = document.getElementById('global-notice-close');
+        closeBtn?.addEventListener('click', () => modal?.classList.add('hidden'));
+        modal?.addEventListener('click', (event) => {
+            if (event.target === modal) modal.classList.add('hidden');
+        });
+    }
+
+    function openGlobalNotice(payload) {
+        const modal = document.getElementById('global-notice-modal');
+        const titleEl = document.getElementById('global-notice-title');
+        const messageEl = document.getElementById('global-notice-message');
+        if (!modal || !messageEl || !titleEl) return;
+        const title = payload?.title || '공지';
+        const message = payload?.message || '';
+        titleEl.textContent = `📣 ${title}`;
+        messageEl.textContent = message;
+        modal.classList.remove('hidden');
+    }
+
+    window.Notifications = { init, markDirectMessageRead };
 })();

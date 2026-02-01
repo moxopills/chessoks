@@ -26,7 +26,7 @@
 
     /* Typography */
     --font-display: 'Gowun Dodum', 'Noto Sans KR', sans-serif;
-    --font-body: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body: 'Gowun Dodum', 'Noto Sans KR', sans-serif;
     --font-chat: var(--font-body);
     --letter-spacing-normal: -0.02em;
 
@@ -109,6 +109,14 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+button,
+input,
+select,
+textarea {
+    font-family: inherit;
+    letter-spacing: inherit;
 }
 
 /* Chat uses body font for readability */
@@ -671,6 +679,40 @@ a:hover {
 .gap-md { gap: var(--space-md); }
 
 .hidden { display: none !important; }
+
+/* Global notice modal */
+.notice-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 10, 23, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2200;
+}
+
+.notice-modal {
+    width: min(520px, 92vw);
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+}
+
+.notice-modal-title {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    margin-bottom: var(--space-sm);
+}
+
+.notice-modal-message {
+    font-size: 0.9rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-md);
+    word-break: keep-all;
+}
 
 /* Context Menu */
 .context-menu {

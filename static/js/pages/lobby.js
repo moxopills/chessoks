@@ -481,6 +481,7 @@
         `;
         chatMessages.appendChild(messageEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (!isMine) Utils?.Sounds?.chat?.();
     }
 
 
@@ -509,7 +510,10 @@
     }
 
     function handleChatBadge(data) {
-        if (isChatOpen) return;
+        if (isChatOpen || !chatSection?.classList.contains('is-hidden')) {
+            resetChatBadge();
+            return;
+        }
         if (data.user_id === currentUserId) return;
         chatUnread += 1;
         if (chatBadge) {
@@ -729,10 +733,12 @@
                     ${user.avatar_url
                         ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="">`
                         : '👤'}
-                    <span class="tier-badge" title="${Utils.escapeHtml(tier)}">${tierIcon}</span>
                 </div>
                 <div class="user-info">
-                    <div class="user-nickname">${Utils.escapeHtml(user.nickname)}</div>
+                    <div class="user-nickname">
+                        ${Utils.escapeHtml(user.nickname)}
+                        <span class="user-tier-icon" title="${Utils.escapeHtml(tier)}">${tierIcon}</span>
+                    </div>
                     <div class="user-status ${statusClass}">${statusText}</div>
                 </div>
             </div>

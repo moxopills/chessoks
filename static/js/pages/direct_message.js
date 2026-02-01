@@ -30,6 +30,7 @@
         }
         await loadTargetInfo();
         await loadMessages(true);
+        await markDirectMessageNotificationsRead();
         bindEvents();
         startPolling();
     }
@@ -72,6 +73,12 @@
             if (forceScroll || data.count !== lastCount) {
                 messagesEl.scrollTop = messagesEl.scrollHeight;
             }
+            if (data.count > lastCount && items.length) {
+                const lastItem = items[items.length - 1];
+                if (lastItem.sender?.id !== currentUser.id) {
+                    Utils?.Sounds?.chat?.();
+                }
+            }
             lastCount = data.count || 0;
         } catch (error) {
             messagesEl.innerHTML = '<div class="history-empty">메시지를 불러오지 못했습니다.</div>';
@@ -101,6 +108,25 @@
             loadMessages();
         }, 4000);
         window.addEventListener('beforeunload', () => pollTimer && clearInterval(pollTimer));
+    }
+
+    async function markDirectMessageNotificationsRead() {
+        if (window.Notifications?.markDirectMessageRead) {
+            window.Notifications.markDirectMessageRead({ senderId: targetUserId });
+            return;
+        }
+        try {
+            const data = await API.get('/notifications/', { limit: 50, offset: 0 });
+            const ids = (data.results || [])
+                .filter((item) => item.type === 'direct_message' && !item.is_read)
+                .filter((item) => item.payload?.sender_id === targetUserId)
+                .map((item) => item.id);
+            if (ids.length) {
+                await API.post('/notifications/read/', { ids });
+            }
+        } catch {
+            // ignore
+        }
     }
 
     function formatTime(value) {

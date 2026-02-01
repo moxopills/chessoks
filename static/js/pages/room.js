@@ -412,6 +412,7 @@
         `;
         chatMessages.appendChild(messageEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (!isMine) Utils?.Sounds?.chat?.();
     }
 
     /**
@@ -466,7 +467,10 @@
     }
 
     function handleChatBadge(data) {
-        if (isChatOpen) return;
+        if (isChatOpen || !chatSection?.classList.contains('is-hidden')) {
+            resetChatBadge();
+            return;
+        }
         if (data.user_id === currentUser.id) return;
         chatUnread += 1;
         if (chatBadge) {
