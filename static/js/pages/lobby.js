@@ -26,6 +26,8 @@
     const waitingRoomEnter = document.getElementById('waiting-room-enter');
     const tierToggle = document.getElementById('tier-toggle');
     const tierPanel = document.getElementById('tier-panel');
+    const modeToggle = document.getElementById('mode-toggle');
+    const modePanel = document.getElementById('mode-panel');
 
     let isMatching = false;
     let lobbySocket = null;
@@ -517,6 +519,12 @@
             const willOpen = tierPanel.classList.contains('hidden');
             tierPanel.classList.toggle('hidden', !willOpen);
             tierToggle.setAttribute('aria-expanded', String(willOpen));
+        });
+        if (!modeToggle || !modePanel) return;
+        modeToggle.addEventListener('click', () => {
+            const willOpen = modePanel.classList.contains('hidden');
+            modePanel.classList.toggle('hidden', !willOpen);
+            modeToggle.setAttribute('aria-expanded', String(willOpen));
         });
     }
 
