@@ -6,6 +6,7 @@
         items: [],
         unreadCount: 0,
         socket: null,
+        noticeSoundReadyAt: 0,
     };
 
     function init() {
@@ -45,6 +46,7 @@
             }
         });
 
+        state.noticeSoundReadyAt = Date.now() + 2000;
         loadInitial(listEl, countEl, messageBadge);
         connectSocket(listEl, countEl, messageBadge);
     }
@@ -152,7 +154,9 @@
                 }
                 if (payload?.type === 'admin_notice') {
                     openGlobalNotice(payload);
-                    Utils?.Sounds?.notice?.();
+                    if (Date.now() > state.noticeSoundReadyAt) {
+                        Utils?.Sounds?.notice?.();
+                    }
                 }
                 state.items.unshift(payload);
                 state.items = state.items.slice(0, 20);

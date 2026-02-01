@@ -24,6 +24,8 @@
     const waitingRoomCard = document.getElementById('waiting-room-card');
     const waitingRoomInfo = document.getElementById('waiting-room-info');
     const waitingRoomEnter = document.getElementById('waiting-room-enter');
+    const tierToggle = document.getElementById('tier-toggle');
+    const tierPanel = document.getElementById('tier-panel');
 
     let isMatching = false;
     let lobbySocket = null;
@@ -50,6 +52,7 @@
         await checkAuthAndSetupChat();
         startRoomAutoRefresh();
         setupMobileTabs();
+        setupTierToggle();
         setupUserContextMenu();
         setupUserSearch();
     }
@@ -481,7 +484,6 @@
         `;
         chatMessages.appendChild(messageEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
-        if (!isMine) Utils?.Sounds?.chat?.();
     }
 
 
@@ -507,6 +509,15 @@
         });
         isChatOpen = false;
         if (chatSection) chatSection.classList.add('is-hidden');
+    }
+
+    function setupTierToggle() {
+        if (!tierToggle || !tierPanel) return;
+        tierToggle.addEventListener('click', () => {
+            const willOpen = tierPanel.classList.contains('hidden');
+            tierPanel.classList.toggle('hidden', !willOpen);
+            tierToggle.setAttribute('aria-expanded', String(willOpen));
+        });
     }
 
     function handleChatBadge(data) {
