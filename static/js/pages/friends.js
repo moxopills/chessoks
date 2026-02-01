@@ -627,7 +627,10 @@
         }
         recentList.innerHTML = games.slice(0, 5).map((game) => {
             const opponent = game.white_player.id === selectedUserId ? game.black_player.nickname : game.white_player.nickname;
-            const resultLabel = getResultLabel(game.result, game.white_player.id === selectedUserId);
+            const resultLabel = getResultLabel(
+                game.result,
+                Number(game.white_player?.id) === Number(selectedUserId)
+            );
             const playedAt = game.created_at ? Utils.formatDate(game.created_at, {
                 year: 'numeric',
                 month: '2-digit',
@@ -644,10 +647,31 @@
     }
 
     function getResultLabel(result, isWhite) {
-        if (result.startsWith('draw') || result === 'draw' || result === 'stalemate') return '무';
-        if (result.includes('white')) return isWhite ? '승' : '패';
-        if (result.includes('black')) return isWhite ? '패' : '승';
+        if (!result) return '-';
+        const drawResults = new Set([
+            'draw',
+            'draw_agreement',
+            'draw_insufficient',
+            'draw_repetition',
+            'draw_fifty_move',
+            'stalemate',
+        ]);
+        const whiteWin = new Set([
+            'white_win',
+            'checkmate_white',
+            'timeout_black',
+            'resignation_black',
+        ]);
+        const blackWin = new Set([
+            'black_win',
+            'checkmate_black',
+            'timeout_white',
+            'resignation_white',
+        ]);
         if (result === 'playing') return '진행';
+        if (drawResults.has(result)) return '무';
+        if (whiteWin.has(result)) return isWhite ? '승' : '패';
+        if (blackWin.has(result)) return isWhite ? '패' : '승';
         return '종료';
     }
 
