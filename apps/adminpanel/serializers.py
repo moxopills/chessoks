@@ -57,6 +57,11 @@ class MuteSerializer(serializers.Serializer):
         return attrs
 
 
+class NoticeSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=100)
+    message = serializers.CharField(max_length=255)
+
+
 class AdminStatsSerializer(serializers.Serializer):
     total_users = serializers.IntegerField(read_only=True)
     active_users = serializers.IntegerField(read_only=True)

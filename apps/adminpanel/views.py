@@ -17,6 +17,7 @@ from apps.adminpanel.serializers import (
     AdminStatsSerializer,
     AdminUserSerializer,
     MuteSerializer,
+    NoticeSerializer,
     PromoteSerializer,
     ReportCreateSerializer,
     ReportResolveSerializer,
@@ -196,6 +197,26 @@ class AdminUserForceDeleteView(APIView):
         user = User.objects.get(pk=user_id)
         user.delete()
         return Response({"message": "계정이 삭제되었습니다."}, status=status.HTTP_200_OK)
+
+
+class AdminNoticeCreateView(APIView):
+    permission_classes = [IsAuthenticated, IsStaff]
+
+    def post(self, request):
+        serializer = NoticeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        title = serializer.validated_data["title"]
+        message = serializer.validated_data["message"]
+        users = User.objects.filter(is_active=True).only("id")
+        for user in users.iterator(chunk_size=1000):
+            NotificationService.create_notification(
+                user=user,
+                type="admin_notice",
+                title=title,
+                message=message,
+                payload={},
+            )
+        return Response({"message": "공지 발송 완료"}, status=status.HTTP_201_CREATED)
 
 
 class ReportCreateView(APIView):

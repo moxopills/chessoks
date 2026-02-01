@@ -67,10 +67,10 @@
     async function loadMessages(forceScroll = false) {
         try {
             const data = await API.get(`/accounts/messages/${targetUserId}/`, { limit: 200, offset: 0 });
-            const items = (data.results || []).slice().reverse();
+            const items = data.results || [];
             renderMessages(items);
             if (forceScroll || data.count !== lastCount) {
-                messagesEl.scrollTop = 0;
+                messagesEl.scrollTop = messagesEl.scrollHeight;
             }
             lastCount = data.count || 0;
         } catch (error) {

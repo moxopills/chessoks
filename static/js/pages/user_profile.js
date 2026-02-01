@@ -73,6 +73,11 @@
         } else {
             avatarEl.innerHTML = '<span class="avatar-placeholder">?</span>';
         }
+        const tier = user.stats?.rank_tier || 'Junior';
+        avatarEl.insertAdjacentHTML(
+            'beforeend',
+            `<span class="tier-badge" title="${Utils.escapeHtml(tier)}">${Utils.getTierIcon(tier)}</span>`
+        );
     }
 
     function renderStats(stats) {

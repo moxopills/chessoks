@@ -15,6 +15,7 @@ class Notification(models.Model):
         ("rating_change", "레이팅 변동"),
         ("tier_promotion", "티어 승격"),
         ("direct_message", "1:1 메시지"),
+        ("admin_notice", "공지"),
     ]
 
     user = models.ForeignKey(

@@ -84,6 +84,11 @@
                 </div>
             </div>
 
+            <!-- Theme Toggle -->
+            <button class="theme-toggle" id="theme-toggle" aria-label="테마 변경">
+                <span class="theme-icon" id="theme-icon">🌙</span>
+            </button>
+
             <!-- Auth Buttons (Guest) -->
             <div class="navbar-auth guest-only" id="auth-buttons">
                 <a href="/login/" class="btn btn-secondary btn-sm">로그인</a>
@@ -139,8 +144,9 @@
 
 .logo-text {
     font-family: var(--font-display);
-    font-size: 0.875rem;
-    letter-spacing: 2px;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: -0.02em;
 }
 
 /* Navigation Menu */
@@ -157,9 +163,8 @@
     padding: var(--space-sm) var(--space-md);
     color: var(--color-text-secondary);
     text-decoration: none;
-    font-family: var(--font-display);
-    font-size: 0.75rem;
-    word-spacing: -4px;
+    font-family: var(--font-body);
+    font-size: 0.875rem;
     border-radius: var(--radius-md);
     transition: all var(--transition-fast);
 }
@@ -182,6 +187,29 @@
     display: flex;
     align-items: center;
     gap: var(--space-md);
+}
+
+.theme-toggle {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.theme-toggle:hover {
+    border-color: var(--color-accent-secondary);
+}
+
+.theme-icon {
+    font-size: 1rem;
+    line-height: 1;
 }
 
 .navbar-messages {

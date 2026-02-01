@@ -64,6 +64,11 @@
                 span.textContent = user.nickname?.[0] || '?';
                 avatarEl.appendChild(span);
             }
+            const tierBadge = document.createElement('span');
+            tierBadge.className = 'tier-badge';
+            tierBadge.title = tier;
+            tierBadge.textContent = Utils.getTierIcon(tier);
+            avatarEl.appendChild(tierBadge);
         }
     }
 

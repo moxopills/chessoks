@@ -2,6 +2,7 @@ from django.urls import path
 
 from apps.adminpanel.views import (
     AdminDashboardView,
+    AdminNoticeCreateView,
     AdminReportListView,
     AdminReportResolveView,
     AdminStatsView,
@@ -25,6 +26,7 @@ urlpatterns = [
     path("users/<int:user_id>/unsuspend/", AdminUserUnsuspendView.as_view(), name="unsuspend"),
     path("users/<int:user_id>/mute/", AdminUserMuteView.as_view(), name="mute"),
     path("users/<int:user_id>/unmute/", AdminUserUnmuteView.as_view(), name="unmute"),
+    path("notices/", AdminNoticeCreateView.as_view(), name="notices"),
     path(
         "users/<int:user_id>/force-delete/", AdminUserForceDeleteView.as_view(), name="force-delete"
     ),

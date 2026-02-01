@@ -477,10 +477,12 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
 
         user = self.scope["user"]
         users = cache.get(self.lobby_users_key, {})
+        rank_tier = getattr(getattr(user, "stats", None), "rank_tier", "Junior")
         users[str(user.id)] = {
             "id": user.id,
             "nickname": user.nickname,
             "avatar_url": user.avatar_url,
+            "rank_tier": rank_tier,
         }
         cache.set(self.lobby_users_key, users, timeout=3600)
 
@@ -516,6 +518,7 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 "id": user.id,
                 "nickname": user.nickname,
                 "avatar_url": user.avatar_url,
+                "rank_tier": getattr(getattr(user, "stats", None), "rank_tier", "Junior"),
             },
         }
         await self.channel_layer.group_send(
