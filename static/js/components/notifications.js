@@ -18,6 +18,8 @@
         const listEl = document.getElementById('notification-list');
         const countEl = document.getElementById('notification-count');
         const markAllBtn = document.getElementById('mark-all-read');
+        const messageBadge = document.getElementById('message-count');
+        const messageLink = document.getElementById('message-link');
         const dropdown = document.getElementById('notification-dropdown');
 
         markAllBtn?.addEventListener('click', async () => {
@@ -35,11 +37,18 @@
 
         dropdown?.addEventListener('click', (event) => event.stopPropagation());
 
-        loadInitial(listEl, countEl);
-        connectSocket(listEl, countEl);
+        messageLink?.addEventListener('click', () => {
+            if (messageBadge) {
+                messageBadge.textContent = '0';
+                messageBadge.classList.add('hidden');
+            }
+        });
+
+        loadInitial(listEl, countEl, messageBadge);
+        connectSocket(listEl, countEl, messageBadge);
     }
 
-    async function loadInitial(listEl, countEl) {
+    async function loadInitial(listEl, countEl, messageBadge) {
         try {
             const [listData, unreadData] = await Promise.all([
                 API.get('/notifications/', { limit: 10, offset: 0 }),
@@ -48,6 +57,7 @@
             state.items = listData.results || [];
             state.unreadCount = unreadData.count || 0;
             renderList(listEl, countEl);
+            updateMessageBadge(messageBadge);
         } catch (error) {
             // Silent fail: bell just stays empty for unauthenticated users.
         }
@@ -59,6 +69,7 @@
         state.unreadCount = unreadCount;
         countEl.textContent = unreadCount;
         countEl.classList.toggle('hidden', unreadCount === 0);
+        updateMessageBadge(document.getElementById('message-count'));
 
         if (!state.items.length) {
             listEl.innerHTML = '<div class="notification-empty">새 알림이 없습니다</div>';
@@ -119,7 +130,7 @@
         });
     }
 
-    function connectSocket(listEl, countEl) {
+    function connectSocket(listEl, countEl, messageBadge) {
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const wsUrl = `${protocol}://${window.location.host}/ws/notifications/`;
         try {
@@ -140,6 +151,7 @@
                 state.items.unshift(payload);
                 state.items = state.items.slice(0, 20);
                 renderList(listEl, countEl);
+                updateMessageBadge(messageBadge);
                 if (payload.title || payload.message) {
                     Toast.info(payload.message || payload.title);
                 }
@@ -147,6 +159,15 @@
                 // ignore invalid payloads
             }
         });
+    }
+
+    function updateMessageBadge(messageBadge) {
+        if (!messageBadge) return;
+        const dmCount = state.items.filter(
+            (item) => item.type === 'direct_message' && !item.is_read
+        ).length;
+        messageBadge.textContent = dmCount;
+        messageBadge.classList.toggle('hidden', dmCount === 0);
     }
 
     async function forceLogout(message) {
