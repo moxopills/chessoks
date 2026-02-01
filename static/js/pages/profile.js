@@ -47,7 +47,8 @@
         nicknameEl.textContent = user.nickname || '닉네임 없음';
         emailEl.textContent = user.email || '';
         bioEl.textContent = user.bio || '소개가 없습니다.';
-        const tier = user.stats?.rank_tier || 'Junior';
+        const rating = user.stats?.rating ?? user.rating ?? 0;
+        const tier = user.stats?.rank_tier || deriveTierFromRating(rating);
         tierEl.textContent = `티어 · ${tier}`;
         tierEl.style.color = Utils.getTierColor(tier);
 
@@ -70,6 +71,16 @@
             tierBadge.textContent = Utils.getTierIcon(tier);
             avatarEl.appendChild(tierBadge);
         }
+    }
+
+    function deriveTierFromRating(rating) {
+        const value = Number(rating) || 0;
+        if (value >= 3000) return 'Master';
+        if (value >= 2500) return 'Expert';
+        if (value >= 2000) return 'Advanced';
+        if (value >= 1500) return 'Intermediate';
+        if (value >= 1000) return 'Junior';
+        return 'Beginner';
     }
 
     function renderDashboard(data) {
