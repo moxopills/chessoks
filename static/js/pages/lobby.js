@@ -100,12 +100,13 @@
      * 방 목록 렌더링
      */
     function renderRooms(rooms) {
-        if (!rooms || rooms.length === 0) {
+        const visibleRooms = (rooms || []).filter((room) => room?.room_type !== 'quick');
+        if (!visibleRooms.length) {
             roomList.innerHTML = '<div class="room-empty">대기 중인 방이 없습니다.</div>';
             return;
         }
 
-        roomList.innerHTML = rooms.map(room => `
+        roomList.innerHTML = visibleRooms.map(room => `
             <div class="room-item" data-room-id="${room.id}">
                 <div class="room-info">
                     <div class="room-title">${Utils.escapeHtml(room.title || '빠른 대전')}</div>
@@ -818,6 +819,10 @@
     function upsertRoom(room) {
         if (!room || room.status !== 'waiting') {
             removeRoom(room?.id);
+            return;
+        }
+        if (room.room_type === 'quick') {
+            removeRoom(room.id);
             return;
         }
 
