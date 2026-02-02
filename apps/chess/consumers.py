@@ -10,6 +10,7 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from apps.accounts.services import OnlineStatusService
 from apps.chess.models import LobbyMessage, Room
 from apps.chess.services import GameService
+from apps.chess.utils import check_profanity, get_profanity_warning
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +199,9 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 {"type": "error", "message": "메시지는 500자 이하로 입력해주세요."}
             )
             return
+        if check_profanity(message):
+            await self.send_json({"type": "error", "message": get_profanity_warning()})
+            return
 
         payload = {
             "type": "chat",
@@ -230,6 +234,9 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             await self.send_json(
                 {"type": "error", "message": "메시지는 500자 이하로 입력해주세요."}
             )
+            return
+        if check_profanity(message):
+            await self.send_json({"type": "error", "message": get_profanity_warning()})
             return
 
         payload = {
@@ -418,6 +425,9 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 await self.send_json(
                     {"type": "error", "message": "메시지는 500자 이하로 입력해주세요."}
                 )
+                return
+            if check_profanity(message):
+                await self.send_json({"type": "error", "message": get_profanity_warning()})
                 return
 
             await self._save_lobby_message(message)

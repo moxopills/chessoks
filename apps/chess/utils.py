@@ -4,6 +4,7 @@ import random
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from korcen import korcen
 
 
 def parse_int(value, default: int, min_value: int, max_value: int) -> int:
@@ -60,3 +61,25 @@ def broadcast_room_removed(room_id: int) -> None:
     async_to_sync(channel_layer.group_send)(
         "chess_lobby", {"type": "broadcast", "payload": payload}
     )
+
+
+# ===== 욕설 필터링 =====
+
+
+def check_profanity(text: str) -> bool:
+    """텍스트에 욕설이 포함되어 있는지 확인"""
+    if not text:
+        return False
+    return korcen.check(text)
+
+
+def filter_profanity(text: str, mask_char: str = "*") -> str:
+    """텍스트의 욕설을 마스킹 처리"""
+    if not text:
+        return text
+    return korcen.highlight_profanity(text, highlight_char=mask_char)
+
+
+def get_profanity_warning() -> str:
+    """욕설 감지 시 경고 메시지 반환"""
+    return "욕설이 포함된 메시지는 전송할 수 없습니다."
