@@ -11,7 +11,7 @@ from apps.accounts.serializers import (
     GuestbookEntrySerializer,
 )
 from apps.accounts.services import MessageService
-from apps.chess.utils import parse_int
+from apps.chess.utils import check_profanity, get_profanity_warning, parse_int
 
 
 class GuestbookView(APIView):
@@ -28,9 +28,10 @@ class GuestbookView(APIView):
     def post(self, request, user_id: int):
         serializer = GuestbookCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        entry = MessageService.add_guestbook_entry(
-            user_id, request.user, serializer.validated_data["message"]
-        )
+        message = serializer.validated_data["message"]
+        if check_profanity(message):
+            return Response({"detail": get_profanity_warning()}, status=400)
+        entry = MessageService.add_guestbook_entry(user_id, request.user, message)
         return Response(GuestbookEntrySerializer(entry).data, status=201)
 
 
@@ -65,9 +66,10 @@ class DirectMessageView(APIView):
     def post(self, request, user_id: int):
         serializer = DirectMessageCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        message = MessageService.send_message(
-            request.user, user_id, serializer.validated_data["message"]
-        )
+        content = serializer.validated_data["message"]
+        if check_profanity(content):
+            return Response({"detail": get_profanity_warning()}, status=400)
+        message = MessageService.send_message(request.user, user_id, content)
         return Response(DirectMessageSerializer(message).data, status=201)
 
 
