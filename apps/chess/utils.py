@@ -65,6 +65,7 @@ def broadcast_room_removed(room_id: int) -> None:
 
 # ===== 욕설 필터링 =====
 
+
 def check_profanity(text: str) -> bool:
     """텍스트에 욕설이 포함되어 있는지 확인"""
     if not text:
