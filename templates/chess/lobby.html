@@ -438,12 +438,19 @@
 .chat-form {
     display: flex;
     gap: var(--space-sm);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.chat-form .btn {
+    flex-shrink: 0;
 }
 
 .chat-input {
     flex: 1;
+    min-width: 0;
     padding: var(--space-sm) var(--space-md);
-    font-size: 0.875rem;
+    font-size: 16px;
     background-color: var(--color-bg-secondary);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
