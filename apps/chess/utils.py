@@ -1,11 +1,10 @@
 """Chess 앱 공통 유틸리티"""
 
 import random
+import re
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-import re
-
 from korcen import korcen
 
 
