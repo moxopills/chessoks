@@ -763,6 +763,22 @@ a:hover {
     justify-content: flex-end;
 }
 
+.report-modal {
+    max-width: 420px;
+    width: min(90vw, 420px);
+}
+
+.report-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.report-modal .form-input {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+}
+
 /* Context Menu */
 .context-menu {
     position: fixed;

@@ -31,10 +31,6 @@
     const recentList = document.getElementById('profile-recent-list');
     const friendBtn = document.getElementById('profile-friend-btn');
     const reportToggle = document.getElementById('profile-report-toggle');
-    const reportBox = document.getElementById('profile-report');
-    const reportCategory = document.getElementById('profile-report-category');
-    const reportMessage = document.getElementById('profile-report-message');
-    const reportSubmit = document.getElementById('profile-report-submit');
     const chatBtn = document.getElementById('profile-chat-btn');
     const guestbookList = document.getElementById('guestbook-list');
     const guestbookInput = document.getElementById('guestbook-input');
@@ -59,8 +55,9 @@
     function bindEvents() {
         refreshBtn?.addEventListener('click', refreshAll);
         drawerClose?.addEventListener('click', () => drawer.classList.add('hidden'));
-        reportToggle?.addEventListener('click', () => reportBox.classList.toggle('hidden'));
-        reportSubmit?.addEventListener('click', submitReport);
+        reportToggle?.addEventListener('click', () => {
+            if (selectedUserId) Utils.ReportModal.open(selectedUserId);
+        });
         friendBtn?.addEventListener('click', sendFriendRequest);
         chatBtn?.addEventListener('click', () => openDirectMessage(selectedUserId));
         guestbookSubmit?.addEventListener('click', submitGuestbook);
@@ -487,7 +484,6 @@
         if (!userId) return;
         selectedUserId = userId;
         drawer.classList.remove('hidden');
-        reportBox.classList.add('hidden');
         updateFriendButtonState(userId);
 
         try {
@@ -530,8 +526,7 @@
                 } else if (action === 'chat') {
                     openDirectMessage(targetId);
                 } else if (action === 'report') {
-                    openProfileDrawer(targetId);
-                    reportBox.classList.remove('hidden');
+                    Utils.ReportModal.open(targetId);
                 }
                 hideContextMenu();
             });
@@ -680,23 +675,5 @@
         await sendFriendRequestTo(selectedUserId);
     }
 
-    async function submitReport() {
-        if (!selectedUserId) return;
-        if (!currentUserId) {
-            Toast.error('로그인 후 이용할 수 있습니다.');
-            return;
-        }
-        try {
-            await API.post('/reports/', {
-                target_id: selectedUserId,
-                category: reportCategory.value,
-                description: reportMessage.value.trim(),
-            });
-            Toast.success('신고가 접수되었습니다.');
-            reportMessage.value = '';
-            reportBox.classList.add('hidden');
-        } catch (error) {
-            Toast.error(error.data?.message || '신고에 실패했습니다.');
-        }
-    }
+ 
 })();

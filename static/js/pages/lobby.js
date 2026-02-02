@@ -29,10 +29,6 @@
     const modeToggle = document.getElementById('mode-toggle');
     const modePanel = document.getElementById('mode-panel');
     const reportModal = document.getElementById('report-modal');
-    const reportCategory = document.getElementById('report-category');
-    const reportMessage = document.getElementById('report-message');
-    const reportCancel = document.getElementById('report-cancel');
-    const reportSubmit = document.getElementById('report-submit');
 
     let isMatching = false;
     let lobbySocket = null;
@@ -49,7 +45,6 @@
     let longPressTimer = null;
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     let isUserSearchMode = false;
-    let reportTargetId = null;
 
     // 초기화
     init();
@@ -538,31 +533,6 @@
 
     function setupReportModal() {
         if (!reportModal) return;
-        reportCancel?.addEventListener('click', () => {
-            reportModal.classList.add('hidden');
-            reportTargetId = null;
-        });
-        reportModal.addEventListener('click', (event) => {
-            if (event.target === reportModal) {
-                reportModal.classList.add('hidden');
-                reportTargetId = null;
-            }
-        });
-        reportSubmit?.addEventListener('click', async () => {
-            if (!reportTargetId) return;
-            try {
-                await API.post('/reports/', {
-                    target_id: reportTargetId,
-                    category: reportCategory?.value || 'other',
-                    description: (reportMessage?.value || '').trim(),
-                });
-                Toast.success('신고가 접수되었습니다.');
-                reportModal.classList.add('hidden');
-                reportTargetId = null;
-            } catch (error) {
-                Toast.error(error.data?.message || '신고에 실패했습니다.');
-            }
-        });
     }
 
     function handleChatBadge(data) {
@@ -715,9 +685,7 @@
             Toast.error('로그인 후 이용할 수 있습니다.');
             return;
         }
-        reportTargetId = targetId;
-        if (reportMessage) reportMessage.value = '';
-        reportModal?.classList.remove('hidden');
+        Utils.ReportModal.open(targetId);
     }
 
     function addUserToList(user) {

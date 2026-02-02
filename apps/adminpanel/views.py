@@ -278,13 +278,6 @@ class AdminReportResolveView(APIView):
             serializer.validated_data["status"],
             serializer.validated_data.get("resolution_note", ""),
         )
-        NotificationService.create_notification(
-            user=report.target,
-            type="report_result",
-            title="신고 처리 결과",
-            message="신고가 처리되었습니다.",
-            payload={"status": report.status},
-        )
         if report.reporter:
             status_label = "처리 완료" if report.status == "resolved" else "무효 처리"
             note = report.resolution_note.strip()
