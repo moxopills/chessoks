@@ -228,6 +228,7 @@ a:hover {
     max-width: var(--content-max-width);
     width: 100%;
     margin: 0 auto;
+    overflow-x: hidden;
 }
 
 /* Footer */
@@ -761,6 +762,22 @@ a:hover {
     display: flex;
     gap: var(--space-sm);
     justify-content: flex-end;
+}
+
+.report-modal {
+    max-width: 420px;
+    width: min(90vw, 420px);
+}
+
+.report-modal .modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.report-modal .form-input {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
 }
 
 /* Context Menu */

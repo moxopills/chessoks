@@ -19,8 +19,10 @@ class AdminPanelService:
         now = timezone.now()
         total_users = User.objects.count()
         active_users = User.objects.filter(is_active=True).count()
-        suspended_users = User.objects.filter(suspended_until__gt=now).count()
-        muted_users = User.objects.filter(muted_until__gt=now).count()
+        suspended_qs = User.objects.filter(suspended_until__gt=now).order_by("-suspended_until")
+        muted_qs = User.objects.filter(muted_until__gt=now).order_by("-muted_until")
+        suspended_users = suspended_qs.count()
+        muted_users = muted_qs.count()
         pending_reports = Report.objects.filter(status="pending").count()
         return {
             "total_users": total_users,
@@ -28,6 +30,22 @@ class AdminPanelService:
             "suspended_users": suspended_users,
             "muted_users": muted_users,
             "pending_reports": pending_reports,
+            "suspended_list": list(
+                suspended_qs.values(
+                    "id",
+                    "nickname",
+                    "suspended_until",
+                    "suspension_reason",
+                )[:20]
+            ),
+            "muted_list": list(
+                muted_qs.values(
+                    "id",
+                    "nickname",
+                    "muted_until",
+                    "mute_reason",
+                )[:20]
+            ),
         }
 
     @staticmethod

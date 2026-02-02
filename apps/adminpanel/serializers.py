@@ -68,6 +68,8 @@ class AdminStatsSerializer(serializers.Serializer):
     suspended_users = serializers.IntegerField(read_only=True)
     muted_users = serializers.IntegerField(read_only=True)
     pending_reports = serializers.IntegerField(read_only=True)
+    suspended_list = serializers.ListField(read_only=True)
+    muted_list = serializers.ListField(read_only=True)
 
 
 class ReportSerializer(serializers.Serializer):

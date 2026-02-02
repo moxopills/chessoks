@@ -4,6 +4,8 @@
     const statsEl = document.getElementById('admin-stats');
     const userTable = document.getElementById('user-table');
     const reportTable = document.getElementById('report-table');
+    const suspendedTable = document.getElementById('suspended-table');
+    const mutedTable = document.getElementById('muted-table');
     const searchInput = document.getElementById('user-search');
     const searchBtn = document.getElementById('user-search-btn');
 
@@ -53,9 +55,61 @@
                 const value = card.querySelector('.stat-value');
                 if (value) value.textContent = values[idx] ?? '-';
             });
+            renderSuspendedList(data.suspended_list || []);
+            renderMutedList(data.muted_list || []);
         } catch (error) {
             Toast.error('통계를 불러올 수 없습니다.');
         }
+    }
+
+    function renderSuspendedList(users) {
+        if (!suspendedTable) return;
+        const body = suspendedTable.querySelector('tbody');
+        if (!users.length) {
+            body.innerHTML = '<tr><td colspan="3">정지 유저 없음</td></tr>';
+            return;
+        }
+        body.innerHTML = users.map((user) => {
+            const until = user.suspended_until ? formatDateTime(user.suspended_until) : '-';
+            const reason = user.suspension_reason ? Utils.escapeHtml(user.suspension_reason) : '-';
+            return `
+                <tr>
+                    <td>${Utils.escapeHtml(user.nickname)}</td>
+                    <td>${until}</td>
+                    <td>${reason}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function renderMutedList(users) {
+        if (!mutedTable) return;
+        const body = mutedTable.querySelector('tbody');
+        if (!users.length) {
+            body.innerHTML = '<tr><td colspan="3">뮤트 유저 없음</td></tr>';
+            return;
+        }
+        body.innerHTML = users.map((user) => {
+            const until = user.muted_until ? formatDateTime(user.muted_until) : '-';
+            const reason = user.mute_reason ? Utils.escapeHtml(user.mute_reason) : '-';
+            return `
+                <tr>
+                    <td>${Utils.escapeHtml(user.nickname)}</td>
+                    <td>${until}</td>
+                    <td>${reason}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function formatDateTime(value) {
+        const d = new Date(value);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${y}-${m}-${day} ${hh}:${mm}`;
     }
 
     async function loadUsers(query = '') {

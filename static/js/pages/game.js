@@ -57,9 +57,7 @@
     const replayNext = document.getElementById('replay-next');
     const replayPlay = document.getElementById('replay-play');
     const replayClose = document.getElementById('replay-close');
-    const reportForm = document.getElementById('report-form');
-    const reportCategory = document.getElementById('report-category');
-    const reportMessage = document.getElementById('report-message');
+    const reportOpenBtn = document.getElementById('report-open-btn');
     const reportHint = document.getElementById('report-hint');
     let pendingEnd = false;
 
@@ -300,27 +298,18 @@
     }
 
     function setupReport() {
-        if (!reportForm) return;
+        if (!reportOpenBtn) return;
         if (!currentUser || !myColor) {
-            reportForm.querySelector('button').disabled = true;
+            reportOpenBtn.disabled = true;
             if (reportHint) reportHint.textContent = '플레이어만 신고할 수 있습니다.';
             return;
         }
-        reportForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        reportOpenBtn.addEventListener('click', () => {
             if (!opponentUserId) {
                 Toast.error('상대 정보를 찾을 수 없습니다.');
                 return;
             }
-            const category = reportCategory.value;
-            const description = reportMessage.value.trim();
-            try {
-                await API.post('/reports/', { target_id: opponentUserId, category, description });
-                Toast.success('신고가 접수되었습니다.');
-                reportMessage.value = '';
-            } catch (error) {
-                Toast.error(error.data?.message || '신고에 실패했습니다.');
-            }
+            Utils.ReportModal.open(opponentUserId);
         });
     }
 

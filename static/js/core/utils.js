@@ -241,6 +241,75 @@ const Utils = (function() {
         return { notice, chat, move };
     })();
 
+    const ReportModal = (() => {
+        let modal;
+        let categoryEl;
+        let messageEl;
+        let cancelBtn;
+        let submitBtn;
+        let targetId = null;
+        let initialized = false;
+
+        function init() {
+            if (initialized) return;
+            modal = document.getElementById('report-modal');
+            if (!modal) {
+                initialized = true;
+                return;
+            }
+            categoryEl = document.getElementById('report-category');
+            messageEl = document.getElementById('report-message');
+            cancelBtn = document.getElementById('report-cancel');
+            submitBtn = document.getElementById('report-submit');
+
+            cancelBtn?.addEventListener('click', () => {
+                close();
+            });
+
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) close();
+            });
+
+            submitBtn?.addEventListener('click', async () => {
+                if (!targetId || !submitBtn) return;
+                submitBtn.disabled = true;
+                try {
+                    await API.post('/reports/', {
+                        target_id: targetId,
+                        category: categoryEl?.value || 'other',
+                        description: (messageEl?.value || '').trim(),
+                    });
+                    Toast.success('신고가 접수되었습니다.');
+                    close();
+                } catch (error) {
+                    Toast.error(error.data?.message || '신고에 실패했습니다.');
+                } finally {
+                    submitBtn.disabled = false;
+                }
+            });
+
+            initialized = true;
+        }
+
+        function open(target) {
+            init();
+            if (!modal) return;
+            targetId = target;
+            if (categoryEl) categoryEl.value = 'other';
+            if (messageEl) messageEl.value = '';
+            modal.classList.remove('hidden');
+        }
+
+        function close() {
+            if (!modal) return;
+            modal.classList.add('hidden');
+            targetId = null;
+            if (messageEl) messageEl.value = '';
+        }
+
+        return { open };
+    })();
+
     // Public API
     return {
         $,
@@ -259,6 +328,7 @@ const Utils = (function() {
         calculateWinRate,
         getTierColor,
         getTierIcon,
+        ReportModal,
         Sounds,
     };
 })();

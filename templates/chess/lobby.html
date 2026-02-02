@@ -122,29 +122,6 @@
     </div>
 </div>
 
-    <div class="modal-overlay hidden" id="report-modal">
-        <div class="modal report-modal">
-            <div class="modal-header">
-                <h3 class="modal-title">신고하기</h3>
-            </div>
-            <div class="modal-body">
-                <label class="modal-label" for="report-category">신고 유형</label>
-                <select id="report-category" class="form-input">
-                    <option value="cheat">부정행위</option>
-                    <option value="abuse">욕설/비매너</option>
-                    <option value="spam">스팸</option>
-                    <option value="other">기타</option>
-                </select>
-                <label class="modal-label" for="report-message">신고 사유</label>
-                <input id="report-message" class="form-input" type="text" placeholder="사유 (선택)" maxlength="200">
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" id="report-cancel">취소</button>
-                <button class="btn btn-primary" id="report-submit">신고 접수</button>
-            </div>
-        </div>
-</div>
-
 <div class="mobile-tabbar" id="mobile-tabbar">
     <button class="mobile-tab active" data-tab="main">로비</button>
     <button class="mobile-tab" data-tab="chat">
@@ -461,12 +438,19 @@
 .chat-form {
     display: flex;
     gap: var(--space-sm);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.chat-form .btn {
+    flex-shrink: 0;
 }
 
 .chat-input {
     flex: 1;
+    min-width: 0;
     padding: var(--space-sm) var(--space-md);
-    font-size: 0.875rem;
+    font-size: 16px;
     background-color: var(--color-bg-secondary);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
@@ -644,22 +628,6 @@
 
 .hero-tier-panel .tier-icon {
     font-size: 0.9rem;
-}
-
-.report-modal {
-    max-width: 420px;
-    width: 90%;
-}
-
-.report-modal .modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-}
-
-.report-modal .form-input {
-    font-family: var(--font-body);
-    font-size: 0.85rem;
 }
 
 .user-status {
