@@ -1,6 +1,7 @@
 """Chess 앱 공통 유틸리티"""
 
 import random
+import re
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
@@ -63,6 +64,11 @@ def broadcast_room_removed(room_id: int) -> None:
     )
 
 
+_EXTRA_PROFANITY_PATTERNS = re.compile(
+    r"(씨발|씨팔|씨바|씨빨|ㅆ발|ㅆ팔|ㅆ바|ㅆㅂ|시발|시팔|시바|시빨|ㅅㅂ|병신|ㅄ|좆|존나|개새끼|새끼|fuck|shit)",
+    re.IGNORECASE,
+)
+
 # ===== 욕설 필터링 =====
 
 
@@ -70,7 +76,13 @@ def check_profanity(text: str) -> bool:
     """텍스트에 욕설이 포함되어 있는지 확인"""
     if not text:
         return False
-    return korcen.check(text)
+    try:
+        if korcen.check(text):
+            return True
+    except Exception:
+        pass
+    normalized = re.sub(r"[\s\W_]+", "", text, flags=re.UNICODE)
+    return bool(_EXTRA_PROFANITY_PATTERNS.search(normalized))
 
 
 def filter_profanity(text: str, mask_char: str = "*") -> str:
