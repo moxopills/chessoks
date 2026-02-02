@@ -269,7 +269,7 @@
             guestbookInput.value = '';
             await loadGuestbook();
         } catch (error) {
-            Toast.error(error.data?.message || '방명록 등록에 실패했습니다.');
+            Toast.error(error.data?.detail || error.data?.message || '방명록 등록에 실패했습니다.');
         }
     }
 
