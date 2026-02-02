@@ -67,13 +67,14 @@
     function renderUser(user) {
         nameEl.textContent = user.nickname;
         ratingEl.textContent = `레이팅 ${user.stats?.rating ?? '-'}`;
-        tierEl.textContent = user.stats?.rank_tier ?? '-';
+        const tierName = user.stats?.rank_tier || user.rank_tier || '-';
+        tierEl.textContent = tierName;
         if (user.avatar_url) {
             avatarEl.innerHTML = `<img src="${user.avatar_url}" alt="${Utils.escapeHtml(user.nickname)}">`;
         } else {
             avatarEl.innerHTML = '<span class="avatar-placeholder">?</span>';
         }
-        const tier = user.stats?.rank_tier || 'Junior';
+        const tier = user.stats?.rank_tier || user.rank_tier || 'Junior';
         avatarEl.insertAdjacentHTML(
             'beforeend',
             `<span class="tier-badge" title="${Utils.escapeHtml(tier)}">${Utils.getTierIcon(tier)}</span>`
@@ -171,22 +172,12 @@
 
         guestbookSubmit?.addEventListener('click', submitGuestbook);
 
-        reportBtn?.addEventListener('click', async () => {
+        reportBtn?.addEventListener('click', () => {
             if (!currentUserId) {
                 Toast.error('로그인 후 이용할 수 있습니다.');
                 return;
             }
-            const reason = prompt('신고 사유를 입력하세요 (선택)') || '';
-            try {
-                await API.post('/reports/', {
-                    target_id: parseInt(userId, 10),
-                    category: 'other',
-                    description: reason.trim(),
-                });
-                Toast.success('신고가 접수되었습니다.');
-            } catch (error) {
-                Toast.error(error.data?.message || '신고에 실패했습니다.');
-            }
+            Utils.ReportModal.open(parseInt(userId, 10));
         });
     }
 

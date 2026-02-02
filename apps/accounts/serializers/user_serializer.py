@@ -13,6 +13,7 @@ class UserStatsSerializer(serializers.Serializer):
     games_won = serializers.IntegerField(read_only=True)
     games_lost = serializers.IntegerField(read_only=True)
     games_draw = serializers.IntegerField(read_only=True)
+    rank_tier = serializers.CharField(source="rank_tier", read_only=True)
     win_rate = serializers.FloatField(read_only=True)
 
 

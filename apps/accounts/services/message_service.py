@@ -33,7 +33,7 @@ class MessageService:
         except GuestbookEntry.DoesNotExist:
             raise NotFound("방명록을 찾을 수 없습니다.") from None
 
-        if entry.author_id != user.id and entry.profile_user_id != user.id:
+        if entry.author_id != user.id:
             raise ValidationError("삭제 권한이 없습니다.")
         entry.delete()
 
