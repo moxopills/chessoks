@@ -49,7 +49,7 @@
                 inputEl.value = '';
                 await loadMessages(true);
             } catch (error) {
-                Toast.error(error.data?.message || '전송에 실패했습니다.');
+            Toast.error(error.data?.detail || error.data?.message || '전송에 실패했습니다.');
             }
         });
     }
