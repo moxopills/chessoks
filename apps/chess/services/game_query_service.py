@@ -1,6 +1,6 @@
 from datetime import date
 
-from django.db.models import Q
+from django.db.models import Case, IntegerField, Q, When
 
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -40,9 +40,16 @@ class GameQueryService:
     @staticmethod
     def list_moves(game_id: int, user, limit: int, offset: int) -> tuple[int, list[Move]]:
         game = GameQueryService.get_game_for_user(game_id, user)
+        color_order = Case(
+            When(player_color="white", then=0),
+            When(player_color="black", then=1),
+            default=2,
+            output_field=IntegerField(),
+        )
         queryset = (
             Move.objects.filter(game=game)
-            .order_by("move_number", "player_color", "id")
+            .annotate(color_order=color_order)
+            .order_by("move_number", "color_order", "id")
             .only(
                 "id",
                 "move_number",
@@ -92,9 +99,16 @@ class GameQueryService:
     @staticmethod
     def captured_summary(game_id: int, user) -> dict:
         game = GameQueryService.get_game_for_user(game_id, user)
+        color_order = Case(
+            When(player_color="white", then=0),
+            When(player_color="black", then=1),
+            default=2,
+            output_field=IntegerField(),
+        )
         moves = (
             Move.objects.filter(game=game)
-            .order_by("move_number", "player_color", "id")
+            .annotate(color_order=color_order)
+            .order_by("move_number", "color_order", "id")
             .only("uci", "is_capture", "is_en_passant")
         )
         board = chess.Board()
