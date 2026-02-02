@@ -5,6 +5,7 @@
     max-width: 800px;
     margin: 0 auto;
     font-family: var(--font-body);
+    overflow-x: hidden;
 }
 
 .dm-header {
@@ -32,6 +33,7 @@
     flex-direction: column;
     gap: var(--space-sm);
     height: min(70vh, 560px);
+    overflow: hidden;
 }
 
 .dm-messages {
@@ -73,10 +75,17 @@
 .dm-form {
     display: flex;
     gap: var(--space-sm);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.dm-form .btn {
+    flex-shrink: 0;
 }
 
 .dm-input {
     flex: 1;
+    min-width: 0;
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-md);
     border: 1px solid var(--color-border);
