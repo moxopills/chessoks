@@ -9,18 +9,6 @@ from apps.accounts.models import SocialUser
 User = get_user_model()
 
 
-class SocialLoginSerializer(serializers.Serializer):
-    """소셜 로그인 요청 - 데이터 검증만 담당"""
-
-    provider = serializers.ChoiceField(
-        choices=SocialUser.PROVIDER_CHOICES, help_text="OAuth 제공자"
-    )
-    access_token = serializers.CharField(min_length=10, help_text="OAuth Access Token")
-    nickname = serializers.CharField(
-        required=False, max_length=50, help_text="닉네임 (최초 가입 시 필수)"
-    )
-
-
 class SocialUserSerializer(serializers.ModelSerializer):
     """소셜 계정 조회"""
 

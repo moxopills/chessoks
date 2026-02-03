@@ -88,7 +88,7 @@ class LogoutView(APIView):
 
 
 class SignUpView(APIView):
-    """회원가입 - 이메일 인증 완료 후 가입"""
+    """회원가입 - 이메일 인증 완료 후 자동 로그인"""
 
     permission_classes = [AllowAny]
     throttle_classes = [AnonRateThrottle]
@@ -104,8 +104,18 @@ class SignUpView(APIView):
         tags=["인증"],
     )
     def post(self, request):
+        from django.contrib.auth import login
+
         serializer = UserSignUpSerializer(data=request.data)
         result = UserProfileService.signup(serializer)
+
+        # 자동 로그인
+        user_id = result.data.get("user_id")
+        if user_id:
+            user = User.objects.filter(pk=user_id).first()
+            if user:
+                login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+
         return Response(result.data, status=result.status)
 
 

@@ -116,6 +116,72 @@
     text-decoration: underline;
 }
 
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--color-text-muted);
+    font-size: 0.75rem;
+    margin-bottom: var(--space-lg);
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background-color: var(--color-border);
+}
+
+.auth-social {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+}
+
+/* Social Login Buttons */
+.btn-social {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    border: none;
+    cursor: pointer;
+}
+
+.btn-social .social-icon {
+    flex-shrink: 0;
+}
+
+/* 카카오 */
+.btn-kakao {
+    background-color: #FEE500;
+    color: #000000;
+}
+
+.btn-kakao:hover {
+    background-color: #E6CF00;
+    color: #000000;
+}
+
+/* 네이버 */
+.btn-naver {
+    background-color: #03C75A;
+    color: #FFFFFF;
+}
+
+.btn-naver:hover {
+    background-color: #02B350;
+    color: #FFFFFF;
+}
+
 /* Footer */
 .auth-footer {
     text-align: center;
