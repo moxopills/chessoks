@@ -157,7 +157,7 @@
             // 성공 시 자동 로그인 후 로비로 이동
             Toast.success('회원가입이 완료되었습니다.');
             setTimeout(() => {
-                window.location.href = '/lobby/';
+                window.location.href = '/';
             }, 1500);
         } catch (error) {
             handleError(error);

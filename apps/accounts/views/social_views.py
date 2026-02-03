@@ -30,7 +30,7 @@ class SocialOAuthStartView(APIView):
             return Response({"error": "지원하지 않는 provider입니다."}, status=400)
         state = secrets.token_urlsafe(16)
         request.session[f"social_state_{provider}"] = state
-        next_url = request.GET.get("next") or "/lobby/"
+        next_url = request.GET.get("next") or "/"
         request.session[f"social_next_{provider}"] = next_url
         redirect_uri = SocialOAuthCallbackView.get_redirect_uri(request, provider)
         try:
@@ -78,7 +78,7 @@ class SocialOAuthCallbackView(APIView):
             return Response({"error": str(exc)}, status=400)
 
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-        next_url = request.session.get(f"social_next_{provider}") or "/lobby/"
+        next_url = request.session.get(f"social_next_{provider}") or "/"
         return HttpResponseRedirect(next_url)
 
 
