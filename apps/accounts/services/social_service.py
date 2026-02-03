@@ -154,10 +154,11 @@ class SocialAuthService:
 
         if provider == "naver":
             response = data.get("response", {})
+            display_name = response.get("name") or response.get("nickname", "")
             return {
                 "id": response.get("id", ""),
                 "email": response.get("email", ""),
-                "name": response.get("nickname", ""),  # 별명 사용
+                "name": display_name,
                 "profile_image": response.get("profile_image", ""),
             }
 

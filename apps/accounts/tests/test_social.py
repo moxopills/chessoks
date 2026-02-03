@@ -107,7 +107,12 @@ class SocialAuthServiceTest(BaseTestCase):
         mock_response = mock_get.return_value
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            "response": {"id": "naver123", "email": "user@naver.com", "name": "네이버유저"}
+            "response": {
+                "id": "naver123",
+                "email": "user@naver.com",
+                "nickname": "네이버유저",
+                "profile_image": "https://example.com/avatar.png",
+            }
         }
 
         from apps.accounts.services.social_service import SocialAuthService
@@ -117,6 +122,7 @@ class SocialAuthServiceTest(BaseTestCase):
         self.assertEqual(result["id"], "naver123")
         self.assertEqual(result["email"], "user@naver.com")
         self.assertEqual(result["name"], "네이버유저")
+        self.assertEqual(result["profile_image"], "https://example.com/avatar.png")
 
     def test_invalid_provider(self):
         """지원하지 않는 provider"""
