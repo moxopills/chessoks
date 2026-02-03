@@ -6,8 +6,6 @@ class SocialUser(models.Model):
     """소셜 로그인 계정 모델 - OAuth 연동"""
 
     PROVIDER_CHOICES = [
-        ("google", "Google"),
-        ("github", "GitHub"),
         ("kakao", "Kakao"),
         ("naver", "Naver"),
     ]

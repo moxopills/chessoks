@@ -154,10 +154,10 @@
                 password2
             });
 
-            // 성공 시 로그인 페이지로 이동 (이메일 인증 안내)
+            // 성공 시 자동 로그인 후 로비로 이동
             Toast.success('회원가입이 완료되었습니다.');
             setTimeout(() => {
-                window.location.href = '/login/';
+                window.location.href = '/lobby/';
             }, 1500);
         } catch (error) {
             handleError(error);
