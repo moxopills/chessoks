@@ -103,14 +103,14 @@ class SocialAuthServiceTest(BaseTestCase):
 
     @patch("apps.accounts.services.social_service.requests.get")
     def test_naver_user_info_success(self, mock_get):
-        """Naver OAuth - 성공"""
+        """Naver OAuth - 성공 (별명만 사용, 회원이름 없음)"""
         mock_response = mock_get.return_value
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "response": {
                 "id": "naver123",
                 "email": "user@naver.com",
-                "nickname": "네이버유저",
+                "nickname": "네이버별명",
                 "profile_image": "https://example.com/avatar.png",
             }
         }
@@ -121,7 +121,7 @@ class SocialAuthServiceTest(BaseTestCase):
 
         self.assertEqual(result["id"], "naver123")
         self.assertEqual(result["email"], "user@naver.com")
-        self.assertEqual(result["name"], "네이버유저")
+        self.assertEqual(result["name"], "네이버별명")  # nickname → name
         self.assertEqual(result["profile_image"], "https://example.com/avatar.png")
 
     def test_invalid_provider(self):
