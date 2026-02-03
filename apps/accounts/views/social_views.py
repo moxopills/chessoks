@@ -1,6 +1,11 @@
 """소셜 로그인 뷰"""
 
+import secrets
+
+from django.conf import settings
 from django.contrib.auth import login
+from django.http import HttpResponseRedirect
+from django.urls import reverse
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import status
@@ -11,52 +16,70 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts.models import SocialUser
-from apps.accounts.serializers import (
-    LoginResponseSerializer,
-    SocialAccountUnlinkSerializer,
-    SocialLoginSerializer,
-    SocialUserSerializer,
-    UserSerializer,
-)
+from apps.accounts.serializers import SocialAccountUnlinkSerializer, SocialUserSerializer
 from apps.accounts.services.social_service import SocialAuthService
 
 
-class SocialLoginView(APIView):
-    """소셜 로그인 - Service 레이어 활용"""
-
+class SocialOAuthStartView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [AnonRateThrottle]
 
-    @extend_schema(
-        request=SocialLoginSerializer,
-        responses={200: LoginResponseSerializer},
-        tags=["소셜 인증"],
-    )
-    def post(self, request):
-        serializer = SocialLoginSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        provider = serializer.validated_data["provider"]
-        access_token = serializer.validated_data["access_token"]
-        nickname = serializer.validated_data.get("nickname")
-
+    def get(self, request, provider: str):
+        provider = provider.lower()
+        if provider not in ("kakao", "naver"):
+            return Response({"error": "지원하지 않는 provider입니다."}, status=400)
+        state = secrets.token_urlsafe(16)
+        request.session[f"social_state_{provider}"] = state
+        next_url = request.GET.get("next") or "/"
+        request.session[f"social_next_{provider}"] = next_url
+        redirect_uri = SocialOAuthCallbackView.get_redirect_uri(request, provider)
         try:
+            auth_url = SocialAuthService.get_authorization_url(provider, redirect_uri, state)
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=400)
+        return HttpResponseRedirect(auth_url)
+
+
+class SocialOAuthCallbackView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    @staticmethod
+    def get_redirect_uri(request, provider: str) -> str:
+        if provider == "kakao" and settings.KAKAO_REDIRECT_URI:
+            return settings.KAKAO_REDIRECT_URI
+        if provider == "naver" and settings.NAVER_REDIRECT_URI:
+            return settings.NAVER_REDIRECT_URI
+        return request.build_absolute_uri(reverse("social:oauth-callback", args=[provider]))
+
+    def get(self, request, provider: str):
+        provider = provider.lower()
+        if provider not in ("kakao", "naver"):
+            return Response({"error": "지원하지 않는 provider입니다."}, status=400)
+        code = request.GET.get("code")
+        state = request.GET.get("state")
+        if not code:
+            return Response({"error": "인증 코드가 없습니다."}, status=400)
+        expected_state = request.session.get(f"social_state_{provider}")
+        if expected_state and state != expected_state:
+            return Response({"error": "잘못된 요청입니다."}, status=400)
+        redirect_uri = SocialOAuthCallbackView.get_redirect_uri(request, provider)
+        try:
+            access_token = SocialAuthService.exchange_code_for_token(
+                provider, code, redirect_uri, state or ""
+            )
             provider_data = SocialAuthService.get_provider_user_info(provider, access_token)
             user = SocialAuthService.create_or_update_user(
                 provider=provider,
                 provider_data=provider_data,
-                nickname=nickname,
+                nickname=None,
             )
-        except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=400)
 
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-
-        return Response(
-            {"message": "소셜 로그인 성공", "user": UserSerializer(user).data},
-            status=status.HTTP_200_OK,
-        )
+        next_url = request.session.get(f"social_next_{provider}") or "/"
+        return HttpResponseRedirect(next_url)
 
 
 class SocialAccountListView(ListAPIView):
