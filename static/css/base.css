@@ -78,6 +78,9 @@ html[data-theme="light"] {
     --color-border: #e2d9cc;
     --color-border-light: #eee6da;
 
+    --btn-arcade-shadow-primary: #c94a5d;
+    --btn-arcade-shadow-secondary: #d8cbb8;
+
     --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.08);
     --shadow-md: 0 6px 14px rgba(0, 0, 0, 0.12);
     --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.18);
@@ -274,7 +277,7 @@ a:hover {
 .footer-contact {
     font-family: var(--font-body);
     font-size: 0.75rem;
-    color: var(--color-accent-primary);
+    color: var(--color-text-muted);
 }
 
 /* ========================================
@@ -365,13 +368,13 @@ a:hover {
     font-size: 0.875rem;
     letter-spacing: var(--letter-spacing-normal);
     padding: var(--space-md) var(--space-xl);
-    box-shadow: 0 4px 0 #a3324a;
+    box-shadow: 0 4px 0 var(--btn-arcade-shadow-primary, #a3324a);
     transform: translateY(0);
 }
 
 .btn-arcade:hover:not(:disabled) {
     transform: translateY(2px);
-    box-shadow: 0 2px 0 #a3324a;
+    box-shadow: 0 2px 0 var(--btn-arcade-shadow-primary, #a3324a);
 }
 
 .btn-arcade:active:not(:disabled) {
@@ -380,11 +383,11 @@ a:hover {
 }
 
 .btn-secondary.btn-arcade {
-    box-shadow: 0 4px 0 #1a2a4a;
+    box-shadow: 0 4px 0 var(--btn-arcade-shadow-secondary, #1a2a4a);
 }
 
 .btn-secondary.btn-arcade:hover:not(:disabled) {
-    box-shadow: 0 2px 0 #1a2a4a;
+    box-shadow: 0 2px 0 var(--btn-arcade-shadow-secondary, #1a2a4a);
 }
 
 .btn-secondary.btn-arcade:active:not(:disabled) {
