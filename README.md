@@ -316,7 +316,7 @@ docker compose -f docker-compose.prod.yml up -d
 - ✅ **Test**: Pytest + Coverage
 - ✅ **Security**: Django security check
 - ✅ **Build**: Docker 이미지 빌드
-- 🚀 **Deploy**: EC2 자동 배포 (main 브랜치)
+- 🚀 **Deploy**: GCP 자동 배포 (main 브랜치)
 
 ## 개발자
 
