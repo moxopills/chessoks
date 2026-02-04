@@ -91,25 +91,25 @@
             const STORAGE_KEY = 'chessok-theme';
 
             function applyTheme(theme) {
-                if (theme === 'light') {
-                    root.setAttribute('data-theme', 'light');
-                    if (icon) icon.textContent = '🌙';
-                    if (toggle) toggle.setAttribute('aria-label', '다크 모드');
-                } else {
-                    root.removeAttribute('data-theme');
+                if (theme === 'dark') {
+                    root.setAttribute('data-theme', 'dark');
                     if (icon) icon.textContent = '☀️';
                     if (toggle) toggle.setAttribute('aria-label', '라이트 모드');
+                } else {
+                    root.removeAttribute('data-theme');
+                    if (icon) icon.textContent = '🌙';
+                    if (toggle) toggle.setAttribute('aria-label', '다크 모드');
                 }
             }
 
             function initTheme() {
-                const saved = localStorage.getItem(STORAGE_KEY) || 'dark';
+                const saved = localStorage.getItem(STORAGE_KEY) || 'light';
                 applyTheme(saved);
             }
 
             toggle?.addEventListener('click', () => {
-                const current = root.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-                const next = current === 'light' ? 'dark' : 'light';
+                const current = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+                const next = current === 'dark' ? 'light' : 'dark';
                 localStorage.setItem(STORAGE_KEY, next);
                 applyTheme(next);
             });
