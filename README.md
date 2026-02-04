@@ -256,9 +256,9 @@ uv run python manage.py collectstatic
 WebSocket Consumer는 `chess/consumers.py`에서 개발하고,
 `chess/routing.py`에서 URL 패턴을 정의하세요.
 
-## 배포 (EC2 + Nginx)
+## 배포 (GCP + Nginx)
 
-1. EC2 인스턴스에 Docker 설치
+1. GCP 인스턴스에 Docker 설치
 
 2. 프로젝트 클론:
 ```bash
