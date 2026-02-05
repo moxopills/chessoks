@@ -21,6 +21,8 @@
     const noticeModal = document.getElementById('admin-notice-modal');
     const noticeModalMessage = document.getElementById('admin-notice-modal-message');
     const noticeModalClose = document.getElementById('admin-notice-modal-close');
+    const adminTabbar = document.getElementById('admin-tabbar');
+    const adminTabs = adminTabbar ? adminTabbar.querySelectorAll('.mobile-tab') : [];
 
     const suspendBtn = document.getElementById('suspend-btn');
     const unsuspendBtn = document.getElementById('unsuspend-btn');
@@ -38,6 +40,7 @@
         await loadUsers();
         await loadReports();
         setupActions();
+        setupMobileTabs();
     }
 
     async function loadStats() {
@@ -298,5 +301,23 @@
 
     function hideNoticeModal() {
         noticeModal?.classList.add('hidden');
+    }
+
+    function setupMobileTabs() {
+        if (!adminTabbar || !adminTabs.length) return;
+        document.body.classList.add('has-mobile-tabbar', 'admin-tab-users');
+        adminTabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                const target = tab.dataset.adminTab;
+                adminTabs.forEach((btn) => btn.classList.remove('active'));
+                tab.classList.add('active');
+                document.body.classList.remove('admin-tab-users', 'admin-tab-reports');
+                if (target === 'reports') {
+                    document.body.classList.add('admin-tab-reports');
+                } else {
+                    document.body.classList.add('admin-tab-users');
+                }
+            });
+        });
     }
 })();

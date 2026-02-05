@@ -10,7 +10,7 @@
         <span class="admin-section-note">운영/제재/신고 관리</span>
     </div>
 
-    <div class="admin-panel">
+    <div class="admin-panel" data-admin-group="users">
         <h2>통계</h2>
         <div class="admin-stats" id="admin-stats">
             <div class="stat-card"><div class="stat-label">전체 유저</div><div class="stat-value">-</div></div>
@@ -22,7 +22,7 @@
     </div>
 
     <div class="admin-grid">
-        <section class="admin-panel">
+        <section class="admin-panel" data-admin-group="users">
             <h2>유저 목록</h2>
             <div class="admin-search">
                 <input type="text" id="user-search" placeholder="이메일/닉네임 검색">
@@ -45,7 +45,7 @@
             </div>
         </section>
 
-        <section class="admin-panel">
+        <section class="admin-panel" data-admin-group="users">
             <h2>선택 유저</h2>
             <div class="admin-actions" id="user-actions">
                 <div class="admin-section-note" id="selected-user-info">유저를 선택하세요.</div>
@@ -78,7 +78,7 @@
             </div>
         </section>
 
-        <section class="admin-panel">
+        <section class="admin-panel" data-admin-group="users">
             <h2>정지 유저 목록</h2>
             <div class="admin-table-wrap">
                 <table class="admin-table" id="suspended-table">
@@ -96,7 +96,7 @@
             </div>
         </section>
 
-        <section class="admin-panel">
+        <section class="admin-panel" data-admin-group="users">
             <h2>뮤트 유저 목록</h2>
             <div class="admin-table-wrap">
                 <table class="admin-table" id="muted-table">
@@ -114,7 +114,7 @@
             </div>
         </section>
 
-        <section class="admin-panel" style="grid-column: span 2;">
+        <section class="admin-panel" data-admin-group="reports" style="grid-column: span 2;">
             <h2>공지 발송</h2>
             <div class="admin-actions">
                 <div class="form-row">
@@ -130,7 +130,7 @@
             </div>
         </section>
 
-        <section class="admin-panel" style="grid-column: span 2;">
+        <section class="admin-panel" data-admin-group="reports" style="grid-column: span 2;">
             <h2>신고 목록</h2>
             <div class="admin-table-wrap">
                 <table class="admin-table" id="report-table">
@@ -151,6 +151,11 @@
             </div>
         </section>
     </div>
+</div>
+
+<div class="mobile-tabbar admin-tabbar" id="admin-tabbar">
+    <button class="mobile-tab active" data-admin-tab="users">유저 관리</button>
+    <button class="mobile-tab" data-admin-tab="reports">공지/신고</button>
 </div>
 
 <div class="admin-modal-overlay hidden" id="admin-notice-modal">

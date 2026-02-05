@@ -166,6 +166,19 @@
 }
 
 @media (max-width: 768px) {
+    .admin-tabbar {
+        display: flex;
+    }
+
+    body.has-mobile-tabbar .admin-container {
+        padding-bottom: 64px;
+    }
+
+    body.admin-tab-users .admin-panel[data-admin-group="reports"],
+    body.admin-tab-reports .admin-panel[data-admin-group="users"] {
+        display: none;
+    }
+
     .admin-panel {
         padding: var(--space-md);
     }
