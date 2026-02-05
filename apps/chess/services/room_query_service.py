@@ -22,7 +22,7 @@ class RoomQueryService:
                 raise ValidationError({"room_type": "유효하지 않은 방 타입입니다."})
             queryset = queryset.filter(room_type=room_type)
         else:
-            queryset = queryset.exclude(room_type="quick")
+            queryset = queryset.exclude(room_type="quick", status__in=["waiting", "ready"])
 
         if status:
             if status not in RoomQueryService.VALID_STATUSES:

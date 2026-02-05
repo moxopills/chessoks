@@ -101,10 +101,18 @@
         messagesEl.innerHTML = items.map((item) => {
             const isMe = item.sender?.id === currentUser.id;
             const time = formatTime(item.created_at);
+            const avatar = !isMe
+                ? (item.sender?.avatar_url
+                    ? `<img src="${Utils.escapeHtml(item.sender.avatar_url)}" alt="">`
+                    : '<span class="avatar-placeholder">?</span>')
+                : '';
             return `
                 <div class="dm-message ${isMe ? 'me' : 'other'}">
-                    <div class="dm-message-text">${Utils.escapeHtml(item.message)}</div>
-                    <div class="dm-message-time">${time}</div>
+                    ${!isMe ? `<div class="dm-avatar">${avatar}</div>` : ''}
+                    <div class="dm-content">
+                        <div class="dm-message-text">${Utils.escapeHtml(item.message)}</div>
+                        <div class="dm-message-time">${time}</div>
+                    </div>
                 </div>
             `;
         }).join('');
