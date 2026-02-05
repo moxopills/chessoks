@@ -475,7 +475,10 @@ class GameService:
     @staticmethod
     def _notify_game_end(game: Game, rating_info: dict) -> None:
         reason = GameService._result_reason(game.result)
+        from django.core.cache import cache
+
         for color, player in (("white", game.white_player), ("black", game.black_player)):
+            cache.delete(f"user_profile_{player.id}")
             outcome = GameService._result_outcome(game.result, color)
             outcome_text = {"win": "승리", "loss": "패배", "draw": "무승부"}[outcome]
             if reason:
