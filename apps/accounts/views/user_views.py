@@ -538,18 +538,15 @@ class UserProfileView(APIView):
         cache_key = f"user_profile_{user_id}"
         cached_data = cache.get(cache_key)
 
-        user = None
-        if cached_data is None:
-            user = User.objects.select_related("stats").filter(pk=user_id).first()
-            if user is None:
-                return Response({"message": "유저 정보를 찾을 수 없습니다."}, status=404)
+        user = User.objects.select_related("stats").filter(pk=user_id).first()
+        if user is None:
+            return Response({"message": "유저 정보를 찾을 수 없습니다."}, status=404)
 
-            recent_games = GameQueryService.list_recent_for_user(user, limit=20)
-            cached_data = {
-                "user": PublicUserSerializer(user).data,
-                "recent_games": GameHistorySerializer(recent_games, many=True).data,
-            }
+        if cached_data is None:
+            cached_data = {"user": PublicUserSerializer(user).data}
             cache.set(cache_key, cached_data, self.CACHE_TTL)
+
+        recent_games = GameQueryService.list_recent_for_user(user, limit=20)
 
         vs_summary = None
         friend_status = None
@@ -571,7 +568,7 @@ class UserProfileView(APIView):
         return Response(
             {
                 "user": cached_data["user"],
-                "recent_games": cached_data["recent_games"],
+                "recent_games": GameHistorySerializer(recent_games, many=True).data,
                 "vs_summary": vs_summary,
                 "friend_status": friend_status,
             }
