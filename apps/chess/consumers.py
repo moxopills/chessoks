@@ -209,6 +209,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             "room_id": int(self.room_id),
             "user_id": self.scope["user"].id,
             "nickname": self.scope["user"].nickname,
+            "avatar_url": self.scope["user"].avatar_url,
             "message": message,
             "sent_at": timezone.now().isoformat(),
         }
@@ -245,6 +246,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             "room_id": int(self.room_id),
             "user_id": self.scope["user"].id,
             "nickname": self.scope["user"].nickname,
+            "avatar_url": self.scope["user"].avatar_url,
             "message": message,
             "sent_at": timezone.now().isoformat(),
         }
@@ -436,6 +438,7 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 "scope": "lobby",
                 "user_id": self.scope["user"].id,
                 "nickname": self.scope["user"].nickname,
+                "avatar_url": self.scope["user"].avatar_url,
                 "message": message,
                 "sent_at": timezone.now().isoformat(),
             }
@@ -474,6 +477,7 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 "scope": "lobby",
                 "user_id": msg.user_id,
                 "nickname": msg.user.nickname,
+                "avatar_url": msg.user.avatar_url,
                 "message": msg.message,
                 "sent_at": msg.created_at.isoformat(),
             }

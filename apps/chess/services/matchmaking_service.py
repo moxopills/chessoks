@@ -63,7 +63,7 @@ class MatchmakingService:
                 return existing, None, "waiting"
             room = Room.objects.create(
                 room_type="quick",
-                title="",
+                title="경쟁전",
                 host=user,
                 status="waiting",
                 is_private=False,

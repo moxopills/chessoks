@@ -67,6 +67,11 @@
     font-size: 0.8rem;
 }
 
+.admin-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
 .admin-table th,
 .admin-table td {
     padding: 8px 6px;
@@ -157,5 +162,20 @@
 @media (max-width: 1024px) {
     .admin-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-panel {
+        padding: var(--space-md);
+    }
+
+    .admin-actions .form-row {
+        flex-direction: column;
+    }
+
+    .admin-actions .form-row input,
+    .admin-actions .form-row select {
+        width: 100%;
     }
 }

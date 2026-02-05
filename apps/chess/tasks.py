@@ -140,10 +140,8 @@ def cleanup_inactive_rooms(stale_minutes: int = 30) -> dict:
     ).filter(models.Q(guest__isnull=True) | models.Q(room_type="quick"))
     stale_deleted, _ = stale_rooms.delete()
 
-    finished_quick_rooms = Room.objects.filter(
-        room_type="quick", status="finished", finished_at__lt=cutoff
-    )
-    finished_quick_deleted, _ = finished_quick_rooms.delete()
+    # 빠른 대전 결과는 전적에 남겨야 하므로 finished quick room은 삭제하지 않음
+    finished_quick_deleted = 0
 
     abnormal_rooms = (
         Room.objects.filter(status="playing", started_at__lt=cutoff)

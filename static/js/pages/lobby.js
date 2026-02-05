@@ -480,11 +480,19 @@
      */
     function addChatMessage(data) {
         const isMine = data.user_id === currentUserId;
+        const avatar = !isMine
+            ? (data.avatar_url
+                ? `<img src="${Utils.escapeHtml(data.avatar_url)}" alt="">`
+                : '<span class="avatar-placeholder">?</span>')
+            : '';
         const messageEl = document.createElement('div');
         messageEl.className = `chat-message ${isMine ? 'mine' : 'others'}`;
         messageEl.innerHTML = `
-            <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
-            <div class="chat-bubble">${Utils.escapeHtml(data.message)}</div>
+            ${!isMine ? `<div class="chat-avatar">${avatar}</div>` : ''}
+            <div class="chat-content">
+                <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
+                <div class="chat-bubble">${Utils.escapeHtml(data.message)}</div>
+            </div>
             <span class="chat-time">${formatChatTime(data.sent_at)}</span>
         `;
         chatMessages.appendChild(messageEl);
