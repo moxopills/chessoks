@@ -25,7 +25,7 @@
     --color-border-light: #eee6da;
 
     --btn-arcade-shadow-primary: #c94a5d;
-    --btn-arcade-shadow-secondary: #e2d9cc;
+    --btn-arcade-shadow-secondary: #efe7dc;
 
     /* Typography */
     --font-display: 'Gowun Dodum', 'Noto Sans KR', sans-serif;
@@ -240,7 +240,7 @@ a:hover {
 /* Footer */
 .footer {
     height: auto;
-    background-color: var(--color-bg-secondary);
+    background-color: var(--color-bg-primary);
     border-top: 1px solid var(--color-border);
     display: flex;
     align-items: center;
@@ -248,11 +248,15 @@ a:hover {
     padding: var(--space-sm) var(--space-md);
 }
 
+html[data-theme="dark"] .footer {
+    background-color: var(--color-bg-secondary);
+}
+
 .footer-content {
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    color: var(--color-text-muted);
+    color: var(--color-accent-primary);
     font-size: 0.75rem;
     font-family: var(--font-body);
 }
@@ -281,6 +285,15 @@ a:hover {
     font-family: var(--font-body);
     font-size: 0.75rem;
     color: var(--color-accent-primary);
+}
+
+html:not([data-theme="dark"]) .mobile-tabbar {
+    background-color: var(--color-bg-primary);
+    border-top: 1px solid var(--color-border);
+}
+
+html[data-theme="dark"] .mobile-tabbar {
+    background-color: var(--color-bg-secondary);
 }
 
 /* ========================================
