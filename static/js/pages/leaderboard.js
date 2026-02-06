@@ -1,6 +1,8 @@
 (function() {
     'use strict';
 
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
     const leaderboardBody = document.getElementById('leaderboard-body');
     const paginationEl = document.getElementById('leaderboard-pagination');
     const refreshBtn = document.getElementById('leaderboard-refresh');
@@ -140,6 +142,11 @@
         leaderboardBody.querySelectorAll('.leaderboard-row').forEach((row) => {
             row.addEventListener('click', () => openProfileDrawer(parseInt(row.dataset.userId, 10)));
             row.addEventListener('contextmenu', (event) => {
+                event.preventDefault();
+                openContextMenu(event, parseInt(row.dataset.userId, 10));
+            });
+            row.addEventListener('click', (event) => {
+                if (!isTouchDevice) return;
                 event.preventDefault();
                 openContextMenu(event, parseInt(row.dataset.userId, 10));
             });
