@@ -155,7 +155,11 @@
         }
 
         if (room.status === 'playing') {
-            window.location.href = `/games/${roomId}/`;
+            if (room.current_game_id) {
+                window.location.href = `/games/${room.current_game_id}/`;
+            } else {
+                Toast.error('관전 가능한 게임 정보를 찾을 수 없습니다.');
+            }
             return;
         }
 
@@ -174,7 +178,12 @@
         try {
             const joined = await API.post(`/chess/rooms/${roomId}/join/`, payload);
             if (joined.room_type === 'quick' || joined.status === 'playing') {
-                window.location.href = `/games/${roomId}/`;
+                const joinedGameId = joined.current_game_id;
+                if (joinedGameId) {
+                    window.location.href = `/games/${joinedGameId}/`;
+                } else {
+                    Toast.error('게임 정보를 찾을 수 없습니다.');
+                }
             } else {
                 window.location.href = `/rooms/${roomId}/`;
             }
