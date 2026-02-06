@@ -92,6 +92,12 @@ class ReportCreateSerializer(serializers.Serializer):
     category = serializers.ChoiceField(choices=Report.CATEGORY_CHOICES)
     description = serializers.CharField(max_length=500, required=False, allow_blank=True)
 
+    def validate_target_id(self, value):
+        request = self.context.get("request")
+        if request and request.user.is_authenticated and request.user.id == value:
+            raise serializers.ValidationError("자기 자신은 신고할 수 없습니다.")
+        return value
+
 
 class ReportResolveSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=Report.STATUS_CHOICES)

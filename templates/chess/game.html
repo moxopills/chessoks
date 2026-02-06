@@ -164,6 +164,18 @@
     </div>
 </div>
 
+<div class="replay-dock hidden" id="replay-dock">
+    <div class="replay-dock-inner">
+        <div class="replay-status" id="replay-status-dock">시작 위치</div>
+        <div class="replay-actions">
+            <button class="btn btn-secondary btn-sm" id="replay-prev-dock">이전</button>
+            <button class="btn btn-primary btn-sm" id="replay-play-dock">재생</button>
+            <button class="btn btn-secondary btn-sm" id="replay-next-dock">다음</button>
+            <button class="btn btn-secondary btn-sm" id="replay-close-dock">닫기</button>
+        </div>
+    </div>
+</div>
+
 <!-- Draw Offer Modal -->
 <div class="modal-overlay hidden" id="draw-modal">
     <div class="modal">
@@ -864,6 +876,36 @@
 
     #replay-modal .modal {
         width: min(90vw, 320px);
+    }
+}
+
+.replay-dock {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: calc(var(--footer-height) + 72px);
+    width: min(92vw, 360px);
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    z-index: 900;
+    padding: var(--space-sm) var(--space-md);
+}
+
+.replay-dock.hidden {
+    display: none;
+}
+
+.replay-dock-inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+@media (max-width: 768px) {
+    #replay-modal {
+        display: none;
     }
 }
 
