@@ -57,6 +57,12 @@
     const replayNext = document.getElementById('replay-next');
     const replayPlay = document.getElementById('replay-play');
     const replayClose = document.getElementById('replay-close');
+    const replayDock = document.getElementById('replay-dock');
+    const replayStatusDock = document.getElementById('replay-status-dock');
+    const replayPrevDock = document.getElementById('replay-prev-dock');
+    const replayNextDock = document.getElementById('replay-next-dock');
+    const replayPlayDock = document.getElementById('replay-play-dock');
+    const replayCloseDock = document.getElementById('replay-close-dock');
     const reportOpenBtn = document.getElementById('report-open-btn');
     const reportHint = document.getElementById('report-hint');
     let pendingEnd = false;
@@ -90,6 +96,7 @@
     let liveFen = null;
     let liveLastMove = null;
     let replayGameId = null;
+    let replayMode = 'modal';
     let captured = { white: [], black: [] };
     let isChatOpen = false;
     let chatUnread = 0;
@@ -1231,10 +1238,14 @@
         replayNext?.addEventListener('click', () => stepReplay(1));
         replayPlay?.addEventListener('click', () => toggleReplay());
         replayClose?.addEventListener('click', () => closeReplay());
+        replayPrevDock?.addEventListener('click', () => stepReplay(-1));
+        replayNextDock?.addEventListener('click', () => stepReplay(1));
+        replayPlayDock?.addEventListener('click', () => toggleReplay());
+        replayCloseDock?.addEventListener('click', () => closeReplay());
     }
 
     async function openReplay(targetGameId = null) {
-        if (!replayModal) return;
+        if (!replayModal && !replayDock) return;
         if (gameEndModal) {
             gameEndModal.classList.add('hidden');
         }
@@ -1259,6 +1270,7 @@
                 console.error('Failed to load replay moves:', innerError);
                 replayMoves = [];
                 if (replayStatus) replayStatus.textContent = '기보를 불러오지 못했습니다.';
+                if (replayStatusDock) replayStatusDock.textContent = '기보를 불러오지 못했습니다.';
             }
         }
         liveFen = game.fen;
@@ -1266,17 +1278,25 @@
         replayIndex = 0;
         replayActive = true;
         updateReplayBoard();
-        replayModal.classList.remove('hidden');
+        replayMode = window.innerWidth <= 768 && replayDock ? 'dock' : 'modal';
+        if (replayMode === 'dock') {
+            replayDock?.classList.remove('hidden');
+            replayModal?.classList.add('hidden');
+        } else {
+            replayModal?.classList.remove('hidden');
+            replayDock?.classList.add('hidden');
+        }
     }
 
     function closeReplay() {
-        if (!replayModal) return;
+        if (!replayModal && !replayDock) return;
         if (replayTimer) {
             clearInterval(replayTimer);
             replayTimer = null;
         }
         replayActive = false;
         replayModal.classList.add('hidden');
+        replayDock?.classList.add('hidden');
         if (gameEndModal) {
             gameEndModal.classList.remove('hidden');
         }
@@ -1293,14 +1313,17 @@
             clearInterval(replayTimer);
             replayTimer = null;
             if (replayPlay) replayPlay.textContent = '재생';
+            if (replayPlayDock) replayPlayDock.textContent = '재생';
             return;
         }
         if (replayPlay) replayPlay.textContent = '일시정지';
+        if (replayPlayDock) replayPlayDock.textContent = '일시정지';
         replayTimer = setInterval(() => {
             if (replayIndex >= replayMoves.length) {
                 clearInterval(replayTimer);
                 replayTimer = null;
                 if (replayPlay) replayPlay.textContent = '재생';
+                if (replayPlayDock) replayPlayDock.textContent = '재생';
                 return;
             }
             replayIndex += 1;
@@ -1320,17 +1343,24 @@
             replayPrev && (replayPrev.disabled = true);
             replayNext && (replayNext.disabled = true);
             replayPlay && (replayPlay.disabled = true);
+            replayPrevDock && (replayPrevDock.disabled = true);
+            replayNextDock && (replayNextDock.disabled = true);
+            replayPlayDock && (replayPlayDock.disabled = true);
             return;
         }
         replayPrev && (replayPrev.disabled = false);
         replayNext && (replayNext.disabled = false);
         replayPlay && (replayPlay.disabled = false);
+        replayPrevDock && (replayPrevDock.disabled = false);
+        replayNextDock && (replayNextDock.disabled = false);
+        replayPlayDock && (replayPlayDock.disabled = false);
 
         const total = replayMoves.length;
         const statusText = replayIndex === 0
             ? '시작 위치'
             : `${replayIndex}/${total} 수`;
         if (replayStatus) replayStatus.textContent = statusText;
+        if (replayStatusDock) replayStatusDock.textContent = statusText;
 
         const fen = replayIndex === 0
             ? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'

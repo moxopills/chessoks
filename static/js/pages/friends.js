@@ -1,6 +1,8 @@
 (function() {
     'use strict';
 
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
     const friendListEl = document.getElementById('friend-list');
     const incomingListEl = document.getElementById('incoming-list');
     const outgoingListEl = document.getElementById('outgoing-list');
@@ -56,7 +58,12 @@
         refreshBtn?.addEventListener('click', refreshAll);
         drawerClose?.addEventListener('click', () => drawer.classList.add('hidden'));
         reportToggle?.addEventListener('click', () => {
-            if (selectedUserId) Utils.ReportModal.open(selectedUserId);
+            if (!selectedUserId) return;
+            if (currentUserId && selectedUserId === currentUserId) {
+                Toast.error('자기 자신은 신고할 수 없습니다.');
+                return;
+            }
+            Utils.ReportModal.open(selectedUserId);
         });
         friendBtn?.addEventListener('click', sendFriendRequest);
         chatBtn?.addEventListener('click', () => openDirectMessage(selectedUserId));
@@ -186,6 +193,11 @@
                 event.preventDefault();
                 openContextMenu(event, parseInt(item.dataset.userId, 10), { isFriend: true });
             });
+            item.addEventListener('click', (event) => {
+                if (!isTouchDevice) return;
+                event.preventDefault();
+                openContextMenu(event, parseInt(item.dataset.userId, 10), { isFriend: true });
+            });
         });
     }
 
@@ -248,6 +260,11 @@
         container.querySelectorAll('.friend-meta').forEach((meta) => {
             meta.addEventListener('click', () => openProfileDrawer(parseInt(meta.dataset.userId, 10)));
             meta.addEventListener('contextmenu', (event) => {
+                event.preventDefault();
+                openContextMenu(event, parseInt(meta.dataset.userId, 10), { isFriend: false });
+            });
+            meta.addEventListener('click', (event) => {
+                if (!isTouchDevice) return;
                 event.preventDefault();
                 openContextMenu(event, parseInt(meta.dataset.userId, 10), { isFriend: false });
             });
@@ -377,6 +394,14 @@
                 openProfileDrawer(userId);
             });
             meta.addEventListener('contextmenu', (event) => {
+                event.preventDefault();
+                const userId = parseInt(meta.closest('.search-item').dataset.userId, 10);
+                const isFriend = friendIds.has(userId);
+                const isPending = outgoingRequestUserIds.has(userId);
+                openContextMenu(event, userId, { isFriend, isPending });
+            });
+            meta.addEventListener('click', (event) => {
+                if (!isTouchDevice) return;
                 event.preventDefault();
                 const userId = parseInt(meta.closest('.search-item').dataset.userId, 10);
                 const isFriend = friendIds.has(userId);
@@ -534,12 +559,13 @@
 
         const canFriend = currentUserId && userId !== currentUserId && !isFriend && !isPending;
         const canChat = currentUserId && userId !== currentUserId;
+        const canReport = currentUserId && userId !== currentUserId;
         const items = [
             { action: 'profile', label: '프로필 보기' },
             ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
             ...(isFriend ? [{ action: 'remove', label: '친구 삭제' }] : []),
             ...(canChat ? [{ action: 'chat', label: '1:1 채팅' }] : []),
-            { action: 'report', label: '신고하기' },
+            ...(canReport ? [{ action: 'report', label: '신고하기' }] : []),
         ];
         contextMenu.innerHTML = items.map(item => (
             `<div class="context-menu-item" data-action="${item.action}">${item.label}</div>`
