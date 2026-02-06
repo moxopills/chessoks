@@ -642,11 +642,12 @@
 
         const canFriend = currentUserId && userId !== currentUserId && !isFriendUser(userId);
         const canChat = currentUserId && userId !== currentUserId;
+        const canReport = currentUserId && userId !== currentUserId;
         const items = [
             { action: 'profile', label: '프로필 보기' },
             ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
             ...(canChat ? [{ action: 'chat', label: '1:1 채팅' }] : []),
-            { action: 'report', label: '신고하기' },
+            ...(canReport ? [{ action: 'report', label: '신고하기' }] : []),
         ];
         userContextMenu.innerHTML = items.map(item => (
             `<div class="context-menu-item" data-action="${item.action}">${item.label}</div>`
@@ -702,6 +703,10 @@
             Toast.error('로그인 후 이용할 수 있습니다.');
             return;
         }
+        if (targetId === currentUserId) {
+            Toast.error('자기 자신은 신고할 수 없습니다.');
+            return;
+        }
         Utils.ReportModal.open(targetId);
     }
 
@@ -729,10 +734,6 @@
                 event.preventDefault();
                 openUserContextMenu(event, userId);
             });
-            item.addEventListener('touchstart', (event) => {
-                longPressTimer = setTimeout(() => openUserContextMenu(event, userId), 450);
-            });
-            item.addEventListener('touchend', () => clearTimeout(longPressTimer));
         } else {
             item.addEventListener('contextmenu', (event) => {
                 event.preventDefault();

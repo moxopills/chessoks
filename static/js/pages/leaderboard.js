@@ -47,7 +47,12 @@
         refreshBtn?.addEventListener('click', () => loadLeaderboard());
         drawerClose?.addEventListener('click', () => drawer.classList.add('hidden'));
         reportToggle?.addEventListener('click', () => {
-            if (selectedUserId) Utils.ReportModal.open(selectedUserId);
+            if (!selectedUserId) return;
+            if (currentUserId && selectedUserId === currentUserId) {
+                Toast.error('자기 자신은 신고할 수 없습니다.');
+                return;
+            }
+            Utils.ReportModal.open(selectedUserId);
         });
         friendBtn?.addEventListener('click', sendFriendRequest);
         chatBtn?.addEventListener('click', () => openDirectMessage(selectedUserId));
@@ -234,11 +239,12 @@
 
         const canFriend = currentUserId && userId !== currentUserId && !isFriendUser(userId);
         const canChat = currentUserId && userId !== currentUserId;
+        const canReport = currentUserId && userId !== currentUserId;
         const items = [
             { action: 'profile', label: '프로필 보기' },
             ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
             ...(canChat ? [{ action: 'chat', label: '1:1 채팅' }] : []),
-            { action: 'report', label: '신고하기' },
+            ...(canReport ? [{ action: 'report', label: '신고하기' }] : []),
         ];
         contextMenu.innerHTML = items.map(item => (
             `<div class="context-menu-item" data-action="${item.action}">${item.label}</div>`

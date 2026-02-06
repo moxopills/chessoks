@@ -177,6 +177,10 @@
                 Toast.error('로그인 후 이용할 수 있습니다.');
                 return;
             }
+            if (parseInt(userId, 10) === currentUserId) {
+                Toast.error('자기 자신은 신고할 수 없습니다.');
+                return;
+            }
             Utils.ReportModal.open(parseInt(userId, 10));
         });
     }
@@ -193,6 +197,9 @@
             friendBtn.textContent = '나';
             if (directMessageBtn) {
                 directMessageBtn.classList.add('hidden');
+            }
+            if (reportBtn) {
+                reportBtn.disabled = true;
             }
             return;
         }

@@ -534,12 +534,13 @@
 
         const canFriend = currentUserId && userId !== currentUserId && !isFriend && !isPending;
         const canChat = currentUserId && userId !== currentUserId;
+        const canReport = currentUserId && userId !== currentUserId;
         const items = [
             { action: 'profile', label: '프로필 보기' },
             ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
             ...(isFriend ? [{ action: 'remove', label: '친구 삭제' }] : []),
             ...(canChat ? [{ action: 'chat', label: '1:1 채팅' }] : []),
-            { action: 'report', label: '신고하기' },
+            ...(canReport ? [{ action: 'report', label: '신고하기' }] : []),
         ];
         contextMenu.innerHTML = items.map(item => (
             `<div class="context-menu-item" data-action="${item.action}">${item.label}</div>`
