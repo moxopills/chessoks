@@ -64,6 +64,26 @@ def broadcast_room_removed(room_id: int) -> None:
     )
 
 
+def broadcast_spectator_event(room_id: int, user, action: str) -> None:
+    """관전자 입장/퇴장 이벤트 브로드캐스트"""
+    from apps.chess.serializers import BaseUserSerializer
+
+    channel_layer = get_channel_layer()
+    if channel_layer is None:
+        return
+    payload = {
+        "type": "spectator_event",
+        "action": action,
+        "user": BaseUserSerializer(user).data,
+    }
+    async_to_sync(channel_layer.group_send)(
+        f"chess_room_{room_id}", {"type": "broadcast", "payload": payload}
+    )
+    async_to_sync(channel_layer.group_send)(
+        f"chess_room_{room_id}_spectators", {"type": "broadcast", "payload": payload}
+    )
+
+
 _EXTRA_PROFANITY_PATTERNS = re.compile(
     r"(씨발|씨팔|씨바|씨빨|ㅆ발|ㅆ팔|ㅆ바|ㅆㅂ|시발|시팔|시바|시빨|ㅅㅂ|병신|ㅄ|좆|존나|개새끼|새끼|fuck|shit)",
     re.IGNORECASE,
