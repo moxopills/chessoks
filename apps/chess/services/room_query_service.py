@@ -1,4 +1,5 @@
 from django.db.models import OuterRef, Subquery
+
 from rest_framework.exceptions import NotFound, ValidationError
 
 from apps.chess.models import Game, Room
