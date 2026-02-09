@@ -25,8 +25,13 @@ class RoomSerializer(serializers.Serializer):
     finished_at = serializers.DateTimeField(read_only=True, allow_null=True)
 
     def get_current_game_id(self, room):
-        game = room.games.filter(result="playing").only("id").first()
-        return game.id if game else None
+        game = room.games.filter(result="playing").only("id", "created_at").first()
+        if game:
+            return game.id
+        if room.status == "playing":
+            latest = room.games.only("id").order_by("-created_at").first()
+            return latest.id if latest else None
+        return None
 
 
 class PagedRoomSerializer(serializers.Serializer):
