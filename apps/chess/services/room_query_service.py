@@ -1,6 +1,8 @@
+from django.db.models import OuterRef, Subquery
+
 from rest_framework.exceptions import NotFound, ValidationError
 
-from apps.chess.models import Room
+from apps.chess.models import Game, Room
 
 
 class RoomQueryService:
@@ -13,8 +15,15 @@ class RoomQueryService:
     def list_rooms(
         *, user, room_type: str | None, status: str | None, limit: int, offset: int
     ) -> tuple[int, list[Room]]:
-        queryset = Room.objects.select_related("host__stats", "guest__stats").order_by(
-            "-created_at"
+        playing_game_subquery = Subquery(
+            Game.objects.filter(room_id=OuterRef("pk"), result="playing")
+            .order_by("-created_at")
+            .values("id")[:1]
+        )
+        queryset = (
+            Room.objects.select_related("host__stats", "guest__stats")
+            .annotate(current_game_id_annotated=playing_game_subquery)
+            .order_by("-created_at")
         )
 
         if room_type:
