@@ -33,6 +33,37 @@
     margin-bottom: var(--space-md);
 }
 
+.card-header--stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    align-items: center;
+}
+
+.card-title--center {
+    text-align: center;
+    font-size: 1.05rem;
+}
+
+.card-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--color-border);
+    border-radius: 999px;
+}
+
+.btn-icon {
+    align-self: flex-start;
+    min-width: 36px;
+    width: 36px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
 .tab-btn {
     border: 1px solid var(--color-border);
     background: var(--color-bg-secondary);
