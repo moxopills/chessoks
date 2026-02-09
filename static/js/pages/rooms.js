@@ -18,12 +18,14 @@
     const modalClose = document.getElementById('modal-close');
     const modalCancel = document.getElementById('modal-cancel');
     const createRoomForm = document.getElementById('create-room-form');
+    const roomsTabs = document.getElementById('rooms-tabs');
 
     // State
     let currentPage = 1;
     const pageSize = 10;
     let totalCount = 0;
     let refreshInterval = null;
+    let currentView = 'game'; // game | spectate
 
     // Init
     init();
@@ -31,6 +33,7 @@
     async function init() {
         await loadRooms();
         setupFilters();
+        setupTabs();
         setupModal();
         setupCreateForm();
         startAutoRefresh();
@@ -53,14 +56,16 @@
                 offset: (currentPage - 1) * pageSize
             };
 
-            const status = filterStatus.value;
-            if (status) {
-                params.status = status;
-            }
+            const status = currentView === 'spectate' ? 'playing' : filterStatus.value;
+            if (status) params.status = status;
 
             const data = await API.get('/chess/rooms/', params);
-            totalCount = data.count || 0;
-            renderRooms(data.results || []);
+            let rooms = data.results || [];
+            if (currentView === 'spectate') {
+                rooms = rooms.filter(room => room.allow_spectators && room.status === 'playing');
+            }
+            totalCount = currentView === 'spectate' ? rooms.length : (data.count || 0);
+            renderRooms(rooms);
             renderPagination();
         } catch (error) {
             roomsList.innerHTML = '<div class="rooms-empty">방 목록을 불러올 수 없습니다.</div>';
@@ -73,7 +78,9 @@
      */
     function renderRooms(rooms) {
         if (!rooms || rooms.length === 0) {
-            roomsList.innerHTML = '<div class="rooms-empty">생성된 방이 없습니다. 새로운 방을 만들어보세요!</div>';
+            roomsList.innerHTML = currentView === 'spectate'
+                ? '<div class="rooms-empty">현재 관전 가능한 방이 없습니다.</div>'
+                : '<div class="rooms-empty">생성된 방이 없습니다. 새로운 방을 만들어보세요!</div>';
             return;
         }
 
@@ -192,6 +199,28 @@
         filterSort.addEventListener('change', () => {
             currentPage = 1;
             loadRooms();
+        });
+    }
+
+    function setupTabs() {
+        if (!roomsTabs) return;
+        roomsTabs.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const view = btn.dataset.view;
+                if (!view || view === currentView) return;
+                currentView = view;
+                roomsTabs.querySelectorAll('.tab-btn').forEach(tab => {
+                    tab.classList.toggle('active', tab === btn);
+                });
+                if (currentView === 'spectate') {
+                    filterStatus.value = 'playing';
+                    filterStatus.disabled = true;
+                } else {
+                    filterStatus.disabled = false;
+                }
+                currentPage = 1;
+                loadRooms();
+            });
         });
     }
 
