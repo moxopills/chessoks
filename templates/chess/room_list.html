@@ -138,9 +138,9 @@
 
 .tab-btn {
     flex: 1;
-    border: 1px solid transparent;
-    background: transparent;
-    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-primary);
     border-radius: 10px;
     padding: 10px 14px;
     font-size: 0.9rem;
@@ -158,6 +158,21 @@
 
 body.light-mode .tab-btn.active {
     box-shadow: 0 6px 14px rgba(220, 84, 101, 0.22);
+}
+
+body.light-mode .rooms-tabs {
+    background: #f7efe6;
+    border-color: #e6d9cb;
+}
+
+body.light-mode .tab-btn {
+    background: #fbf6ee;
+    border-color: #e6d9cb;
+    color: #3a2f28;
+}
+
+body.light-mode .tab-btn.active {
+    color: #fff;
 }
 
 #create-room-btn {
