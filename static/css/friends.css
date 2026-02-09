@@ -52,6 +52,10 @@
     border-radius: 999px;
 }
 
+.card-header--no-divider .card-divider {
+    display: none;
+}
+
 .btn-icon {
     align-self: flex-start;
     min-width: 36px;
