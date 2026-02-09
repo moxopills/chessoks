@@ -45,7 +45,7 @@
     let longPressTimer = null;
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     let isUserSearchMode = false;
-    let lastRoomsSignature = '';
+    let lastRoomsSignature = null;
     let lastWaitingSignature = '';
 
     // 초기화
@@ -69,14 +69,23 @@
     async function loadRooms() {
         try {
             const data = await API.get('/chess/rooms/', { status: 'waiting', limit: 5 });
-            const rooms = (data.results || data || []).filter((room) => room.room_type !== 'quick');
+            const rawRooms = Array.isArray(data?.results)
+                ? data.results
+                : (Array.isArray(data) ? data : []);
+            const rooms = rawRooms.filter((room) => room?.room_type !== 'quick');
             const signature = rooms
                 .map((room) => `${room.id}:${room.status}:${room.guest?.id || 0}:${room.current_game_id || 0}`)
                 .join('|');
-            if (signature !== lastRoomsSignature) {
+            const isLoading = roomList && roomList.querySelector('.loading-placeholder');
+            if (signature !== lastRoomsSignature || isLoading) {
                 lastRoomsSignature = signature;
                 lobbyRooms = rooms;
-                renderRooms(lobbyRooms);
+                try {
+                    renderRooms(lobbyRooms);
+                } catch (renderError) {
+                    console.error('Failed to render rooms:', renderError);
+                    roomList.innerHTML = '<div class="room-empty">방 목록을 불러올 수 없습니다.</div>';
+                }
             }
         } catch (error) {
             roomList.innerHTML = '<div class="room-empty">방 목록을 불러올 수 없습니다.</div>';
