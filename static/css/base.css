@@ -63,26 +63,26 @@
 
 /* Dark Theme */
 html[data-theme="dark"] {
-    --color-bg-primary: #1a1a2e;
-    --color-bg-secondary: #16213e;
-    --color-bg-tertiary: #0f3460;
-    --color-bg-card: #1f2940;
+    --color-bg-primary: #0f172a;
+    --color-bg-secondary: #162235;
+    --color-bg-tertiary: #1b2a3d;
+    --color-bg-card: #152036;
 
-    --color-accent-primary: #e94560;
-    --color-accent-secondary: #0f9b8e;
-    --color-accent-warning: #f39c12;
-    --color-accent-success: #27ae60;
-    --color-accent-error: #c0392b;
+    --color-accent-primary: #38bdf8;
+    --color-accent-secondary: #60a5fa;
+    --color-accent-warning: #fbbf24;
+    --color-accent-success: #22c55e;
+    --color-accent-error: #f87171;
 
-    --color-text-primary: #eaeaea;
-    --color-text-secondary: #a0a0a0;
-    --color-text-muted: #6c6c6c;
+    --color-text-primary: #e2e8f0;
+    --color-text-secondary: #b0becf;
+    --color-text-muted: #7b8aa6;
 
     --color-border: #2a3a5a;
     --color-border-light: #3a4a6a;
 
-    --btn-arcade-shadow-primary: #c94a5d;
-    --btn-arcade-shadow-secondary: #2a3a5a;
+    --btn-arcade-shadow-primary: #2b7db3;
+    --btn-arcade-shadow-secondary: #22314a;
 
     --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
