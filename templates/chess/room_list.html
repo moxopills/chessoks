@@ -130,15 +130,21 @@
     display: flex;
     gap: 8px;
     margin-bottom: 12px;
+    padding: 6px;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
 }
 
 .tab-btn {
-    border: 1px solid var(--border-muted);
-    background: var(--surface-2);
-    color: var(--text-muted);
+    flex: 1;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--color-text-secondary);
     border-radius: 10px;
-    padding: 8px 14px;
+    padding: 10px 14px;
     font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -147,6 +153,11 @@
     background: var(--accent);
     color: #fff;
     border-color: var(--accent);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+body.light-mode .tab-btn.active {
+    box-shadow: 0 6px 14px rgba(220, 84, 101, 0.22);
 }
 
 #create-room-btn {
