@@ -485,10 +485,34 @@ html[data-theme="dark"] .mobile-tabbar {
     border-bottom: 1px solid var(--color-border);
 }
 
+.card-header--no-divider {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
 .card-title {
     font-family: var(--font-display);
     font-size: 0.875rem;
     margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+    .card {
+        padding: var(--space-md);
+    }
+
+    .card-header {
+        margin-bottom: var(--space-md);
+        padding-bottom: var(--space-sm);
+    }
+
+    .card-title {
+        font-size: 0.95rem;
+    }
+
+    .divider {
+        margin: var(--space-md) 0;
+    }
 }
 
 /* Divider */
