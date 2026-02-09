@@ -941,6 +941,17 @@
                 addChatMessage(data);
                 break;
 
+            case 'spectator_event': {
+                const nickname = data.user?.nickname || '관전자';
+                const isSelf = currentUser && data.user?.id === currentUser.id;
+                if (!isSelf) {
+                    const actionText = data.action === 'leave' ? '퇴장' : '입장';
+                    Toast.info(`${nickname}님이 관전에 ${actionText}했습니다.`);
+                    addChatNotice(`${nickname}님이 관전에 ${actionText}했습니다.`);
+                }
+                break;
+            }
+
             case 'error':
                 Toast.error(data.message);
                 if (data.message && data.message.includes('허용되지 않는 수')) {
