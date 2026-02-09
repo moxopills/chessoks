@@ -22,7 +22,10 @@ class RoomQueryService:
                 raise ValidationError({"room_type": "유효하지 않은 방 타입입니다."})
             queryset = queryset.filter(room_type=room_type)
         else:
-            queryset = queryset.exclude(room_type="quick", status__in=["waiting", "ready"])
+            # 기본 목록에서는 빠른 대전의 대기/준비 방을 숨기되,
+            # 게임 중 상태에서는 관전 가능하도록 제외하지 않는다.
+            if status in (None, "waiting", "ready"):
+                queryset = queryset.exclude(room_type="quick", status__in=["waiting", "ready"])
 
         if status:
             if status not in RoomQueryService.VALID_STATUSES:

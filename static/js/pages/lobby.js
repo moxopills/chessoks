@@ -45,6 +45,8 @@
     let longPressTimer = null;
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     let isUserSearchMode = false;
+    let lastRoomsSignature = '';
+    let lastWaitingSignature = '';
 
     // 초기화
     init();
@@ -67,8 +69,15 @@
     async function loadRooms() {
         try {
             const data = await API.get('/chess/rooms/', { status: 'waiting', limit: 5 });
-            lobbyRooms = (data.results || data || []).filter((room) => room.room_type !== 'quick');
-            renderRooms(lobbyRooms);
+            const rooms = (data.results || data || []).filter((room) => room.room_type !== 'quick');
+            const signature = rooms
+                .map((room) => `${room.id}:${room.status}:${room.guest?.id || 0}:${room.current_game_id || 0}`)
+                .join('|');
+            if (signature !== lastRoomsSignature) {
+                lastRoomsSignature = signature;
+                lobbyRooms = rooms;
+                renderRooms(lobbyRooms);
+            }
         } catch (error) {
             roomList.innerHTML = '<div class="room-empty">방 목록을 불러올 수 없습니다.</div>';
         }
@@ -80,9 +89,15 @@
             const data = await API.get('/chess/rooms/waiting/');
             const room = data.room;
             if (!room) {
+                lastWaitingSignature = '';
                 waitingRoomCard.classList.add('hidden');
                 return;
             }
+            const signature = `${room.id}:${room.status}:${room.time_limit || 0}:${room.title || ''}`;
+            if (signature === lastWaitingSignature) {
+                return;
+            }
+            lastWaitingSignature = signature;
             waitingRoomCard.classList.remove('hidden');
             const title = room.title || '빠른 대전';
             const timeText = room.time_limit ? `${room.time_limit}분` : '무제한';
@@ -131,12 +146,19 @@
 
     function startRoomAutoRefresh() {
         roomRefreshInterval = setInterval(() => {
+            if (document.hidden) return;
             loadRooms();
             loadWaitingRoom();
         }, 5000);
 
         window.addEventListener('beforeunload', () => {
             if (roomRefreshInterval) clearInterval(roomRefreshInterval);
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) return;
+            loadRooms();
+            loadWaitingRoom();
         });
     }
 

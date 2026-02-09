@@ -318,6 +318,7 @@ class UserProfileService:
 
         user.avatar_url = new_avatar_url
         user.save(update_fields=["avatar_url"])
+        cache.delete(f"user_profile_{user.id}")
 
         if old_avatar_key:
             try:
@@ -344,6 +345,7 @@ class UserProfileService:
 
         user.avatar_url = None
         user.save(update_fields=["avatar_url"])
+        cache.delete(f"user_profile_{user.id}")
 
         return _ok({"message": "아바타가 삭제되었습니다."}, status.HTTP_200_OK)
 
@@ -381,6 +383,7 @@ class UserProfileService:
         if new_nickname and new_nickname != old_nickname:
             user.nickname_changed_at = timezone.now()
             user.save(update_fields=["nickname_changed_at"])
+        cache.delete(f"user_profile_{user.id}")
         return _ok({"message": "프로필이 업데이트되었습니다."}, status.HTTP_200_OK)
 
     @staticmethod
