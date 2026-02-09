@@ -86,6 +86,7 @@
 
         roomsList.innerHTML = rooms.map(room => {
             const isPlaying = room.status === 'playing';
+            const hasGame = !!room.current_game_id;
             const isFull = room.guest !== null;
             const statusText = {
                 'waiting': '대기 중',
@@ -93,6 +94,7 @@
                 'playing': '게임 중',
                 'finished': '종료'
             }[room.status] || room.status;
+            const safeStatusText = isPlaying && !hasGame ? '게임 준비 중' : statusText;
 
             return `
                 <div class="room-card ${isPlaying ? 'is-playing' : ''} ${isFull ? 'is-full' : ''}"
@@ -122,7 +124,7 @@
                             ${room.allow_spectators ? '<span class="room-meta-item">👁 관전 가능</span>' : ''}
                         </div>
                     </div>
-                    <span class="room-status ${room.status}">${statusText}</span>
+                    <span class="room-status ${room.status}">${safeStatusText}</span>
                 </div>
             `;
         }).join('');
@@ -317,6 +319,11 @@
         const isPlaying = card.classList.contains('is-playing');
         const isFull = card.classList.contains('is-full');
         const isPrivate = card.querySelector('.icon-private') !== null;
+
+        if (isFull && !isPlaying) {
+            Toast.error('이미 인원이 가득 찼습니다.');
+            return;
+        }
 
         if (isPlaying) {
             // 게임 중인 방은 관전 페이지로
