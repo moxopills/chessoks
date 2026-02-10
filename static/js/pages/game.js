@@ -1170,7 +1170,13 @@
     function setupModals() {
         if (replayOnly) {
             rematchBtn?.classList.add('hidden');
+            const lobbyBtn = document.getElementById('lobby-btn');
+            if (lobbyBtn) lobbyBtn.textContent = '전적 보기';
         }
+        const historyBtn = document.getElementById('history-btn');
+        historyBtn?.addEventListener('click', () => {
+            window.location.href = '/history/';
+        });
         // 리매치 버튼
         if (!replayOnly && rematchBtn) {
             rematchBtn.addEventListener('click', () => {
@@ -1181,7 +1187,7 @@
 
         // 로비 버튼
         document.getElementById('lobby-btn').addEventListener('click', () => {
-            window.location.href = '/';
+            window.location.href = replayOnly ? '/history/' : '/';
         });
 
         // 무승부 수락/거절
@@ -1289,6 +1295,13 @@
         replayIndex = 0;
         replayActive = true;
         updateReplayBoard();
+        if (replayOnly) {
+            if (replayClose) replayClose.textContent = '전적 보기';
+            if (replayCloseDock) replayCloseDock.textContent = '전적 보기';
+        } else {
+            if (replayClose) replayClose.textContent = '닫기';
+            if (replayCloseDock) replayCloseDock.textContent = '닫기';
+        }
         replayMode = window.innerWidth <= 768 && replayDock ? 'dock' : 'modal';
         if (replayMode === 'dock') {
             replayDock?.classList.remove('hidden');
@@ -1308,6 +1321,10 @@
         replayActive = false;
         replayModal.classList.add('hidden');
         replayDock?.classList.add('hidden');
+        if (replayOnly) {
+            window.location.href = '/history/';
+            return;
+        }
         if (gameEndModal) {
             gameEndModal.classList.remove('hidden');
         }

@@ -772,9 +772,15 @@
         const userId = parseInt(item.dataset.userId, 10);
         if (!userId) return;
         if (isTouchDevice) {
-            item.addEventListener('click', (event) => {
-                event.preventDefault();
-                openUserContextMenu(event, userId);
+            Utils.bindDoubleTap(item, {
+                single: (event) => {
+                    event.preventDefault();
+                    openUserContextMenu(event, userId);
+                },
+                double: (event) => {
+                    event.preventDefault();
+                    window.location.href = `/users/${userId}/`;
+                }
             });
         } else {
             item.addEventListener('contextmenu', (event) => {

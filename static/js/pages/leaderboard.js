@@ -140,15 +140,24 @@
         }).join('');
 
         leaderboardBody.querySelectorAll('.leaderboard-row').forEach((row) => {
-            row.addEventListener('click', () => openProfileDrawer(parseInt(row.dataset.userId, 10)));
+            const userId = parseInt(row.dataset.userId, 10);
+            if (isTouchDevice) {
+                Utils.bindDoubleTap(row, {
+                    single: (event) => {
+                        event.preventDefault();
+                        openContextMenu(event, userId);
+                    },
+                    double: (event) => {
+                        event.preventDefault();
+                        openProfileDrawer(userId);
+                    }
+                });
+                return;
+            }
+            row.addEventListener('click', () => openProfileDrawer(userId));
             row.addEventListener('contextmenu', (event) => {
                 event.preventDefault();
-                openContextMenu(event, parseInt(row.dataset.userId, 10));
-            });
-            row.addEventListener('click', (event) => {
-                if (!isTouchDevice) return;
-                event.preventDefault();
-                openContextMenu(event, parseInt(row.dataset.userId, 10));
+                openContextMenu(event, userId);
             });
         });
     }
