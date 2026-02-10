@@ -77,7 +77,7 @@
 
     async function loadMessages(forceScroll = false) {
         try {
-            const data = await API.get(`/accounts/messages/${targetUserId}/`, { limit: 200, offset: 0 });
+            const data = await API.get(`/accounts/messages/${targetUserId}/`, { limit: 200, offset: 0, no_count: 1 });
             const items = data.results || [];
             renderMessages(items);
             messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -132,7 +132,7 @@
             return;
         }
         try {
-            const data = await API.get('/notifications/', { limit: 50, offset: 0 });
+            const data = await API.get('/notifications/', { limit: 50, offset: 0, no_count: 1 });
             const ids = (data.results || [])
                 .filter((item) => item.type === 'direct_message' && !item.is_read)
                 .filter((item) => item.payload?.sender_id === targetUserId)

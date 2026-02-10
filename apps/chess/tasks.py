@@ -16,6 +16,31 @@ from apps.chess.services import GameService
 logger = logging.getLogger(__name__)
 
 
+def _build_game_end_payload(game: Game) -> dict:
+    """게임 종료 브로드캐스트 페이로드 생성"""
+    return {
+        "type": "game_end",
+        "game_id": game.id,
+        "result": game.result,
+        "fen": game.fen,
+        "pgn": game.pgn,
+        "current_turn": game.current_turn,
+        "white_time_remaining": game.white_time_remaining,
+        "black_time_remaining": game.black_time_remaining,
+        "turn_started_at": game.turn_started_at.isoformat() if game.turn_started_at else None,
+    }
+
+
+def _broadcast_game_end(channel_layer, game: Game) -> None:
+    """게임 종료 브로드캐스트 (플레이어 + 관전자)"""
+    if not channel_layer:
+        return
+    payload = _build_game_end_payload(game)
+    message = {"type": "broadcast", "payload": payload}
+    async_to_sync(channel_layer.group_send)(f"chess_room_{game.room_id}", message)
+    async_to_sync(channel_layer.group_send)(f"chess_room_{game.room_id}_spectators", message)
+
+
 @shared_task
 def handle_timeouts() -> int:
     """진행 중 게임의 타임아웃 처리"""
@@ -48,30 +73,7 @@ def handle_timeouts() -> int:
                 if now.timestamp() - ts >= GameService.DISCONNECT_GRACE_SECONDS:
                     try:
                         GameService.apply_disconnect_forfeit(game, color, now)
-                        if channel_layer:
-                            payload = {
-                                "type": "game_end",
-                                "game_id": game.id,
-                                "result": game.result,
-                                "fen": game.fen,
-                                "pgn": game.pgn,
-                                "current_turn": game.current_turn,
-                                "white_time_remaining": game.white_time_remaining,
-                                "black_time_remaining": game.black_time_remaining,
-                                "turn_started_at": (
-                                    game.turn_started_at.isoformat()
-                                    if game.turn_started_at
-                                    else None
-                                ),
-                            }
-                            async_to_sync(channel_layer.group_send)(
-                                f"chess_room_{game.room_id}",
-                                {"type": "broadcast", "payload": payload},
-                            )
-                            async_to_sync(channel_layer.group_send)(
-                                f"chess_room_{game.room_id}_spectators",
-                                {"type": "broadcast", "payload": payload},
-                            )
+                        _broadcast_game_end(channel_layer, game)
                         updated += 1
                         disconnected = True
                         break
@@ -88,28 +90,7 @@ def handle_timeouts() -> int:
             if remaining <= 0:
                 try:
                     GameService.apply_timeout(game, game.current_turn, now)
-                    if channel_layer:
-                        payload = {
-                            "type": "game_end",
-                            "game_id": game.id,
-                            "result": game.result,
-                            "fen": game.fen,
-                            "pgn": game.pgn,
-                            "current_turn": game.current_turn,
-                            "white_time_remaining": game.white_time_remaining,
-                            "black_time_remaining": game.black_time_remaining,
-                            "turn_started_at": (
-                                game.turn_started_at.isoformat() if game.turn_started_at else None
-                            ),
-                        }
-                        async_to_sync(channel_layer.group_send)(
-                            f"chess_room_{game.room_id}",
-                            {"type": "broadcast", "payload": payload},
-                        )
-                        async_to_sync(channel_layer.group_send)(
-                            f"chess_room_{game.room_id}_spectators",
-                            {"type": "broadcast", "payload": payload},
-                        )
+                    _broadcast_game_end(channel_layer, game)
                     updated += 1
                 except ObjectDoesNotExist as exc:
                     logger.warning("Game %s not found during timeout: %s", game.id, exc)

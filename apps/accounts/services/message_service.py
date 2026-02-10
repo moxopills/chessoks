@@ -50,7 +50,7 @@ class MessageService:
 
     @staticmethod
     def list_messages(
-        user: User, other_id: int, limit: int, offset: int
+        user: User, other_id: int, limit: int, offset: int, no_count: bool = False
     ) -> tuple[int, list[DirectMessage]]:
         other = User.objects.filter(pk=other_id).first()
         if not other:
@@ -59,11 +59,16 @@ class MessageService:
         queryset = DirectMessage.objects.select_related("sender", "sender__stats").filter(
             thread=thread
         )
+        messages = list(queryset.order_by("created_at")[offset : offset + limit])
+        if no_count:
+            return len(messages), messages
         total = queryset.count()
-        return total, list(queryset.order_by("created_at")[offset : offset + limit])
+        return total, messages
 
     @staticmethod
-    def list_threads(user: User, limit: int, offset: int) -> tuple[int, list[DirectMessageThread]]:
+    def list_threads(
+        user: User, limit: int, offset: int, no_count: bool = False
+    ) -> tuple[int, list[DirectMessageThread]]:
         last_message_qs = DirectMessage.objects.filter(thread=OuterRef("pk")).order_by(
             "-created_at"
         )
@@ -79,8 +84,11 @@ class MessageService:
             )
             .order_by("-last_message_at", "-updated_at")
         )
+        threads = list(queryset[offset : offset + limit])
+        if no_count:
+            return len(threads), threads
         total = queryset.count()
-        return total, list(queryset[offset : offset + limit])
+        return total, threads
 
     @staticmethod
     @transaction.atomic

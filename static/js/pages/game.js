@@ -160,7 +160,7 @@
 
                 let gameId = room.current_game_id;
                 if (!gameId) {
-                    const history = await API.get(`/chess/games/history/`, { result: 'playing', limit: 20 });
+                    const history = await API.get(`/chess/games/history/`, { result: 'playing', limit: 20, no_count: 1 });
                     const matches = history.results || [];
                     const found = matches.find(item => item.room_id === roomId);
                     gameId = found?.id;
@@ -1267,7 +1267,7 @@
             replayMoves = data.results || [];
         } catch (error) {
             try {
-                const history = await API.get('/chess/games/history/', { limit: 20 });
+                const history = await API.get('/chess/games/history/', { limit: 20, no_count: 1 });
                 const matches = history.results || [];
                 const fallback = matches.find(item => item.room_id === roomId);
                 if (fallback?.id) {
@@ -1501,7 +1501,7 @@
         if (!ratingEl || !currentUser || !game) return;
 
         try {
-            const data = await API.get('/notifications/', { limit: 10, offset: 0 });
+            const data = await API.get('/notifications/', { limit: 10, offset: 0, no_count: 1 });
             const items = data.results || [];
             const target = items.find(
                 (item) =>

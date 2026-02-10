@@ -20,8 +20,8 @@
         listEl.innerHTML = '<div class="history-empty">불러오는 중...</div>';
         try {
             const [data, notifications] = await Promise.all([
-                API.get('/accounts/messages/threads/', { limit: 50, offset: 0 }),
-                API.get('/notifications/', { limit: 200, offset: 0 }),
+                API.get('/accounts/messages/threads/', { limit: 50, offset: 0, no_count: 1 }),
+                API.get('/notifications/', { limit: 200, offset: 0, no_count: 1 }),
             ]);
             const threads = data.results || [];
             if (!threads.length) {
