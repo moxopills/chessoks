@@ -54,7 +54,7 @@
     async function loadInitial(listEl, countEl, messageBadge) {
         try {
             const [listData, unreadData] = await Promise.all([
-                API.get('/notifications/', { limit: 10, offset: 0 }),
+                API.get('/notifications/', { limit: 10, offset: 0, no_count: 1 }),
                 API.get('/notifications/unread/'),
             ]);
             state.items = listData.results || [];

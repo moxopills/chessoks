@@ -31,6 +31,19 @@
         setupDelete();
     }
 
+    function notifyUserUpdated(user) {
+        window.dispatchEvent(new CustomEvent('user:updated', { detail: { user } }));
+    }
+
+    async function refreshAuthUser() {
+        try {
+            const me = await API.get('/accounts/me/');
+            notifyUserUpdated(me);
+        } catch (error) {
+            // Ignore refresh failure; navbar will update on next page load.
+        }
+    }
+
     async function loadProfile() {
         try {
             const me = await API.get('/accounts/me/');
@@ -70,6 +83,7 @@
                 const result = await API.patch('/accounts/profile/avatar/', formData, true);
                 Toast.success(result.message || '아바타가 업데이트되었습니다.');
                 renderAvatar(result.avatar_url, nicknameInput.value);
+                await refreshAuthUser();
             } catch (error) {
                 Toast.error(error.data?.message || '업로드에 실패했습니다.');
             }
@@ -81,6 +95,7 @@
                 const result = await API.delete('/accounts/profile/avatar/');
                 Toast.success(result.message || '아바타가 삭제되었습니다.');
                 renderAvatar('', nicknameInput.value);
+                await refreshAuthUser();
             } catch (error) {
                 Toast.error(error.data?.message || '삭제에 실패했습니다.');
             }
@@ -99,6 +114,7 @@
                 const updated = await API.patch('/accounts/profile/', payload);
                 Toast.success('프로필이 업데이트되었습니다.');
                 renderAvatar(updated.avatar_url, updated.nickname);
+                await refreshAuthUser();
             } catch (error) {
                 const fieldError = error.data?.nickname?.[0];
                 if (fieldError) nicknameError.textContent = fieldError;

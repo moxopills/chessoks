@@ -100,7 +100,7 @@ html[data-theme="dark"] {
 
 /* Base */
 html {
-    font-size: 16px;
+    font-size: clamp(14px, 1.1vw + 10px, 16px);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
@@ -207,10 +207,10 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: var(--space-md);
 }
 
-h1 { font-size: 1.5rem; }
-h2 { font-size: 1.25rem; }
-h3 { font-size: 1rem; }
-h4 { font-size: 0.875rem; }
+h1 { font-size: clamp(1.2rem, 2.2vw, 1.5rem); }
+h2 { font-size: clamp(1rem, 1.8vw, 1.25rem); }
+h3 { font-size: clamp(0.9rem, 1.4vw, 1rem); }
+h4 { font-size: clamp(0.8rem, 1.2vw, 0.875rem); }
 
 p {
     margin-bottom: var(--space-md);
@@ -229,10 +229,9 @@ a:hover {
 /* Main Content */
 .main-content {
     flex: 1;
-    padding: var(--space-lg);
-    padding-top: calc(var(--navbar-height) + var(--space-lg));
-    max-width: var(--content-max-width);
-    width: 100%;
+    padding: clamp(0.75rem, 2.8vw, var(--space-lg));
+    padding-top: calc(var(--navbar-height) + clamp(0.75rem, 2.8vw, var(--space-lg)));
+    width: min(100%, var(--content-max-width));
     margin: 0 auto;
     overflow-x: hidden;
 }
@@ -288,12 +287,32 @@ html[data-theme="dark"] .footer {
 }
 
 html:not([data-theme="dark"]) .mobile-tabbar {
-    background-color: var(--color-bg-primary);
+    background-color: var(--color-bg-secondary);
     border-top: 1px solid var(--color-border);
 }
 
 html[data-theme="dark"] .mobile-tabbar {
     background-color: var(--color-bg-secondary);
+}
+
+html:not([data-theme="dark"]) .mobile-tab {
+    background-color: var(--color-bg-card);
+    color: var(--color-text-primary);
+    border-color: var(--color-border);
+}
+
+html:not([data-theme="dark"]) .mobile-tab.active {
+    background-color: var(--color-bg-card);
+    color: var(--color-accent-primary);
+    border-color: var(--color-accent-primary);
+}
+
+html:not([data-theme="dark"]) .btn-secondary.btn-arcade {
+    box-shadow: 0 4px 0 #e4dbcf;
+}
+
+html:not([data-theme="dark"]) .btn-secondary.btn-arcade:hover:not(:disabled) {
+    box-shadow: 0 2px 0 #e4dbcf;
 }
 
 /* ========================================
@@ -308,7 +327,7 @@ html[data-theme="dark"] .mobile-tabbar {
     gap: var(--space-sm);
     padding: var(--space-sm) var(--space-lg);
     font-family: var(--font-display);
-    font-size: 0.875rem;
+    font-size: clamp(0.8rem, 1.2vw, 0.875rem);
     font-weight: 500;
     border: 2px solid transparent;
     border-radius: var(--radius-md);
@@ -366,13 +385,13 @@ html[data-theme="dark"] .mobile-tabbar {
 }
 
 .btn-lg {
-    padding: var(--space-md) var(--space-xl);
-    font-size: 1rem;
+    padding: clamp(0.7rem, 2vw, var(--space-md)) clamp(1rem, 2.6vw, var(--space-xl));
+    font-size: clamp(0.9rem, 1.4vw, 1rem);
 }
 
 .btn-sm {
-    padding: var(--space-xs) var(--space-md);
-    font-size: 0.75rem;
+    padding: clamp(0.2rem, 1vw, var(--space-xs)) clamp(0.5rem, 1.6vw, var(--space-md));
+    font-size: clamp(0.7rem, 1vw, 0.75rem);
 }
 
 .btn-block {
@@ -476,12 +495,12 @@ html[data-theme="dark"] .mobile-tabbar {
     background-color: var(--color-bg-card);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+    padding: clamp(0.75rem, 2.4vw, var(--space-lg));
 }
 
 .card-header {
-    margin-bottom: var(--space-lg);
-    padding-bottom: var(--space-md);
+    margin-bottom: clamp(0.5rem, 2vw, var(--space-lg));
+    padding-bottom: clamp(0.35rem, 1.6vw, var(--space-md));
     border-bottom: 1px solid var(--color-border);
 }
 
@@ -492,7 +511,7 @@ html[data-theme="dark"] .mobile-tabbar {
 
 .card-title {
     font-family: var(--font-display);
-    font-size: 0.875rem;
+    font-size: clamp(0.85rem, 1.4vw, 1rem);
     margin-bottom: 0;
 }
 
@@ -507,11 +526,32 @@ html[data-theme="dark"] .mobile-tabbar {
     }
 
     .card-title {
-        font-size: 0.95rem;
+        font-size: clamp(0.9rem, 3vw, 0.95rem);
     }
 
     .divider {
         margin: var(--space-md) 0;
+    }
+}
+
+@media (max-width: 1200px) {
+    .main-content {
+        padding: clamp(0.75rem, 2.6vw, 1.5rem);
+        padding-top: calc(var(--navbar-height) + clamp(0.75rem, 2.6vw, 1.5rem));
+    }
+}
+
+@media (max-width: 900px) {
+    .main-content {
+        padding: clamp(0.7rem, 2.8vw, 1.25rem);
+        padding-top: calc(var(--navbar-height) + clamp(0.7rem, 2.8vw, 1.25rem));
+    }
+}
+
+@media (max-width: 640px) {
+    .main-content {
+        padding: clamp(0.6rem, 3vw, 1rem);
+        padding-top: calc(var(--navbar-height) + clamp(0.6rem, 3vw, 1rem));
     }
 }
 

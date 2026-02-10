@@ -101,7 +101,7 @@
             renderMyRank(data.my_rank);
         } catch (error) {
             leaderboardBody.innerHTML = '<tr><td colspan="5" class="table-empty">불러오기 실패</td></tr>';
-            if (myRankBody) myRankBody.textContent = '로그인이 필요합니다.';
+            if (myRankBody) myRankBody.textContent = '로그인 시 가능합니다.';
         }
     }
 
@@ -182,7 +182,7 @@
     function renderMyRank(myRank) {
         if (!myRankBody) return;
         if (!myRank) {
-            myRankBody.textContent = '로그인 후 확인할 수 있습니다.';
+            myRankBody.textContent = '로그인 시 가능합니다.';
             return;
         }
         myRankBody.innerHTML = `
@@ -282,7 +282,7 @@
         if (!friendBtn) return;
         if (!currentUserId) {
             friendBtn.disabled = true;
-            friendBtn.textContent = '로그인 필요';
+            friendBtn.textContent = '로그인 시 가능합니다.';
             reportToggle.disabled = true;
             return;
         }
@@ -397,7 +397,7 @@
     async function sendFriendRequestTo(userId) {
         if (!userId) return;
         if (!currentUserId) {
-            Toast.error('로그인 후 이용할 수 있습니다.');
+            Toast.error('로그인 시 가능합니다.');
             return;
         }
         if (userId === currentUserId) {

@@ -557,6 +557,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Check auth status and update UI
     updateAuthUI();
+
+    // Live update user info (e.g., avatar change)
+    window.addEventListener('user:updated', (event) => {
+        const user = event.detail?.user;
+        if (user) {
+            showAuthenticatedUI(user);
+        }
+    });
 });
 
 async function updateAuthUI() {

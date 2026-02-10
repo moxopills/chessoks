@@ -1,6 +1,6 @@
 from datetime import date
 
-from django.db.models import Case, IntegerField, Q, When
+from django.db.models import Case, Count, IntegerField, Q, When
 
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -98,7 +98,33 @@ class GameQueryService:
 
     @staticmethod
     def captured_summary(game_id: int, user) -> dict:
+        """잡힌 기물 요약 조회 - captured_piece 필드 활용으로 최적화"""
         game = GameQueryService.get_game_for_user(game_id, user)
+
+        # captured_piece 필드가 있는 경우 빠른 조회 (새 필드 활용)
+        captures = (
+            Move.objects.filter(game=game, is_capture=True)
+            .exclude(captured_piece="")
+            .values_list("captured_piece", "captured_color")
+        )
+
+        captured = {"white": [], "black": []}
+        has_new_field_data = False
+
+        for piece, color in captures:
+            if piece and color:
+                captured[color].append(piece)
+                has_new_field_data = True
+
+        # 새 필드에 데이터가 없는 경우 (기존 게임) fallback
+        if not has_new_field_data:
+            captured = GameQueryService._captured_summary_fallback(game)
+
+        return captured
+
+    @staticmethod
+    def _captured_summary_fallback(game: Game) -> dict:
+        """기존 게임용 fallback - 보드 재구성 방식"""
         color_order = Case(
             When(player_color="white", then=0),
             When(player_color="black", then=1),
@@ -149,6 +175,7 @@ class GameQueryService:
         room_type: str | None,
         limit: int,
         offset: int,
+        no_count: bool = False,
     ) -> tuple[int, list[Game]]:
         queryset = (
             Game.objects.user_games(user)
@@ -206,8 +233,11 @@ class GameQueryService:
                 raise ValidationError({"room_type": "유효하지 않은 방 타입입니다."})
             queryset = queryset.filter(room__room_type=room_type)
 
+        games = list(queryset[offset : offset + limit])
+        if no_count:
+            return len(games), games
         total = queryset.count()
-        return total, list(queryset[offset : offset + limit])
+        return total, games
 
     @staticmethod
     def list_recent_for_user(user, *, limit: int) -> list[Game]:
@@ -220,25 +250,49 @@ class GameQueryService:
 
     @staticmethod
     def head_to_head_summary(user, opponent) -> dict:
-        games = (
-            Game.objects.filter(
-                Q(white_player=user, black_player=opponent)
-                | Q(white_player=opponent, black_player=user)
-            )
-            .exclude(result="playing")
-            .only("result", "white_player_id", "black_player_id")
+        """상대 전적 요약 - DB 집계 최적화"""
+        white_win_results = GameQueryService.WHITE_WIN_RESULTS
+        black_win_results = GameQueryService.BLACK_WIN_RESULTS
+        draw_results = {
+            "draw",
+            "stalemate",
+            "draw_agreement",
+            "draw_repetition",
+            "draw_fifty_move",
+            "draw_insufficient",
+        }
+
+        base_qs = Game.objects.filter(
+            Q(white_player=user, black_player=opponent)
+            | Q(white_player=opponent, black_player=user)
+        ).exclude(result="playing")
+
+        # DB 레벨 집계 (Case/When + Count 사용)
+        stats = base_qs.aggregate(
+            total=Count("id"),
+            wins=Count(
+                "id",
+                filter=(
+                    Q(white_player=user, result__in=white_win_results)
+                    | Q(black_player=user, result__in=black_win_results)
+                ),
+            ),
+            losses=Count(
+                "id",
+                filter=(
+                    Q(white_player=user, result__in=black_win_results)
+                    | Q(black_player=user, result__in=white_win_results)
+                ),
+            ),
+            draws=Count("id", filter=Q(result__in=draw_results)),
         )
-        wins = losses = draws = 0
-        for game in games:
-            outcome = GameQueryService._outcome_for_user(game, user)
-            if outcome == "win":
-                wins += 1
-            elif outcome == "loss":
-                losses += 1
-            else:
-                draws += 1
-        total = wins + losses + draws
-        return {"total": total, "wins": wins, "losses": losses, "draws": draws}
+
+        return {
+            "total": stats["total"] or 0,
+            "wins": stats["wins"] or 0,
+            "losses": stats["losses"] or 0,
+            "draws": stats["draws"] or 0,
+        }
 
     @staticmethod
     def _outcome_for_user(game: Game, user) -> str:

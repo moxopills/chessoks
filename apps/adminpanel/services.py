@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db.models import Q
 from django.utils import timezone
 
@@ -16,6 +17,10 @@ class AdminPanelService:
 
     @staticmethod
     def stats():
+        cache_key = "adminpanel:stats:v1"
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
         now = timezone.now()
         total_users = User.objects.count()
         active_users = User.objects.filter(is_active=True).count()
@@ -24,7 +29,7 @@ class AdminPanelService:
         suspended_users = suspended_qs.count()
         muted_users = muted_qs.count()
         pending_reports = Report.objects.filter(status="pending").count()
-        return {
+        payload = {
             "total_users": total_users,
             "active_users": active_users,
             "suspended_users": suspended_users,
@@ -47,6 +52,8 @@ class AdminPanelService:
                 )[:20]
             ),
         }
+        cache.set(cache_key, payload, timeout=10)
+        return payload
 
     @staticmethod
     def list_reports(*, status: str | None, limit: int, offset: int):

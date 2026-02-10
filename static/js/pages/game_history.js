@@ -22,7 +22,7 @@
         try {
             currentUser = await API.get('/accounts/me/');
         } catch (error) {
-            Toast.error('로그인이 필요합니다.');
+            Toast.error('로그인 시 가능합니다.');
             window.location.href = '/login/';
             return;
         }
@@ -90,6 +90,7 @@
             if (resultSelect.value) params.result = resultSelect.value;
             if (startInput.value) params.start_date = startInput.value;
             if (endInput.value) params.end_date = endInput.value;
+            // 페이지네이션 필요 시 no_count 미사용 (정확한 total count 필요)
             const data = await API.get('/chess/games/history/', params);
             totalCount = data.count || 0;
             renderHistory(data.results || []);

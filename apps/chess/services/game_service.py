@@ -121,6 +121,8 @@ class GameService:
             is_checkmate=is_checkmate,
             is_castling=is_castling,
             is_en_passant=is_en_passant,
+            captured_piece=captured_letter or "",  # 잡힌 기물 저장 (성능 최적화)
+            captured_color=captured_color or "",  # 잡힌 기물 색상 저장
             promotion=GameService._promotion_symbol(move),
             fen_after_move=new_fen,
             time_spent=time_spent,
