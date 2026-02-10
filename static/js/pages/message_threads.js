@@ -9,7 +9,7 @@
         try {
             await API.get('/accounts/me/');
         } catch {
-            Toast.error('로그인이 필요합니다.');
+            Toast.error('로그인 시 가능합니다.');
             window.location.href = '/login/';
             return;
         }

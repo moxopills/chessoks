@@ -17,12 +17,31 @@ class UserStatsSerializer(serializers.Serializer):
     win_rate = serializers.FloatField(read_only=True)
 
 
+def _avatar_with_cache_bust(user) -> str | None:
+    if user is None:
+        return None
+    if isinstance(user, dict):
+        url = user.get("avatar_url")
+        updated_at = user.get("updated_at")
+    else:
+        url = getattr(user, "avatar_url", None)
+        updated_at = getattr(user, "updated_at", None)
+    if not url:
+        return None
+    if not updated_at:
+        return url
+    version = int(updated_at.timestamp())
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}v={version}"
+
+
 class UserSerializer(serializers.ModelSerializer):
     """사용자 정보 조회용 Serializer"""
 
     stats = UserStatsSerializer(read_only=True)
     is_muted = serializers.SerializerMethodField()
     is_suspended = serializers.SerializerMethodField()
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -52,11 +71,15 @@ class UserSerializer(serializers.ModelSerializer):
     def get_is_suspended(self, obj):
         return obj.is_suspended
 
+    def get_avatar_url(self, obj):
+        return _avatar_with_cache_bust(obj)
+
 
 class PublicUserSerializer(serializers.ModelSerializer):
     """공개 사용자 정보 Serializer (이메일 제외)"""
 
     stats = UserStatsSerializer(read_only=True)
+    avatar_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -69,13 +92,16 @@ class PublicUserSerializer(serializers.ModelSerializer):
             "stats",
         )
 
+    def get_avatar_url(self, obj):
+        return _avatar_with_cache_bust(obj)
+
 
 class LeaderboardEntrySerializer(serializers.Serializer):
     """랭킹 보드 항목"""
 
     id = serializers.IntegerField(read_only=True)
     nickname = serializers.CharField(read_only=True)
-    avatar_url = serializers.URLField(read_only=True, allow_null=True)
+    avatar_url = serializers.SerializerMethodField()
     rating = serializers.IntegerField(source="stats.rating", read_only=True)
     games_played = serializers.IntegerField(source="stats.games_played", read_only=True)
     games_won = serializers.IntegerField(source="stats.games_won", read_only=True)
@@ -84,13 +110,16 @@ class LeaderboardEntrySerializer(serializers.Serializer):
     rank_tier = serializers.CharField(source="stats.rank_tier", read_only=True)
     rank = serializers.IntegerField(read_only=True)
 
+    def get_avatar_url(self, obj):
+        return _avatar_with_cache_bust(obj)
+
 
 class MyRankSerializer(serializers.Serializer):
     """내 랭킹 정보 (페이지네이션 응답 내 포함용)"""
 
     id = serializers.IntegerField()
     nickname = serializers.CharField()
-    avatar_url = serializers.URLField(allow_null=True)
+    avatar_url = serializers.SerializerMethodField()
     rating = serializers.IntegerField()
     games_played = serializers.IntegerField()
     games_won = serializers.IntegerField()
@@ -98,6 +127,9 @@ class MyRankSerializer(serializers.Serializer):
     games_lost = serializers.IntegerField()
     rank_tier = serializers.CharField()
     rank = serializers.IntegerField()
+
+    def get_avatar_url(self, obj):
+        return _avatar_with_cache_bust(obj)
 
 
 class LeaderboardResponseSerializer(serializers.Serializer):

@@ -54,6 +54,10 @@ const API = (function() {
             }
         }
 
+        if (response.status === 401) {
+            errorData = { ...errorData, message: '로그인 시 가능합니다.' };
+        }
+
         const error = new Error(errorData.message || `HTTP ${response.status}`);
         error.status = response.status;
         error.data = errorData;
