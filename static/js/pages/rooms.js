@@ -63,6 +63,8 @@
             let rooms = data.results || [];
             if (currentView === 'spectate') {
                 rooms = rooms.filter(room => room.allow_spectators && room.status === 'playing');
+            } else {
+                rooms = rooms.filter(room => room.status !== 'playing');
             }
             totalCount = currentView === 'spectate' ? rooms.length : (data.count || 0);
             renderRooms(rooms);
