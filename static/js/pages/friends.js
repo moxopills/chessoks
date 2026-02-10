@@ -188,15 +188,24 @@
         }).join('');
 
         friendListEl.querySelectorAll('.friend-item').forEach((item) => {
-            item.addEventListener('click', () => openProfileDrawer(parseInt(item.dataset.userId, 10)));
+            const userId = parseInt(item.dataset.userId, 10);
+            if (isTouchDevice) {
+                Utils.bindDoubleTap(item, {
+                    single: (event) => {
+                        event.preventDefault();
+                        openContextMenu(event, userId, { isFriend: true });
+                    },
+                    double: (event) => {
+                        event.preventDefault();
+                        openProfileDrawer(userId);
+                    }
+                });
+                return;
+            }
+            item.addEventListener('click', () => openProfileDrawer(userId));
             item.addEventListener('contextmenu', (event) => {
                 event.preventDefault();
-                openContextMenu(event, parseInt(item.dataset.userId, 10), { isFriend: true });
-            });
-            item.addEventListener('click', (event) => {
-                if (!isTouchDevice) return;
-                event.preventDefault();
-                openContextMenu(event, parseInt(item.dataset.userId, 10), { isFriend: true });
+                openContextMenu(event, userId, { isFriend: true });
             });
         });
     }
@@ -258,15 +267,24 @@
         });
 
         container.querySelectorAll('.friend-meta').forEach((meta) => {
-            meta.addEventListener('click', () => openProfileDrawer(parseInt(meta.dataset.userId, 10)));
+            const userId = parseInt(meta.dataset.userId, 10);
+            if (isTouchDevice) {
+                Utils.bindDoubleTap(meta, {
+                    single: (event) => {
+                        event.preventDefault();
+                        openContextMenu(event, userId, { isFriend: false });
+                    },
+                    double: (event) => {
+                        event.preventDefault();
+                        openProfileDrawer(userId);
+                    }
+                });
+                return;
+            }
+            meta.addEventListener('click', () => openProfileDrawer(userId));
             meta.addEventListener('contextmenu', (event) => {
                 event.preventDefault();
-                openContextMenu(event, parseInt(meta.dataset.userId, 10), { isFriend: false });
-            });
-            meta.addEventListener('click', (event) => {
-                if (!isTouchDevice) return;
-                event.preventDefault();
-                openContextMenu(event, parseInt(meta.dataset.userId, 10), { isFriend: false });
+                openContextMenu(event, userId, { isFriend: false });
             });
         });
     }
@@ -389,23 +407,27 @@
         });
 
         searchResultsEl.querySelectorAll('.search-item .friend-meta').forEach((meta) => {
+            const userId = parseInt(meta.closest('.search-item').dataset.userId, 10);
+            const isFriend = friendIds.has(userId);
+            const isPending = outgoingRequestUserIds.has(userId);
+            if (isTouchDevice) {
+                Utils.bindDoubleTap(meta, {
+                    single: (event) => {
+                        event.preventDefault();
+                        openContextMenu(event, userId, { isFriend, isPending });
+                    },
+                    double: (event) => {
+                        event.preventDefault();
+                        openProfileDrawer(userId);
+                    }
+                });
+                return;
+            }
             meta.addEventListener('click', () => {
-                const userId = parseInt(meta.closest('.search-item').dataset.userId, 10);
                 openProfileDrawer(userId);
             });
             meta.addEventListener('contextmenu', (event) => {
                 event.preventDefault();
-                const userId = parseInt(meta.closest('.search-item').dataset.userId, 10);
-                const isFriend = friendIds.has(userId);
-                const isPending = outgoingRequestUserIds.has(userId);
-                openContextMenu(event, userId, { isFriend, isPending });
-            });
-            meta.addEventListener('click', (event) => {
-                if (!isTouchDevice) return;
-                event.preventDefault();
-                const userId = parseInt(meta.closest('.search-item').dataset.userId, 10);
-                const isFriend = friendIds.has(userId);
-                const isPending = outgoingRequestUserIds.has(userId);
                 openContextMenu(event, userId, { isFriend, isPending });
             });
         });
