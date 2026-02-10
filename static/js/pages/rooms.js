@@ -53,7 +53,8 @@
 
             const params = {
                 limit: pageSize,
-                offset: (currentPage - 1) * pageSize
+                offset: (currentPage - 1) * pageSize,
+                no_count: 1  // 성능 최적화: count 쿼리 생략
             };
 
             const status = currentView === 'spectate' ? 'playing' : filterStatus.value;
@@ -66,7 +67,8 @@
             } else {
                 rooms = rooms.filter(room => room.status !== 'playing');
             }
-            totalCount = currentView === 'spectate' ? rooms.length : (data.count || 0);
+            // no_count 사용 시 count는 현재 페이지 결과 수만 반환됨
+            totalCount = currentView === 'spectate' ? rooms.length : (data.count || rooms.length);
             renderRooms(rooms);
             renderPagination();
         } catch (error) {

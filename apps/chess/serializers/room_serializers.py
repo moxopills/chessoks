@@ -25,9 +25,8 @@ class RoomSerializer(serializers.Serializer):
     finished_at = serializers.DateTimeField(read_only=True, allow_null=True)
 
     def get_current_game_id(self, room):
-        annotated = getattr(room, "current_game_id_annotated", None)
-        if annotated:
-            return annotated
+        if hasattr(room, "current_game_id_annotated"):
+            return room.current_game_id_annotated
         game = room.games.filter(result="playing").only("id", "created_at").first()
         if game:
             return game.id

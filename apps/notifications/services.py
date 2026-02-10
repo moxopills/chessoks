@@ -15,10 +15,15 @@ class NotificationService:
     logger = logging.getLogger(__name__)
 
     @staticmethod
-    def list_notifications(user, *, limit: int, offset: int) -> tuple[int, list[Notification]]:
+    def list_notifications(
+        user, *, limit: int, offset: int, no_count: bool = False
+    ) -> tuple[int, list[Notification]]:
         queryset = Notification.objects.filter(user=user).order_by("-created_at")
+        items = list(queryset[offset : offset + limit])
+        if no_count:
+            return len(items), items
         total = queryset.count()
-        return total, list(queryset[offset : offset + limit])
+        return total, items
 
     @staticmethod
     def count_unread(user) -> int:

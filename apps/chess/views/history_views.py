@@ -26,6 +26,7 @@ class GameHistoryView(APIView):
         end_date = request.query_params.get("end_date")
         result = request.query_params.get("result")
         room_type = request.query_params.get("room_type")
+        no_count = request.query_params.get("no_count") in ("1", "true", "True")
 
         total, games = GameQueryService.list_history(
             request.user,
@@ -36,6 +37,7 @@ class GameHistoryView(APIView):
             room_type=room_type,
             limit=limit,
             offset=offset,
+            no_count=no_count,
         )
         data = GameHistorySerializer(games, many=True).data
         return Response({"count": total, "results": data})

@@ -5,6 +5,9 @@ from django.db import models
 
 from .game import Game
 
+# 모듈 레벨에서 정규식 컴파일 (clean() 호출 시마다 컴파일하지 않도록)
+SQUARE_PATTERN = re.compile(r"^[a-h][1-8]$")
+
 
 class Move(models.Model):
     """체스 착수 기록 모델
@@ -75,6 +78,28 @@ class Move(models.Model):
     # 앙파상 여부
     is_en_passant = models.BooleanField(default=False, help_text="앙파상 착수인지 여부")
 
+    # 잡은 기물 (captured_summary 최적화용)
+    captured_piece = models.CharField(
+        max_length=1,
+        blank=True,
+        choices=[
+            ("P", "Pawn"),
+            ("N", "Knight"),
+            ("B", "Bishop"),
+            ("R", "Rook"),
+            ("Q", "Queen"),
+        ],
+        help_text="잡은 기물 (빈 값이면 잡은 기물 없음)",
+    )
+
+    # 잡은 기물의 색상
+    captured_color = models.CharField(
+        max_length=5,
+        blank=True,
+        choices=[("white", "백"), ("black", "흑")],
+        help_text="잡은 기물의 색상",
+    )
+
     # 프로모션 여부 및 승진 기물
     promotion = models.CharField(
         max_length=1,
@@ -105,6 +130,7 @@ class Move(models.Model):
         indexes = [
             models.Index(fields=["game", "move_number"]),
             models.Index(fields=["game", "created_at"]),
+            models.Index(fields=["game", "is_capture"]),  # captured_summary 조회 최적화
         ]
         constraints = [
             models.UniqueConstraint(
@@ -124,11 +150,10 @@ class Move(models.Model):
         """모델 검증"""
         super().clean()
 
-        # 체스 좌표 검증 (a1-h8)
-        square_pattern = re.compile(r"^[a-h][1-8]$")
-        if not square_pattern.match(self.from_square):
+        # 체스 좌표 검증 (a1-h8) - 모듈 레벨에서 컴파일된 정규식 사용
+        if not SQUARE_PATTERN.match(self.from_square):
             raise ValidationError(f"잘못된 출발 좌표: {self.from_square}")
-        if not square_pattern.match(self.to_square):
+        if not SQUARE_PATTERN.match(self.to_square):
             raise ValidationError(f"잘못된 도착 좌표: {self.to_square}")
 
         # 체크와 체크메이트는 동시에 불가

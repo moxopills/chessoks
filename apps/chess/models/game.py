@@ -137,6 +137,14 @@ class Game(models.Model):
         indexes = [
             models.Index(fields=["result"]),
             models.Index(fields=["white_player", "black_player"]),
+            # 전적 조회 최적화 (list_history)
+            models.Index(fields=["result", "-created_at"]),
+            models.Index(fields=["room", "result"]),
+            # 플레이어별 전적 조회 최적화
+            models.Index(fields=["white_player", "-created_at"]),
+            models.Index(fields=["black_player", "-created_at"]),
+            # head_to_head 조회 최적화
+            models.Index(fields=["white_player", "black_player", "result"]),
         ]
         constraints = [
             models.CheckConstraint(

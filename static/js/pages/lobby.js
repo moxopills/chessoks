@@ -47,6 +47,7 @@
     let isUserSearchMode = false;
     let lastRoomsSignature = null;
     let lastWaitingSignature = '';
+    let waitingTick = 0;
 
     // 초기화
     init();
@@ -68,7 +69,7 @@
      */
     async function loadRooms() {
         try {
-            const data = await API.get('/chess/rooms/', { status: 'waiting', limit: 5 });
+            const data = await API.get('/chess/rooms/', { status: 'waiting', limit: 5, no_count: 1 });
             const rawRooms = Array.isArray(data?.results)
                 ? data.results
                 : (Array.isArray(data) ? data : []);
@@ -94,6 +95,10 @@
 
     async function loadWaitingRoom() {
         if (!waitingRoomCard) return;
+        if (!currentUserId) {
+            waitingRoomCard.classList.add('hidden');
+            return;
+        }
         try {
             const data = await API.get('/chess/rooms/waiting/');
             const room = data.room;
@@ -157,7 +162,10 @@
         roomRefreshInterval = setInterval(() => {
             if (document.hidden) return;
             loadRooms();
-            loadWaitingRoom();
+            waitingTick += 1;
+            if (isMatching || waitingTick % 3 === 0) {
+                loadWaitingRoom();
+            }
         }, 5000);
 
         window.addEventListener('beforeunload', () => {

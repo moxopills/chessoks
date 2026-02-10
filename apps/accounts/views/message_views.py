@@ -53,7 +53,10 @@ class DirectMessageView(APIView):
         offset = parse_int(
             request.query_params.get("offset"), default=0, min_value=0, max_value=10_000
         )
-        total, messages = MessageService.list_messages(request.user, user_id, limit, offset)
+        no_count = request.query_params.get("no_count") in ("1", "true", "True")
+        total, messages = MessageService.list_messages(
+            request.user, user_id, limit, offset, no_count=no_count
+        )
         return Response(
             {"count": total, "results": DirectMessageSerializer(messages, many=True).data}
         )
@@ -82,7 +85,8 @@ class DirectMessageThreadView(APIView):
         offset = parse_int(
             request.query_params.get("offset"), default=0, min_value=0, max_value=10_000
         )
-        total, threads = MessageService.list_threads(request.user, limit, offset)
+        no_count = request.query_params.get("no_count") in ("1", "true", "True")
+        total, threads = MessageService.list_threads(request.user, limit, offset, no_count=no_count)
         results = []
         for thread in threads:
             other_user = thread.user2 if thread.user1_id == request.user.id else thread.user1

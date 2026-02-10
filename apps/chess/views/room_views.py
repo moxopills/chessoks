@@ -31,6 +31,7 @@ class RoomListView(APIView):
         )
         room_type = request.query_params.get("room_type")
         status = request.query_params.get("status")
+        no_count = request.query_params.get("no_count") in ("1", "true", "True")
 
         total, rooms = RoomQueryService.list_rooms(
             user=request.user,
@@ -38,6 +39,7 @@ class RoomListView(APIView):
             status=status,
             limit=limit,
             offset=offset,
+            no_count=no_count,
         )
         data = RoomSerializer(rooms, many=True).data
         return Response({"count": total, "results": data})

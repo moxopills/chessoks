@@ -284,11 +284,11 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     def _mark_disconnect(self) -> None:
         from django.core.cache import cache
 
-        room = Room.objects.filter(pk=self.room_id).prefetch_related("games").first()
-        if not room:
-            return
+        from apps.chess.models import Game
+
+        # prefetch_related 대신 직접 Game 쿼리
         game = (
-            room.games.filter(result="playing")
+            Game.objects.filter(room_id=self.room_id, result="playing")
             .only("id", "white_player_id", "black_player_id")
             .first()
         )
@@ -312,11 +312,11 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     def _clear_disconnect_marker(self) -> None:
         from django.core.cache import cache
 
-        room = Room.objects.filter(pk=self.room_id).prefetch_related("games").first()
-        if not room:
-            return
+        from apps.chess.models import Game
+
+        # prefetch_related 대신 직접 Game 쿼리
         game = (
-            room.games.filter(result="playing")
+            Game.objects.filter(room_id=self.room_id, result="playing")
             .only("id", "white_player_id", "black_player_id")
             .first()
         )

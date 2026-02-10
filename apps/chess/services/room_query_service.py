@@ -13,7 +13,13 @@ class RoomQueryService:
 
     @staticmethod
     def list_rooms(
-        *, user, room_type: str | None, status: str | None, limit: int, offset: int
+        *,
+        user,
+        room_type: str | None,
+        status: str | None,
+        limit: int,
+        offset: int,
+        no_count: bool = False,
     ) -> tuple[int, list[Room]]:
         playing_game_subquery = Subquery(
             Game.objects.filter(room_id=OuterRef("pk"), result="playing")
@@ -43,8 +49,11 @@ class RoomQueryService:
         else:
             queryset = queryset.exclude(status="finished")
 
+        rooms = list(queryset[offset : offset + limit])
+        if no_count:
+            return len(rooms), rooms
         total = queryset.count()
-        return total, list(queryset[offset : offset + limit])
+        return total, rooms
 
     @staticmethod
     def get_room(room_id: int, user) -> Room:

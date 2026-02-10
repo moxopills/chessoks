@@ -24,8 +24,9 @@ class NotificationListView(APIView):
         offset = parse_int(
             request.query_params.get("offset"), default=0, min_value=0, max_value=10_000
         )
+        no_count = request.query_params.get("no_count") in ("1", "true", "True")
         total, items = NotificationService.list_notifications(
-            request.user, limit=limit, offset=offset
+            request.user, limit=limit, offset=offset, no_count=no_count
         )
         return Response({"count": total, "results": NotificationSerializer(items, many=True).data})
 
