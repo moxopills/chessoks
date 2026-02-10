@@ -81,7 +81,7 @@
             </div>
             <div class="chat-container" id="lobby-chat">
                 <div class="chat-messages" id="chat-messages">
-                    <div class="chat-notice">로그인 후 채팅에 참여할 수 있습니다.</div>
+                    <div class="chat-notice">로그인 시 가능합니다.</div>
                 </div>
                 <form class="chat-form" id="chat-form">
                     <input
@@ -174,7 +174,7 @@
 .hero-actions {
     display: flex;
     justify-content: center;
-    gap: var(--space-md);
+    gap: clamp(0.5rem, 2vw, var(--space-md));
     flex-wrap: wrap;
 }
 
@@ -208,13 +208,13 @@
     background-color: var(--color-bg-card);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+    padding: clamp(0.75rem, 2.4vw, var(--space-lg));
     overflow: hidden;
 }
 
 @media (max-width: 768px) {
     .lobby-section {
-        padding: var(--space-md);
+        padding: clamp(0.75rem, 2.4vw, var(--space-md));
     }
 }
 

@@ -121,7 +121,7 @@
 
 .page-title {
     font-family: var(--font-display);
-    font-size: 1.1rem;
+    font-size: clamp(0.95rem, 1.6vw, 1.2rem);
     letter-spacing: -0.02em;
     margin: 0;
 }
@@ -142,8 +142,8 @@
     background: var(--color-bg-secondary);
     color: var(--color-text-primary);
     border-radius: 10px;
-    padding: 10px 14px;
-    font-size: 0.9rem;
+    padding: clamp(8px, 1.6vw, 12px) clamp(12px, 2.6vw, 16px);
+    font-size: clamp(0.8rem, 1.2vw, 0.95rem);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -168,7 +168,7 @@ html:not([data-theme="dark"]) .rooms-tabs {
 html:not([data-theme="dark"]) .tab-btn {
     background: #fdf7ef;
     border-color: #d9c7b2;
-    color: #2f2620;
+    color: #5f554a;
 }
 
 html:not([data-theme="dark"]) .tab-btn.active {
@@ -179,7 +179,7 @@ html:not([data-theme="dark"]) .tab-btn.active {
 }
 
 html:not([data-theme="dark"]) .tab-btn:not(.active) {
-    color: #2f2620;
+    color: #5f554a;
 }
 
 #create-room-btn {
@@ -204,7 +204,7 @@ html:not([data-theme="dark"]) .tab-btn:not(.active) {
 }
 
 .filter-label {
-    font-size: 0.75rem;
+    font-size: clamp(0.7rem, 1.1vw, 0.8rem);
     color: var(--color-text-secondary);
 }
 

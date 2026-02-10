@@ -245,6 +245,9 @@
             // 비로그인 상태 - 채팅 비활성화
             chatInput.disabled = true;
             chatForm.querySelector('button').disabled = true;
+            if (chatMessages) {
+                chatMessages.innerHTML = '<div class="chat-notice">로그인 시 가능합니다.</div>';
+            }
         }
     }
 
@@ -709,7 +712,7 @@
 
     async function sendFriendRequest(targetId) {
         if (!currentUserId) {
-            Toast.error('로그인 후 이용할 수 있습니다.');
+            Toast.error('로그인 시 가능합니다.');
             return;
         }
         if (targetId === currentUserId) {
@@ -731,7 +734,7 @@
 
     async function openReportForUser(targetId) {
         if (!currentUserId) {
-            Toast.error('로그인 후 이용할 수 있습니다.');
+            Toast.error('로그인 시 가능합니다.');
             return;
         }
         if (targetId === currentUserId) {

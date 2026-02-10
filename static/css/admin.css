@@ -14,7 +14,7 @@
 
 .admin-title {
     font-family: var(--font-display);
-    font-size: 1rem;
+    font-size: clamp(0.9rem, 1.6vw, 1.1rem);
 }
 
 .admin-grid {
@@ -27,12 +27,12 @@
     background-color: var(--color-bg-card);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+    padding: clamp(0.75rem, 2.4vw, var(--space-lg));
 }
 
 .admin-panel h2 {
     font-family: var(--font-display);
-    font-size: 0.75rem;
+    font-size: clamp(0.7rem, 1.1vw, 0.85rem);
     margin-bottom: var(--space-md);
 }
 
@@ -51,20 +51,20 @@
 }
 
 .stat-label {
-    font-size: 0.75rem;
+    font-size: clamp(0.7rem, 1.1vw, 0.85rem);
     color: var(--color-text-secondary);
 }
 
 .stat-value {
     font-family: var(--font-display);
-    font-size: 1rem;
+    font-size: clamp(0.9rem, 1.6vw, 1.1rem);
     margin-top: var(--space-xs);
 }
 
 .admin-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.8rem;
+    font-size: clamp(0.75rem, 1.1vw, 0.9rem);
 }
 
 .admin-table-wrap {

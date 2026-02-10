@@ -314,7 +314,7 @@
 
     async function searchUsers() {
         if (!currentUserId) {
-            Toast.error('로그인 후 이용할 수 있습니다.');
+            Toast.error('로그인 시 가능합니다.');
             return;
         }
         const query = searchInput.value.trim();
@@ -596,7 +596,7 @@
         if (!friendBtn) return;
         if (!currentUserId) {
             friendBtn.disabled = true;
-            friendBtn.textContent = '로그인 필요';
+            friendBtn.textContent = '로그인 시 가능합니다.';
             reportToggle.disabled = true;
             return;
         }
