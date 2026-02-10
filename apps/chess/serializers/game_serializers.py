@@ -1,12 +1,29 @@
 from rest_framework import serializers
 
 
+def _avatar_with_cache_bust(user) -> str | None:
+    if user is None:
+        return None
+    url = getattr(user, "avatar_url", None)
+    if not url:
+        return None
+    updated_at = getattr(user, "updated_at", None)
+    if not updated_at:
+        return url
+    version = int(updated_at.timestamp())
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}v={version}"
+
+
 class BaseUserSerializer(serializers.Serializer):
     """사용자 기본 정보 (관전자 등)"""
 
     id = serializers.IntegerField(read_only=True)
     nickname = serializers.CharField(read_only=True)
-    avatar_url = serializers.URLField(read_only=True, allow_null=True)
+    avatar_url = serializers.SerializerMethodField()
+
+    def get_avatar_url(self, obj):
+        return _avatar_with_cache_bust(obj)
 
 
 class PlayerSerializer(BaseUserSerializer):

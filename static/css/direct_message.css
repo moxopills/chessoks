@@ -16,11 +16,11 @@
 }
 
 .dm-title {
-    font-size: 1.1rem;
+    font-size: clamp(0.95rem, 1.6vw, 1.15rem);
 }
 
 .dm-subtitle {
-    font-size: 0.8rem;
+    font-size: clamp(0.75rem, 1.2vw, 0.9rem);
     color: var(--color-text-secondary);
 }
 
@@ -94,7 +94,7 @@
 .dm-message-text {
     padding: var(--space-sm) var(--space-md);
     border-radius: var(--radius-md);
-    font-size: 0.85rem;
+    font-size: clamp(0.78rem, 1.2vw, 0.9rem);
     line-height: 1.4;
     word-break: break-word;
 }
@@ -110,7 +110,7 @@
 }
 
 .dm-message-time {
-    font-size: 0.65rem;
+    font-size: clamp(0.6rem, 1vw, 0.75rem);
     color: var(--color-text-muted);
     margin-top: 4px;
 }
