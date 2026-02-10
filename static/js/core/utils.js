@@ -192,6 +192,45 @@ const Utils = (function() {
         return icons[tier] || '♟️';
     }
 
+    /**
+     * 더블 탭 바인딩 (모바일용)
+     */
+    function bindDoubleTap(element, { single, double, threshold = 260 } = {}) {
+        if (!element) return () => {};
+        let lastTap = 0;
+        let timer = null;
+        const handler = (event) => {
+            const now = Date.now();
+            if (now - lastTap < threshold) {
+                lastTap = 0;
+                if (timer) {
+                    clearTimeout(timer);
+                    timer = null;
+                }
+                if (double) double(event);
+                return;
+            }
+            lastTap = now;
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+                lastTap = 0;
+                timer = null;
+                if (single) single(event);
+            }, threshold);
+        };
+        element.addEventListener('touchend', handler);
+        element.addEventListener('touchcancel', () => {
+            lastTap = 0;
+            if (timer) {
+                clearTimeout(timer);
+                timer = null;
+            }
+        });
+        return () => {
+            element.removeEventListener('touchend', handler);
+        };
+    }
+
     const Sounds = (() => {
         let ctx = null;
 
@@ -328,6 +367,7 @@ const Utils = (function() {
         calculateWinRate,
         getTierColor,
         getTierIcon,
+        bindDoubleTap,
         ReportModal,
         Sounds,
     };
