@@ -94,7 +94,7 @@
     async function loadLeaderboard(page = currentPage) {
         currentPage = page;
         try {
-            const data = await API.get('/accounts/leaderboard/', { page, page_size: 20 });
+            const data = await API.get('/accounts/leaderboard/', { page, page_size: 9 });
             totalPages = data.total_pages || 1;
             renderRows(data.results || [], data.my_rank);
             renderPagination();
