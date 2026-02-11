@@ -81,10 +81,13 @@ class GameQueryService:
 
         if not getattr(user, "is_authenticated", False):
             return []
-        if user.id not in {game.white_player_id, game.black_player_id}:
+        user_id = getattr(user, "pk", None)
+        if user_id is None:
+            return []
+        if user_id not in {game.white_player_id, game.black_player_id}:
             return []
 
-        player_color = "white" if user.id == game.white_player_id else "black"
+        player_color = "white" if user_id == game.white_player_id else "black"
         board = chess.Board(game.fen)
         expected = chess.WHITE if player_color == "white" else chess.BLACK
         if board.turn != expected:
