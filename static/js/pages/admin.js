@@ -23,6 +23,17 @@
     const noticeModalClose = document.getElementById('admin-notice-modal-close');
     const adminTabbar = document.getElementById('admin-tabbar');
     const adminTabs = adminTabbar ? adminTabbar.querySelectorAll('.mobile-tab') : [];
+    const aiCurrentSettings = document.getElementById('ai-current-settings');
+    const aiEasyDepth = document.getElementById('ai-easy-depth');
+    const aiEasyRandom = document.getElementById('ai-easy-random');
+    const aiEasyDelay = document.getElementById('ai-easy-delay');
+    const aiMediumDepth = document.getElementById('ai-medium-depth');
+    const aiMediumRandom = document.getElementById('ai-medium-random');
+    const aiMediumDelay = document.getElementById('ai-medium-delay');
+    const aiHardDepth = document.getElementById('ai-hard-depth');
+    const aiHardRandom = document.getElementById('ai-hard-random');
+    const aiHardDelay = document.getElementById('ai-hard-delay');
+    const aiSettingsSave = document.getElementById('ai-settings-save');
 
     const suspendBtn = document.getElementById('suspend-btn');
     const unsuspendBtn = document.getElementById('unsuspend-btn');
@@ -39,6 +50,7 @@
         await loadStats();
         await loadUsers();
         await loadReports();
+        await loadAiSettings();
         setupActions();
         setupMobileTabs();
     }
@@ -213,6 +225,37 @@
 
     function setupActions() {
         searchBtn.addEventListener('click', () => loadUsers(searchInput.value.trim()));
+        if (aiSettingsSave) {
+            aiSettingsSave.addEventListener('click', async () => {
+                try {
+                    const items = [
+                        {
+                            level: 'easy',
+                            depth: parseInt(aiEasyDepth?.value || 0, 10),
+                            randomness: parseInt(aiEasyRandom?.value || 0, 10),
+                            delay_ms: parseInt(aiEasyDelay?.value || 0, 10),
+                        },
+                        {
+                            level: 'medium',
+                            depth: parseInt(aiMediumDepth?.value || 0, 10),
+                            randomness: parseInt(aiMediumRandom?.value || 0, 10),
+                            delay_ms: parseInt(aiMediumDelay?.value || 0, 10),
+                        },
+                        {
+                            level: 'hard',
+                            depth: parseInt(aiHardDepth?.value || 0, 10),
+                            randomness: parseInt(aiHardRandom?.value || 0, 10),
+                            delay_ms: parseInt(aiHardDelay?.value || 0, 10),
+                        },
+                    ];
+                    await API.post('/admin/ai-settings/', { items });
+                    Toast.success('AI 설정이 저장되었습니다.');
+                    await loadAiSettings();
+                } catch (error) {
+                    Toast.error(error.data?.message || 'AI 설정 저장 실패');
+                }
+            });
+        }
 
         suspendBtn.addEventListener('click', async () => {
             if (!selectedUser) return Toast.error('유저를 선택하세요.');
@@ -290,6 +333,35 @@
         noticeModal?.addEventListener('click', (event) => {
             if (event.target === noticeModal) hideNoticeModal();
         });
+    }
+
+    async function loadAiSettings() {
+        if (!aiCurrentSettings) return;
+        try {
+            const data = await API.get('/admin/ai-settings/');
+            const byLevel = {};
+            data.forEach((item) => {
+                byLevel[item.level] = item;
+            });
+            if (aiEasyDepth) aiEasyDepth.value = byLevel.easy?.depth ?? 0;
+            if (aiEasyRandom) aiEasyRandom.value = byLevel.easy?.randomness ?? 4;
+            if (aiEasyDelay) aiEasyDelay.value = byLevel.easy?.delay_ms ?? 1200;
+            if (aiMediumDepth) aiMediumDepth.value = byLevel.medium?.depth ?? 1;
+            if (aiMediumRandom) aiMediumRandom.value = byLevel.medium?.randomness ?? 4;
+            if (aiMediumDelay) aiMediumDelay.value = byLevel.medium?.delay_ms ?? 900;
+            if (aiHardDepth) aiHardDepth.value = byLevel.hard?.depth ?? 2;
+            if (aiHardRandom) aiHardRandom.value = byLevel.hard?.randomness ?? 2;
+            if (aiHardDelay) aiHardDelay.value = byLevel.hard?.delay_ms ?? 700;
+
+            const summary = [
+                `쉬움(depth=${byLevel.easy?.depth ?? 0}, rand=${byLevel.easy?.randomness ?? 4}, delay=${byLevel.easy?.delay_ms ?? 1200}ms)`,
+                `중간(depth=${byLevel.medium?.depth ?? 1}, rand=${byLevel.medium?.randomness ?? 4}, delay=${byLevel.medium?.delay_ms ?? 900}ms)`,
+                `어려움(depth=${byLevel.hard?.depth ?? 2}, rand=${byLevel.hard?.randomness ?? 2}, delay=${byLevel.hard?.delay_ms ?? 700}ms)`,
+            ].join(' · ');
+            aiCurrentSettings.textContent = `현재 설정: ${summary}`;
+        } catch (error) {
+            aiCurrentSettings.textContent = '현재 설정을 불러오지 못했습니다.';
+        }
     }
 
     function showNoticeModal(message) {

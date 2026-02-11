@@ -28,9 +28,9 @@ class AiService:
     }
     ROOM_TYPE_TO_LEVEL = {v: k for k, v in LEVEL_TO_ROOM_TYPE.items()}
     LEVEL_CONFIG = {
-        "easy": {"depth": 0, "randomness": 8},
-        "medium": {"depth": 1, "randomness": 4},
-        "hard": {"depth": 2, "randomness": 2},
+        "easy": {"depth": 0, "randomness": 8, "delay_ms": 1200},
+        "medium": {"depth": 1, "randomness": 4, "delay_ms": 900},
+        "hard": {"depth": 2, "randomness": 2, "delay_ms": 700},
     }
     CACHE_KEY = "ai:level_config:v1"
 
@@ -50,12 +50,11 @@ class AiService:
 
     @classmethod
     def get_ai_user(cls, level: str) -> User:
-        level = cls._normalize_level(level)
-        cached = cls._AI_USER_CACHE.get(level)
+        cached = cls._AI_USER_CACHE.get("single")
         if cached:
             return cached
-        email = f"ai_{level}@chessok.local"
-        nickname = f"AI-{level}"
+        email = "ai@chessok.local"
+        nickname = "AI"
         user, created = User.objects.get_or_create(
             email=email,
             defaults={
@@ -67,7 +66,7 @@ class AiService:
         if created:
             user.set_unusable_password()
             user.save(update_fields=["password"])
-        cls._AI_USER_CACHE[level] = user
+        cls._AI_USER_CACHE["single"] = user
         return user
 
     @staticmethod
@@ -96,6 +95,12 @@ class AiService:
             randomness=config["randomness"],
             ai_color=ai_color,
         )
+
+    @classmethod
+    def get_delay_ms(cls, level: str) -> int:
+        level = cls._normalize_level(level)
+        config = cls._get_level_config(level)
+        return int(config.get("delay_ms", 0))
 
     @staticmethod
     def _choose_with_eval(
@@ -153,6 +158,7 @@ class AiService:
                 merged[key] = {
                     "depth": max(0, int(value.get("depth", merged[key]["depth"]))),
                     "randomness": max(1, int(value.get("randomness", merged[key]["randomness"]))),
+                    "delay_ms": max(0, int(value.get("delay_ms", merged[key]["delay_ms"]))),
                 }
         cache.set(cls.CACHE_KEY, merged, timeout=60)
         return merged.get(level, cls.LEVEL_CONFIG["easy"])

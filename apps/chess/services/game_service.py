@@ -158,7 +158,8 @@ class GameService:
         if result != "playing":
             game.result = result
             game.finished_at = now
-            rating_info = GameService._apply_rating_update(game)
+            if not game.room.room_type.startswith("ai_"):
+                rating_info = GameService._apply_rating_update(game)
         elif game.started_at is None:
             game.started_at = now
             started_at_set = True
@@ -200,9 +201,12 @@ class GameService:
         player_color = GameService._player_color(game, player)
         game.result = "resignation_white" if player_color == "white" else "resignation_black"
         game.finished_at = timezone.now()
-        rating_info = GameService._apply_rating_update(game)
+        rating_info = None
+        if not game.room.room_type.startswith("ai_"):
+            rating_info = GameService._apply_rating_update(game)
         game.save(update_fields=["result", "finished_at"])
-        GameService._notify_game_end(game, rating_info)
+        if rating_info:
+            GameService._notify_game_end(game, rating_info)
         GameService._clear_draw_offers(game.id)
         GameService._clear_disconnects(game.id)
         return game
@@ -223,9 +227,12 @@ class GameService:
         if cache.delete(opponent_key):
             game.result = "draw_agreement"
             game.finished_at = timezone.now()
-            rating_info = GameService._apply_rating_update(game)
+            rating_info = None
+            if not game.room.room_type.startswith("ai_"):
+                rating_info = GameService._apply_rating_update(game)
             game.save(update_fields=["result", "finished_at"])
-            GameService._notify_game_end(game, rating_info)
+            if rating_info:
+                GameService._notify_game_end(game, rating_info)
             return game, "accepted", player_color
 
         cache.set(key, True, timeout=GameService.DRAW_OFFER_TTL)
@@ -382,7 +389,9 @@ class GameService:
         else:
             game.result = "timeout_black"
             game.black_time_remaining = 0
-        rating_info = GameService._apply_rating_update(game)
+        rating_info = None
+        if not game.room.room_type.startswith("ai_"):
+            rating_info = GameService._apply_rating_update(game)
         game.finished_at = now
         game.save(
             update_fields=[
@@ -392,7 +401,8 @@ class GameService:
                 "black_time_remaining",
             ]
         )
-        GameService._notify_game_end(game, rating_info)
+        if rating_info:
+            GameService._notify_game_end(game, rating_info)
         GameService._clear_draw_offers(game.id)
         GameService._clear_rematch_offers(game.id)
         GameService._clear_disconnects(game.id)
@@ -403,10 +413,13 @@ class GameService:
             game.result = "resignation_white"
         else:
             game.result = "resignation_black"
-        rating_info = GameService._apply_rating_update(game)
+        rating_info = None
+        if not game.room.room_type.startswith("ai_"):
+            rating_info = GameService._apply_rating_update(game)
         game.finished_at = now
         game.save(update_fields=["result", "finished_at"])
-        GameService._notify_game_end(game, rating_info)
+        if rating_info:
+            GameService._notify_game_end(game, rating_info)
         GameService._clear_draw_offers(game.id)
         GameService._clear_rematch_offers(game.id)
         GameService._clear_disconnects(game.id)
