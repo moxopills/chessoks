@@ -86,6 +86,8 @@ class GameQueryService:
             return []
         if user_id not in {game.white_player_id, game.black_player_id}:
             return []
+        if user_id not in {game.room.host_id, game.room.guest_id}:
+            return []
 
         player_color = "white" if user_id == game.white_player_id else "black"
         board = chess.Board(game.fen)
