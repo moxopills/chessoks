@@ -276,10 +276,14 @@ class GameQueryService:
             "draw_insufficient",
         }
 
-        base_qs = Game.objects.filter(
-            Q(white_player=user, black_player=opponent)
-            | Q(white_player=opponent, black_player=user)
-        ).exclude(result="playing").exclude(room__room_type__startswith="ai_")
+        base_qs = (
+            Game.objects.filter(
+                Q(white_player=user, black_player=opponent)
+                | Q(white_player=opponent, black_player=user)
+            )
+            .exclude(result="playing")
+            .exclude(room__room_type__startswith="ai_")
+        )
 
         # DB 레벨 집계 (Case/When + Count 사용)
         stats = base_qs.aggregate(
