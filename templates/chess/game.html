@@ -119,9 +119,8 @@
             <div class="panel-header">
                 <h3 class="panel-title">신고</h3>
             </div>
-            <div class="panel-body">
-                <button type="button" class="btn btn-secondary btn-sm" id="report-open-btn">신고하기</button>
-                <div class="report-hint" id="report-hint">상대 플레이어만 신고할 수 있습니다.</div>
+            <div class="panel-body report-panel-body">
+                <button type="button" class="btn btn-secondary btn-sm" id="report-open-btn">상대 플레이어 신고하기</button>
             </div>
         </div>
     </div>
@@ -376,18 +375,41 @@
 }
 
 .guide-toggle-btn {
+    position: relative;
+    width: 54px;
+    height: 28px;
     border: 1px solid var(--border-color);
-    background: var(--card-bg);
-    color: var(--text-primary);
+    background: #1c3a53;
+    color: #fff;
     border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     cursor: pointer;
+    padding: 0;
+    text-transform: uppercase;
 }
 
 .guide-toggle-btn.is-off {
-    opacity: 0.6;
+    background: #cfc7bc;
+    color: #554a3f;
+    border-color: #c5bdb3;
+}
+
+.guide-toggle-btn::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 28px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: left 0.2s ease;
+}
+
+.guide-toggle-btn.is-off::after {
+    left: 4px;
 }
 
 .square {
@@ -559,6 +581,12 @@
     margin-top: var(--space-sm);
     font-size: 0.75rem;
     color: var(--color-text-secondary);
+}
+.report-panel-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--space-md);
 }
 
 .panel-header {
