@@ -113,4 +113,4 @@ class ReportResolveSerializer(serializers.Serializer):
 class AiDifficultySettingSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiDifficultySetting
-        fields = ("level", "depth", "randomness")
+        fields = ("level", "depth", "randomness", "delay_ms")
