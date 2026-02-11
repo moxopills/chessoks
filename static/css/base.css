@@ -764,6 +764,14 @@ html:not([data-theme="dark"]) .btn-secondary.btn-arcade:hover:not(:disabled) {
 
 .hidden { display: none !important; }
 
+/* Shared social pages layout */
+.main-content .social-page {
+    max-width: min(1120px, 100%);
+    margin-left: auto !important;
+    margin-right: auto !important;
+    width: 100%;
+}
+
 /* Global notice modal */
 .notice-modal-overlay {
     position: fixed;
