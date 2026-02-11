@@ -16,6 +16,7 @@ from apps.adminpanel.permissions import IsStaff, IsSuperuser
 from apps.adminpanel.serializers import (
     AdminStatsSerializer,
     AdminUserSerializer,
+    AiDifficultySettingSerializer,
     MuteSerializer,
     NoticeSerializer,
     PromoteSerializer,
@@ -197,6 +198,36 @@ class AdminUserForceDeleteView(APIView):
         user = User.objects.get(pk=user_id)
         user.delete()
         return Response({"message": "계정이 삭제되었습니다."}, status=status.HTTP_200_OK)
+
+
+class AdminAiSettingsView(APIView):
+    permission_classes = [IsAuthenticated, IsStaff]
+
+    def get(self, request):
+        from apps.chess.models import AiDifficultySetting
+
+        qs = AiDifficultySetting.objects.order_by("level")
+        return Response(AiDifficultySettingSerializer(qs, many=True).data)
+
+    def post(self, request):
+        from django.core.cache import cache
+
+        from apps.chess.models import AiDifficultySetting
+        from apps.chess.services.ai_service import AiService
+
+        items = request.data if isinstance(request.data, list) else request.data.get("items", [])
+        for item in items:
+            serializer = AiDifficultySettingSerializer(data=item)
+            serializer.is_valid(raise_exception=True)
+            AiDifficultySetting.objects.update_or_create(
+                level=serializer.validated_data["level"],
+                defaults={
+                    "depth": serializer.validated_data["depth"],
+                    "randomness": serializer.validated_data["randomness"],
+                },
+            )
+        cache.delete(AiService.CACHE_KEY)
+        return Response({"updated": len(items)})
 
 
 class AdminNoticeCreateView(APIView):

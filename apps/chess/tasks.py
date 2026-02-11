@@ -11,7 +11,7 @@ from celery import shared_task
 from channels.layers import get_channel_layer
 
 from apps.chess.models import Game, LobbyMessage, Room
-from apps.chess.services import GameService
+from apps.chess.services import AiService, GameService
 
 logger = logging.getLogger(__name__)
 
@@ -144,3 +144,87 @@ def cleanup_lobby_messages(retention_days: int = 3) -> int:
     cutoff = timezone.now() - timedelta(days=retention_days)
     deleted, _ = LobbyMessage.objects.filter(created_at__lt=cutoff).delete()
     return deleted
+
+
+def _build_move_payload(result, game: Game) -> dict:
+    payload = {
+        "type": "move",
+        "game_id": game.id,
+        "fen": game.fen,
+        "pgn": game.pgn,
+        "current_turn": game.current_turn,
+        "result": game.result,
+        "white_time_remaining": game.white_time_remaining,
+        "black_time_remaining": game.black_time_remaining,
+        "turn_started_at": game.turn_started_at.isoformat() if game.turn_started_at else None,
+        "move": result.move.san if result and result.move else None,
+    }
+    if result and result.move:
+        payload["last_move"] = {
+            "from": result.move.from_square,
+            "to": result.move.to_square,
+            "uci": result.move.uci,
+            "san": result.move.san,
+            "is_check": result.move.is_check,
+            "is_checkmate": result.move.is_checkmate,
+            "is_capture": result.move.is_capture,
+            "is_castling": result.move.is_castling,
+            "is_en_passant": result.move.is_en_passant,
+            "promotion": result.move.promotion,
+        }
+        if result.captured_letter and result.captured_color:
+            payload["last_move"]["capture"] = {
+                "piece": result.captured_letter,
+                "color": result.captured_color,
+            }
+    if result and result.commentary:
+        payload["commentary"] = result.commentary
+        payload["commentary_level"] = result.commentary_level
+        payload["commentary_color"] = result.commentary_color
+    return payload
+
+
+@shared_task
+def handle_ai_move(game_id: int) -> bool:
+    """AI 착수 처리"""
+    import time
+
+    try:
+        game = Game.objects.select_related("room", "white_player", "black_player").get(pk=game_id)
+    except Game.DoesNotExist:
+        return False
+
+    if game.result != "playing":
+        return False
+
+    room_type = game.room.room_type
+    level = AiService.ROOM_TYPE_TO_LEVEL.get(room_type)
+    if not level:
+        return False
+
+    ai_user = AiService.get_ai_user(level)
+    ai_color = "white" if game.white_player_id == ai_user.id else "black"
+    if game.current_turn != ai_color:
+        return False
+
+    decision = AiService.choose_move(game.fen, level)
+    if not decision:
+        return False
+
+    start = time.monotonic()
+    result = GameService.make_move(game.id, ai_user, decision.uci)
+    elapsed_ms = int((time.monotonic() - start) * 1000)
+    logger.info(
+        "AI move game=%s level=%s uci=%s score=%.2f elapsed_ms=%s",
+        game.id,
+        level,
+        decision.uci,
+        decision.score,
+        elapsed_ms,
+    )
+    channel_layer = get_channel_layer()
+    payload = _build_move_payload(result, result.game)
+    message = {"type": "broadcast", "payload": payload}
+    async_to_sync(channel_layer.group_send)(f"chess_room_{game.room_id}", message)
+    async_to_sync(channel_layer.group_send)(f"chess_room_{game.room_id}_spectators", message)
+    return True

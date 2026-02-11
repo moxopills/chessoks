@@ -9,7 +9,8 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 from apps.accounts.services import OnlineStatusService
 from apps.chess.models import LobbyMessage, Room
-from apps.chess.services import GameService
+from apps.chess.services import AiService, GameService
+from apps.chess.tasks import handle_ai_move
 from apps.chess.utils import check_profanity, get_profanity_warning
 
 logger = logging.getLogger(__name__)
@@ -115,13 +116,25 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 "san": result.move.san,
                 "is_check": result.move.is_check,
                 "is_checkmate": result.move.is_checkmate,
+                "is_capture": result.move.is_capture,
+                "is_castling": result.move.is_castling,
+                "is_en_passant": result.move.is_en_passant,
+                "promotion": result.move.promotion,
             }
             if result.captured_letter and result.captured_color:
                 payload["last_move"]["capture"] = {
                     "piece": result.captured_letter,
                     "color": result.captured_color,
                 }
+        if result.commentary:
+            payload["commentary"] = result.commentary
+            payload["commentary_level"] = result.commentary_level
+            payload["commentary_color"] = result.commentary_color
         await self._broadcast(payload)
+
+        room_type = result.game.room.room_type
+        if room_type in AiService.ROOM_TYPE_TO_LEVEL and result.game.result == "playing":
+            handle_ai_move.delay(result.game.id)
 
     async def _handle_resign(self, content):
         if not self.is_player:
