@@ -248,8 +248,12 @@
                             delay_ms: parseInt(aiHardDelay?.value || 0, 10),
                         },
                     ];
-                    await API.post('/admin/ai-settings/', { items });
-                    Toast.success('AI 설정이 저장되었습니다.');
+                    const response = await API.post('/admin/ai-settings/', { items });
+                    if (response.errors?.length) {
+                        Toast.error('일부 설정이 저장되지 않았습니다.');
+                    } else {
+                        Toast.success('AI 설정이 저장되었습니다.');
+                    }
                     await loadAiSettings();
                 } catch (error) {
                     Toast.error(error.data?.message || 'AI 설정 저장 실패');
@@ -353,12 +357,14 @@
             if (aiHardRandom) aiHardRandom.value = byLevel.hard?.randomness ?? 2;
             if (aiHardDelay) aiHardDelay.value = byLevel.hard?.delay_ms ?? 700;
 
-            const summary = [
-                `쉬움(depth=${byLevel.easy?.depth ?? 0}, rand=${byLevel.easy?.randomness ?? 4}, delay=${byLevel.easy?.delay_ms ?? 1200}ms)`,
-                `중간(depth=${byLevel.medium?.depth ?? 1}, rand=${byLevel.medium?.randomness ?? 4}, delay=${byLevel.medium?.delay_ms ?? 900}ms)`,
-                `어려움(depth=${byLevel.hard?.depth ?? 2}, rand=${byLevel.hard?.randomness ?? 2}, delay=${byLevel.hard?.delay_ms ?? 700}ms)`,
-            ].join(' · ');
-            aiCurrentSettings.textContent = `현재 설정: ${summary}`;
+            const easyText = `쉬움: depth=${byLevel.easy?.depth ?? 0}, rand=${byLevel.easy?.randomness ?? 4}, delay=${byLevel.easy?.delay_ms ?? 1200}ms`;
+            const mediumText = `중간: depth=${byLevel.medium?.depth ?? 1}, rand=${byLevel.medium?.randomness ?? 4}, delay=${byLevel.medium?.delay_ms ?? 900}ms`;
+            const hardText = `어려움: depth=${byLevel.hard?.depth ?? 2}, rand=${byLevel.hard?.randomness ?? 2}, delay=${byLevel.hard?.delay_ms ?? 700}ms`;
+            aiCurrentSettings.innerHTML = [
+                `<div>${easyText}</div>`,
+                `<div>${mediumText}</div>`,
+                `<div>${hardText}</div>`,
+            ].join('');
         } catch (error) {
             aiCurrentSettings.textContent = '현재 설정을 불러오지 못했습니다.';
         }
