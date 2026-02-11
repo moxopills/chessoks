@@ -90,6 +90,8 @@ class GameQueryService:
             return []
 
         player_color = "white" if user_id == game.white_player_id else "black"
+        if game.current_turn and game.current_turn != player_color:
+            return []
         board = chess.Board(game.fen)
         expected = chess.WHITE if player_color == "white" else chess.BLACK
         if board.turn != expected:
