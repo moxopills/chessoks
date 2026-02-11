@@ -79,10 +79,19 @@ class GameQueryService:
         if game.result != "playing":
             raise ValidationError({"game": "진행 중인 게임이 아닙니다."})
 
-        if user != game.white_player and user != game.black_player:
+        if not getattr(user, "is_authenticated", False):
+            return []
+        user_id = getattr(user, "pk", None)
+        if user_id is None:
+            return []
+        if user_id not in {game.white_player_id, game.black_player_id}:
+            return []
+        if user_id not in {game.room.host_id, game.room.guest_id}:
             return []
 
-        player_color = "white" if user == game.white_player else "black"
+        player_color = "white" if user_id == game.white_player_id else "black"
+        if game.current_turn and game.current_turn != player_color:
+            return []
         board = chess.Board(game.fen)
         expected = chess.WHITE if player_color == "white" else chess.BLACK
         if board.turn != expected:
@@ -229,7 +238,7 @@ class GameQueryService:
             queryset = queryset.exclude(result="playing")
 
         if room_type:
-            if room_type not in {"quick", "custom"}:
+            if room_type not in {"quick", "custom", "ai_easy", "ai_medium", "ai_hard"}:
                 raise ValidationError({"room_type": "유효하지 않은 방 타입입니다."})
             queryset = queryset.filter(room__room_type=room_type)
 

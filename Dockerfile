@@ -4,7 +4,8 @@ FROM python:3.13-slim
 # 환경 변수 설정
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    UV_SYSTEM_PYTHON=1
+    UV_SYSTEM_PYTHON=1 \
+    STOCKFISH_PATH=/usr/games/stockfish
 
 # 작업 디렉토리 설정
 WORKDIR /app
@@ -14,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     build-essential \
     libpq-dev \
+    stockfish \
     && rm -rf /var/lib/apt/lists/*
 
 # uv 설치

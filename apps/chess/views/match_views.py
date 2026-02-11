@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 
 from apps.chess.models import Game
 from apps.chess.serializers import CancelMatchResponseSerializer, QuickMatchResponseSerializer
-from apps.chess.services import MatchmakingService
+from apps.chess.services import AiMatchService, MatchmakingService
 from apps.chess.utils import assign_colors
 
 
@@ -51,3 +51,27 @@ class CancelMatchView(APIView):
     def post(self, request):
         cancelled = MatchmakingService.cancel_match(request.user)
         return Response({"cancelled": cancelled})
+
+
+class AiMatchView(APIView):
+    """AI 대전 매칭"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=None,
+        responses={200: QuickMatchResponseSerializer},
+        tags=["게임매칭"],
+    )
+    def post(self, request):
+        level = (request.data.get("level") or "easy").lower()
+        try:
+            room, game = AiMatchService.create_ai_match(request.user, level)
+        except ValueError:
+            return Response({"detail": "유효하지 않은 난이도입니다."}, status=400)
+        data = {
+            "status": "created",
+            "room_id": room.id,
+            "game_id": game.id,
+        }
+        return Response(data)
