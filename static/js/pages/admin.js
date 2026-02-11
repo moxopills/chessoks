@@ -228,24 +228,28 @@
         if (aiSettingsSave) {
             aiSettingsSave.addEventListener('click', async () => {
                 try {
+                    const numOr = (value, fallback) => {
+                        const parsed = parseInt(value, 10);
+                        return Number.isFinite(parsed) ? parsed : fallback;
+                    };
                     const items = [
                         {
                             level: 'easy',
-                            depth: parseInt(aiEasyDepth?.value || 0, 10),
-                            randomness: parseInt(aiEasyRandom?.value || 0, 10),
-                            delay_ms: parseInt(aiEasyDelay?.value || 0, 10),
+                            depth: numOr(aiEasyDepth?.value, 0),
+                            randomness: numOr(aiEasyRandom?.value, 1),
+                            delay_ms: numOr(aiEasyDelay?.value, 0),
                         },
                         {
                             level: 'medium',
-                            depth: parseInt(aiMediumDepth?.value || 0, 10),
-                            randomness: parseInt(aiMediumRandom?.value || 0, 10),
-                            delay_ms: parseInt(aiMediumDelay?.value || 0, 10),
+                            depth: numOr(aiMediumDepth?.value, 0),
+                            randomness: numOr(aiMediumRandom?.value, 1),
+                            delay_ms: numOr(aiMediumDelay?.value, 0),
                         },
                         {
                             level: 'hard',
-                            depth: parseInt(aiHardDepth?.value || 0, 10),
-                            randomness: parseInt(aiHardRandom?.value || 0, 10),
-                            delay_ms: parseInt(aiHardDelay?.value || 0, 10),
+                            depth: numOr(aiHardDepth?.value, 0),
+                            randomness: numOr(aiHardRandom?.value, 1),
+                            delay_ms: numOr(aiHardDelay?.value, 0),
                         },
                     ];
                     const response = await API.post('/admin/ai-settings/', { items });
