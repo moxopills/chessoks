@@ -79,10 +79,12 @@ class GameQueryService:
         if game.result != "playing":
             raise ValidationError({"game": "진행 중인 게임이 아닙니다."})
 
-        if user != game.white_player and user != game.black_player:
+        if not getattr(user, "is_authenticated", False):
+            return []
+        if user.id not in {game.white_player_id, game.black_player_id}:
             return []
 
-        player_color = "white" if user == game.white_player else "black"
+        player_color = "white" if user.id == game.white_player_id else "black"
         board = chess.Board(game.fen)
         expected = chess.WHITE if player_color == "white" else chess.BLACK
         if board.turn != expected:

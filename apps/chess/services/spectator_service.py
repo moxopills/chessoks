@@ -15,6 +15,8 @@ class SpectatorService:
     @staticmethod
     def add_spectator(room_id: int, user):
         room = SpectatorService._get_room(room_id)
+        if room.room_type.startswith("ai_"):
+            raise ValidationError("AI 대전은 관전할 수 없습니다.")
         if not room.allow_spectators:
             raise ValidationError("관전을 허용하지 않는 방입니다.")
         if user == room.host or user == room.guest:
@@ -40,5 +42,7 @@ class SpectatorService:
     def _ensure_access(room: Room, user) -> None:
         if room.is_private and user != room.host and user != room.guest:
             raise NotFound("방에 접근할 수 없습니다.")
+        if room.room_type.startswith("ai_") and user != room.host and user != room.guest:
+            raise ValidationError("AI 대전은 관전할 수 없습니다.")
         if not room.allow_spectators and user != room.host and user != room.guest:
             raise ValidationError("관전을 허용하지 않는 방입니다.")
