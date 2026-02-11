@@ -837,20 +837,27 @@
         const userId = parseInt(item.dataset.userId, 10);
         if (!userId) return;
         if (isTouchDevice) {
-            Utils.bindDoubleTap(item, {
-                single: (event) => {
-                    event.preventDefault();
-                    openUserContextMenu(event, userId);
-                },
-                double: (event) => {
-                    event.preventDefault();
-                    window.location.href = `/users/${userId}/`;
-                }
+            item.addEventListener('click', (event) => {
+                event.preventDefault();
+                window.location.href = `/users/${userId}/`;
             });
         } else {
             item.addEventListener('contextmenu', (event) => {
                 event.preventDefault();
                 openUserContextMenu(event, userId);
+            });
+        }
+
+        const menuBtn = item.querySelector('.user-menu-btn');
+        if (menuBtn) {
+            menuBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const rect = menuBtn.getBoundingClientRect();
+                const fakeEvent = {
+                    clientX: rect.left + rect.width / 2,
+                    clientY: rect.bottom + 6,
+                };
+                openUserContextMenu(fakeEvent, userId);
             });
         }
     }
@@ -888,6 +895,7 @@
                     </div>
                     <div class="user-status ${statusClass}">${statusText}</div>
                 </div>
+                <button class="user-menu-btn" type="button" aria-label="메뉴">⋯</button>
             </div>
         `;
     }

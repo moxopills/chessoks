@@ -4,6 +4,7 @@
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
     const leaderboardBody = document.getElementById('leaderboard-body');
+    const leaderboardGrid = document.querySelector('.leaderboard-grid');
     const paginationEl = document.getElementById('leaderboard-pagination');
     const refreshBtn = document.getElementById('leaderboard-refresh');
     const myRankBody = document.getElementById('my-rank-body');
@@ -42,12 +43,16 @@
     async function init() {
         await loadCurrentUser();
         await loadLeaderboard();
+        syncDrawerState();
         bindEvents();
     }
 
     function bindEvents() {
         refreshBtn?.addEventListener('click', () => loadLeaderboard());
-        drawerClose?.addEventListener('click', () => drawer.classList.add('hidden'));
+        drawerClose?.addEventListener('click', () => {
+            drawer.classList.add('hidden');
+            syncDrawerState();
+        });
         reportToggle?.addEventListener('click', () => {
             if (!selectedUserId) return;
             if (currentUserId && selectedUserId === currentUserId) {
@@ -214,6 +219,7 @@
         if (!userId) return;
         selectedUserId = userId;
         drawer.classList.remove('hidden');
+        syncDrawerState();
         updateFriendButtonState(userId);
 
         try {
@@ -235,6 +241,12 @@
         } catch (error) {
             Toast.error('프로필 정보를 불러올 수 없습니다.');
         }
+    }
+
+    function syncDrawerState() {
+        if (!leaderboardGrid) return;
+        const isHidden = drawer.classList.contains('hidden');
+        leaderboardGrid.classList.toggle('drawer-collapsed', isHidden);
     }
 
     function openContextMenu(event, userId) {

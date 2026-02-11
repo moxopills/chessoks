@@ -16,6 +16,7 @@
     const searchBtn = document.getElementById('friend-search-btn');
     const searchResultsEl = document.getElementById('search-results');
 
+    const friendsGrid = document.querySelector('.friends-grid');
     const drawer = document.getElementById('profile-drawer');
     const drawerClose = document.getElementById('profile-close');
     const avatarEl = document.getElementById('profile-avatar');
@@ -51,12 +52,16 @@
         bindEvents();
         await refreshAll();
         applyTabFromUrl();
+        syncDrawerState();
         startOnlineRefresh();
     }
 
     function bindEvents() {
         refreshBtn?.addEventListener('click', refreshAll);
-        drawerClose?.addEventListener('click', () => drawer.classList.add('hidden'));
+        drawerClose?.addEventListener('click', () => {
+            drawer.classList.add('hidden');
+            syncDrawerState();
+        });
         reportToggle?.addEventListener('click', () => {
             if (!selectedUserId) return;
             if (currentUserId && selectedUserId === currentUserId) {
@@ -531,6 +536,7 @@
         if (!userId) return;
         selectedUserId = userId;
         drawer.classList.remove('hidden');
+        syncDrawerState();
         updateFriendButtonState(userId);
 
         try {
@@ -551,6 +557,12 @@
         } catch {
             Toast.error('프로필 정보를 불러올 수 없습니다.');
         }
+    }
+
+    function syncDrawerState() {
+        if (!friendsGrid) return;
+        const isHidden = drawer.classList.contains('hidden');
+        friendsGrid.classList.toggle('drawer-collapsed', isHidden);
     }
 
     function openContextMenu(event, userId, { isFriend = false, isPending = false } = {}) {
