@@ -8,18 +8,17 @@
     --leaderboard-max-width: min(980px, 100%);
 }
 
-.page-header {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
+.page-header.leaderboard-header {
+    display: flex;
+    justify-content: center;
     align-items: center;
-    gap: var(--space-md);
     max-width: var(--leaderboard-max-width);
     width: 100%;
     margin: 0 auto;
+    text-align: center;
 }
 
 .page-title-block {
-    grid-column: 2;
     text-align: center;
 }
 
@@ -38,7 +37,6 @@
 .page-summary {
     min-width: 220px;
     padding: var(--space-md);
-    justify-self: end;
 }
 
 .summary-title {
@@ -60,6 +58,17 @@
     max-width: var(--leaderboard-max-width);
     width: 100%;
     margin: 0 auto;
+}
+
+.leaderboard-card {
+    position: relative;
+}
+
+.leaderboard-card .page-summary {
+    position: absolute;
+    top: calc(-1 * var(--space-xl));
+    right: 0;
+    z-index: 2;
 }
 
 .card-header--stack {
@@ -149,6 +158,20 @@
     display: flex;
     align-items: center;
     gap: var(--space-sm);
+}
+
+.user-menu-btn {
+    margin-left: auto;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-tertiary);
+    border-radius: 999px;
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
 }
 
 .user-name {
@@ -360,6 +383,12 @@
     .profile-drawer {
         position: static;
     }
+
+    .leaderboard-card .page-summary {
+        position: static;
+        margin-bottom: var(--space-md);
+        width: 100%;
+    }
 }
 
 @media (max-width: 900px) {
@@ -374,11 +403,6 @@
         text-align: center;
     }
 
-    .page-summary {
-        justify-self: stretch;
-        width: 100%;
-    }
-
     .profile-drawer {
         position: fixed;
         top: 50%;
@@ -388,6 +412,10 @@
         max-height: 85vh;
         overflow-y: auto;
         z-index: 50;
+    }
+
+    .user-menu-btn {
+        display: inline-flex;
     }
 }
 

@@ -130,6 +130,7 @@
                                 </strong>
                                 <span class="user-tier">승률 ${winRate}%</span>
                             </div>
+                            <button class="user-menu-btn" type="button" data-user-id="${row.id}" aria-label="메뉴">⋯</button>
                         </div>
                     </td>
                     <td>${row.rating}</td>
@@ -142,15 +143,9 @@
         leaderboardBody.querySelectorAll('.leaderboard-row').forEach((row) => {
             const userId = parseInt(row.dataset.userId, 10);
             if (isTouchDevice) {
-                Utils.bindDoubleTap(row, {
-                    single: (event) => {
-                        event.preventDefault();
-                        openContextMenu(event, userId);
-                    },
-                    double: (event) => {
-                        event.preventDefault();
-                        openProfileDrawer(userId);
-                    }
+                row.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    openProfileDrawer(userId);
                 });
                 return;
             }
@@ -158,6 +153,20 @@
             row.addEventListener('contextmenu', (event) => {
                 event.preventDefault();
                 openContextMenu(event, userId);
+            });
+        });
+
+        leaderboardBody.querySelectorAll('.user-menu-btn').forEach((btn) => {
+            btn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const userId = parseInt(btn.dataset.userId, 10);
+                if (!userId) return;
+                const rect = btn.getBoundingClientRect();
+                const fakeEvent = {
+                    clientX: rect.left + rect.width / 2,
+                    clientY: rect.bottom + 6,
+                };
+                openContextMenu(fakeEvent, userId);
             });
         });
     }
