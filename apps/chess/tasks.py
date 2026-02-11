@@ -211,6 +211,10 @@ def handle_ai_move(game_id: int) -> bool:
     if not decision:
         return False
 
+    delay_ms = AiService.get_delay_ms(level)
+    if delay_ms > 0:
+        time.sleep(delay_ms / 1000)
+
     start = time.monotonic()
     result = GameService.make_move(game.id, ai_user, decision.uci)
     elapsed_ms = int((time.monotonic() - start) * 1000)

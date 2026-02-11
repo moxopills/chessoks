@@ -138,21 +138,25 @@
                     <span class="ai-help" title="깊이는 몇 수 앞까지 읽을지 결정합니다. 높을수록 더 강하지만 느릴 수 있습니다.">깊이 설명</span>
                     <span class="ai-help" title="랜덤 폭은 수 선택의 다양성을 의미합니다. 높을수록 예측이 어려워집니다.">랜덤 폭 설명</span>
                 </div>
+                <div class="ai-current" id="ai-current-settings">현재 설정: 로딩 중...</div>
                 <div class="ai-settings-grid" id="ai-settings-grid">
                     <div class="ai-settings-row">
                         <span class="ai-settings-label">쉬움</span>
                         <input type="number" min="0" max="3" id="ai-easy-depth" placeholder="깊이(수읽기)">
                         <input type="number" min="1" max="10" id="ai-easy-random" placeholder="랜덤 폭(선택 다양성)">
+                        <input type="number" min="0" max="5000" id="ai-easy-delay" placeholder="딜레이(ms)">
                     </div>
                     <div class="ai-settings-row">
                         <span class="ai-settings-label">중간</span>
                         <input type="number" min="0" max="4" id="ai-medium-depth" placeholder="깊이(수읽기)">
                         <input type="number" min="1" max="10" id="ai-medium-random" placeholder="랜덤 폭(선택 다양성)">
+                        <input type="number" min="0" max="5000" id="ai-medium-delay" placeholder="딜레이(ms)">
                     </div>
                     <div class="ai-settings-row">
                         <span class="ai-settings-label">어려움</span>
                         <input type="number" min="0" max="6" id="ai-hard-depth" placeholder="깊이(수읽기)">
                         <input type="number" min="1" max="10" id="ai-hard-random" placeholder="랜덤 폭(선택 다양성)">
+                        <input type="number" min="0" max="5000" id="ai-hard-delay" placeholder="딜레이(ms)">
                     </div>
                 </div>
                 <div class="action-buttons">
@@ -208,7 +212,7 @@
 }
 .ai-settings-row {
     display: grid;
-    grid-template-columns: 80px 1fr 1fr;
+    grid-template-columns: 80px 1fr 1fr 1fr;
     gap: 10px;
     align-items: center;
 }
@@ -229,6 +233,11 @@
 }
 .ai-help + .ai-help {
     margin-left: 8px;
+}
+.ai-current {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
 }
 </style>
 {% endblock %}

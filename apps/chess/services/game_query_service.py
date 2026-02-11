@@ -192,6 +192,10 @@ class GameQueryService:
             .order_by("-created_at")
         )
 
+        # 기본 전적에서는 AI 대전 제외
+        if not room_type:
+            queryset = queryset.exclude(room__room_type__startswith="ai_")
+
         if opponent:
             queryset = queryset.filter(GameQueryService._opponent_filter(user, opponent))
 

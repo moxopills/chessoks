@@ -224,6 +224,7 @@ class AdminAiSettingsView(APIView):
                 defaults={
                     "depth": serializer.validated_data["depth"],
                     "randomness": serializer.validated_data["randomness"],
+                    "delay_ms": serializer.validated_data.get("delay_ms", 0),
                 },
             )
         cache.delete(AiService.CACHE_KEY)
