@@ -3,20 +3,24 @@
     flex-direction: column;
     gap: var(--space-xl);
 }
+.leaderboard-page {
+    gap: var(--space-lg);
+}
 
 .page-header {
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-between;
-    gap: var(--space-lg);
+    justify-content: center;
+    gap: var(--space-md);
     align-items: center;
+    text-align: center;
 }
 
 .page-title {
     font-family: var(--font-display);
     font-size: clamp(1rem, 2vw, 1.35rem);
     letter-spacing: -0.02em;
-    margin-bottom: var(--space-sm);
+    margin-bottom: var(--space-xs);
 }
 
 .page-subtitle {

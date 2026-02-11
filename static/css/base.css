@@ -846,6 +846,9 @@ html:not([data-theme="dark"]) .btn-secondary.btn-arcade:hover:not(:disabled) {
     gap: var(--space-sm);
     justify-content: flex-end;
 }
+.modal-actions.is-centered {
+    justify-content: center;
+}
 
 .report-modal {
     max-width: 420px;
