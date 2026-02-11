@@ -28,6 +28,7 @@
     const moveList = document.getElementById('move-list');
     const turnIndicator = document.getElementById('turn-indicator');
     const moveSection = document.getElementById('game-moves-section');
+    const guideToggle = document.getElementById('guide-toggle');
     const capturedWhite = document.getElementById('captured-white');
     const capturedBlack = document.getElementById('captured-black');
     const chatMessages = document.getElementById('chat-messages');
@@ -101,6 +102,7 @@
     let isChatOpen = false;
     let chatUnread = 0;
     let opponentUserId = null;
+    let guideEnabled = true;
 
     // Init
     init();
@@ -111,6 +113,9 @@
             window.location.href = '/';
             return;
         }
+
+        guideEnabled = Utils.Storage.get('guide_enabled', true);
+        setupGuideToggle();
 
         try {
             currentUser = await API.get('/accounts/me/');
@@ -890,6 +895,7 @@
                     if (data.last_move.is_check && data.result === 'playing') {
                         if (myColor && myColor === data.current_turn) {
                             showStatusModal('체크입니다. 왕을 보호하세요.');
+                            showGuideMessage('체크 상태입니다. 왕을 지키는 수만 가능합니다.', 'warning');
                         }
                     }
                     if (data.last_move.is_checkmate) {
@@ -909,6 +915,10 @@
                     setTimeout(() => showGameEndModal(data.result), 1200);
                 } else if (data.result !== 'playing') {
                     showGameEndModal(data.result);
+                }
+
+                if (data.commentary && data.commentary_color === myColor) {
+                    showGuideMessage(data.commentary, data.commentary_level || 'info');
                 }
                 break;
 
@@ -1151,6 +1161,30 @@
                 }
             });
         }
+    }
+
+    function setupGuideToggle() {
+        if (!guideToggle) return;
+        const updateToggle = () => {
+            guideToggle.textContent = guideEnabled ? 'ON' : 'OFF';
+            guideToggle.setAttribute('aria-pressed', guideEnabled ? 'true' : 'false');
+            guideToggle.classList.toggle('is-off', !guideEnabled);
+        };
+        updateToggle();
+        guideToggle.addEventListener('click', () => {
+            guideEnabled = !guideEnabled;
+            Utils.Storage.set('guide_enabled', guideEnabled);
+            updateToggle();
+        });
+    }
+
+    function showGuideMessage(message, level = 'info') {
+        if (!guideEnabled || !message) return;
+        if (level === 'warning' || level === 'major') {
+            showStatusModal(message);
+            return;
+        }
+        Toast.info(message);
     }
 
     function setupExitGuard() {

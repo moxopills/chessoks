@@ -41,6 +41,8 @@ class RoomQueryService:
             # 게임 중 상태에서는 관전 가능하도록 제외하지 않는다.
             if status in (None, "waiting", "ready"):
                 queryset = queryset.exclude(room_type="quick", status__in=["waiting", "ready"])
+            # AI 방은 기본 목록에서 제외
+            queryset = queryset.exclude(room_type__startswith="ai_")
 
         if status:
             if status not in RoomQueryService.VALID_STATUSES:

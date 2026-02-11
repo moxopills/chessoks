@@ -71,6 +71,12 @@
         <div class="panel-section game-moves-section" id="game-moves-section">
             <div class="panel-header">
                 <h3 class="panel-title">기보</h3>
+                <div class="guide-toggle" id="guide-toggle-wrap">
+                    <span class="guide-toggle-label">가이드</span>
+                    <button type="button" class="guide-toggle-btn" id="guide-toggle" aria-pressed="true">
+                        ON
+                    </button>
+                </div>
             </div>
             <div class="move-list" id="move-list">
                 <div class="move-list-empty">아직 착수가 없습니다.</div>
@@ -356,6 +362,29 @@
     min-height: 24px;
     letter-spacing: 0;
     word-spacing: 0;
+}
+
+.guide-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.guide-toggle-btn {
+    border: 1px solid var(--border-color);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.guide-toggle-btn.is-off {
+    opacity: 0.6;
 }
 
 .square {

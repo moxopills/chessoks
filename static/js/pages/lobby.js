@@ -9,6 +9,7 @@
     'use strict';
 
     const quickMatchBtn = document.getElementById('quick-match-btn');
+    const aiMatchBtn = document.getElementById('ai-match-btn');
     const roomList = document.getElementById('room-list');
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
@@ -29,8 +30,13 @@
     const modeToggle = document.getElementById('mode-toggle');
     const modePanel = document.getElementById('mode-panel');
     const reportModal = document.getElementById('report-modal');
+    const aiMatchModal = document.getElementById('ai-match-modal');
+    const aiMatchCancel = document.getElementById('ai-match-cancel');
+    const aiLevelButtons = Array.from(document.querySelectorAll('.ai-level-btn'));
+    const aiLevelLoading = document.getElementById('ai-level-loading');
 
     let isMatching = false;
+    let isAiMatching = false;
     let lobbySocket = null;
     let notificationSocket = null;
     let currentUserId = null;
@@ -59,6 +65,7 @@
         startRoomAutoRefresh();
         setupMobileTabs();
         setupTierToggle();
+        setupAiMatch();
         setupReportModal();
         setupUserContextMenu();
         setupUserSearch();
@@ -288,6 +295,64 @@
             } else {
                 await startMatch();
             }
+        });
+    }
+
+    function setupAiMatch() {
+        if (!aiMatchBtn) return;
+        const closeModal = () => aiMatchModal?.classList.add('hidden');
+        const openModal = () => aiMatchModal?.classList.remove('hidden');
+        const setAiLoading = (loading) => {
+            isAiMatching = loading;
+            aiLevelLoading?.classList.toggle('hidden', !loading);
+            aiLevelButtons.forEach((btn) => {
+                btn.disabled = loading;
+                btn.classList.toggle('btn-disabled', loading);
+            });
+            aiMatchCancel?.classList.toggle('btn-disabled', loading);
+            if (aiMatchCancel) aiMatchCancel.disabled = loading;
+        };
+
+        aiMatchBtn.addEventListener('click', () => {
+            if (!currentUserId) {
+                Toast.error('로그인 시 가능합니다.');
+                return;
+            }
+            if (isSuspended) {
+                Toast.error('계정이 정지되어 이용할 수 없습니다.');
+                return;
+            }
+            if (isAiMatching) return;
+            openModal();
+        });
+
+        aiMatchCancel?.addEventListener('click', () => {
+            if (isAiMatching) return;
+            closeModal();
+        });
+        aiMatchModal?.addEventListener('click', (event) => {
+            if (event.target === aiMatchModal && !isAiMatching) closeModal();
+        });
+
+        aiLevelButtons.forEach((btn) => {
+            btn.addEventListener('click', async () => {
+                const level = btn.dataset.level;
+                if (!level) return;
+                setAiLoading(true);
+                try {
+                    const result = await API.post('/chess/ai-match/', { level });
+                    if (result.room_id) {
+                        window.location.href = `/games/${result.room_id}/`;
+                        return;
+                    }
+                    Toast.error('AI 대전을 시작할 수 없습니다.');
+                } catch (error) {
+                    Toast.error(error.data?.detail || 'AI 대전 시작에 실패했습니다.');
+                } finally {
+                    setAiLoading(false);
+                    closeModal();
+                }
+            });
         });
     }
 

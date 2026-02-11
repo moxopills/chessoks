@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import User, UserStats
 from apps.adminpanel.models import Report
+from apps.chess.models import AiDifficultySetting
 
 
 class AdminUserSerializer(serializers.Serializer):
@@ -107,3 +108,9 @@ class ReportResolveSerializer(serializers.Serializer):
         if value == "pending":
             raise serializers.ValidationError("pending 상태로는 처리할 수 없습니다.")
         return value
+
+
+class AiDifficultySettingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AiDifficultySetting
+        fields = ("level", "depth", "randomness")

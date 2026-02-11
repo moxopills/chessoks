@@ -229,7 +229,7 @@ class GameQueryService:
             queryset = queryset.exclude(result="playing")
 
         if room_type:
-            if room_type not in {"quick", "custom"}:
+            if room_type not in {"quick", "custom", "ai_easy", "ai_medium", "ai_hard"}:
                 raise ValidationError({"room_type": "유효하지 않은 방 타입입니다."})
             queryset = queryset.filter(room__room_type=room_type)
 

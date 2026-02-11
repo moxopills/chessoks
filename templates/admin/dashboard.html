@@ -131,6 +131,37 @@
         </section>
 
         <section class="admin-panel" data-admin-group="reports" style="grid-column: span 2;">
+            <h2>AI 난이도 설정</h2>
+            <div class="admin-actions">
+                <div class="admin-section-note">깊이(수읽기)와 랜덤 폭(선택 다양성)을 조정할 수 있습니다.</div>
+                <div class="admin-section-note">
+                    <span class="ai-help" title="깊이는 몇 수 앞까지 읽을지 결정합니다. 높을수록 더 강하지만 느릴 수 있습니다.">깊이 설명</span>
+                    <span class="ai-help" title="랜덤 폭은 수 선택의 다양성을 의미합니다. 높을수록 예측이 어려워집니다.">랜덤 폭 설명</span>
+                </div>
+                <div class="ai-settings-grid" id="ai-settings-grid">
+                    <div class="ai-settings-row">
+                        <span class="ai-settings-label">쉬움</span>
+                        <input type="number" min="0" max="3" id="ai-easy-depth" placeholder="깊이(수읽기)">
+                        <input type="number" min="1" max="10" id="ai-easy-random" placeholder="랜덤 폭(선택 다양성)">
+                    </div>
+                    <div class="ai-settings-row">
+                        <span class="ai-settings-label">중간</span>
+                        <input type="number" min="0" max="4" id="ai-medium-depth" placeholder="깊이(수읽기)">
+                        <input type="number" min="1" max="10" id="ai-medium-random" placeholder="랜덤 폭(선택 다양성)">
+                    </div>
+                    <div class="ai-settings-row">
+                        <span class="ai-settings-label">어려움</span>
+                        <input type="number" min="0" max="6" id="ai-hard-depth" placeholder="깊이(수읽기)">
+                        <input type="number" min="1" max="10" id="ai-hard-random" placeholder="랜덤 폭(선택 다양성)">
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary btn-sm" id="ai-settings-save">AI 설정 저장</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="admin-panel" data-admin-group="reports" style="grid-column: span 2;">
             <h2>신고 목록</h2>
             <div class="admin-table-wrap">
                 <table class="admin-table" id="report-table">
@@ -169,6 +200,37 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+<style>
+.ai-settings-grid {
+    display: grid;
+    gap: 10px;
+    margin-top: 8px;
+}
+.ai-settings-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 1fr;
+    gap: 10px;
+    align-items: center;
+}
+.ai-settings-label {
+    font-weight: 600;
+}
+.ai-help {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--card-bg);
+    color: var(--text-muted);
+    font-size: 12px;
+    border: 1px solid var(--border-color);
+    cursor: help;
+}
+.ai-help + .ai-help {
+    margin-left: 8px;
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}

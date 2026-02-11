@@ -22,6 +22,9 @@ class Room(models.Model):
     ROOM_TYPE_CHOICES = [
         ("quick", "빠른 대전"),
         ("custom", "사용자 방"),
+        ("ai_easy", "AI 대전(쉬움)"),
+        ("ai_medium", "AI 대전(중간)"),
+        ("ai_hard", "AI 대전(어려움)"),
     ]
 
     STATUS_CHOICES = [

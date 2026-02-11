@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 
 from django.core.cache import cache
@@ -22,11 +23,15 @@ class MoveResult:
     move: Move | None
     captured_letter: str | None = None
     captured_color: str | None = None
+    commentary: str | None = None
+    commentary_level: str | None = None
+    commentary_color: str | None = None
 
 
 class GameService:
     """체스 게임 진행 서비스 (서버 authoritative)"""
 
+    logger = logging.getLogger(__name__)
     DRAW_OFFER_TTL = 300
     REMATCH_OFFER_TTL = 90
     DISCONNECT_GRACE_SECONDS = 180
@@ -68,6 +73,7 @@ class GameService:
             return MoveResult(game=game, move=None)
 
         board = chess.Board(game.fen)
+        pre_board = board.copy(stack=False)
         GameService._ensure_turn_matches(board, player_color)
 
         move = chess.Move.from_uci(move_uci)
@@ -127,6 +133,18 @@ class GameService:
             fen_after_move=new_fen,
             time_spent=time_spent,
         )
+        commentary, commentary_level = GameService._build_commentary(
+            pre_board=pre_board,
+            post_board=board,
+            move=move,
+            player_color=player_color,
+            is_capture=is_capture,
+            is_castling=is_castling,
+            is_en_passant=is_en_passant,
+            is_check=is_check,
+            is_checkmate=is_checkmate,
+            promotion=GameService._promotion_symbol(move),
+        )
 
         GameService._apply_time_increment(game, player_color, remaining_after)
         game.fen = new_fen
@@ -167,6 +185,9 @@ class GameService:
             move=move_obj,
             captured_letter=captured_letter,
             captured_color=captured_color,
+            commentary=commentary,
+            commentary_level=commentary_level,
+            commentary_color=player_color,
         )
 
     @staticmethod
@@ -298,6 +319,46 @@ class GameService:
     def _calc_time_spent(game: Game, now) -> float:
         turn_started_at = game.turn_started_at or game.updated_at or game.created_at
         return max(0.0, (now - turn_started_at).total_seconds())
+
+    @staticmethod
+    def _build_commentary(
+        *,
+        pre_board: chess.Board,
+        post_board: chess.Board,
+        move: chess.Move,
+        player_color: str,
+        is_capture: bool,
+        is_castling: bool,
+        is_en_passant: bool,
+        is_check: bool,
+        is_checkmate: bool,
+        promotion: str,
+    ) -> tuple[str | None, str | None]:
+        if is_checkmate:
+            return "체크메이트! 승리에 가까워졌습니다.", "major"
+        if is_check:
+            return "체크! 상대 왕을 압박했습니다.", "positive"
+        if promotion:
+            return "프로모션! 강력한 기물로 승격했습니다.", "positive"
+        if is_castling:
+            return "킹을 안전하게 보호했습니다.", "positive"
+        if is_capture or is_en_passant:
+            return "기물을 잡아 유리함을 만들었습니다.", "positive"
+
+        # 간단한 중앙 장악 힌트
+        center_squares = {chess.D4, chess.E4, chess.D5, chess.E5}
+        if move.to_square in center_squares:
+            return "중앙을 장악했습니다. 좋은 전개입니다.", "positive"
+
+        # 기물 노출 경고 (단순 휴리스틱)
+        moved_color = chess.WHITE if player_color == "white" else chess.BLACK
+        opponent = not moved_color
+        if post_board.is_attacked_by(opponent, move.to_square) and not post_board.is_attacked_by(
+            moved_color, move.to_square
+        ):
+            return "기물이 노출될 수 있습니다. 다음 수를 주의하세요.", "warning"
+
+        return None, None
 
     @staticmethod
     def _remaining_after_spent(game: Game, player_color: str, time_spent: float) -> int:
@@ -479,6 +540,8 @@ class GameService:
         reason = GameService._result_reason(game.result)
         from django.core.cache import cache
 
+        ai_room = game.room.room_type.startswith("ai_")
+
         for color, player in (("white", game.white_player), ("black", game.black_player)):
             cache.delete(f"user_profile_{player.id}")
             outcome = GameService._result_outcome(game.result, color)
@@ -521,6 +584,15 @@ class GameService:
                     message=f"{tier_after} 티어로 승격했습니다.",
                     payload={"before": tier_before, "after": tier_after, "game_id": game.id},
                 )
+
+        if ai_room:
+            GameService.logger.info(
+                "AI game end game=%s result=%s white=%s black=%s",
+                game.id,
+                game.result,
+                game.white_player_id,
+                game.black_player_id,
+            )
 
         from apps.chess.utils import broadcast_room_update
 
