@@ -820,6 +820,9 @@ html:not([data-theme="dark"]) .btn-secondary.btn-arcade:hover:not(:disabled) {
     box-shadow: var(--shadow-lg);
     letter-spacing: 0;
     word-spacing: 0;
+    width: min(520px, 92vw);
+    max-height: 85vh;
+    overflow-y: auto;
 }
 
 .modal-header {
