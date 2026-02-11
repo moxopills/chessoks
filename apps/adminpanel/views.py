@@ -225,18 +225,16 @@ class AdminAiSettingsView(APIView):
         updated = 0
         errors = []
         for idx, item in enumerate(items):
-            serializer = AiDifficultySettingSerializer(data=item)
+            level = item.get("level")
+            if not level:
+                errors.append({"index": idx, "errors": {"level": ["level 값이 필요합니다."]}})
+                continue
+            setting, _ = AiDifficultySetting.objects.get_or_create(level=level)
+            serializer = AiDifficultySettingSerializer(instance=setting, data=item, partial=True)
             if not serializer.is_valid():
                 errors.append({"index": idx, "errors": serializer.errors})
                 continue
-            AiDifficultySetting.objects.update_or_create(
-                level=serializer.validated_data["level"],
-                defaults={
-                    "depth": serializer.validated_data["depth"],
-                    "randomness": serializer.validated_data["randomness"],
-                    "delay_ms": serializer.validated_data.get("delay_ms", 0),
-                },
-            )
+            serializer.save()
             updated += 1
         cache.delete(AiService.CACHE_KEY)
         if errors and updated == 0:
