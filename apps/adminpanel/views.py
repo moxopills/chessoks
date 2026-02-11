@@ -215,10 +215,20 @@ class AdminAiSettingsView(APIView):
         from apps.chess.models import AiDifficultySetting
         from apps.chess.services.ai_service import AiService
 
-        items = request.data if isinstance(request.data, list) else request.data.get("items", [])
-        for item in items:
+        if isinstance(request.data, list):
+            items = request.data
+        elif isinstance(request.data, dict) and request.data.get("level"):
+            items = [request.data]
+        else:
+            items = request.data.get("items", [])
+
+        updated = 0
+        errors = []
+        for idx, item in enumerate(items):
             serializer = AiDifficultySettingSerializer(data=item)
-            serializer.is_valid(raise_exception=True)
+            if not serializer.is_valid():
+                errors.append({"index": idx, "errors": serializer.errors})
+                continue
             AiDifficultySetting.objects.update_or_create(
                 level=serializer.validated_data["level"],
                 defaults={
@@ -227,8 +237,11 @@ class AdminAiSettingsView(APIView):
                     "delay_ms": serializer.validated_data.get("delay_ms", 0),
                 },
             )
+            updated += 1
         cache.delete(AiService.CACHE_KEY)
-        return Response({"updated": len(items)})
+        if errors and updated == 0:
+            return Response({"updated": 0, "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"updated": updated, "errors": errors})
 
 
 class AdminNoticeCreateView(APIView):
