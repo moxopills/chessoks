@@ -121,7 +121,7 @@
                     <span>로딩 중...</span>
                 </div>
             </div>
-            <div class="users-hint">우클릭(모바일: ⋯)으로 신고·친구추가를 할 수 있습니다.</div>
+            <div class="users-hint">우클릭 (모바일: ⋯ 토글) 으로 신고·친구추가를 할 수 있습니다.</div>
         </section>
     </div>
 </div>
@@ -636,6 +636,10 @@
     .users-search .btn {
         flex: 1;
     }
+
+    .user-menu-btn {
+        display: inline-flex;
+    }
 }
 
 .user-item {
@@ -674,6 +678,20 @@
 .user-info {
     flex: 1;
     min-width: 0;
+}
+
+.user-menu-btn {
+    margin-left: auto;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-tertiary);
+    border-radius: 999px;
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-secondary);
 }
 
 .user-nickname {
