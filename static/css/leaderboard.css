@@ -5,6 +5,7 @@
 }
 .leaderboard-page {
     gap: var(--space-lg);
+    --leaderboard-max-width: min(980px, 100%);
 }
 
 .page-header {
@@ -12,6 +13,9 @@
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: var(--space-md);
+    max-width: var(--leaderboard-max-width);
+    width: 100%;
+    margin: 0 auto;
 }
 
 .page-title-block {
@@ -53,6 +57,9 @@
     grid-template-columns: minmax(0, 1fr) 320px;
     gap: var(--space-lg);
     align-items: start;
+    max-width: var(--leaderboard-max-width);
+    width: 100%;
+    margin: 0 auto;
 }
 
 .card-header--stack {
@@ -370,6 +377,17 @@
     .page-summary {
         justify-self: stretch;
         width: 100%;
+    }
+
+    .profile-drawer {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(92vw, 520px);
+        max-height: 85vh;
+        overflow-y: auto;
+        z-index: 50;
     }
 }
 
