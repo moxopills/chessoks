@@ -10,7 +10,11 @@ const API = (function() {
      * CSRF 토큰 가져오기
      */
     function getCSRFToken() {
-        return window.CSRF_TOKEN || '';
+        if (window.CSRF_TOKEN) {
+            return window.CSRF_TOKEN;
+        }
+        const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
     }
 
     /**
