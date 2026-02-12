@@ -182,6 +182,7 @@ const Utils = (function() {
      */
     function getTierIcon(tier) {
         const icons = {
+            'Unranked': '❔',
             'Beginner': '🥉',
             'Junior': '🥈',
             'Intermediate': '🥇',

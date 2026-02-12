@@ -238,6 +238,8 @@ class GameService:
         game = GameService._get_game_for_update(game_id)
         if game.result == "playing":
             raise ValidationError("진행 중인 게임에는 리매치를 요청할 수 없습니다.")
+        if GameService._is_competitive_room(game.room.room_type):
+            raise ValidationError("경쟁전에서는 리매치를 요청할 수 없습니다.")
 
         player_color = GameService._player_color(game, player)
         opponent_color = "black" if player_color == "white" else "white"
@@ -265,6 +267,8 @@ class GameService:
         game = Game.objects.select_related("white_player", "black_player").get(pk=game_id)
         if game.result == "playing":
             raise ValidationError("진행 중인 게임입니다.")
+        if GameService._is_competitive_room(game.room.room_type):
+            raise ValidationError("경쟁전에서는 리매치를 사용할 수 없습니다.")
 
         player_color = GameService._player_color(game, player)
         opponent_color = "black" if player_color == "white" else "white"
@@ -564,6 +568,7 @@ class GameService:
         from django.core.cache import cache
 
         ai_room = game.room.room_type.startswith("ai_")
+        competitive_room = GameService._is_competitive_room(game.room.room_type)
 
         for color, player in (("white", game.white_player), ("black", game.black_player)):
             cache.delete(f"user_profile_{player.id}")
@@ -607,6 +612,19 @@ class GameService:
                         title="티어 승격",
                         message=f"{tier_after} 티어로 승격했습니다.",
                         payload={"before": tier_before, "after": tier_after, "game_id": game.id},
+                    )
+
+            if competitive_room:
+                stats = (
+                    UserStats.objects.filter(user=player).only("competitive_games_played").first()
+                )
+                if stats and stats.competitive_games_played < 5:
+                    NotificationService.create_notification(
+                        user=player,
+                        type="placement_progress",
+                        title="배치전 진행",
+                        message=f"배치 진행: {stats.competitive_games_played}/5",
+                        payload={"game_id": game.id, "played": stats.competitive_games_played},
                     )
 
         if ai_room:

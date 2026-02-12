@@ -146,7 +146,12 @@ class LobbyChatConsumerTestCase(TransactionTestCase):
             await communicator.receive_json_from()  # user_joined
 
             await communicator.send_json_to({"action": "chat", "message": "로비 채팅"})
-            message = await communicator.receive_json_from()
+            message = None
+            for _ in range(5):
+                received = await communicator.receive_json_from()
+                if received.get("type") == "chat":
+                    message = received
+                    break
             await communicator.disconnect()
             return message
 

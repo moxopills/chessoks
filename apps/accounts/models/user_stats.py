@@ -107,14 +107,14 @@ class UserStats(models.Model):
         if self.competitive_games_played < 5:
             return "Unranked"
         rating = self.rating
-        if rating >= 3000:
+        if rating >= 3500:
             return "Master"
-        if rating >= 2500:
+        if rating >= 2700:
             return "Expert"
-        if rating >= 2000:
+        if rating >= 2100:
             return "Advanced"
-        if rating >= 1500:
+        if rating >= 1700:
             return "Intermediate"
-        if rating >= 1000:
+        if rating >= 1200:
             return "Junior"
         return "Beginner"
