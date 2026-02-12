@@ -152,11 +152,13 @@
      */
     async function loadGame() {
         try {
+            let roomTypeHint = null;
             if (replayOnly && replayGameParamId) {
                 game = await API.get(`/chess/games/${replayGameParamId}/`);
             } else {
                 // 방에서 현재 게임 가져오기
                 const room = await API.get(`/chess/rooms/${roomId}/`);
+                roomTypeHint = room?.room_type || null;
 
                 if (room.status !== 'playing') {
                     Toast.error('진행 중인 게임이 없습니다.');
@@ -177,6 +179,9 @@
                     return;
                 }
                 game = await API.get(`/chess/games/${gameId}/`);
+                if (roomTypeHint && !game.room_type) {
+                    game.room_type = roomTypeHint;
+                }
             }
 
             // 내 색상 결정
@@ -199,7 +204,7 @@
                 reportSection?.classList.add('hidden');
             }
             isAiRoom = Boolean(game.room_type && game.room_type.startsWith('ai_'));
-            const roomType = game.room_type || game.room?.room_type;
+            const roomType = game.room_type || game.room?.room_type || roomTypeHint;
             isAiRoom = Boolean(roomType && roomType.startsWith('ai_'));
             if (roomType === 'quick') {
                 document.body.classList.add('competitive-room');
