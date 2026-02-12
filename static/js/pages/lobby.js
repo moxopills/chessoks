@@ -66,6 +66,7 @@
     let lastWaitingSignature = '';
     let waitingTick = 0;
     const HIDDEN_ROOM_TYPES = new Set(['quick', 'random']);
+    let activeMatchToast = null;
 
     // 초기화
     init();
@@ -114,14 +115,14 @@
 
     async function loadWaitingRoom() {
         if (!waitingRoomCard) return;
-        if (!currentUserId) {
+        if (!currentUserId || isMatching || isRandomMatching) {
             waitingRoomCard.classList.add('hidden');
             return;
         }
         try {
             const data = await API.get('/chess/rooms/waiting/');
             const room = data.room;
-            if (!room) {
+            if (!room || isHiddenRoomType(room)) {
                 lastWaitingSignature = '';
                 waitingRoomCard.classList.add('hidden');
                 return;
@@ -320,7 +321,7 @@
         quickMatchWait?.addEventListener('click', () => {
             if (!isMatching) return;
             quickMatchModal?.classList.add('hidden');
-            showMatchToast('경쟁전 매칭 중...');
+            showMatchToast('경쟁전 매칭 중...', 'quick');
         });
         quickMatchModal?.addEventListener('click', (event) => {
             if (event.target === quickMatchModal && isMatching) return;
@@ -355,7 +356,7 @@
         randomMatchWait?.addEventListener('click', () => {
             if (!isRandomMatching) return;
             randomMatchModal?.classList.add('hidden');
-            showMatchToast('랜덤 대전 매칭 중...');
+            showMatchToast('빠른 대전 매칭 중...', 'random');
         });
         randomMatchModal?.addEventListener('click', (event) => {
             if (event.target === randomMatchModal && isRandomMatching) return;
@@ -553,7 +554,8 @@
         quickMatchLoading?.classList.toggle('hidden', !matching);
         if (matching) {
             quickMatchModal?.classList.remove('hidden');
-            showMatchToast('경쟁전 매칭 중...');
+            showMatchToast('경쟁전 매칭 중...', 'quick');
+            waitingRoomCard?.classList.add('hidden');
         } else {
             quickMatchModal?.classList.add('hidden');
             hideMatchToast();
@@ -568,22 +570,25 @@
         randomMatchLoading?.classList.toggle('hidden', !matching);
         if (matching) {
             randomMatchModal?.classList.remove('hidden');
-            showMatchToast('랜덤 대전 매칭 중...');
+            showMatchToast('빠른 대전 매칭 중...', 'random');
+            waitingRoomCard?.classList.add('hidden');
         } else {
             randomMatchModal?.classList.add('hidden');
             hideMatchToast();
         }
     }
 
-    function showMatchToast(text) {
+    function showMatchToast(text, type) {
         if (!matchToast) return;
         matchToast.textContent = text;
+        activeMatchToast = type || null;
         matchToast.classList.remove('hidden');
     }
 
     function hideMatchToast() {
         if (!matchToast) return;
         matchToast.classList.add('hidden');
+        activeMatchToast = null;
     }
 
     /**
@@ -601,6 +606,21 @@
         chatForm.addEventListener('submit', function(e) {
             e.preventDefault();
             sendChatMessage();
+        });
+    }
+
+    if (matchToast) {
+        matchToast.addEventListener('click', () => {
+            if (activeMatchToast === 'quick' && isMatching) {
+                quickMatchModal?.classList.remove('hidden');
+                hideMatchToast();
+                return;
+            }
+            if (activeMatchToast === 'random' && isRandomMatching) {
+                randomMatchModal?.classList.remove('hidden');
+                hideMatchToast();
+                return;
+            }
         });
     }
 
