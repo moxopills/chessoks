@@ -20,6 +20,12 @@ class UserStats(models.Model):
     games_won = models.IntegerField(default=0, help_text="승리 수")
     games_lost = models.IntegerField(default=0, help_text="패배 수")
     games_draw = models.IntegerField(default=0, help_text="무승부 수")
+    competitive_games_played = models.IntegerField(default=0, help_text="경쟁전 게임 수")
+    competitive_won = models.IntegerField(default=0, help_text="경쟁전 승리 수")
+    competitive_lost = models.IntegerField(default=0, help_text="경쟁전 패배 수")
+    competitive_draw = models.IntegerField(default=0, help_text="경쟁전 무승부 수")
+    win_streak = models.IntegerField(default=0, help_text="연승 수")
+    lose_streak = models.IntegerField(default=0, help_text="연패 수")
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -49,6 +55,30 @@ class UserStats(models.Model):
                 condition=models.Q(games_draw__gte=0),
                 name="stats_games_draw_positive",
             ),
+            models.CheckConstraint(
+                condition=models.Q(competitive_games_played__gte=0),
+                name="stats_competitive_games_played_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(competitive_won__gte=0),
+                name="stats_competitive_won_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(competitive_lost__gte=0),
+                name="stats_competitive_lost_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(competitive_draw__gte=0),
+                name="stats_competitive_draw_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(win_streak__gte=0),
+                name="stats_win_streak_positive",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(lose_streak__gte=0),
+                name="stats_lose_streak_positive",
+            ),
         ]
         indexes = [
             models.Index(fields=["-rating", "-games_played"], name="stats_ranking_idx"),
@@ -74,6 +104,8 @@ class UserStats(models.Model):
     @property
     def rank_tier(self):
         """레이팅 구간 기반 등급"""
+        if self.competitive_games_played < 5:
+            return "Unranked"
         rating = self.rating
         if rating >= 3000:
             return "Master"

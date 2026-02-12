@@ -663,6 +663,8 @@ class UserModelTest(BaseTestCase):
     def test_rank_tier_by_rating(self):
         """레이팅 구간별 등급"""
         user = self.create_user()
+        user.stats.competitive_games_played = 5
+        user.stats.save(update_fields=["competitive_games_played"])
 
         user.stats.rating = 500
         user.stats.save(update_fields=["rating"])

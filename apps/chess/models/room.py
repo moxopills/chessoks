@@ -21,6 +21,7 @@ class Room(models.Model):
 
     ROOM_TYPE_CHOICES = [
         ("quick", "빠른 대전"),
+        ("random", "랜덤 대전"),
         ("custom", "사용자 방"),
         ("ai_easy", "AI 대전(쉬움)"),
         ("ai_medium", "AI 대전(중간)"),
@@ -127,6 +128,8 @@ class Room(models.Model):
     def __str__(self):
         if self.room_type == "quick":
             return f"빠른 대전 - {self.host.nickname}"
+        if self.room_type == "random":
+            return f"랜덤 대전 - {self.host.nickname}"
         return f"{self.title} - {self.host.nickname}"
 
     def clean(self):

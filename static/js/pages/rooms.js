@@ -116,7 +116,7 @@
                     <div class="room-info">
                         <div class="room-title">
                             ${room.is_private ? '<span class="icon-private">🔒</span>' : ''}
-                            ${Utils.escapeHtml(room.title || '빠른 대전')}
+                            ${Utils.escapeHtml(room.title || (room.room_type === 'random' ? '랜덤 대전' : '빠른 대전'))}
                         </div>
                         <div class="room-meta">
                             <span class="room-meta-item">
