@@ -93,6 +93,9 @@ class GameQueryService:
         if game.current_turn and game.current_turn != player_color:
             return []
         board = chess.Board(game.fen)
+        board_turn = "white" if board.turn == chess.WHITE else "black"
+        if game.current_turn and game.current_turn != board_turn:
+            return []
         expected = chess.WHITE if player_color == "white" else chess.BLACK
         if board.turn != expected:
             return []
@@ -242,7 +245,7 @@ class GameQueryService:
             queryset = queryset.exclude(result="playing")
 
         if room_type:
-            if room_type not in {"quick", "custom", "ai_easy", "ai_medium", "ai_hard"}:
+            if room_type not in {"quick", "random", "custom", "ai_easy", "ai_medium", "ai_hard"}:
                 raise ValidationError({"room_type": "유효하지 않은 방 타입입니다."})
             queryset = queryset.filter(room__room_type=room_type)
 

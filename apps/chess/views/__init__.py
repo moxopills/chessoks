@@ -6,7 +6,13 @@ from apps.chess.views.game_views import (
     GameRematchView,
 )
 from apps.chess.views.history_views import GameHistoryView
-from apps.chess.views.match_views import AiMatchView, CancelMatchView, QuickMatchView
+from apps.chess.views.match_views import (
+    AiMatchView,
+    CancelMatchView,
+    CancelRandomMatchView,
+    QuickMatchView,
+    RandomMatchView,
+)
 from apps.chess.views.room_views import (
     RoomDetailView,
     RoomJoinView,
@@ -26,6 +32,8 @@ __all__ = [
     "QuickMatchView",
     "AiMatchView",
     "CancelMatchView",
+    "RandomMatchView",
+    "CancelRandomMatchView",
     "GameDetailView",
     "GameCapturedView",
     "GameLegalMoveView",

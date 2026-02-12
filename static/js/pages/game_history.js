@@ -113,7 +113,9 @@
             const resultLabel = outcome.label;
             const resultClass = outcome.className;
             const dateText = formatDate(game.finished_at || game.created_at);
-            const roomLabel = game.room_type === 'quick' ? '빠른 대전' : '사용자 방';
+            const roomLabel = game.room_type === 'quick'
+                ? '경쟁전'
+                : (game.room_type === 'random' ? '랜덤 대전' : '사용자 방');
             const moveCount = game.move_count ?? 0;
             const opponentName = opponent?.nickname || '알 수 없음';
             const myName = currentUser?.nickname || '나';

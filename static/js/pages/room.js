@@ -86,7 +86,8 @@
      */
     function renderRoom() {
         // Header
-        roomTitle.textContent = room.title || '빠른 대전';
+        const defaultTitle = room.room_type === 'random' ? '랜덤 대전' : '빠른 대전';
+        roomTitle.textContent = room.title || defaultTitle;
         roomTime.textContent = `⏱ ${room.time_limit ? room.time_limit + '분' : '무제한'}`;
         roomSpectators.textContent = room.allow_spectators ? '👁 관전 가능' : '👁 관전 불가';
 

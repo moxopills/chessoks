@@ -36,6 +36,7 @@ class GameService:
     REMATCH_OFFER_TTL = 90
     DISCONNECT_GRACE_SECONDS = 180
     TIER_ORDER = {
+        "Unranked": -1,
         "Beginner": 0,
         "Junior": 1,
         "Intermediate": 2,
@@ -158,8 +159,7 @@ class GameService:
         if result != "playing":
             game.result = result
             game.finished_at = now
-            if not game.room.room_type.startswith("ai_"):
-                rating_info = GameService._apply_rating_update(game)
+            rating_info = GameService._apply_post_game_updates(game)
         elif game.started_at is None:
             game.started_at = now
             started_at_set = True
@@ -179,7 +179,7 @@ class GameService:
             update_fields += ["started_at"]
 
         game.save(update_fields=update_fields)
-        if rating_info:
+        if result != "playing":
             GameService._notify_game_end(game, rating_info)
         return MoveResult(
             game=game,
@@ -201,12 +201,9 @@ class GameService:
         player_color = GameService._player_color(game, player)
         game.result = "resignation_white" if player_color == "white" else "resignation_black"
         game.finished_at = timezone.now()
-        rating_info = None
-        if not game.room.room_type.startswith("ai_"):
-            rating_info = GameService._apply_rating_update(game)
+        rating_info = GameService._apply_post_game_updates(game)
         game.save(update_fields=["result", "finished_at"])
-        if rating_info:
-            GameService._notify_game_end(game, rating_info)
+        GameService._notify_game_end(game, rating_info)
         GameService._clear_draw_offers(game.id)
         GameService._clear_disconnects(game.id)
         return game
@@ -227,12 +224,9 @@ class GameService:
         if cache.delete(opponent_key):
             game.result = "draw_agreement"
             game.finished_at = timezone.now()
-            rating_info = None
-            if not game.room.room_type.startswith("ai_"):
-                rating_info = GameService._apply_rating_update(game)
+            rating_info = GameService._apply_post_game_updates(game)
             game.save(update_fields=["result", "finished_at"])
-            if rating_info:
-                GameService._notify_game_end(game, rating_info)
+            GameService._notify_game_end(game, rating_info)
             return game, "accepted", player_color
 
         cache.set(key, True, timeout=GameService.DRAW_OFFER_TTL)
@@ -389,9 +383,7 @@ class GameService:
         else:
             game.result = "timeout_black"
             game.black_time_remaining = 0
-        rating_info = None
-        if not game.room.room_type.startswith("ai_"):
-            rating_info = GameService._apply_rating_update(game)
+        rating_info = GameService._apply_post_game_updates(game)
         game.finished_at = now
         game.save(
             update_fields=[
@@ -401,8 +393,7 @@ class GameService:
                 "black_time_remaining",
             ]
         )
-        if rating_info:
-            GameService._notify_game_end(game, rating_info)
+        GameService._notify_game_end(game, rating_info)
         GameService._clear_draw_offers(game.id)
         GameService._clear_rematch_offers(game.id)
         GameService._clear_disconnects(game.id)
@@ -413,13 +404,10 @@ class GameService:
             game.result = "resignation_white"
         else:
             game.result = "resignation_black"
-        rating_info = None
-        if not game.room.room_type.startswith("ai_"):
-            rating_info = GameService._apply_rating_update(game)
+        rating_info = GameService._apply_post_game_updates(game)
         game.finished_at = now
         game.save(update_fields=["result", "finished_at"])
-        if rating_info:
-            GameService._notify_game_end(game, rating_info)
+        GameService._notify_game_end(game, rating_info)
         GameService._clear_draw_offers(game.id)
         GameService._clear_rematch_offers(game.id)
         GameService._clear_disconnects(game.id)
@@ -444,6 +432,28 @@ class GameService:
         if not pgn:
             return prefix
         return f"{pgn} {prefix}"
+
+    @staticmethod
+    def _is_competitive_room(room_type: str) -> bool:
+        return room_type == "quick"
+
+    @staticmethod
+    def _apply_post_game_updates(game: Game) -> dict | None:
+        if game.room.room_type.startswith("ai_"):
+            return None
+        if GameService._is_competitive_room(game.room.room_type):
+            return GameService._apply_rating_update(game)
+        GameService._apply_stats_only(game)
+        return None
+
+    @staticmethod
+    def _apply_stats_only(game: Game) -> None:
+        white_stats, _ = UserStats.objects.get_or_create(user=game.white_player)
+        black_stats, _ = UserStats.objects.get_or_create(user=game.black_player)
+        RatingService.update_stats_only(white_stats, black_stats, game.result)
+        white_stats.save()
+        black_stats.save()
+        RankingService.invalidate_leaderboard_cache()
 
     @staticmethod
     def _apply_rating_update(game: Game) -> dict:
@@ -549,7 +559,7 @@ class GameService:
         return Game.objects.create(room=room, white_player=white_player, black_player=black_player)
 
     @staticmethod
-    def _notify_game_end(game: Game, rating_info: dict) -> None:
+    def _notify_game_end(game: Game, rating_info: dict | None) -> None:
         reason = GameService._result_reason(game.result)
         from django.core.cache import cache
 
@@ -571,32 +581,33 @@ class GameService:
                 payload={"game_id": game.id, "result": game.result, "outcome": outcome},
             )
 
-            rating_before = rating_info[color]["before"]
-            rating_after = rating_info[color]["after"]
-            delta = rating_after - rating_before
-            NotificationService.create_notification(
-                user=player,
-                type="rating_change",
-                title="레이팅 변동",
-                message=f"{rating_before} -> {rating_after} ({delta:+d})",
-                payload={
-                    "game_id": game.id,
-                    "before": rating_before,
-                    "after": rating_after,
-                    "delta": delta,
-                },
-            )
-
-            tier_before = rating_info[color]["tier_before"]
-            tier_after = rating_info[color]["tier_after"]
-            if GameService._tier_rank(tier_after) > GameService._tier_rank(tier_before):
+            if rating_info:
+                rating_before = rating_info[color]["before"]
+                rating_after = rating_info[color]["after"]
+                delta = rating_after - rating_before
                 NotificationService.create_notification(
                     user=player,
-                    type="tier_promotion",
-                    title="티어 승격",
-                    message=f"{tier_after} 티어로 승격했습니다.",
-                    payload={"before": tier_before, "after": tier_after, "game_id": game.id},
+                    type="rating_change",
+                    title="레이팅 변동",
+                    message=f"{rating_before} -> {rating_after} ({delta:+d})",
+                    payload={
+                        "game_id": game.id,
+                        "before": rating_before,
+                        "after": rating_after,
+                        "delta": delta,
+                    },
                 )
+
+                tier_before = rating_info[color]["tier_before"]
+                tier_after = rating_info[color]["tier_after"]
+                if GameService._tier_rank(tier_after) > GameService._tier_rank(tier_before):
+                    NotificationService.create_notification(
+                        user=player,
+                        type="tier_promotion",
+                        title="티어 승격",
+                        message=f"{tier_after} 티어로 승격했습니다.",
+                        payload={"before": tier_before, "after": tier_after, "game_id": game.id},
+                    )
 
         if ai_room:
             GameService.logger.info(

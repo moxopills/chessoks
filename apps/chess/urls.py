@@ -3,6 +3,7 @@ from django.urls import path
 from apps.chess.views import (
     AiMatchView,
     CancelMatchView,
+    CancelRandomMatchView,
     GameCapturedView,
     GameDetailView,
     GameHistoryView,
@@ -10,6 +11,7 @@ from apps.chess.views import (
     GameMoveListView,
     GameRematchView,
     QuickMatchView,
+    RandomMatchView,
     RoomDetailView,
     RoomJoinView,
     RoomLeaveView,
@@ -27,6 +29,8 @@ app_name = "chess"
 urlpatterns = [
     path("quick-match/", QuickMatchView.as_view(), name="quick-match"),
     path("quick-match/cancel/", CancelMatchView.as_view(), name="cancel-match"),
+    path("random-match/", RandomMatchView.as_view(), name="random-match"),
+    path("random-match/cancel/", CancelRandomMatchView.as_view(), name="cancel-random-match"),
     path("ai-match/", AiMatchView.as_view(), name="ai-match"),
     path("games/<int:game_id>/", GameDetailView.as_view(), name="game-detail"),
     path("games/<int:game_id>/moves/", GameMoveListView.as_view(), name="game-moves"),
