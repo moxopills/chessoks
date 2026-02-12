@@ -7,6 +7,7 @@ from django.utils import timezone
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
+from apps.accounts.models import User
 from apps.accounts.services import OnlineStatusService
 from apps.chess.models import LobbyMessage, Room
 from apps.chess.services import AiService, GameService
@@ -525,11 +526,26 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def _get_lobby_users(self) -> list:
-        """로비 접속자 목록 조회"""
-        from django.core.cache import cache
-
-        users = cache.get(self.lobby_users_key, {})
-        return list(users.values())
+        """온라인 접속자 목록 조회"""
+        online_ids = OnlineStatusService.list_online_ids()
+        if not online_ids:
+            return []
+        queryset = User.objects.select_related("stats").filter(id__in=online_ids)
+        user_map = {user.id: user for user in queryset}
+        users = []
+        for user_id in online_ids:
+            user = user_map.get(user_id)
+            if not user:
+                continue
+            users.append(
+                {
+                    "id": user.id,
+                    "nickname": user.nickname,
+                    "avatar_url": user.avatar_url,
+                    "rank_tier": getattr(getattr(user, "stats", None), "rank_tier", "Junior"),
+                }
+            )
+        return users
 
     async def _send_lobby_users(self):
         """연결 시 현재 접속자 목록 전송"""
@@ -551,6 +567,7 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}
         )
+        await self._broadcast_lobby_users()
 
     async def _broadcast_user_left(self):
         """유저 퇴장 브로드캐스트"""
@@ -561,4 +578,12 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         }
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}
+        )
+        await self._broadcast_lobby_users()
+
+    async def _broadcast_lobby_users(self):
+        users = await self._get_lobby_users()
+        await self.channel_layer.group_send(
+            self.group_name,
+            {"type": "broadcast", "payload": {"type": "lobby_users", "users": users}},
         )

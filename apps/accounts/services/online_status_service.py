@@ -12,15 +12,34 @@ class OnlineStatusService:
 
     TTL_SECONDS = 60
     HEARTBEAT_INTERVAL = 30  # 클라이언트 heartbeat 권장 주기
+    LIST_TTL_SECONDS = 600
 
     @staticmethod
     def _key(user_id: int) -> str:
         return f"user:online:{user_id}"
 
     @staticmethod
+    def _list_key() -> str:
+        return "user:online:list"
+
+    @staticmethod
+    def _get_list() -> list[int]:
+        return cache.get(OnlineStatusService._list_key(), [])
+
+    @staticmethod
+    def _set_list(user_ids: list[int]) -> None:
+        cache.set(
+            OnlineStatusService._list_key(), user_ids, timeout=OnlineStatusService.LIST_TTL_SECONDS
+        )
+
+    @staticmethod
     def set_online(user_id: int) -> None:
         """온라인 상태 설정 (TTL 갱신)"""
         cache.set(OnlineStatusService._key(user_id), True, timeout=OnlineStatusService.TTL_SECONDS)
+        user_ids = OnlineStatusService._get_list()
+        if user_id not in user_ids:
+            user_ids.append(user_id)
+            OnlineStatusService._set_list(user_ids)
 
     @staticmethod
     def refresh(user_id: int) -> None:
@@ -31,6 +50,10 @@ class OnlineStatusService:
     def set_offline(user_id: int) -> None:
         """명시적 오프라인 (로그아웃 등)"""
         cache.delete(OnlineStatusService._key(user_id))
+        user_ids = OnlineStatusService._get_list()
+        if user_id in user_ids:
+            user_ids = [uid for uid in user_ids if uid != user_id]
+            OnlineStatusService._set_list(user_ids)
 
     @staticmethod
     def is_online(user_id: int) -> bool:
@@ -44,3 +67,14 @@ class OnlineStatusService:
         for key in cached.keys():
             status[keys[key]] = True
         return status
+
+    @staticmethod
+    def list_online_ids() -> list[int]:
+        user_ids = OnlineStatusService._get_list()
+        if not user_ids:
+            return []
+        status = OnlineStatusService.bulk_status(user_ids)
+        online_ids = [user_id for user_id in user_ids if status.get(user_id)]
+        if len(online_ids) != len(user_ids):
+            OnlineStatusService._set_list(online_ids)
+        return online_ids
