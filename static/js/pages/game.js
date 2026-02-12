@@ -197,6 +197,10 @@
                 const reportSection = document.getElementById('game-report-section');
                 reportSection?.classList.add('hidden');
             }
+            if (game.room_type === 'quick') {
+                guideEnabled = false;
+                guideToggle?.classList.add('hidden');
+            }
 
             renderPlayerBars();
             renderBoard();
@@ -1202,17 +1206,24 @@
      * 모달 설정
      */
     function setupModals() {
+        const isCompetitive = game?.room_type === 'quick';
         if (replayOnly) {
             rematchBtn?.classList.add('hidden');
             const lobbyBtn = document.getElementById('lobby-btn');
             if (lobbyBtn) lobbyBtn.textContent = '전적 보기';
+        }
+        if (isCompetitive) {
+            rematchBtn?.remove();
+            rematchModal?.remove();
+            document.getElementById('accept-rematch-btn')?.remove();
+            document.getElementById('decline-rematch-btn')?.remove();
         }
         const historyBtn = document.getElementById('history-btn');
         historyBtn?.addEventListener('click', () => {
             window.location.href = '/history/';
         });
         // 리매치 버튼
-        if (!replayOnly && rematchBtn) {
+        if (!replayOnly && !isCompetitive && rematchBtn) {
             rematchBtn.addEventListener('click', () => {
                 socket.send(JSON.stringify({ action: 'rematch', game_id: game.id }));
                 Toast.info('리매치를 요청했습니다.');
@@ -1236,7 +1247,7 @@
         });
 
         // 리매치 수락/거절
-        if (!replayOnly) {
+        if (!replayOnly && !isCompetitive) {
             document.getElementById('accept-rematch-btn').addEventListener('click', () => {
                 socket.send(JSON.stringify({ action: 'rematch', game_id: game.id }));
                 rematchModal.classList.add('hidden');

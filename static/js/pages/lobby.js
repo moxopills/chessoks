@@ -992,7 +992,6 @@
                     </div>
                     <div class="user-status ${statusClass}">${statusText}</div>
                 </div>
-                <button class="user-menu-btn" type="button" aria-label="메뉴">⋯</button>
             </div>
         `;
     }
