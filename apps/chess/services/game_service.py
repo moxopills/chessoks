@@ -600,9 +600,7 @@ class GameService:
 
                 tier_before = rating_info[color]["tier_before"]
                 tier_after = rating_info[color]["tier_after"]
-                if GameService._tier_rank(tier_after) > GameService._tier_rank(
-                    tier_before
-                ):
+                if GameService._tier_rank(tier_after) > GameService._tier_rank(tier_before):
                     NotificationService.create_notification(
                         user=player,
                         type="tier_promotion",

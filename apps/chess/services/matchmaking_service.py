@@ -210,7 +210,9 @@ class MatchmakingService:
     @staticmethod
     def _cancel_match(user, room_type: str) -> bool:
         room = (
-            Room.objects.filter(room_type=room_type, host=user, status="waiting", guest__isnull=True)
+            Room.objects.filter(
+                room_type=room_type, host=user, status="waiting", guest__isnull=True
+            )
             .only("id")
             .first()
         )

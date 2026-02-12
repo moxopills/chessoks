@@ -3,6 +3,7 @@ from django.urls import path
 from apps.chess.views import (
     AiMatchView,
     CancelMatchView,
+    CancelRandomMatchView,
     GameCapturedView,
     GameDetailView,
     GameHistoryView,
@@ -11,7 +12,6 @@ from apps.chess.views import (
     GameRematchView,
     QuickMatchView,
     RandomMatchView,
-    CancelRandomMatchView,
     RoomDetailView,
     RoomJoinView,
     RoomLeaveView,
