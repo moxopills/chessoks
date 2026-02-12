@@ -33,6 +33,15 @@
     const reportModal = document.getElementById('report-modal');
     const aiMatchModal = document.getElementById('ai-match-modal');
     const aiMatchCancel = document.getElementById('ai-match-cancel');
+    const quickMatchModal = document.getElementById('quick-match-modal');
+    const randomMatchModal = document.getElementById('random-match-modal');
+    const quickMatchCancel = document.getElementById('quick-match-cancel');
+    const randomMatchCancel = document.getElementById('random-match-cancel');
+    const quickMatchWait = document.getElementById('quick-match-wait');
+    const randomMatchWait = document.getElementById('random-match-wait');
+    const quickMatchLoading = document.getElementById('quick-match-loading');
+    const randomMatchLoading = document.getElementById('random-match-loading');
+    const matchToast = document.getElementById('match-toast');
     const aiLevelButtons = Array.from(document.querySelectorAll('.ai-level-btn'));
     const aiLevelLoading = document.getElementById('ai-level-loading');
 
@@ -304,6 +313,19 @@
                 await startMatch();
             }
         });
+        quickMatchCancel?.addEventListener('click', async () => {
+            if (!isMatching) return;
+            await cancelMatch();
+        });
+        quickMatchWait?.addEventListener('click', () => {
+            if (!isMatching) return;
+            quickMatchModal?.classList.add('hidden');
+            showMatchToast('경쟁전 매칭 중...');
+        });
+        quickMatchModal?.addEventListener('click', (event) => {
+            if (event.target === quickMatchModal && isMatching) return;
+            if (event.target === quickMatchModal) quickMatchModal.classList.add('hidden');
+        });
     }
 
     /**
@@ -325,6 +347,19 @@
             } else {
                 await startRandomMatch();
             }
+        });
+        randomMatchCancel?.addEventListener('click', async () => {
+            if (!isRandomMatching) return;
+            await cancelRandomMatch();
+        });
+        randomMatchWait?.addEventListener('click', () => {
+            if (!isRandomMatching) return;
+            randomMatchModal?.classList.add('hidden');
+            showMatchToast('랜덤 대전 매칭 중...');
+        });
+        randomMatchModal?.addEventListener('click', (event) => {
+            if (event.target === randomMatchModal && isRandomMatching) return;
+            if (event.target === randomMatchModal) randomMatchModal.classList.add('hidden');
         });
     }
 
@@ -512,24 +547,43 @@
      */
     function setMatchingState(matching) {
         isMatching = matching;
-        quickMatchBtn.querySelector('.btn-text').classList.toggle('hidden', matching);
-        quickMatchBtn.querySelector('.btn-loading').classList.toggle('hidden', !matching);
-
+        quickMatchBtn.classList.toggle('btn-danger', matching);
+        quickMatchBtn.classList.toggle('btn-primary', !matching);
+        quickMatchBtn.disabled = matching;
+        quickMatchLoading?.classList.toggle('hidden', !matching);
         if (matching) {
-            quickMatchBtn.classList.remove('btn-primary');
-            quickMatchBtn.classList.add('btn-danger');
+            quickMatchModal?.classList.remove('hidden');
+            showMatchToast('경쟁전 매칭 중...');
         } else {
-            quickMatchBtn.classList.remove('btn-danger');
-            quickMatchBtn.classList.add('btn-primary');
+            quickMatchModal?.classList.add('hidden');
+            hideMatchToast();
         }
     }
 
     function setRandomMatchingState(matching) {
         isRandomMatching = matching;
         if (!randomMatchBtn) return;
-        randomMatchBtn.querySelector('.btn-text').classList.toggle('hidden', matching);
-        randomMatchBtn.querySelector('.btn-loading').classList.toggle('hidden', !matching);
         randomMatchBtn.classList.toggle('btn-danger', matching);
+        randomMatchBtn.disabled = matching;
+        randomMatchLoading?.classList.toggle('hidden', !matching);
+        if (matching) {
+            randomMatchModal?.classList.remove('hidden');
+            showMatchToast('랜덤 대전 매칭 중...');
+        } else {
+            randomMatchModal?.classList.add('hidden');
+            hideMatchToast();
+        }
+    }
+
+    function showMatchToast(text) {
+        if (!matchToast) return;
+        matchToast.textContent = text;
+        matchToast.classList.remove('hidden');
+    }
+
+    function hideMatchToast() {
+        if (!matchToast) return;
+        matchToast.classList.add('hidden');
     }
 
     /**
