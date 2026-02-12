@@ -103,6 +103,7 @@
     let chatUnread = 0;
     let opponentUserId = null;
     let guideEnabled = true;
+    let isAiRoom = false;
 
     // Init
     init();
@@ -197,10 +198,21 @@
                 const reportSection = document.getElementById('game-report-section');
                 reportSection?.classList.add('hidden');
             }
-            if (game.room_type === 'quick') {
+            isAiRoom = Boolean(game.room_type && game.room_type.startsWith('ai_'));
+            const roomType = game.room_type || game.room?.room_type;
+            isAiRoom = Boolean(roomType && roomType.startsWith('ai_'));
+            if (roomType === 'quick') {
                 guideEnabled = false;
                 guideToggle?.classList.add('hidden');
                 document.getElementById('guide-toggle-wrap')?.classList.add('hidden');
+            }
+            if (isAiRoom) {
+                drawBtn?.remove();
+                resignBtn?.remove();
+                drawModal?.remove();
+                document.getElementById('game-report-section')?.remove();
+                chatSection?.classList.add('is-hidden');
+                document.querySelector('.mobile-tab[data-tab="chat"]')?.classList.add('hidden');
             }
 
             renderPlayerBars();
@@ -315,6 +327,7 @@
     }
 
     function setupReport() {
+        if (isAiRoom) return;
         if (!reportOpenBtn) return;
         if (!currentUser || !myColor) {
             reportOpenBtn.disabled = true;
@@ -983,6 +996,10 @@
      * 채팅 설정
      */
     function setupChat() {
+        if (isAiRoom) {
+            chatSection?.classList.add('is-hidden');
+            return;
+        }
         chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const message = chatInput.value.trim();
@@ -1143,6 +1160,17 @@
             gameActions?.classList.add('hidden');
             return;
         }
+        if (isAiRoom) {
+            gameActions?.classList.remove('hidden');
+            drawBtn?.remove();
+            resignBtn?.remove();
+            if (leaveBtn) {
+                leaveBtn.addEventListener('click', () => {
+                    window.location.href = '/';
+                });
+            }
+            return;
+        }
         drawBtn.addEventListener('click', () => {
             if (!confirm('무승부를 제안하시겠습니까?')) return;
             socket.send(JSON.stringify({ action: 'draw', game_id: game.id }));
@@ -1239,15 +1267,19 @@
         });
 
         // 무승부 수락/거절
-        document.getElementById('accept-draw-btn').addEventListener('click', () => {
-            socket.send(JSON.stringify({ action: 'draw', game_id: game.id }));
-            drawModal.classList.add('hidden');
-        });
+        const acceptDrawBtn = document.getElementById('accept-draw-btn');
+        const declineDrawBtn = document.getElementById('decline-draw-btn');
+        if (drawModal && acceptDrawBtn && declineDrawBtn) {
+            acceptDrawBtn.addEventListener('click', () => {
+                socket.send(JSON.stringify({ action: 'draw', game_id: game.id }));
+                drawModal.classList.add('hidden');
+            });
 
-        document.getElementById('decline-draw-btn').addEventListener('click', () => {
-            drawModal.classList.add('hidden');
-            Toast.info('무승부를 거절했습니다.');
-        });
+            declineDrawBtn.addEventListener('click', () => {
+                drawModal.classList.add('hidden');
+                Toast.info('무승부를 거절했습니다.');
+            });
+        }
 
         // 리매치 수락/거절
         if (!replayOnly && !isCompetitive) {
