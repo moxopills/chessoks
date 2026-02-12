@@ -688,6 +688,10 @@ class UserModelTest(BaseTestCase):
 
         user.stats.rating = 3200
         user.stats.save(update_fields=["rating"])
+        self.assertEqual(user.stats.rank_tier, "Expert")
+
+        user.stats.rating = 3600
+        user.stats.save(update_fields=["rating"])
         self.assertEqual(user.stats.rank_tier, "Master")
 
 
