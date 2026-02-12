@@ -200,6 +200,7 @@
             if (game.room_type === 'quick') {
                 guideEnabled = false;
                 guideToggle?.classList.add('hidden');
+                document.getElementById('guide-toggle-wrap')?.classList.add('hidden');
             }
 
             renderPlayerBars();
@@ -1206,13 +1207,15 @@
      * 모달 설정
      */
     function setupModals() {
-        const isCompetitive = game?.room_type === 'quick';
+        const roomType = game?.room_type || game?.room?.room_type;
+        const isCompetitive = roomType === 'quick';
+        const isAiRoom = roomType?.startsWith('ai_');
         if (replayOnly) {
             rematchBtn?.classList.add('hidden');
             const lobbyBtn = document.getElementById('lobby-btn');
             if (lobbyBtn) lobbyBtn.textContent = '전적 보기';
         }
-        if (isCompetitive) {
+        if (isCompetitive || isAiRoom) {
             rematchBtn?.remove();
             rematchModal?.remove();
             document.getElementById('accept-rematch-btn')?.remove();
