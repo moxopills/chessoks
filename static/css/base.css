@@ -703,9 +703,12 @@ html:not([data-theme="dark"]) .btn-secondary.btn-arcade:hover:not(:disabled) {
 }
 
 .avatar-placeholder {
-    font-family: var(--font-display);
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: url('/static/images/icons/default-avatar.svg') center/70% no-repeat;
+    color: transparent;
+    text-indent: -9999px;
 }
 
 .tier-badge {
