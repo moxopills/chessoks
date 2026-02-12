@@ -202,11 +202,17 @@
             const roomType = game.room_type || game.room?.room_type;
             isAiRoom = Boolean(roomType && roomType.startsWith('ai_'));
             if (roomType === 'quick') {
+                document.body.classList.add('competitive-room');
                 guideEnabled = false;
                 guideToggle?.classList.add('hidden');
                 document.getElementById('guide-toggle-wrap')?.classList.add('hidden');
+                rematchBtn?.remove();
+                rematchModal?.remove();
+                document.getElementById('accept-rematch-btn')?.remove();
+                document.getElementById('decline-rematch-btn')?.remove();
             }
             if (isAiRoom) {
+                document.body.classList.add('ai-room');
                 drawBtn?.remove();
                 resignBtn?.remove();
                 drawModal?.remove();
