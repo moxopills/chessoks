@@ -15,6 +15,8 @@ from apps.chess.utils import (
 class RoomFlowService:
     """방 준비/시작 플로우 서비스"""
 
+    AUTO_START_ROOM_TYPES = {"quick", "random"}
+
     @staticmethod
     @transaction.atomic
     def set_ready(room_id: int, user, ready: bool) -> Room:
@@ -120,7 +122,7 @@ class RoomFlowService:
         room.guest = user
         room.host_start_confirmed = False
         room.guest_start_confirmed = False
-        if room.room_type == "quick":
+        if room.room_type in RoomFlowService.AUTO_START_ROOM_TYPES:
             room.status = "playing"
             room.started_at = timezone.now()
             if not room.games.filter(result="playing").exists():

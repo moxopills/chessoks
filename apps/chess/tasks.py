@@ -14,6 +14,7 @@ from apps.chess.models import Game, LobbyMessage, Room
 from apps.chess.services import AiService, GameService
 
 logger = logging.getLogger(__name__)
+MATCH_ROOM_TYPES = ["quick", "random"]
 
 
 def _build_game_end_payload(game: Game) -> dict:
@@ -105,7 +106,10 @@ def cleanup_stale_waiting_rooms(timeout_minutes: int = 3) -> int:
     """오래된 빠른 대전 대기방 정리"""
     cutoff = timezone.now() - timedelta(minutes=timeout_minutes)
     deleted, _ = Room.objects.filter(
-        room_type="quick", status="waiting", guest__isnull=True, created_at__lt=cutoff
+        room_type__in=MATCH_ROOM_TYPES,
+        status="waiting",
+        guest__isnull=True,
+        created_at__lt=cutoff,
     ).delete()
     return deleted
 
@@ -118,7 +122,7 @@ def cleanup_inactive_rooms(stale_minutes: int = 30) -> dict:
 
     stale_rooms = Room.objects.filter(
         status__in=["waiting", "ready"], updated_at__lt=cutoff
-    ).filter(models.Q(guest__isnull=True) | models.Q(room_type="quick"))
+    ).filter(models.Q(guest__isnull=True) | models.Q(room_type__in=MATCH_ROOM_TYPES))
     stale_deleted, _ = stale_rooms.delete()
 
     # 빠른 대전 결과는 전적에 남겨야 하므로 finished quick room은 삭제하지 않음

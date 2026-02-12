@@ -14,6 +14,9 @@ from apps.notifications.services import NotificationService
 class MatchmakingService:
     """빠른 대전 매칭 서비스"""
 
+    QUICK_ROOM_TYPE = "quick"
+    RANDOM_ROOM_TYPE = "random"
+    MATCH_ROOM_TYPES = {QUICK_ROOM_TYPE, RANDOM_ROOM_TYPE}
     RATING_DIFF_TIERS = (
         (0, 125),
         (15, 175),
@@ -30,63 +33,12 @@ class MatchmakingService:
     @staticmethod
     @transaction.atomic
     def quick_match(user) -> tuple[Room, Game | None, str]:
-        if user.is_suspended:
-            raise ValidationError("정지된 계정입니다.")
-        playing = (
-            Room.objects.select_for_update(skip_locked=True)
-            .filter(room_type="quick", status="playing")
-            .filter(models.Q(host=user) | models.Q(guest=user))
-            .prefetch_related("games")
-            .first()
+        return MatchmakingService._match(
+            user,
+            room_type=MatchmakingService.QUICK_ROOM_TYPE,
+            title="경쟁전",
+            rating_based=True,
         )
-        if playing is not None:
-            game = playing.games.filter(result="playing").only("id").first()
-            if game is None and playing.host_id and playing.guest_id:
-                white_player, black_player = assign_colors(playing.host, playing.guest)
-                game = Game.objects.create(
-                    room=playing, white_player=white_player, black_player=black_player
-                )
-            return playing, game, "matched"
-
-        existing = (
-            Room.objects.select_for_update(skip_locked=True)
-            .filter(room_type="quick", host=user, status="waiting", guest__isnull=True)
-            .first()
-        )
-
-        stats, _ = UserStats.objects.get_or_create(user=user)
-        rating = stats.rating
-        room = MatchmakingService._find_best_room(user, rating)
-
-        if room is None:
-            if existing is not None:
-                return existing, None, "waiting"
-            room = Room.objects.create(
-                room_type="quick",
-                title="경쟁전",
-                host=user,
-                status="waiting",
-                is_private=False,
-            )
-            broadcast_room_update(room)
-            return room, None, "waiting"
-
-        room.guest = user
-        room.status = "playing"
-        room.started_at = timezone.now()
-        room.save(update_fields=["guest", "status", "started_at"])
-        broadcast_room_update(room)
-
-        if existing is not None and existing.id != room.id:
-            existing_id = existing.id
-            existing.delete()
-            broadcast_room_removed(existing_id)
-
-        white_player, black_player = assign_colors(room.host, room.guest)
-        game = Game.objects.create(room=room, white_player=white_player, black_player=black_player)
-
-        MatchmakingService._notify_match(room, game)
-        return room, game, "matched"
 
     @staticmethod
     def _find_best_room(user, rating):
@@ -135,8 +87,132 @@ class MatchmakingService:
     @staticmethod
     def cancel_match(user) -> bool:
         """대기 중인 빠른 대전 취소"""
+        return MatchmakingService._cancel_match(user, MatchmakingService.QUICK_ROOM_TYPE)
+
+    @staticmethod
+    @transaction.atomic
+    def random_match(user) -> tuple[Room, Game | None, str]:
+        """랜덤 대전 매칭 (레이팅 영향 없음)"""
+        return MatchmakingService._match(
+            user,
+            room_type=MatchmakingService.RANDOM_ROOM_TYPE,
+            title="랜덤 대전",
+            rating_based=False,
+        )
+
+    @staticmethod
+    def cancel_random_match(user) -> bool:
+        """대기 중인 랜덤 대전 취소"""
+        return MatchmakingService._cancel_match(user, MatchmakingService.RANDOM_ROOM_TYPE)
+
+    @staticmethod
+    def _match(
+        user,
+        *,
+        room_type: str,
+        title: str,
+        rating_based: bool,
+    ) -> tuple[Room, Game | None, str]:
+        MatchmakingService._ensure_available(user)
+        playing = MatchmakingService._find_playing_room(user, room_type)
+        if playing is not None:
+            return MatchmakingService._ensure_game(playing), None, "matched"
+
+        existing = MatchmakingService._find_existing_waiting_room(user, room_type)
+
+        room = None
+        if rating_based:
+            stats, _ = UserStats.objects.get_or_create(user=user)
+            room = MatchmakingService._find_best_room(user, stats.rating)
+        else:
+            room = MatchmakingService._find_first_room(user, room_type)
+
+        if room is None:
+            if existing is not None:
+                return existing, None, "waiting"
+            room = MatchmakingService._create_waiting_room(user, room_type, title)
+            return room, None, "waiting"
+
+        room, game = MatchmakingService._start_match(room, user, existing)
+        return room, game, "matched"
+
+    @staticmethod
+    def _ensure_available(user) -> None:
+        if user.is_suspended:
+            raise ValidationError("정지된 계정입니다.")
+
+    @staticmethod
+    def _find_playing_room(user, room_type: str) -> Room | None:
+        return (
+            Room.objects.select_for_update(skip_locked=True)
+            .filter(room_type=room_type, status="playing")
+            .filter(models.Q(host=user) | models.Q(guest=user))
+            .prefetch_related("games")
+            .first()
+        )
+
+    @staticmethod
+    def _find_existing_waiting_room(user, room_type: str) -> Room | None:
+        return (
+            Room.objects.select_for_update(skip_locked=True)
+            .filter(room_type=room_type, host=user, status="waiting", guest__isnull=True)
+            .first()
+        )
+
+    @staticmethod
+    def _find_first_room(user, room_type: str) -> Room | None:
+        return (
+            Room.objects.select_for_update(skip_locked=True)
+            .filter(room_type=room_type, status="waiting", guest__isnull=True)
+            .exclude(host=user)
+            .order_by("created_at")
+            .first()
+        )
+
+    @staticmethod
+    def _create_waiting_room(user, room_type: str, title: str) -> Room:
+        room = Room.objects.create(
+            room_type=room_type,
+            title=title,
+            host=user,
+            status="waiting",
+            is_private=False,
+        )
+        broadcast_room_update(room)
+        return room
+
+    @staticmethod
+    def _ensure_game(room: Room) -> Room:
+        game = room.games.filter(result="playing").only("id").first()
+        if game is None and room.host_id and room.guest_id:
+            white_player, black_player = assign_colors(room.host, room.guest)
+            Game.objects.create(room=room, white_player=white_player, black_player=black_player)
+        return room
+
+    @staticmethod
+    def _start_match(room: Room, user, existing: Room | None) -> tuple[Room, Game]:
+        room.guest = user
+        room.status = "playing"
+        room.started_at = timezone.now()
+        room.save(update_fields=["guest", "status", "started_at"])
+        broadcast_room_update(room)
+
+        if existing is not None and existing.id != room.id:
+            existing_id = existing.id
+            existing.delete()
+            broadcast_room_removed(existing_id)
+
+        white_player, black_player = assign_colors(room.host, room.guest)
+        game = Game.objects.create(room=room, white_player=white_player, black_player=black_player)
+        MatchmakingService._notify_match(room, game)
+        return room, game
+
+    @staticmethod
+    def _cancel_match(user, room_type: str) -> bool:
         room = (
-            Room.objects.filter(room_type="quick", host=user, status="waiting", guest__isnull=True)
+            Room.objects.filter(
+                room_type=room_type, host=user, status="waiting", guest__isnull=True
+            )
             .only("id")
             .first()
         )

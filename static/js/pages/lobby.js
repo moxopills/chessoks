@@ -9,6 +9,7 @@
     'use strict';
 
     const quickMatchBtn = document.getElementById('quick-match-btn');
+    const randomMatchBtn = document.getElementById('random-match-btn');
     const aiMatchBtn = document.getElementById('ai-match-btn');
     const roomList = document.getElementById('room-list');
     const chatMessages = document.getElementById('chat-messages');
@@ -36,6 +37,7 @@
     const aiLevelLoading = document.getElementById('ai-level-loading');
 
     let isMatching = false;
+    let isRandomMatching = false;
     let isAiMatching = false;
     let lobbySocket = null;
     let notificationSocket = null;
@@ -54,6 +56,7 @@
     let lastRoomsSignature = null;
     let lastWaitingSignature = '';
     let waitingTick = 0;
+    const HIDDEN_ROOM_TYPES = new Set(['quick', 'random']);
 
     // 초기화
     init();
@@ -80,7 +83,7 @@
             const rawRooms = Array.isArray(data?.results)
                 ? data.results
                 : (Array.isArray(data) ? data : []);
-            const rooms = rawRooms.filter((room) => room?.room_type !== 'quick');
+            const rooms = rawRooms.filter((room) => !isHiddenRoomType(room));
             const signature = rooms
                 .map((room) => `${room.id}:${room.status}:${room.guest?.id || 0}:${room.current_game_id || 0}`)
                 .join('|');
@@ -138,7 +141,7 @@
      * 방 목록 렌더링
      */
     function renderRooms(rooms) {
-        const visibleRooms = (rooms || []).filter((room) => room?.room_type !== 'quick');
+        const visibleRooms = (rooms || []).filter((room) => !isHiddenRoomType(room));
         if (!visibleRooms.length) {
             roomList.innerHTML = '<div class="room-empty">대기 중인 방이 없습니다.</div>';
             return;
@@ -223,7 +226,7 @@
 
         try {
             const joined = await API.post(`/chess/rooms/${roomId}/join/`, payload);
-            if (joined.room_type === 'quick' || joined.status === 'playing') {
+            if (isHiddenRoomType(joined) || joined.status === 'playing') {
                 const joinedGameId = joined.current_game_id;
                 if (joinedGameId) {
                     window.location.href = `/games/${joinedGameId}/`;
@@ -248,6 +251,7 @@
             await loadFriendIds();
             setupChat();
             setupQuickMatch();
+            setupRandomMatch();
             // lobby report removed; using profile report actions instead
             if (user.is_muted) {
                 setChatMutedState(true, user.mute_reason || '');
@@ -290,10 +294,36 @@
                 Toast.error('계정이 정지되어 이용할 수 없습니다.');
                 return;
             }
+            if (isRandomMatching || isAiMatching) {
+                Toast.error('다른 매칭이 진행 중입니다.');
+                return;
+            }
             if (isMatching) {
                 await cancelMatch();
             } else {
                 await startMatch();
+            }
+        });
+    }
+
+    /**
+     * 랜덤 대전 설정
+     */
+    function setupRandomMatch() {
+        if (!randomMatchBtn) return;
+        randomMatchBtn.addEventListener('click', async function() {
+            if (isSuspended) {
+                Toast.error('계정이 정지되어 이용할 수 없습니다.');
+                return;
+            }
+            if (isMatching || isAiMatching) {
+                Toast.error('다른 매칭이 진행 중입니다.');
+                return;
+            }
+            if (isRandomMatching) {
+                await cancelRandomMatch();
+            } else {
+                await startRandomMatch();
             }
         });
     }
@@ -320,6 +350,10 @@
             }
             if (isSuspended) {
                 Toast.error('계정이 정지되어 이용할 수 없습니다.');
+                return;
+            }
+            if (isMatching || isRandomMatching) {
+                Toast.error('다른 매칭이 진행 중입니다.');
                 return;
             }
             if (isAiMatching) return;
@@ -380,6 +414,25 @@
         }
     }
 
+    async function startRandomMatch() {
+        setRandomMatchingState(true);
+
+        try {
+            const result = await API.post('/chess/random-match/');
+
+            if (result.status === 'matched') {
+                Toast.success('매칭되었습니다!');
+                window.location.href = `/games/${result.room_id}/`;
+            } else if (result.status === 'waiting') {
+                Toast.info('상대를 찾는 중...');
+                pollRandomMatchStatus();
+            }
+        } catch (error) {
+            setRandomMatchingState(false);
+            Toast.error(error.data?.message || '매칭 시작에 실패했습니다.');
+        }
+    }
+
     /**
      * 매칭 취소
      */
@@ -387,6 +440,16 @@
         try {
             await API.post('/chess/quick-match/cancel/');
             setMatchingState(false);
+            Toast.info('매칭이 취소되었습니다.');
+        } catch (error) {
+            Toast.error('매칭 취소에 실패했습니다.');
+        }
+    }
+
+    async function cancelRandomMatch() {
+        try {
+            await API.post('/chess/random-match/cancel/');
+            setRandomMatchingState(false);
             Toast.info('매칭이 취소되었습니다.');
         } catch (error) {
             Toast.error('매칭 취소에 실패했습니다.');
@@ -420,6 +483,30 @@
         }, 2000);
     }
 
+    function pollRandomMatchStatus() {
+        if (!isRandomMatching) return;
+
+        const pollInterval = setInterval(async () => {
+            if (!isRandomMatching) {
+                clearInterval(pollInterval);
+                return;
+            }
+
+            try {
+                const result = await API.post('/chess/random-match/');
+
+                if (result.status === 'matched') {
+                    clearInterval(pollInterval);
+                    Toast.success('매칭되었습니다!');
+                    window.location.href = `/games/${result.room_id}/`;
+                }
+            } catch (error) {
+                clearInterval(pollInterval);
+                setRandomMatchingState(false);
+            }
+        }, 2000);
+    }
+
     /**
      * 매칭 상태 UI 업데이트
      */
@@ -435,6 +522,14 @@
             quickMatchBtn.classList.remove('btn-danger');
             quickMatchBtn.classList.add('btn-primary');
         }
+    }
+
+    function setRandomMatchingState(matching) {
+        isRandomMatching = matching;
+        if (!randomMatchBtn) return;
+        randomMatchBtn.querySelector('.btn-text').classList.toggle('hidden', matching);
+        randomMatchBtn.querySelector('.btn-loading').classList.toggle('hidden', !matching);
+        randomMatchBtn.classList.toggle('btn-danger', matching);
     }
 
     /**
@@ -581,6 +676,7 @@
         isSuspended = suspended;
         if (suspended) {
             quickMatchBtn?.classList.add('btn-disabled');
+            randomMatchBtn?.classList.add('btn-disabled');
             if (reason) {
                 addChatNotice(`계정 정지됨: ${reason}`);
             } else {
@@ -588,6 +684,7 @@
             }
         } else {
             quickMatchBtn?.classList.remove('btn-disabled');
+            randomMatchBtn?.classList.remove('btn-disabled');
         }
     }
 
@@ -956,7 +1053,7 @@
             removeRoom(room?.id);
             return;
         }
-        if (room.room_type === 'quick') {
+        if (isHiddenRoomType(room)) {
             removeRoom(room.id);
             return;
         }
@@ -977,5 +1074,9 @@
         if (nextRooms.length === lobbyRooms.length) return;
         lobbyRooms = nextRooms;
         renderRooms(lobbyRooms);
+    }
+
+    function isHiddenRoomType(room) {
+        return HIDDEN_ROOM_TYPES.has(room?.room_type);
     }
 })();
