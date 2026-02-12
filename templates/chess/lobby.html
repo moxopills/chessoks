@@ -27,7 +27,7 @@
         </div>
         <div class="hero-tier-panel hidden" id="mode-panel">
             <div class="tier-row">• 경쟁전: 레이팅에 맞춰 자동 매칭됩니다 게임방 목록에는 안보입니다.</div>
-            <div class="tier-row">• 랜덤 대전: 일반 랜덤 매칭이며 레이팅에 반영되지 않습니다.</div>
+            <div class="tier-row">• 빠른 대전: 일반 매칭이며 레이팅에 반영되지 않습니다.</div>
             <div class="tier-row">• 방 만들기: 방을 생성하고 상대가 입장해 게임합니다.</div>
             <div class="tier-row">• 비밀번호 방: 비밀번호방을 만들어 플레이할 수 있습니다.</div>
             <div class="tier-row">• 관전: 관전 허용 방만 입장 가능하며 비허용 방은 차단됩니다.</div>
@@ -40,7 +40,7 @@
                 <span class="btn-text"><span class="btn-icon">⚔</span> 경쟁전</span>
             </button>
             <button class="btn btn-secondary btn-arcade btn-lg" id="random-match-btn">
-                <span class="btn-text"><span class="btn-icon">🎲</span> 랜덤 대전</span>
+                <span class="btn-text"><span class="btn-icon">🎲</span> 빠른 대전</span>
             </button>
             <button class="btn btn-secondary btn-arcade btn-lg btn-ai" id="ai-match-btn">
                 <span class="btn-text"><span class="btn-icon">🤖</span> AI 대전</span>
@@ -179,7 +179,7 @@
 <div class="modal-overlay hidden" id="random-match-modal">
     <div class="modal">
         <div class="modal-header">
-            <h2 class="modal-title">랜덤 대전 매칭</h2>
+            <h2 class="modal-title">빠른 대전 매칭</h2>
         </div>
         <div class="modal-body">
             <div class="ai-level-loading hidden" id="random-match-loading">
@@ -243,6 +243,7 @@
     color: var(--color-text-primary);
     font-size: 0.85rem;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+    cursor: pointer;
 }
 
 .hero-subtitle {
