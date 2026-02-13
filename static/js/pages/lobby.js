@@ -59,6 +59,7 @@
     let lobbyUsers = {};
     let lobbyRooms = [];
     let roomRefreshInterval = null;
+    let activeRoomInterval = null;
     let chatUnread = 0;
     let isChatOpen = true;
     let userContextMenu = null;
@@ -169,10 +170,10 @@
             const black = room.guest?.nickname || '블랙';
             activeGameInfo.textContent = `${white} vs ${black}`;
             activeGameEnter.onclick = () => {
-                window.location.href = `/games/${room.current_game_id}/`;
+                window.location.href = `/games/${room.id}/`;
             };
             activeGameCard.onclick = () => {
-                window.location.href = `/games/${room.current_game_id}/`;
+                window.location.href = `/games/${room.id}/`;
             };
         } catch (error) {
             activeGameCard.classList.add('hidden');
@@ -223,8 +224,14 @@
             }
         }, 5000);
 
+        activeRoomInterval = setInterval(() => {
+            if (document.hidden) return;
+            loadActiveGame();
+        }, 1000);
+
         window.addEventListener('beforeunload', () => {
             if (roomRefreshInterval) clearInterval(roomRefreshInterval);
+            if (activeRoomInterval) clearInterval(activeRoomInterval);
         });
 
         document.addEventListener('visibilitychange', () => {
@@ -251,7 +258,7 @@
 
         if (room.status === 'playing') {
             if (room.current_game_id) {
-                window.location.href = `/games/${room.current_game_id}/`;
+                window.location.href = `/games/${room.id}/`;
             } else {
                 Toast.error('관전 가능한 게임 정보를 찾을 수 없습니다.');
             }
@@ -736,8 +743,10 @@
             removeUserFromList(data.user_id);
         } else if (data.type === 'room_update') {
             upsertRoom(data.room);
+            loadActiveGame();
         } else if (data.type === 'room_removed') {
             removeRoom(data.room_id);
+            loadActiveGame();
         } else if (data.type === 'error') {
             Toast.error(data.message);
         }
