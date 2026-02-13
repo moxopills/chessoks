@@ -265,7 +265,7 @@
             return;
         }
 
-        if (room.guest || room.player_count >= 2) {
+        if ((room.guest || room.player_count >= 2) && room.guest?.id !== currentUserId) {
             Toast.error('이미 인원이 찬 방입니다.');
             return;
         }
