@@ -97,6 +97,7 @@
         <div class="panel-section game-chat-section" id="game-chat-section">
             <div class="panel-header">
                 <h3 class="panel-title">채팅</h3>
+                <button class="btn btn-secondary btn-xs chat-toggle-btn" id="chat-toggle-btn" aria-label="채팅 접기">💬</button>
             </div>
             <div class="game-chat">
                 <div class="chat-messages" id="chat-messages"></div>
@@ -104,16 +105,6 @@
                     <input type="text" class="chat-input" id="chat-input" placeholder="메시지..." maxlength="500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                     <button type="submit" class="btn btn-primary btn-sm">전송</button>
                 </form>
-            </div>
-        </div>
-
-        <!-- Report -->
-        <div class="panel-section game-report-section" id="game-report-section">
-            <div class="panel-header">
-                <h3 class="panel-title">신고</h3>
-            </div>
-            <div class="panel-body report-panel-body">
-                <button type="button" class="btn btn-secondary btn-sm" id="report-open-btn">상대 플레이어 신고하기</button>
             </div>
         </div>
     </div>
@@ -604,6 +595,11 @@
     border-bottom: 1px solid var(--color-border);
 }
 
+.game-actions-panel .panel-header {
+    border-bottom: 0;
+    padding-bottom: var(--space-sm);
+}
+
 .panel-title {
     font-family: var(--font-display);
     font-size: 0.625rem;
@@ -678,6 +674,11 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-sm);
+}
+
+.game-chat.is-collapsed .chat-messages,
+.game-chat.is-collapsed .chat-form {
+    display: none;
 }
 
 .game-actions-panel .btn {

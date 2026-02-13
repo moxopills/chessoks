@@ -67,8 +67,8 @@
     const replayNextDock = document.getElementById('replay-next-dock');
     const replayPlayDock = document.getElementById('replay-play-dock');
     const replayCloseDock = document.getElementById('replay-close-dock');
-    const reportOpenBtn = document.getElementById('report-open-btn');
-    const reportHint = document.getElementById('report-hint');
+    const reportOpenBtn = document.getElementById('report-btn');
+    const chatToggleBtn = document.getElementById('chat-toggle-btn');
     let pendingEnd = false;
 
     // State
@@ -148,6 +148,7 @@
         setupStatusModal();
         setupReplayControls();
         setupReport();
+        setupChatToggle();
         setupExitGuard();
         if (!replayOnly) {
             connectWebSocket();
@@ -221,8 +222,6 @@
 
             if (!myColor || replayOnly) {
                 gameActions?.classList.add('hidden');
-                const reportSection = document.getElementById('game-report-section');
-                reportSection?.classList.add('hidden');
             }
             isAiRoom = Boolean(game.room_type && game.room_type.startsWith('ai_'));
             const roomType = game.room_type || game.room?.room_type || roomTypeHint;
@@ -242,7 +241,7 @@
                 drawBtn?.remove();
                 resignBtn?.remove();
                 drawModal?.remove();
-                document.getElementById('game-report-section')?.remove();
+                reportOpenBtn?.remove();
                 chatSection?.classList.add('is-hidden');
                 document.querySelector('.mobile-tab[data-tab="chat"]')?.classList.add('hidden');
             }
@@ -363,7 +362,6 @@
         if (!reportOpenBtn) return;
         if (!currentUser || !myColor) {
             reportOpenBtn.disabled = true;
-            if (reportHint) reportHint.textContent = '플레이어만 신고할 수 있습니다.';
             return;
         }
         reportOpenBtn.addEventListener('click', () => {
@@ -372,6 +370,16 @@
                 return;
             }
             Utils.ReportModal.open(opponentUserId);
+        });
+    }
+
+    function setupChatToggle() {
+        if (!chatToggleBtn || !chatSection) return;
+        chatToggleBtn.addEventListener('click', () => {
+            const chatBox = chatSection.querySelector('.game-chat');
+            if (!chatBox) return;
+            const collapsed = chatBox.classList.toggle('is-collapsed');
+            chatToggleBtn.textContent = collapsed ? '열기' : '접기';
         });
     }
 
