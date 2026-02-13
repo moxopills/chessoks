@@ -1,11 +1,14 @@
 """Chess 앱 공통 유틸리티"""
 
+import logging
 import random
 import re
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from korcen import korcen
+
+logger = logging.getLogger(__name__)
 
 
 def parse_int(value, default: int, min_value: int, max_value: int) -> int:
@@ -32,9 +35,12 @@ def broadcast_room_update(room) -> None:
     if channel_layer is None:
         return
     payload = {"type": "room_update", "room": RoomSerializer(room).data}
-    async_to_sync(channel_layer.group_send)(
-        "chess_lobby", {"type": "broadcast", "payload": payload}
-    )
+    try:
+        async_to_sync(channel_layer.group_send)(
+            "chess_lobby", {"type": "broadcast", "payload": payload}
+        )
+    except Exception as exc:
+        logger.error("broadcast_room_update failed room=%s: %s", room.id, exc)
 
 
 def broadcast_room_state(room) -> None:
@@ -45,12 +51,15 @@ def broadcast_room_state(room) -> None:
     if channel_layer is None:
         return
     payload = {"type": "room_update", "room": RoomSerializer(room).data}
-    async_to_sync(channel_layer.group_send)(
-        f"chess_room_{room.id}", {"type": "broadcast", "payload": payload}
-    )
-    async_to_sync(channel_layer.group_send)(
-        f"chess_room_{room.id}_spectators", {"type": "broadcast", "payload": payload}
-    )
+    try:
+        async_to_sync(channel_layer.group_send)(
+            f"chess_room_{room.id}", {"type": "broadcast", "payload": payload}
+        )
+        async_to_sync(channel_layer.group_send)(
+            f"chess_room_{room.id}_spectators", {"type": "broadcast", "payload": payload}
+        )
+    except Exception as exc:
+        logger.error("broadcast_room_state failed room=%s: %s", room.id, exc)
 
 
 def broadcast_room_removed(room_id: int) -> None:
@@ -59,9 +68,12 @@ def broadcast_room_removed(room_id: int) -> None:
     if channel_layer is None:
         return
     payload = {"type": "room_removed", "room_id": room_id}
-    async_to_sync(channel_layer.group_send)(
-        "chess_lobby", {"type": "broadcast", "payload": payload}
-    )
+    try:
+        async_to_sync(channel_layer.group_send)(
+            "chess_lobby", {"type": "broadcast", "payload": payload}
+        )
+    except Exception as exc:
+        logger.error("broadcast_room_removed failed room_id=%s: %s", room_id, exc)
 
 
 def broadcast_spectator_event(room_id: int, user, action: str) -> None:
@@ -76,12 +88,15 @@ def broadcast_spectator_event(room_id: int, user, action: str) -> None:
         "action": action,
         "user": BaseUserSerializer(user).data,
     }
-    async_to_sync(channel_layer.group_send)(
-        f"chess_room_{room_id}", {"type": "broadcast", "payload": payload}
-    )
-    async_to_sync(channel_layer.group_send)(
-        f"chess_room_{room_id}_spectators", {"type": "broadcast", "payload": payload}
-    )
+    try:
+        async_to_sync(channel_layer.group_send)(
+            f"chess_room_{room_id}", {"type": "broadcast", "payload": payload}
+        )
+        async_to_sync(channel_layer.group_send)(
+            f"chess_room_{room_id}_spectators", {"type": "broadcast", "payload": payload}
+        )
+    except Exception as exc:
+        logger.error("broadcast_spectator_event failed room_id=%s: %s", room_id, exc)
 
 
 _EXTRA_PROFANITY_PATTERNS = re.compile(

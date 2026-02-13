@@ -72,6 +72,9 @@
     let waitingTick = 0;
     const HIDDEN_ROOM_TYPES = new Set(['quick', 'random']);
     let activeMatchToast = null;
+    let lobbyWsReconnectAttempts = 0;
+    const LOBBY_WS_MAX_RECONNECT = 10;
+    const LOBBY_WS_BASE_DELAY = 1000;
 
     // 초기화
     init();
@@ -688,6 +691,7 @@
 
         lobbySocket.onopen = function() {
             addChatNotice('채팅에 연결되었습니다.');
+            lobbyWsReconnectAttempts = 0;
         };
 
         lobbySocket.onmessage = function(e) {
@@ -697,8 +701,13 @@
 
         lobbySocket.onclose = function() {
             addChatNotice('채팅 연결이 끊어졌습니다.');
-            // 재연결 시도
-            setTimeout(connectLobbyChat, 3000);
+            if (lobbyWsReconnectAttempts >= LOBBY_WS_MAX_RECONNECT) {
+                addChatNotice('재연결 실패. 페이지를 새로고침해 주세요.');
+                return;
+            }
+            lobbyWsReconnectAttempts += 1;
+            const delay = Math.min(LOBBY_WS_BASE_DELAY * Math.pow(2, lobbyWsReconnectAttempts - 1), 30000);
+            setTimeout(connectLobbyChat, delay);
         };
 
         lobbySocket.onerror = function() {
@@ -783,6 +792,14 @@
                 setSuspendedState(false);
                 Toast.success(data.message || '계정 정지가 해제되었습니다.');
             }
+        };
+
+        notificationSocket.onclose = function() {
+            notificationSocket = null;
+        };
+
+        notificationSocket.onerror = function() {
+            notificationSocket = null;
         };
     }
 

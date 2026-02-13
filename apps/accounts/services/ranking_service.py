@@ -77,6 +77,26 @@ class RankingService:
         }
 
     @staticmethod
+    def get_users_with_rank(user_ids: list[int]) -> dict[int, int]:
+        """여러 유저의 랭킹 일괄 조회 (N+1 방지)
+
+        Returns:
+            dict[user_id, rank]: 유저 ID와 랭킹 매핑
+        """
+        if not user_ids:
+            return {}
+
+        # Window 함수로 전체 랭킹 계산 후 필터링
+        ranked_users = (
+            User.objects.filter(is_active=True, stats__isnull=False)
+            .select_related("stats")
+            .annotate(rank=RankingService._rank_window())
+            .filter(id__in=user_ids)
+            .values("id", "rank")
+        )
+        return {row["id"]: row["rank"] for row in ranked_users}
+
+    @staticmethod
     def _rank_window():
         """랭킹 Window 함수"""
         return Window(
