@@ -26,6 +26,9 @@
     const waitingRoomCard = document.getElementById('waiting-room-card');
     const waitingRoomInfo = document.getElementById('waiting-room-info');
     const waitingRoomEnter = document.getElementById('waiting-room-enter');
+    const activeGameCard = document.getElementById('active-game-card');
+    const activeGameInfo = document.getElementById('active-game-info');
+    const activeGameEnter = document.getElementById('active-game-enter');
     const tierToggle = document.getElementById('tier-toggle');
     const tierPanel = document.getElementById('tier-panel');
     const modeToggle = document.getElementById('mode-toggle');
@@ -74,6 +77,7 @@
     async function init() {
         await loadRooms();
         await loadWaitingRoom();
+        await loadActiveGame();
         await checkAuthAndSetupChat();
         startRoomAutoRefresh();
         setupMobileTabs();
@@ -147,6 +151,36 @@
         }
     }
 
+    async function loadActiveGame() {
+        if (!activeGameCard) return;
+        if (!currentUserId) {
+            activeGameCard.classList.add('hidden');
+            return;
+        }
+        try {
+            const data = await API.get('/chess/games/history/', { result: 'playing', limit: 1, no_count: 1 });
+            const games = data.results || [];
+            const game = games[0];
+            if (!game) {
+                activeGameCard.classList.add('hidden');
+                return;
+            }
+            const roomId = game.room_id;
+            activeGameCard.classList.remove('hidden');
+            const white = game.white_player?.nickname || '화이트';
+            const black = game.black_player?.nickname || '블랙';
+            activeGameInfo.textContent = `${white} vs ${black}`;
+            activeGameEnter.onclick = () => {
+                window.location.href = `/games/${roomId}/`;
+            };
+            activeGameCard.onclick = () => {
+                window.location.href = `/games/${roomId}/`;
+            };
+        } catch (error) {
+            activeGameCard.classList.add('hidden');
+        }
+    }
+
     /**
      * 방 목록 렌더링
      */
@@ -186,6 +220,9 @@
             if (isMatching || waitingTick % 3 === 0) {
                 loadWaitingRoom();
             }
+            if (waitingTick % 3 === 0) {
+                loadActiveGame();
+            }
         }, 5000);
 
         window.addEventListener('beforeunload', () => {
@@ -196,6 +233,7 @@
             if (document.hidden) return;
             loadRooms();
             loadWaitingRoom();
+            loadActiveGame();
         });
     }
 
