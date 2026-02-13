@@ -91,6 +91,19 @@ class RoomWaitingView(APIView):
         return Response({"room": RoomSerializer(room).data})
 
 
+class RoomActiveView(APIView):
+    """내 진행 중 방 조회"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: RoomSerializer}, tags=["방"])
+    def get(self, request):
+        room = RoomQueryService.get_active_room(request.user)
+        if not room:
+            return Response({"room": None})
+        return Response({"room": RoomSerializer(room).data})
+
+
 class RoomReadyView(APIView):
     """방 준비 상태 변경"""
 

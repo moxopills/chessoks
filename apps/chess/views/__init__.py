@@ -14,6 +14,7 @@ from apps.chess.views.match_views import (
     RandomMatchView,
 )
 from apps.chess.views.room_views import (
+    RoomActiveView,
     RoomDetailView,
     RoomJoinView,
     RoomLeaveView,
@@ -42,6 +43,7 @@ __all__ = [
     "GameHistoryView",
     "RoomListView",
     "RoomDetailView",
+    "RoomActiveView",
     "RoomJoinView",
     "RoomLeaveView",
     "RoomReadyView",

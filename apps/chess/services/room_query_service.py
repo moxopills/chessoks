@@ -1,3 +1,4 @@
+from django.db import models
 from django.db.models import OuterRef, Subquery
 
 from rest_framework.exceptions import NotFound, ValidationError
@@ -83,6 +84,18 @@ class RoomQueryService:
         return (
             Room.objects.select_related("host__stats", "guest__stats")
             .filter(host=user, status__in=["waiting", "ready"], guest__isnull=True)
+            .first()
+        )
+
+    @staticmethod
+    def get_active_room(user) -> Room | None:
+        if not user or not getattr(user, "is_authenticated", False):
+            return None
+        return (
+            Room.objects.select_related("host__stats", "guest__stats")
+            .filter(status="playing")
+            .filter(models.Q(host=user) | models.Q(guest=user))
+            .order_by("-started_at", "-created_at")
             .first()
         )
 

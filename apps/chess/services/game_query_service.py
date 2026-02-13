@@ -75,15 +75,17 @@ class GameQueryService:
 
     @staticmethod
     def list_legal_moves(game_id: int, user, from_square: str | None) -> list[str]:
-        game = GameQueryService.get_game_for_user(game_id, user)
-        if game.result != "playing":
-            raise ValidationError({"game": "진행 중인 게임이 아닙니다."})
-
         if not getattr(user, "is_authenticated", False):
             return []
         user_id = getattr(user, "pk", None)
         if user_id is None:
             return []
+        try:
+            game = Game.objects.select_related("room").get(pk=game_id)
+        except Game.DoesNotExist:
+            raise NotFound("게임을 찾을 수 없습니다.") from None
+        if game.result != "playing":
+            raise ValidationError({"game": "진행 중인 게임이 아닙니다."})
         if user_id not in {game.white_player_id, game.black_player_id}:
             return []
         if user_id not in {game.room.host_id, game.room.guest_id}:
