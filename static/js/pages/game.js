@@ -1273,7 +1273,7 @@
         }
 
         // 로비 버튼
-        document.getElementById('lobby-btn').addEventListener('click', () => {
+        document.getElementById('lobby-btn')?.addEventListener('click', () => {
             window.location.href = replayOnly ? '/history/' : '/';
         });
 
@@ -1294,14 +1294,16 @@
 
         // 리매치 수락/거절
         if (!replayOnly && !isCompetitive) {
-            document.getElementById('accept-rematch-btn').addEventListener('click', () => {
+            const acceptRematchBtn = document.getElementById('accept-rematch-btn');
+            const declineRematchBtn = document.getElementById('decline-rematch-btn');
+            acceptRematchBtn?.addEventListener('click', () => {
                 socket.send(JSON.stringify({ action: 'rematch', game_id: game.id }));
-                rematchModal.classList.add('hidden');
+                rematchModal?.classList.add('hidden');
             });
 
-            document.getElementById('decline-rematch-btn').addEventListener('click', () => {
+            declineRematchBtn?.addEventListener('click', () => {
                 socket.send(JSON.stringify({ action: 'decline_rematch', game_id: game.id }));
-                rematchModal.classList.add('hidden');
+                rematchModal?.classList.add('hidden');
             });
         }
     }
