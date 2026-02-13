@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from apps.chess.models import Game, Room
 from apps.chess.services.ai_service import AiService
-from apps.chess.utils import assign_colors, broadcast_room_state, broadcast_room_update
+from apps.chess.utils import broadcast_room_state, broadcast_room_update
 
 
 class AiMatchService:
@@ -37,7 +37,7 @@ class AiMatchService:
             guest_start_confirmed=True,
             started_at=timezone.now(),
         )
-        white_player, black_player = assign_colors(room.host, room.guest)
+        white_player, black_player = room.host, room.guest
         game = Game.objects.create(room=room, white_player=white_player, black_player=black_player)
         broadcast_room_update(room)
         broadcast_room_state(room)
