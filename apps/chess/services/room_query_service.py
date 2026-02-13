@@ -1,3 +1,4 @@
+from django.db import models
 from django.db.models import OuterRef, Subquery
 
 from rest_framework.exceptions import NotFound, ValidationError
