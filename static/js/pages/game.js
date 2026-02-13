@@ -68,7 +68,7 @@
     const replayPlayDock = document.getElementById('replay-play-dock');
     const replayCloseDock = document.getElementById('replay-close-dock');
     const reportOpenBtn = document.getElementById('report-btn');
-    const chatToggleBtn = document.getElementById('chat-toggle-btn');
+    const chatFab = document.getElementById('chat-fab');
     let pendingEnd = false;
 
     // State
@@ -374,12 +374,10 @@
     }
 
     function setupChatToggle() {
-        if (!chatToggleBtn || !chatSection) return;
-        chatToggleBtn.addEventListener('click', () => {
-            const chatBox = chatSection.querySelector('.game-chat');
-            if (!chatBox) return;
-            const collapsed = chatBox.classList.toggle('is-collapsed');
-            chatToggleBtn.textContent = collapsed ? '열기' : '접기';
+        if (!chatFab || !chatSection) return;
+        chatFab.addEventListener('click', () => {
+            const collapsed = chatSection.classList.toggle('is-collapsed');
+            chatFab.classList.toggle('is-active', !collapsed);
         });
     }
 

@@ -97,7 +97,6 @@
         <div class="panel-section game-chat-section" id="game-chat-section">
             <div class="panel-header">
                 <h3 class="panel-title">채팅</h3>
-                <button class="btn btn-secondary btn-xs chat-toggle-btn" id="chat-toggle-btn" aria-label="채팅 접기">💬</button>
             </div>
             <div class="game-chat">
                 <div class="chat-messages" id="chat-messages"></div>
@@ -109,6 +108,8 @@
         </div>
     </div>
 </div>
+
+<button class="chat-fab" id="chat-fab" aria-label="채팅 열기">💬</button>
 
 <div class="mobile-tabbar" id="mobile-tabbar">
     <button class="mobile-tab active" data-tab="main">게임</button>
@@ -679,6 +680,41 @@
 .game-chat.is-collapsed .chat-messages,
 .game-chat.is-collapsed .chat-form {
     display: none;
+}
+
+.game-chat-section.is-collapsed {
+    display: none;
+}
+
+.chat-fab {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-card);
+    box-shadow: var(--shadow-md);
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1200;
+}
+
+.chat-fab.is-active {
+    background: var(--color-accent-primary);
+    color: #fff;
+    border-color: var(--color-accent-primary);
+}
+
+@media (max-width: 768px) {
+    .chat-fab {
+        bottom: 80px;
+        right: 16px;
+    }
 }
 
 .game-actions-panel .btn {
