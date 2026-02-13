@@ -158,7 +158,21 @@
                 game = await API.get(`/chess/games/${replayGameParamId}/`);
             } else {
                 // 방에서 현재 게임 가져오기
-                const room = await API.get(`/chess/rooms/${roomId}/`);
+                let room = null;
+                try {
+                    room = await API.get(`/chess/rooms/${roomId}/`);
+                } catch (roomError) {
+                    try {
+                        const active = await API.get('/chess/rooms/active/');
+                        if (active?.room?.id) {
+                            window.location.href = `/games/${active.room.id}/`;
+                            return;
+                        }
+                    } catch {
+                        // noop
+                    }
+                    throw roomError;
+                }
                 roomTypeHint = room?.room_type || null;
 
                 if (room.status !== 'playing') {
@@ -207,7 +221,7 @@
             isAiRoom = Boolean(game.room_type && game.room_type.startsWith('ai_'));
             const roomType = game.room_type || game.room?.room_type || roomTypeHint;
             isAiRoom = Boolean(roomType && roomType.startsWith('ai_'));
-            if (roomType === 'quick' || roomType === 'random' || roomType === 'competitive') {
+            if (roomType === 'quick' || roomType === 'competitive') {
                 document.body.classList.add('competitive-room');
                 guideEnabled = false;
                 guideToggle?.classList.add('hidden');
@@ -1249,7 +1263,7 @@
      */
     function setupModals() {
         const roomType = game?.room_type || game?.room?.room_type;
-        const isCompetitive = roomType === 'quick' || roomType === 'random' || roomType === 'competitive';
+        const isCompetitive = roomType === 'quick' || roomType === 'competitive';
         const isAiRoom = roomType?.startsWith('ai_');
         if (replayOnly) {
             rematchBtn?.classList.add('hidden');

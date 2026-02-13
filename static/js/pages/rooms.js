@@ -325,17 +325,21 @@
         const isPrivate = card.querySelector('.icon-private') !== null;
 
         if (isFull && !isPlaying) {
-            Toast.error('이미 인원이 가득 찼습니다.');
-            return;
+            try {
+                const latest = await API.get(`/chess/rooms/${roomId}/`);
+                if (latest?.guest) {
+                    Toast.error('이미 인원이 가득 찼습니다.');
+                    return;
+                }
+            } catch {
+                Toast.error('방 정보를 확인할 수 없습니다.');
+                return;
+            }
         }
 
         if (isPlaying) {
-            // 게임 중인 방은 관전 페이지로
-            if (gameId) {
-                window.location.href = `/games/${gameId}/`;
-            } else {
-                Toast.error('관전 가능한 게임 정보를 찾을 수 없습니다.');
-            }
+            const target = currentView === 'spectate' ? `/games/${roomId}/spectate/` : `/games/${roomId}/`;
+            window.location.href = target;
             return;
         }
 
@@ -346,13 +350,8 @@
 
             try {
             const joined = await API.post(`/chess/rooms/${roomId}/join/`, { password });
-            if (joined.room_type === 'quick' || joined.status === 'playing') {
-                const joinedGameId = joined.current_game_id;
-                if (joinedGameId) {
-                    window.location.href = `/games/${joinedGameId}/`;
-                } else {
-                    Toast.error('게임 정보를 찾을 수 없습니다.');
-                }
+            if (joined.room_type === 'quick' || joined.room_type === 'random' || joined.status === 'playing') {
+                window.location.href = `/games/${roomId}/`;
             } else {
                 window.location.href = `/rooms/${roomId}/`;
             }
@@ -365,13 +364,8 @@
         // 일반 입장
         try {
             const joined = await API.post(`/chess/rooms/${roomId}/join/`);
-            if (joined.room_type === 'quick' || joined.status === 'playing') {
-                const joinedGameId = joined.current_game_id;
-                if (joinedGameId) {
-                    window.location.href = `/games/${joinedGameId}/`;
-                } else {
-                    Toast.error('게임 정보를 찾을 수 없습니다.');
-                }
+            if (joined.room_type === 'quick' || joined.room_type === 'random' || joined.status === 'playing') {
+                window.location.href = `/games/${roomId}/`;
             } else {
                 window.location.href = `/rooms/${roomId}/`;
             }
