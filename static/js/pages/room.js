@@ -22,9 +22,6 @@
     const mobileTabbar = document.getElementById('mobile-tabbar');
     const chatBadge = document.getElementById('chat-badge');
     const chatSection = document.querySelector('.room-chat-section');
-    const statusModal = document.getElementById('status-modal');
-    const statusModalMessage = document.getElementById('status-modal-message');
-    const statusModalOk = document.getElementById('status-modal-ok');
     const lobbyWaitBtn = document.getElementById('lobby-wait-btn');
 
     // State
@@ -58,7 +55,6 @@
         }
 
         await loadRoom();
-        setupStatusModal();
         setupLeaveButton();
         setupLobbyWait();
         setupChat();
@@ -307,17 +303,28 @@
         });
     }
 
-    function setupStatusModal() {
-        if (!statusModalOk) return;
-        statusModalOk.addEventListener('click', () => {
-            statusModal.classList.add('hidden');
-        });
+    function showStatusModal(message) {
+        Toast.info(message);
+        playStatusTone();
     }
 
-    function showStatusModal(message) {
-        if (!statusModal || !statusModalMessage) return;
-        statusModalMessage.textContent = message;
-        statusModal.classList.remove('hidden');
+    function playStatusTone() {
+        try {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = context.createOscillator();
+            const gain = context.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(880, context.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(660, context.currentTime + 0.18);
+            gain.gain.setValueAtTime(0.0001, context.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.2, context.currentTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.2);
+            osc.connect(gain).connect(context.destination);
+            osc.start();
+            osc.stop(context.currentTime + 0.22);
+        } catch {
+            // noop
+        }
     }
 
     /**

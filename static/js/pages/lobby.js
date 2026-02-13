@@ -60,6 +60,7 @@
     let lobbyRooms = [];
     let roomRefreshInterval = null;
     let activeRoomInterval = null;
+    let activeRoomId = null;
     let chatUnread = 0;
     let isChatOpen = true;
     let userContextMenu = null;
@@ -163,7 +164,15 @@
             const room = data.room;
             if (!room || !room.current_game_id) {
                 activeGameCard.classList.add('hidden');
+                activeRoomId = null;
+                if (activeRoomInterval) {
+                    clearInterval(activeRoomInterval);
+                    activeRoomInterval = null;
+                }
                 return;
+            }
+            if (activeRoomId !== room.id) {
+                activeRoomId = room.id;
             }
             activeGameCard.classList.remove('hidden');
             const white = room.host?.nickname || '화이트';
@@ -175,6 +184,12 @@
             activeGameCard.onclick = () => {
                 window.location.href = `/games/${room.id}/`;
             };
+            if (!activeRoomInterval) {
+                activeRoomInterval = setInterval(() => {
+                    if (document.hidden) return;
+                    loadActiveGame();
+                }, 1000);
+            }
         } catch (error) {
             activeGameCard.classList.add('hidden');
         }
@@ -223,11 +238,6 @@
                 loadActiveGame();
             }
         }, 5000);
-
-        activeRoomInterval = setInterval(() => {
-            if (document.hidden) return;
-            loadActiveGame();
-        }, 1000);
 
         window.addEventListener('beforeunload', () => {
             if (roomRefreshInterval) clearInterval(roomRefreshInterval);
