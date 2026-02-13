@@ -26,6 +26,9 @@
     const opponentTimer = document.getElementById('opponent-timer');
     const myTimer = document.getElementById('my-timer');
     const moveList = document.getElementById('move-list');
+    const movePrevBtn = document.getElementById('move-prev');
+    const moveNextBtn = document.getElementById('move-next');
+    const movePageLabel = document.getElementById('move-page');
     const turnIndicator = document.getElementById('turn-indicator');
     const moveSection = document.getElementById('game-moves-section');
     const guideToggle = document.getElementById('guide-toggle');
@@ -104,6 +107,8 @@
     let opponentUserId = null;
     let guideEnabled = true;
     let isAiRoom = false;
+    let movePage = 1;
+    const movePageSize = 6;
     let aiExitTriggered = false;
 
     // Init
@@ -139,6 +144,7 @@
         setupMobileTabs();
         setupActions();
         setupModals();
+        setupMovePagination();
         setupStatusModal();
         setupReplayControls();
         setupReport();
@@ -520,15 +526,22 @@
     function renderMoveList() {
         if (!game || !game.pgn || game.pgn.trim() === '') {
             moveList.innerHTML = '<div class="move-list-empty">아직 착수가 없습니다.</div>';
+            if (movePageLabel) movePageLabel.textContent = '1';
+            movePrevBtn && (movePrevBtn.disabled = true);
+            moveNextBtn && (moveNextBtn.disabled = true);
             return;
         }
 
         // PGN 파싱 (간단한 구현)
         const moves = game.pgn.trim().split(/\d+\.\s*/).filter(m => m.trim());
+        const totalPages = Math.max(1, Math.ceil(moves.length / movePageSize));
+        movePage = Math.min(movePage, totalPages);
+        const startIndex = (movePage - 1) * movePageSize;
+        const pageMoves = moves.slice(startIndex, startIndex + movePageSize);
         let html = '';
-        let moveNum = 1;
+        let moveNum = startIndex + 1;
 
-        for (const movePair of moves) {
+        for (const movePair of pageMoves) {
             const parts = movePair.trim().split(/\s+/);
             html += `
                 <div class="move-row">
@@ -541,7 +554,9 @@
         }
 
         moveList.innerHTML = html || '<div class="move-list-empty">아직 착수가 없습니다.</div>';
-        moveList.scrollTop = moveList.scrollHeight;
+        if (movePageLabel) movePageLabel.textContent = `${movePage} / ${totalPages}`;
+        movePrevBtn && (movePrevBtn.disabled = movePage <= 1);
+        moveNextBtn && (moveNextBtn.disabled = movePage >= totalPages);
     }
 
     /**
@@ -1322,6 +1337,20 @@
                 rematchModal?.classList.add('hidden');
             });
         }
+    }
+
+    function setupMovePagination() {
+        if (!movePrevBtn || !moveNextBtn) return;
+        movePrevBtn.addEventListener('click', () => {
+            if (movePage > 1) {
+                movePage -= 1;
+                renderMoveList();
+            }
+        });
+        moveNextBtn.addEventListener('click', () => {
+            movePage += 1;
+            renderMoveList();
+        });
     }
 
     function setupStatusModal() {
