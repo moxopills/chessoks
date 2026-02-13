@@ -1,4 +1,12 @@
+import logging
+import threading
+
 from django.core.cache import cache
+
+logger = logging.getLogger(__name__)
+
+# 온라인 목록 수정을 위한 간단한 락 (단일 프로세스 환경용)
+_online_list_lock = threading.Lock()
 
 
 class OnlineStatusService:
@@ -36,10 +44,11 @@ class OnlineStatusService:
     def set_online(user_id: int) -> None:
         """온라인 상태 설정 (TTL 갱신)"""
         cache.set(OnlineStatusService._key(user_id), True, timeout=OnlineStatusService.TTL_SECONDS)
-        user_ids = OnlineStatusService._get_list()
-        if user_id not in user_ids:
-            user_ids.append(user_id)
-            OnlineStatusService._set_list(user_ids)
+        with _online_list_lock:
+            user_ids = OnlineStatusService._get_list()
+            if user_id not in user_ids:
+                user_ids.append(user_id)
+                OnlineStatusService._set_list(user_ids)
 
     @staticmethod
     def refresh(user_id: int) -> None:
@@ -50,10 +59,11 @@ class OnlineStatusService:
     def set_offline(user_id: int) -> None:
         """명시적 오프라인 (로그아웃 등)"""
         cache.delete(OnlineStatusService._key(user_id))
-        user_ids = OnlineStatusService._get_list()
-        if user_id in user_ids:
-            user_ids = [uid for uid in user_ids if uid != user_id]
-            OnlineStatusService._set_list(user_ids)
+        with _online_list_lock:
+            user_ids = OnlineStatusService._get_list()
+            if user_id in user_ids:
+                user_ids = [uid for uid in user_ids if uid != user_id]
+                OnlineStatusService._set_list(user_ids)
 
     @staticmethod
     def is_online(user_id: int) -> bool:

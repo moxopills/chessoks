@@ -35,6 +35,9 @@
     let chatUnread = 0;
     let isChatOpen = true;
     let lastRoomState = null;
+    let wsReconnectAttempts = 0;
+    const WS_MAX_RECONNECT = 10;
+    const WS_BASE_DELAY = 1000;
 
     // Init
     init();
@@ -338,6 +341,7 @@
 
         socket.onopen = () => {
             addChatNotice('연결되었습니다.');
+            wsReconnectAttempts = 0;
             startHeartbeat();
         };
 
@@ -349,8 +353,13 @@
         socket.onclose = () => {
             addChatNotice('연결이 끊어졌습니다.');
             stopHeartbeat();
-            // 재연결 시도
-            setTimeout(connectWebSocket, 3000);
+            if (wsReconnectAttempts >= WS_MAX_RECONNECT) {
+                addChatNotice('재연결 실패. 페이지를 새로고침해 주세요.');
+                return;
+            }
+            wsReconnectAttempts += 1;
+            const delay = Math.min(WS_BASE_DELAY * Math.pow(2, wsReconnectAttempts - 1), 30000);
+            setTimeout(connectWebSocket, delay);
         };
 
         socket.onerror = () => {
