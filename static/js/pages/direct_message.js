@@ -121,9 +121,13 @@
     function startPolling() {
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = setInterval(() => {
+            if (document.hidden) return;
             loadMessages();
         }, 4000);
         window.addEventListener('beforeunload', () => pollTimer && clearInterval(pollTimer));
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) loadMessages();
+        });
     }
 
     async function markDirectMessageNotificationsRead() {

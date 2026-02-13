@@ -38,8 +38,11 @@ def _broadcast_game_end(channel_layer, game: Game) -> None:
         return
     payload = _build_game_end_payload(game)
     message = {"type": "broadcast", "payload": payload}
-    async_to_sync(channel_layer.group_send)(f"chess_room_{game.room_id}", message)
-    async_to_sync(channel_layer.group_send)(f"chess_room_{game.room_id}_spectators", message)
+    try:
+        async_to_sync(channel_layer.group_send)(f"chess_room_{game.room_id}", message)
+        async_to_sync(channel_layer.group_send)(f"chess_room_{game.room_id}_spectators", message)
+    except Exception as exc:
+        logger.error("_broadcast_game_end failed game=%s: %s", game.id, exc)
 
 
 @shared_task
@@ -188,9 +191,14 @@ def _build_move_payload(result, game: Game) -> dict:
     return payload
 
 
+def _ai_move_lock_key(game_id: int, move_count: int) -> str:
+    """AI 수 중복 방지용 캐시 키"""
+    return f"ai_move_lock:{game_id}:{move_count}"
+
+
 @shared_task
 def handle_ai_move(game_id: int) -> bool:
-    """AI 착수 처리"""
+    """AI 착수 처리 (idempotency 보장)"""
     import time
 
     try:
@@ -211,8 +219,15 @@ def handle_ai_move(game_id: int) -> bool:
     if game.current_turn != ai_color:
         return False
 
+    # Idempotency: 동일 move_count에 대해 중복 실행 방지
+    lock_key = _ai_move_lock_key(game_id, game.move_count)
+    if not cache.add(lock_key, True, timeout=60):
+        logger.info("AI move skipped (duplicate) game=%s move_count=%s", game_id, game.move_count)
+        return False
+
     decision = AiService.choose_move(game.fen, level)
     if not decision:
+        cache.delete(lock_key)
         return False
 
     delay_ms = AiService.get_delay_ms(level)
@@ -220,7 +235,12 @@ def handle_ai_move(game_id: int) -> bool:
         time.sleep(delay_ms / 1000)
 
     start = time.monotonic()
-    result = GameService.make_move(game.id, ai_user, decision.uci)
+    try:
+        result = GameService.make_move(game.id, ai_user, decision.uci)
+    except Exception as exc:
+        cache.delete(lock_key)
+        logger.error("AI move failed game=%s error=%s", game_id, exc)
+        raise
     elapsed_ms = int((time.monotonic() - start) * 1000)
     logger.info(
         "AI move game=%s level=%s uci=%s score=%.2f elapsed_ms=%s",
@@ -233,6 +253,9 @@ def handle_ai_move(game_id: int) -> bool:
     channel_layer = get_channel_layer()
     payload = _build_move_payload(result, result.game)
     message = {"type": "broadcast", "payload": payload}
-    async_to_sync(channel_layer.group_send)(f"chess_room_{game.room_id}", message)
-    async_to_sync(channel_layer.group_send)(f"chess_room_{game.room_id}_spectators", message)
+    try:
+        async_to_sync(channel_layer.group_send)(f"chess_room_{game.room_id}", message)
+        async_to_sync(channel_layer.group_send)(f"chess_room_{game.room_id}_spectators", message)
+    except Exception as exc:
+        logger.error("AI move broadcast failed game=%s: %s", game_id, exc)
     return True

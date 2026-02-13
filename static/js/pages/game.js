@@ -110,6 +110,11 @@
     let movePage = 1;
     const movePageSize = 6;
     let aiExitTriggered = false;
+    let wsReconnectAttempts = 0;
+    const WS_MAX_RECONNECT_ATTEMPTS = 10;
+    const WS_BASE_RECONNECT_DELAY = 1000;
+    let ratingPollAttempts = 0;
+    const RATING_POLL_MAX_ATTEMPTS = 30;
 
     // Init
     init();
@@ -302,6 +307,8 @@
         captured = { white: [], black: [] };
         hasShownStartGuide = false;
         lastTurnColor = null;
+        wsReconnectAttempts = 0;
+        ratingPollAttempts = 0;
 
         let fetched = null;
         for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -922,6 +929,7 @@
 
         socket.onopen = () => {
             addChatNotice('연결되었습니다.');
+            wsReconnectAttempts = 0;
             startHeartbeat();
         };
 
@@ -933,7 +941,14 @@
         socket.onclose = () => {
             addChatNotice('연결이 끊어졌습니다.');
             stopHeartbeat();
-            setTimeout(connectWebSocket, 3000);
+            if (wsReconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS) {
+                addChatNotice('재연결 시도 횟수를 초과했습니다. 페이지를 새로고침해 주세요.');
+                return;
+            }
+            wsReconnectAttempts += 1;
+            const delay = Math.min(WS_BASE_RECONNECT_DELAY * Math.pow(2, wsReconnectAttempts - 1), 30000);
+            addChatNotice(`${Math.round(delay / 1000)}초 후 재연결 시도 (${wsReconnectAttempts}/${WS_MAX_RECONNECT_ATTEMPTS})...`);
+            setTimeout(connectWebSocket, delay);
         };
 
         socket.onerror = () => {
@@ -1603,6 +1618,7 @@
         titleEl.textContent = title;
         resultEl.textContent = resultText;
 
+        ratingPollAttempts = 0;
         loadRatingChange();
 
         gameEndModal.classList.remove('hidden');
@@ -1675,10 +1691,16 @@
             );
 
             if (!target) {
+                ratingPollAttempts += 1;
+                if (ratingPollAttempts >= RATING_POLL_MAX_ATTEMPTS) {
+                    ratingEl.textContent = '레이팅 정보를 불러오지 못했습니다.';
+                    return;
+                }
                 setTimeout(loadRatingChange, 1000);
                 return;
             }
 
+            ratingPollAttempts = 0;
             const before = target.payload.before;
             const after = target.payload.after;
             const delta = target.payload.delta ?? (after - before);
