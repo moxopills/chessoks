@@ -158,23 +158,21 @@
             return;
         }
         try {
-            const data = await API.get('/chess/games/history/', { result: 'playing', limit: 1, no_count: 1 });
-            const games = data.results || [];
-            const game = games[0];
-            if (!game) {
+            const data = await API.get('/chess/rooms/active/');
+            const room = data.room;
+            if (!room || !room.current_game_id) {
                 activeGameCard.classList.add('hidden');
                 return;
             }
-            const roomId = game.room_id;
             activeGameCard.classList.remove('hidden');
-            const white = game.white_player?.nickname || '화이트';
-            const black = game.black_player?.nickname || '블랙';
+            const white = room.host?.nickname || '화이트';
+            const black = room.guest?.nickname || '블랙';
             activeGameInfo.textContent = `${white} vs ${black}`;
             activeGameEnter.onclick = () => {
-                window.location.href = `/games/${roomId}/`;
+                window.location.href = `/games/${room.current_game_id}/`;
             };
             activeGameCard.onclick = () => {
-                window.location.href = `/games/${roomId}/`;
+                window.location.href = `/games/${room.current_game_id}/`;
             };
         } catch (error) {
             activeGameCard.classList.add('hidden');

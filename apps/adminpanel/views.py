@@ -230,7 +230,8 @@ class AdminAiSettingsView(APIView):
                 errors.append({"index": idx, "errors": {"level": ["level 값이 필요합니다."]}})
                 continue
             setting, _ = AiDifficultySetting.objects.get_or_create(level=level)
-            serializer = AiDifficultySettingSerializer(instance=setting, data=item, partial=True)
+            payload = {key: value for key, value in item.items() if key != "level"}
+            serializer = AiDifficultySettingSerializer(instance=setting, data=payload, partial=True)
             if not serializer.is_valid():
                 errors.append({"index": idx, "errors": serializer.errors})
                 continue
