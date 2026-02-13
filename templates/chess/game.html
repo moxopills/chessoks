@@ -686,6 +686,33 @@
     display: none;
 }
 
+.game-chat-section {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.game-chat-section.is-floating {
+    position: fixed;
+    right: 24px;
+    bottom: 90px;
+    width: 320px;
+    max-height: 420px;
+    z-index: 1200;
+    box-shadow: var(--shadow-lg);
+}
+
+.game-chat-section.is-floating .game-chat {
+    max-height: 320px;
+}
+
+@media (max-width: 768px) {
+    .game-chat-section.is-floating {
+        right: 12px;
+        left: 12px;
+        width: auto;
+        bottom: 90px;
+    }
+}
+
 .chat-fab {
     position: fixed;
     right: 24px;

@@ -375,9 +375,12 @@
 
     function setupChatToggle() {
         if (!chatFab || !chatSection) return;
+        chatSection.classList.add('is-collapsed');
         chatFab.addEventListener('click', () => {
-            const collapsed = chatSection.classList.toggle('is-collapsed');
-            chatFab.classList.toggle('is-active', !collapsed);
+            const willOpen = chatSection.classList.contains('is-collapsed');
+            chatSection.classList.toggle('is-collapsed');
+            chatSection.classList.toggle('is-floating', willOpen);
+            chatFab.classList.toggle('is-active', willOpen);
         });
     }
 
