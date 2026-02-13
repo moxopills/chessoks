@@ -207,7 +207,7 @@
             isAiRoom = Boolean(game.room_type && game.room_type.startsWith('ai_'));
             const roomType = game.room_type || game.room?.room_type || roomTypeHint;
             isAiRoom = Boolean(roomType && roomType.startsWith('ai_'));
-            if (roomType === 'quick') {
+            if (roomType === 'quick' || roomType === 'random' || roomType === 'competitive') {
                 document.body.classList.add('competitive-room');
                 guideEnabled = false;
                 guideToggle?.classList.add('hidden');
@@ -1249,7 +1249,7 @@
      */
     function setupModals() {
         const roomType = game?.room_type || game?.room?.room_type;
-        const isCompetitive = roomType === 'quick';
+        const isCompetitive = roomType === 'quick' || roomType === 'random' || roomType === 'competitive';
         const isAiRoom = roomType?.startsWith('ai_');
         if (replayOnly) {
             rematchBtn?.classList.add('hidden');
