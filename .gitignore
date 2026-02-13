@@ -56,3 +56,4 @@ dmypy.json
 .ruff_cache/
 
 WORK_ITEMS.md
+perf_bug_audit.md

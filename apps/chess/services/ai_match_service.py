@@ -37,7 +37,7 @@ class AiMatchService:
             guest_start_confirmed=True,
             started_at=timezone.now(),
         )
-        white_player, black_player = assign_colors(room.host, room.guest)
+        white_player, black_player = room.host, room.guest
         game = Game.objects.create(room=room, white_player=white_player, black_player=black_player)
         broadcast_room_update(room)
         broadcast_room_state(room)
