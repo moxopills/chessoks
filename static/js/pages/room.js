@@ -120,11 +120,7 @@
         // 게임 시작 체크
         if (room.status === 'playing') {
             Toast.success('게임이 시작됩니다!');
-            if (room.current_game_id) {
-                window.location.href = `/games/${room.current_game_id}/`;
-            } else {
-                Toast.error('게임 정보를 찾을 수 없습니다.');
-            }
+            window.location.href = `/games/${room.id}/`;
         }
     }
 
