@@ -30,22 +30,31 @@
         </div>
         <div class="turn-indicator" id="turn-indicator"></div>
 
-        <!-- Game Actions -->
-        <div class="game-actions" id="game-actions">
-            <button class="btn btn-secondary btn-sm" id="draw-btn" title="무승부 제안">
-                🤝 무승부
-            </button>
-            <button class="btn btn-danger btn-sm" id="resign-btn" title="기권">
-                🏳️ 기권
-            </button>
-            <button class="btn btn-secondary btn-sm" id="leave-btn" title="나가기">
-                🚪 나가기
-            </button>
-        </div>
     </div>
 
     <!-- Right: Side Panel -->
     <div class="game-side-panel">
+        <!-- Game Actions -->
+        <div class="panel-section game-actions-panel" id="game-actions">
+            <div class="panel-header">
+                <h3 class="panel-title">대전 메뉴</h3>
+            </div>
+            <div class="action-grid">
+                <button class="btn btn-secondary btn-sm" id="draw-btn" title="무승부 제안">
+                    🤝 무승부
+                </button>
+                <button class="btn btn-danger btn-sm" id="resign-btn" title="기권">
+                    🏳️ 기권
+                </button>
+                <button class="btn btn-secondary btn-sm" id="leave-btn" title="나가기">
+                    🚪 나가기
+                </button>
+                <button class="btn btn-secondary btn-sm" id="report-btn" title="신고하기">
+                    🚨 신고
+                </button>
+            </div>
+        </div>
+
         <!-- Move List -->
         <div class="panel-section game-moves-section" id="game-moves-section">
             <div class="panel-header">
@@ -61,9 +70,9 @@
                 <div class="move-list-empty">아직 착수가 없습니다.</div>
             </div>
             <div class="move-pagination">
-                <button class="btn btn-secondary btn-sm" id="move-prev">이전</button>
+                <button class="btn btn-secondary btn-sm" id="move-prev" aria-label="이전">◀</button>
                 <span class="move-page" id="move-page">1</span>
-                <button class="btn btn-secondary btn-sm" id="move-next">다음</button>
+                <button class="btn btn-secondary btn-sm" id="move-next" aria-label="다음">▶</button>
             </div>
         </div>
 
@@ -663,6 +672,16 @@
 .move-page {
     font-size: 0.8rem;
     color: var(--color-text-secondary);
+}
+
+.game-actions-panel .action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+}
+
+.game-actions-panel .btn {
+    width: 100%;
 }
 
 .move-list-empty {
