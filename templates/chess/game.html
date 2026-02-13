@@ -7,18 +7,11 @@
 <div class="game-container">
     <!-- Left: Game Board Area -->
     <div class="game-board-area">
-        <!-- Opponent Info -->
-        <div class="player-bar opponent" id="opponent-bar">
-            <div class="player-bar-info">
-                <div class="avatar avatar-sm">
-                    <span class="avatar-placeholder">?</span>
-                </div>
-                <div class="player-bar-details">
-                    <span class="player-bar-name">상대</span>
-                    <span class="player-bar-rating">--</span>
-                </div>
-            </div>
-            <div class="player-bar-timer" id="opponent-timer">--:--</div>
+        <!-- Match Header -->
+        <div class="match-header">
+            <div class="player-bar opponent" id="opponent-bar"></div>
+            <div class="match-vs">VS</div>
+            <div class="player-bar mine" id="my-bar"></div>
         </div>
 
         <!-- Chess Board -->
@@ -36,20 +29,6 @@
             </div>
         </div>
         <div class="turn-indicator" id="turn-indicator"></div>
-
-        <!-- My Info -->
-        <div class="player-bar mine" id="my-bar">
-            <div class="player-bar-info">
-                <div class="avatar avatar-sm">
-                    <span class="avatar-placeholder">?</span>
-                </div>
-                <div class="player-bar-details">
-                    <span class="player-bar-name">나</span>
-                    <span class="player-bar-rating">--</span>
-                </div>
-            </div>
-            <div class="player-bar-timer" id="my-timer">--:--</div>
-        </div>
 
         <!-- Game Actions -->
         <div class="game-actions" id="game-actions">
@@ -80,6 +59,11 @@
             </div>
             <div class="move-list" id="move-list">
                 <div class="move-list-empty">아직 착수가 없습니다.</div>
+            </div>
+            <div class="move-pagination">
+                <button class="btn btn-secondary btn-sm" id="move-prev">이전</button>
+                <span class="move-page" id="move-page">1</span>
+                <button class="btn btn-secondary btn-sm" id="move-next">다음</button>
             </div>
         </div>
 
@@ -281,6 +265,23 @@
     border-radius: var(--radius-md);
 }
 
+.match-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-sm);
+}
+
+.match-header .player-bar {
+    flex: 1;
+}
+
+.match-vs {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    color: var(--color-accent-primary);
+}
+
 .player-bar.active {
     border-color: var(--color-accent-success);
     box-shadow: 0 0 10px rgba(39, 174, 96, 0.3);
@@ -314,7 +315,7 @@
 
 .player-bar-timer {
     font-family: var(--font-body);
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: -0.02em;
     padding: var(--space-sm) var(--space-md);
@@ -646,9 +647,22 @@
 
 /* Move List */
 .move-list {
-    height: 200px;
+    height: 140px;
     overflow-y: auto;
     padding: var(--space-sm);
+}
+
+.move-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+}
+
+.move-page {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
 }
 
 .move-list-empty {
