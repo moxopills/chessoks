@@ -104,6 +104,7 @@
     let opponentUserId = null;
     let guideEnabled = true;
     let isAiRoom = false;
+    let aiExitTriggered = false;
 
     // Init
     init();
@@ -1177,6 +1178,7 @@
             resignBtn?.remove();
             if (leaveBtn) {
                 leaveBtn.addEventListener('click', () => {
+                    sendAiResign();
                     window.location.href = '/';
                 });
             }
@@ -1660,6 +1662,23 @@
     window.addEventListener('beforeunload', () => {
         stopHeartbeat();
         if (timerInterval) clearInterval(timerInterval);
+        if (isAiRoom) {
+            sendAiResign();
+        }
         if (socket) socket.close();
     });
+
+    window.addEventListener('pagehide', () => {
+        if (isAiRoom) {
+            sendAiResign();
+        }
+    });
+
+    function sendAiResign() {
+        if (aiExitTriggered) return;
+        if (!socket || !game || !myColor) return;
+        if (socket.readyState !== WebSocket.OPEN) return;
+        aiExitTriggered = true;
+        socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
+    }
 })();

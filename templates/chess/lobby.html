@@ -54,7 +54,7 @@
     <!-- Main Content -->
     <div class="lobby-content">
         <!-- Waiting Room -->
-        <section class="lobby-section lobby-waiting-section hidden" id="waiting-room-card">
+    <section class="lobby-section lobby-waiting-section hidden" id="waiting-room-card">
             <div class="section-header">
                 <h2 class="section-title">⏳ 대기 중인 방</h2>
             </div>
@@ -62,7 +62,16 @@
                 <div class="waiting-room-info" id="waiting-room-info">로딩 중...</div>
                 <button class="btn btn-secondary btn-sm" id="waiting-room-enter">대기실로 이동</button>
             </div>
-        </section>
+    </section>
+    <section class="lobby-section lobby-waiting-section hidden" id="active-game-card">
+        <div class="lobby-section-header">
+            <h2 class="section-title">진행 중인 게임</h2>
+        </div>
+        <div class="waiting-room-body">
+            <div class="waiting-room-info" id="active-game-info">로딩 중...</div>
+            <button class="btn btn-secondary btn-sm" id="active-game-enter">게임으로 복귀</button>
+        </div>
+    </section>
 
         <!-- Left: Room List Preview -->
         <section class="lobby-section">
