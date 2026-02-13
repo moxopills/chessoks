@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from apps.chess.models import Game, Room
 from apps.chess.services.ai_service import AiService
-from apps.chess.utils import assign_colors, broadcast_room_state, broadcast_room_update
+from apps.chess.utils import broadcast_room_state, broadcast_room_update
 
 
 class AiMatchService:
