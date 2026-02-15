@@ -571,6 +571,7 @@
             } catch (error) {
                 clearInterval(pollInterval);
                 setMatchingState(false);
+                Toast.error('매칭 중 오류가 발생했습니다. 다시 시도해주세요.');
             }
         }, 2000);
     }
@@ -595,6 +596,7 @@
             } catch (error) {
                 clearInterval(pollInterval);
                 setRandomMatchingState(false);
+                Toast.error('매칭 중 오류가 발생했습니다. 다시 시도해주세요.');
             }
         }, 2000);
     }

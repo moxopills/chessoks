@@ -102,6 +102,7 @@
     let replayGameId = null;
     let replayMode = 'modal';
     let captured = { white: [], black: [] };
+    let squareCache = null; // Map<squareName, element> for DOM caching
     let isChatOpen = false;
     let chatUnread = 0;
     let opponentUserId = null;
@@ -465,6 +466,28 @@
     }
 
     /**
+     * 보드 칸 요소 캐시 초기화
+     */
+    function initSquareCache() {
+        if (squareCache) return;
+        squareCache = new Map();
+        document.querySelectorAll('.square').forEach(sq => {
+            const name = sq.dataset.square;
+            if (name) squareCache.set(name, sq);
+        });
+    }
+
+    function getSquare(name) {
+        if (!squareCache) initSquareCache();
+        return squareCache.get(name);
+    }
+
+    function getAllSquareElements() {
+        if (!squareCache) initSquareCache();
+        return squareCache.values();
+    }
+
+    /**
      * 보드 렌더링
      */
     function renderBoard() {
@@ -474,11 +497,11 @@
         const position = parseFEN(fen);
         const isFlipped = myColor === 'black';
 
-        // 모든 칸 초기화
-        document.querySelectorAll('.square').forEach(sq => {
+        // 모든 칸 초기화 (캐시 사용)
+        for (const sq of getAllSquareElements()) {
             sq.innerHTML = '';
             sq.classList.remove('selected', 'valid-move', 'valid-capture', 'last-move', 'check');
-        });
+        }
 
         // 기물 배치
         for (let rank = 0; rank < 8; rank++) {
@@ -488,7 +511,7 @@
                     const displayRank = isFlipped ? 7 - rank : rank;
                     const displayFile = isFlipped ? 7 - file : file;
                     const squareName = FILES[displayFile] + RANKS[displayRank];
-                    const squareEl = document.querySelector(`[data-square="${squareName}"]`);
+                    const squareEl = getSquare(squareName);
 
                     if (squareEl) {
                         const pieceEl = document.createElement('span');
@@ -680,7 +703,7 @@
         if (selectedSquare) {
             // 이동 시도
             const targetSquare = toActualSquare(squareName);
-            const targetEl = document.querySelector(`[data-square="${squareName}"]`);
+            const targetEl = getSquare(squareName);
             const targetPiece = targetEl?.querySelector('.piece');
             if (targetPiece) {
                 const isWhitePiece = targetPiece.classList.contains('white');
@@ -697,7 +720,7 @@
             clearSelection();
         } else {
             // 기물 선택
-            const squareEl = document.querySelector(`[data-square="${squareName}"]`);
+            const squareEl = getSquare(squareName);
             const piece = squareEl?.querySelector('.piece');
 
             if (piece) {
@@ -732,14 +755,14 @@
         selectedDisplaySquare = squareName;
         selectedSquare = toActualSquare(squareName);
 
-        const squareEl = document.querySelector(`[data-square="${squareName}"]`);
+        const squareEl = getSquare(squareName);
         squareEl?.classList.add('selected');
 
         validMoves = await fetchLegalMoves(selectedSquare);
 
         validMoves.forEach(sq => {
             const displaySquare = toDisplaySquare(sq);
-            const el = document.querySelector(`[data-square="${displaySquare}"]`);
+            const el = getSquare(displaySquare);
             if (el && sq !== selectedSquare) {
                 const hasPiece = el.querySelector('.piece');
                 el.classList.add(hasPiece ? 'valid-capture' : 'valid-move');
@@ -755,9 +778,9 @@
         selectedDisplaySquare = null;
         validMoves = [];
 
-        document.querySelectorAll('.square').forEach(sq => {
+        for (const sq of getAllSquareElements()) {
             sq.classList.remove('selected', 'valid-move', 'valid-capture');
-        });
+        }
     }
 
     /**
@@ -806,14 +829,14 @@
     }
 
     function applyLastMoveHighlight() {
-        document.querySelectorAll('.square.last-move').forEach(sq => {
+        for (const sq of getAllSquareElements()) {
             sq.classList.remove('last-move');
-        });
+        }
         if (!lastMove) return;
         const fromSquare = toDisplaySquare(lastMove.from);
         const toSquare = toDisplaySquare(lastMove.to);
-        const fromEl = document.querySelector(`[data-square="${fromSquare}"]`);
-        const toEl = document.querySelector(`[data-square="${toSquare}"]`);
+        const fromEl = getSquare(fromSquare);
+        const toEl = getSquare(toSquare);
         fromEl?.classList.add('last-move');
         toEl?.classList.add('last-move');
     }
@@ -867,7 +890,7 @@
         const uci = from + to;
 
         // 프로모션 체크
-        const fromEl = document.querySelector(`[data-square="${toDisplaySquare(from)}"]`);
+        const fromEl = getSquare(toDisplaySquare(from));
         const piece = fromEl?.querySelector('.piece');
 
         if (piece) {
