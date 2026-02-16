@@ -192,31 +192,37 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             payload = {"type": "rematch_declined", "game_id": game_id, "from": player_color}
             await self._broadcast(payload)
 
+    async def _validate_chat_message(self, content) -> tuple[bool, str | None]:
+        """채팅 메시지 공통 검증"""
+        if self.scope["user"].is_suspended:
+            await self.send_json({"type": "error", "message": "정지된 계정입니다."})
+            return False, None
+        if self.scope["user"].is_muted:
+            await self.send_json({"type": "error", "message": "채팅이 제한된 계정입니다."})
+            return False, None
+        message = (content.get("message") or "").strip()
+        if not message:
+            await self.send_json({"type": "error", "message": "메시지를 입력해주세요."})
+            return False, None
+        if len(message) > 500:
+            await self.send_json(
+                {"type": "error", "message": "메시지는 500자 이하로 입력해주세요."}
+            )
+            return False, None
+        if check_profanity(message):
+            await self.send_json({"type": "error", "message": get_profanity_warning()})
+            return False, None
+        return True, message
+
     async def _handle_chat(self, content):
         if not self.is_player:
             await self.send_json(
                 {"type": "error", "message": "관전자는 플레이어 채팅을 사용할 수 없습니다."}
             )
             return
-        if self.scope["user"].is_suspended:
-            await self.send_json({"type": "error", "message": "정지된 계정입니다."})
+        valid, message = await self._validate_chat_message(content)
+        if not valid:
             return
-        if self.scope["user"].is_muted:
-            await self.send_json({"type": "error", "message": "채팅이 제한된 계정입니다."})
-            return
-        message = (content.get("message") or "").strip()
-        if not message:
-            await self.send_json({"type": "error", "message": "메시지를 입력해주세요."})
-            return
-        if len(message) > 500:
-            await self.send_json(
-                {"type": "error", "message": "메시지는 500자 이하로 입력해주세요."}
-            )
-            return
-        if check_profanity(message):
-            await self.send_json({"type": "error", "message": get_profanity_warning()})
-            return
-
         payload = {
             "type": "chat",
             "scope": "player",
@@ -235,25 +241,9 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 {"type": "error", "message": "플레이어는 관전자 채팅을 사용할 수 없습니다."}
             )
             return
-        if self.scope["user"].is_suspended:
-            await self.send_json({"type": "error", "message": "정지된 계정입니다."})
+        valid, message = await self._validate_chat_message(content)
+        if not valid:
             return
-        if self.scope["user"].is_muted:
-            await self.send_json({"type": "error", "message": "채팅이 제한된 계정입니다."})
-            return
-        message = (content.get("message") or "").strip()
-        if not message:
-            await self.send_json({"type": "error", "message": "메시지를 입력해주세요."})
-            return
-        if len(message) > 500:
-            await self.send_json(
-                {"type": "error", "message": "메시지는 500자 이하로 입력해주세요."}
-            )
-            return
-        if check_profanity(message):
-            await self.send_json({"type": "error", "message": get_profanity_warning()})
-            return
-
         payload = {
             "type": "chat",
             "scope": "spectator",
@@ -317,7 +307,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         if not color:
             return
         cache.set(
-            GameService._disconnect_key(game.id, color),
+            GameService._cache_key("disconnect", game.id, color),
             timezone.now().timestamp(),
             timeout=GameService.DISCONNECT_GRACE_SECONDS,
         )
@@ -344,7 +334,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         )
         if not color:
             return
-        cache.delete(GameService._disconnect_key(game.id, color))
+        cache.delete(GameService._cache_key("disconnect", game.id, color))
 
     @database_sync_to_async
     def _make_move(self, game_id, uci, promotion):

@@ -43,11 +43,16 @@
     let friendIds = new Set();
     let outgoingRequestUserIds = new Set();
     let selectedUserId = null;
-    let contextMenu = null;
 
     init();
 
     async function init() {
+        Guestbook.init({
+            listEl: guestbookList,
+            inputEl: guestbookInput,
+            getCurrentUserId: () => currentUserId,
+            getTargetUserId: () => selectedUserId,
+        });
         await loadCurrentUser();
         bindEvents();
         await refreshAll();
@@ -72,15 +77,10 @@
         });
         friendBtn?.addEventListener('click', sendFriendRequest);
         chatBtn?.addEventListener('click', () => openDirectMessage(selectedUserId));
-        guestbookSubmit?.addEventListener('click', submitGuestbook);
+        guestbookSubmit?.addEventListener('click', () => Guestbook.submit());
         searchBtn?.addEventListener('click', searchUsers);
         searchInput?.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') searchUsers();
-        });
-        document.addEventListener('click', hideContextMenu);
-        document.addEventListener('scroll', hideContextMenu, true);
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') hideContextMenu();
         });
 
         tabButtons.forEach((btn) => {
@@ -440,96 +440,15 @@
 
     async function sendFriendRequestTo(userId) {
         if (!userId) return;
-        try {
-            const result = await API.post('/accounts/friends/requests/', { user_id: userId });
-            if (result.status === 'accepted') {
-                Toast.success('친구 요청이 자동 수락되었습니다.');
-            } else {
-                Toast.success('친구 요청을 보냈습니다.');
-            }
+        const res = await Utils.sendFriendRequest(userId, currentUserId);
+        if (res.success) {
             await refreshAll();
-        } catch (error) {
-            Toast.error(error.data?.message || '친구 요청에 실패했습니다.');
         }
     }
 
     function openDirectMessage(userId) {
         if (!userId) return;
         window.location.href = `/messages/${userId}/`;
-    }
-
-    async function loadGuestbook(userId) {
-        if (!guestbookList) return;
-        guestbookList.innerHTML = '<div class="text-muted">불러오는 중...</div>';
-        try {
-            const data = await API.get(`/accounts/users/${userId}/guestbook/`);
-            renderGuestbook(data || []);
-        } catch (error) {
-            guestbookList.innerHTML = '<div class="text-muted">방명록을 불러오지 못했습니다.</div>';
-        }
-    }
-
-    function renderGuestbook(entries) {
-        if (!guestbookList) return;
-        if (!entries.length) {
-            guestbookList.innerHTML = '<div class="text-muted">방명록이 없습니다.</div>';
-            return;
-        }
-        guestbookList.innerHTML = entries.map((entry) => {
-            const canDelete = entry.author?.id === currentUserId || selectedUserId === currentUserId;
-            const time = formatDate(entry.created_at);
-            return `
-                <div class="guestbook-item" data-entry-id="${entry.id}">
-                    <div>${Utils.escapeHtml(entry.message)}</div>
-                    <div class="guestbook-meta">
-                        <span>${Utils.escapeHtml(entry.author?.nickname || '알 수 없음')}</span>
-                        <span>${time}</span>
-                    </div>
-                    ${canDelete ? '<button class="btn btn-secondary btn-sm" data-action="delete">삭제</button>' : ''}
-                </div>
-            `;
-        }).join('');
-
-        guestbookList.querySelectorAll('[data-action="delete"]').forEach((btn) => {
-            btn.addEventListener('click', async () => {
-                const entryId = btn.closest('.guestbook-item')?.dataset.entryId;
-                if (!entryId) return;
-                await deleteGuestbook(entryId);
-            });
-        });
-    }
-
-    async function submitGuestbook() {
-        if (!guestbookInput || !selectedUserId) return;
-        const message = guestbookInput.value.trim();
-        if (!message) return;
-        try {
-            await API.post(`/accounts/users/${selectedUserId}/guestbook/`, { message });
-            guestbookInput.value = '';
-            await loadGuestbook(selectedUserId);
-        } catch (error) {
-            Toast.error(error.data?.detail || error.data?.message || '방명록 등록에 실패했습니다.');
-        }
-    }
-
-    async function deleteGuestbook(entryId) {
-        try {
-            await API.delete(`/accounts/guestbook/${entryId}/`);
-            await loadGuestbook(selectedUserId);
-        } catch (error) {
-            Toast.error(error.data?.message || '삭제에 실패했습니다.');
-        }
-    }
-
-    function formatDate(value) {
-        if (!value) return '-';
-        const d = new Date(value);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const hh = String(d.getHours()).padStart(2, '0');
-        const mm = String(d.getMinutes()).padStart(2, '0');
-        return `${y}-${m}-${day} ${hh}:${mm}`;
     }
 
     async function openProfileDrawer(userId) {
@@ -545,7 +464,7 @@
             renderDrawerUser(user);
             renderDrawerStats(user.stats);
             renderRecentGames(data.recent_games || []);
-            await loadGuestbook(userId);
+            await Guestbook.load(userId);
             if (data.vs_summary) {
                 vsBox.classList.remove('hidden');
                 vsWins.textContent = data.vs_summary.wins;
@@ -568,62 +487,22 @@
     function openContextMenu(event, userId, { isFriend = false, isPending = false } = {}) {
         if (!userId) return;
         selectedUserId = userId;
-        if (!contextMenu) {
-            contextMenu = document.createElement('div');
-            contextMenu.className = 'context-menu hidden';
-            document.body.appendChild(contextMenu);
-            contextMenu.addEventListener('click', (e) => {
-                const action = e.target.closest('.context-menu-item')?.dataset.action;
-                const targetId = parseInt(contextMenu.dataset.userId, 10);
-                if (!action || !targetId) return;
-                if (action === 'profile') {
-                    openProfileDrawer(targetId);
-                } else if (action === 'friend') {
-                    sendFriendRequestTo(targetId);
-                } else if (action === 'remove') {
-                    removeFriend(targetId);
-                } else if (action === 'chat') {
-                    openDirectMessage(targetId);
-                } else if (action === 'report') {
-                    Utils.ReportModal.open(targetId);
-                }
-                hideContextMenu();
-            });
-        }
-
-        const canFriend = currentUserId && userId !== currentUserId && !isFriend && !isPending;
-        const canChat = currentUserId && userId !== currentUserId;
-        const canReport = currentUserId && userId !== currentUserId;
-        const items = [
-            { action: 'profile', label: '프로필 보기' },
-            ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
-            ...(isFriend ? [{ action: 'remove', label: '친구 삭제' }] : []),
-            ...(canChat ? [{ action: 'chat', label: '1:1 채팅' }] : []),
-            ...(canReport ? [{ action: 'report', label: '신고하기' }] : []),
-        ];
-        contextMenu.innerHTML = items.map(item => (
-            `<div class="context-menu-item" data-action="${item.action}">${item.label}</div>`
-        )).join('');
-
-        contextMenu.dataset.userId = `${userId}`;
-        positionContextMenu(event);
-        contextMenu.classList.remove('hidden');
+        const items = ContextMenu.buildUserMenuItems({
+            currentUserId,
+            targetUserId: userId,
+            isFriend,
+            isPending,
+            showRemove: true,
+        });
+        ContextMenu.show(event, userId, items, handleContextAction);
     }
 
-    function positionContextMenu(event) {
-        if (!contextMenu) return;
-        const padding = 8;
-        const rect = contextMenu.getBoundingClientRect();
-        const maxX = window.innerWidth - rect.width - padding;
-        const maxY = window.innerHeight - rect.height - padding;
-        const left = Math.min(event.clientX, maxX);
-        const top = Math.min(event.clientY, maxY);
-        contextMenu.style.left = `${left}px`;
-        contextMenu.style.top = `${top}px`;
-    }
-
-    function hideContextMenu() {
-        if (contextMenu) contextMenu.classList.add('hidden');
+    function handleContextAction(action, targetId) {
+        if (action === 'profile') openProfileDrawer(targetId);
+        else if (action === 'friend') sendFriendRequestTo(targetId);
+        else if (action === 'remove') removeFriend(targetId);
+        else if (action === 'chat') openDirectMessage(targetId);
+        else if (action === 'report') Utils.ReportModal.open(targetId);
     }
 
     function updateFriendButtonState(userId) {
@@ -682,7 +561,7 @@
         }
         recentList.innerHTML = games.slice(0, 5).map((game) => {
             const opponent = game.white_player.id === selectedUserId ? game.black_player.nickname : game.white_player.nickname;
-            const resultLabel = getResultLabel(
+            const resultLabel = Utils.getGameResultLabel(
                 game.result,
                 Number(game.white_player?.id) === Number(selectedUserId)
             );
@@ -699,35 +578,6 @@
                 </div>
             `;
         }).join('');
-    }
-
-    function getResultLabel(result, isWhite) {
-        if (!result) return '-';
-        const drawResults = new Set([
-            'draw',
-            'draw_agreement',
-            'draw_insufficient',
-            'draw_repetition',
-            'draw_fifty_move',
-            'stalemate',
-        ]);
-        const whiteWin = new Set([
-            'white_win',
-            'checkmate_white',
-            'timeout_black',
-            'resignation_black',
-        ]);
-        const blackWin = new Set([
-            'black_win',
-            'checkmate_black',
-            'timeout_white',
-            'resignation_white',
-        ]);
-        if (result === 'playing') return '진행';
-        if (drawResults.has(result)) return '무';
-        if (whiteWin.has(result)) return isWhite ? '승' : '패';
-        if (blackWin.has(result)) return isWhite ? '패' : '승';
-        return '종료';
     }
 
     async function sendFriendRequest() {

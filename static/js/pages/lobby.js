@@ -63,7 +63,6 @@
     let activeRoomId = null;
     let chatUnread = 0;
     let isChatOpen = true;
-    let userContextMenu = null;
     let longPressTimer = null;
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     let isUserSearchMode = false;
@@ -962,91 +961,30 @@
     }
 
     function setupUserContextMenu() {
-        document.addEventListener('click', hideUserContextMenu);
-        document.addEventListener('scroll', hideUserContextMenu, true);
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') hideUserContextMenu();
-        });
+        // ContextMenu 컴포넌트가 이벤트 처리
     }
 
     function openUserContextMenu(event, userId) {
         if (!userId) return;
-        if (!userContextMenu) {
-            userContextMenu = document.createElement('div');
-            userContextMenu.className = 'context-menu hidden';
-            document.body.appendChild(userContextMenu);
-            userContextMenu.addEventListener('click', (e) => {
-                const action = e.target.closest('.context-menu-item')?.dataset.action;
-                const targetId = parseInt(userContextMenu.dataset.userId, 10);
-                if (!action || !targetId) return;
-                if (action === 'profile') {
-                    window.location.href = `/users/${targetId}/`;
-                } else if (action === 'friend') {
-                    sendFriendRequest(targetId);
-                } else if (action === 'chat') {
-                    window.location.href = `/messages/${targetId}/`;
-                } else if (action === 'report') {
-                    openReportForUser(targetId);
-                }
-                hideUserContextMenu();
-            });
-        }
-
-        const canFriend = currentUserId && userId !== currentUserId && !isFriendUser(userId);
-        const canChat = currentUserId && userId !== currentUserId;
-        const canReport = currentUserId && userId !== currentUserId;
-        const items = [
-            { action: 'profile', label: '프로필 보기' },
-            ...(canFriend ? [{ action: 'friend', label: '친구 추가' }] : []),
-            ...(canChat ? [{ action: 'chat', label: '1:1 채팅' }] : []),
-            ...(canReport ? [{ action: 'report', label: '신고하기' }] : []),
-        ];
-        userContextMenu.innerHTML = items.map(item => (
-            `<div class="context-menu-item" data-action="${item.action}">${item.label}</div>`
-        )).join('');
-
-        userContextMenu.dataset.userId = `${userId}`;
-        positionUserContextMenu(event);
-        userContextMenu.classList.remove('hidden');
+        const items = ContextMenu.buildUserMenuItems({
+            currentUserId,
+            targetUserId: userId,
+            isFriend: isFriendUser(userId),
+        });
+        ContextMenu.show(event, userId, items, handleUserContextAction);
     }
 
-    function positionUserContextMenu(event) {
-        if (!userContextMenu) return;
-        const padding = 8;
-        const rect = userContextMenu.getBoundingClientRect();
-        const clientX = event.touches?.[0]?.clientX ?? event.clientX;
-        const clientY = event.touches?.[0]?.clientY ?? event.clientY;
-        const maxX = window.innerWidth - rect.width - padding;
-        const maxY = window.innerHeight - rect.height - padding;
-        const left = Math.min(clientX, maxX);
-        const top = Math.min(clientY, maxY);
-        userContextMenu.style.left = `${left}px`;
-        userContextMenu.style.top = `${top}px`;
-    }
-
-    function hideUserContextMenu() {
-        if (userContextMenu) userContextMenu.classList.add('hidden');
+    function handleUserContextAction(action, targetId) {
+        if (action === 'profile') window.location.href = `/users/${targetId}/`;
+        else if (action === 'friend') sendFriendRequest(targetId);
+        else if (action === 'chat') window.location.href = `/messages/${targetId}/`;
+        else if (action === 'report') openReportForUser(targetId);
     }
 
     async function sendFriendRequest(targetId) {
-        if (!currentUserId) {
-            Toast.error('로그인 시 가능합니다.');
-            return;
-        }
-        if (targetId === currentUserId) {
-            Toast.error('자기 자신에게 요청할 수 없습니다.');
-            return;
-        }
-        try {
-            const result = await API.post('/accounts/friends/requests/', { user_id: targetId });
-            if (result.status === 'accepted') {
-                friendIds.add(targetId);
-                Toast.success('친구 요청이 자동 수락되었습니다.');
-            } else {
-                Toast.success('친구 요청을 보냈습니다.');
-            }
-        } catch (error) {
-            Toast.error(error.data?.message || '친구 요청에 실패했습니다.');
+        const res = await Utils.sendFriendRequest(targetId, currentUserId);
+        if (res.success && res.accepted) {
+            friendIds.add(targetId);
         }
     }
 

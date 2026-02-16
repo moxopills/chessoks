@@ -114,8 +114,8 @@ def check_profanity(text: str) -> bool:
     try:
         if korcen.check(text):
             return True
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("korcen.check failed: %s", exc)
     normalized = re.sub(r"[\s\W_]+", "", text, flags=re.UNICODE)
     return bool(_EXTRA_PROFANITY_PATTERNS.search(normalized))
 
