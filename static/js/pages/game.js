@@ -1260,22 +1260,36 @@
             }
             return;
         }
-        drawBtn.addEventListener('click', () => {
-            if (!confirm('무승부를 제안하시겠습니까?')) return;
+        drawBtn.addEventListener('click', async () => {
+            const confirmed = await Modal.confirm('무승부를 제안하시겠습니까?', {
+                title: '무승부 제안',
+                confirmText: '제안하기'
+            });
+            if (!confirmed) return;
             socket.send(JSON.stringify({ action: 'draw', game_id: game.id }));
             Toast.info('무승부를 제안했습니다.');
         });
 
-        resignBtn.addEventListener('click', () => {
-            if (!confirm('정말 기권하시겠습니까?')) return;
+        resignBtn.addEventListener('click', async () => {
+            const confirmed = await Modal.confirm('정말 기권하시겠습니까?', {
+                title: '기권',
+                confirmText: '기권하기',
+                danger: true
+            });
+            if (!confirmed) return;
             socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
             showPendingEnd('기권 처리 중...');
         });
 
         if (leaveBtn) {
-            leaveBtn.addEventListener('click', () => {
+            leaveBtn.addEventListener('click', async () => {
                 if (myColor) {
-                    if (!confirm('나가면 기권 처리됩니다. 나가시겠습니까?')) return;
+                    const confirmed = await Modal.confirm('나가면 기권 처리됩니다. 나가시겠습니까?', {
+                        title: '게임 나가기',
+                        confirmText: '나가기',
+                        danger: true
+                    });
+                    if (!confirmed) return;
                     socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
                     showPendingEnd('나가기 처리 중...');
                 } else {
@@ -1312,10 +1326,15 @@
     function setupExitGuard() {
         const logo = document.querySelector('.navbar-logo');
         if (!logo) return;
-        logo.addEventListener('click', (e) => {
-            const leave = confirm('게임을 나가시겠습니까?');
-            if (!leave) {
-                e.preventDefault();
+        logo.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const leave = await Modal.confirm('게임을 나가시겠습니까?', {
+                title: '게임 나가기',
+                confirmText: '나가기',
+                danger: true
+            });
+            if (leave) {
+                window.location.href = '/';
             }
         });
     }
@@ -1607,7 +1626,6 @@
         // 결과에 따른 표시
         const outcome = getOutcome(result, myColor);
         const isWin = outcome === 'win';
-        const isLoss = outcome === 'loss';
 
         if (result.includes('checkmate')) {
             icon = isWin ? '👑' : '💀';

@@ -42,8 +42,6 @@
     const randomMatchCancel = document.getElementById('random-match-cancel');
     const quickMatchWait = document.getElementById('quick-match-wait');
     const randomMatchWait = document.getElementById('random-match-wait');
-    const quickMatchLoading = document.getElementById('quick-match-loading');
-    const randomMatchLoading = document.getElementById('random-match-loading');
     const matchToast = document.getElementById('match-toast');
     const aiLevelButtons = Array.from(document.querySelectorAll('.ai-level-btn'));
     const aiLevelLoading = document.getElementById('ai-level-loading');
@@ -74,6 +72,10 @@
     let lobbyWsReconnectAttempts = 0;
     const LOBBY_WS_MAX_RECONNECT = 10;
     const LOBBY_WS_BASE_DELAY = 1000;
+    let quickMatchTimerInterval = null;
+    let quickMatchStartTime = null;
+    let randomMatchTimerInterval = null;
+    let randomMatchStartTime = null;
 
     // 초기화
     init();
@@ -284,7 +286,11 @@
 
         let payload = {};
         if (room.is_private) {
-            const password = prompt('비밀번호를 입력하세요:');
+            const password = await Modal.prompt('비밀번호를 입력하세요:', {
+                title: '비공개 방 입장',
+                inputType: 'password',
+                placeholder: '비밀번호'
+            });
             if (!password) return;
             payload = { password };
         }
@@ -608,14 +614,15 @@
         quickMatchBtn.classList.toggle('btn-danger', matching);
         quickMatchBtn.classList.toggle('btn-primary', !matching);
         quickMatchBtn.disabled = matching;
-        quickMatchLoading?.classList.toggle('hidden', !matching);
         if (matching) {
             quickMatchModal?.classList.remove('hidden');
             showMatchToast('경쟁전 매칭 중...', 'quick');
             waitingRoomCard?.classList.add('hidden');
+            startMatchTimer('quick');
         } else {
             quickMatchModal?.classList.add('hidden');
             hideMatchToast();
+            stopMatchTimer('quick');
         }
     }
 
@@ -624,14 +631,57 @@
         if (!randomMatchBtn) return;
         randomMatchBtn.classList.toggle('btn-danger', matching);
         randomMatchBtn.disabled = matching;
-        randomMatchLoading?.classList.toggle('hidden', !matching);
         if (matching) {
             randomMatchModal?.classList.remove('hidden');
             showMatchToast('빠른 대전 매칭 중...', 'random');
             waitingRoomCard?.classList.add('hidden');
+            startMatchTimer('random');
         } else {
             randomMatchModal?.classList.add('hidden');
             hideMatchToast();
+            stopMatchTimer('random');
+        }
+    }
+
+    function startMatchTimer(type) {
+        const timerEl = document.getElementById(`${type}-match-timer`);
+        if (type === 'quick') {
+            quickMatchStartTime = Date.now();
+            if (quickMatchTimerInterval) clearInterval(quickMatchTimerInterval);
+            quickMatchTimerInterval = setInterval(() => updateMatchTimer('quick'), 1000);
+        } else {
+            randomMatchStartTime = Date.now();
+            if (randomMatchTimerInterval) clearInterval(randomMatchTimerInterval);
+            randomMatchTimerInterval = setInterval(() => updateMatchTimer('random'), 1000);
+        }
+        if (timerEl) timerEl.textContent = '대기 시간: 0:00';
+    }
+
+    function stopMatchTimer(type) {
+        if (type === 'quick') {
+            if (quickMatchTimerInterval) {
+                clearInterval(quickMatchTimerInterval);
+                quickMatchTimerInterval = null;
+            }
+            quickMatchStartTime = null;
+        } else {
+            if (randomMatchTimerInterval) {
+                clearInterval(randomMatchTimerInterval);
+                randomMatchTimerInterval = null;
+            }
+            randomMatchStartTime = null;
+        }
+    }
+
+    function updateMatchTimer(type) {
+        const startTime = type === 'quick' ? quickMatchStartTime : randomMatchStartTime;
+        if (!startTime) return;
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        const minutes = Math.floor(elapsed / 60);
+        const seconds = elapsed % 60;
+        const timerEl = document.getElementById(`${type}-match-timer`);
+        if (timerEl) {
+            timerEl.textContent = `대기 시간: ${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
     }
 
