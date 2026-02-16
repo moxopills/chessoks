@@ -205,7 +205,9 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             await self.send_json({"type": "error", "message": "메시지를 입력해주세요."})
             return False, None
         if len(message) > 500:
-            await self.send_json({"type": "error", "message": "메시지는 500자 이하로 입력해주세요."})
+            await self.send_json(
+                {"type": "error", "message": "메시지는 500자 이하로 입력해주세요."}
+            )
             return False, None
         if check_profanity(message):
             await self.send_json({"type": "error", "message": get_profanity_warning()})
@@ -214,7 +216,9 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
 
     async def _handle_chat(self, content):
         if not self.is_player:
-            await self.send_json({"type": "error", "message": "관전자는 플레이어 채팅을 사용할 수 없습니다."})
+            await self.send_json(
+                {"type": "error", "message": "관전자는 플레이어 채팅을 사용할 수 없습니다."}
+            )
             return
         valid, message = await self._validate_chat_message(content)
         if not valid:
@@ -233,7 +237,9 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
 
     async def _handle_spectator_chat(self, content):
         if self.is_player:
-            await self.send_json({"type": "error", "message": "플레이어는 관전자 채팅을 사용할 수 없습니다."})
+            await self.send_json(
+                {"type": "error", "message": "플레이어는 관전자 채팅을 사용할 수 없습니다."}
+            )
             return
         valid, message = await self._validate_chat_message(content)
         if not valid:
