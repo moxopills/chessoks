@@ -307,7 +307,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         if not color:
             return
         cache.set(
-            GameService._disconnect_key(game.id, color),
+            GameService._cache_key("disconnect", game.id, color),
             timezone.now().timestamp(),
             timeout=GameService.DISCONNECT_GRACE_SECONDS,
         )
@@ -334,7 +334,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         )
         if not color:
             return
-        cache.delete(GameService._disconnect_key(game.id, color))
+        cache.delete(GameService._cache_key("disconnect", game.id, color))
 
     @database_sync_to_async
     def _make_move(self, game_id, uci, promotion):

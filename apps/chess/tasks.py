@@ -70,7 +70,7 @@ def handle_timeouts() -> int:
 
             disconnected = False
             for color in ("white", "black"):
-                key = GameService._disconnect_key(game.id, color)
+                key = GameService._cache_key("disconnect", game.id, color)
                 ts = cache.get(key)
                 if ts is None:
                     continue
