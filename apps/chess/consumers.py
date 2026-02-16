@@ -78,6 +78,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 "move": self._handle_move,
                 "resign": self._handle_resign,
                 "draw": self._handle_draw,
+                "decline_draw": self._handle_decline_draw,
                 "rematch": self._handle_rematch,
                 "decline_rematch": self._handle_decline_rematch,
                 "chat": self._handle_chat,
@@ -160,6 +161,17 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         else:
             payload = self._game_payload(game)
             payload["type"] = "game_end"
+        await self._broadcast(payload)
+
+    async def _handle_decline_draw(self, content):
+        if not self.is_player:
+            await self.send_json(
+                {"type": "error", "message": "관전자는 무승부를 거절할 수 없습니다."}
+            )
+            return
+        game_id = content.get("game_id")
+        player_color = "white" if self.user.id == self.white_player_id else "black"
+        payload = {"type": "draw_declined", "game_id": game_id, "from": player_color}
         await self._broadcast(payload)
 
     async def _handle_rematch(self, content):
