@@ -204,8 +204,8 @@ class GameService:
         rating_info = GameService._apply_post_game_updates(game)
         game.save(update_fields=["result", "finished_at"])
         GameService._notify_game_end(game, rating_info)
-        GameService._clear_draw_offers(game.id)
-        GameService._clear_disconnects(game.id)
+        GameService._clear_cache("draw_offer", game.id)
+        GameService._clear_cache("disconnect", game.id)
         return game
 
     @staticmethod
@@ -217,8 +217,8 @@ class GameService:
 
         player_color = GameService._player_color(game, player)
         opponent_color = "black" if player_color == "white" else "white"
-        key = GameService._draw_offer_key(game.id, player_color)
-        opponent_key = GameService._draw_offer_key(game.id, opponent_color)
+        key = GameService._cache_key("draw_offer", game.id, player_color)
+        opponent_key = GameService._cache_key("draw_offer", game.id, opponent_color)
 
         # cache.delete()는 삭제 성공 시 True 반환 (원자적 연산)
         if cache.delete(opponent_key):
@@ -243,8 +243,8 @@ class GameService:
 
         player_color = GameService._player_color(game, player)
         opponent_color = "black" if player_color == "white" else "white"
-        key = GameService._rematch_offer_key(game.id, player_color)
-        opponent_key = GameService._rematch_offer_key(game.id, opponent_color)
+        key = GameService._cache_key("rematch_offer", game.id, player_color)
+        opponent_key = GameService._cache_key("rematch_offer", game.id, opponent_color)
 
         # cache.delete()는 삭제 성공 시 True 반환 (원자적 연산)
         if cache.delete(opponent_key):
@@ -272,7 +272,7 @@ class GameService:
 
         player_color = GameService._player_color(game, player)
         opponent_color = "black" if player_color == "white" else "white"
-        opponent_key = GameService._rematch_offer_key(game.id, opponent_color)
+        opponent_key = GameService._cache_key("rematch_offer", game.id, opponent_color)
 
         # 상대방의 리매치 요청이 있으면 삭제
         if cache.delete(opponent_key):
@@ -398,9 +398,9 @@ class GameService:
             ]
         )
         GameService._notify_game_end(game, rating_info)
-        GameService._clear_draw_offers(game.id)
-        GameService._clear_rematch_offers(game.id)
-        GameService._clear_disconnects(game.id)
+        GameService._clear_cache("draw_offer", game.id)
+        GameService._clear_cache("rematch_offer", game.id)
+        GameService._clear_cache("disconnect", game.id)
 
     @staticmethod
     def apply_disconnect_forfeit(game: Game, player_color: str, now) -> None:
@@ -412,9 +412,9 @@ class GameService:
         game.finished_at = now
         game.save(update_fields=["result", "finished_at"])
         GameService._notify_game_end(game, rating_info)
-        GameService._clear_draw_offers(game.id)
-        GameService._clear_rematch_offers(game.id)
-        GameService._clear_disconnects(game.id)
+        GameService._clear_cache("draw_offer", game.id)
+        GameService._clear_cache("rematch_offer", game.id)
+        GameService._clear_cache("disconnect", game.id)
 
     @staticmethod
     def _determine_result(board: chess.Board) -> str:
@@ -497,31 +497,15 @@ class GameService:
         )
 
     @staticmethod
-    def _draw_offer_key(game_id: int, player_color: str) -> str:
-        return f"chess:draw_offer:{game_id}:{player_color}"
+    def _cache_key(prefix: str, game_id: int, player_color: str) -> str:
+        """통합 캐시 키 생성 (draw_offer, disconnect, rematch_offer)"""
+        return f"chess:{prefix}:{game_id}:{player_color}"
 
     @staticmethod
-    def _clear_draw_offers(game_id: int) -> None:
-        cache.delete(GameService._draw_offer_key(game_id, "white"))
-        cache.delete(GameService._draw_offer_key(game_id, "black"))
-
-    @staticmethod
-    def _disconnect_key(game_id: int, player_color: str) -> str:
-        return f"chess:disconnect:{game_id}:{player_color}"
-
-    @staticmethod
-    def _clear_disconnects(game_id: int) -> None:
-        cache.delete(GameService._disconnect_key(game_id, "white"))
-        cache.delete(GameService._disconnect_key(game_id, "black"))
-
-    @staticmethod
-    def _rematch_offer_key(game_id: int, player_color: str) -> str:
-        return f"chess:rematch_offer:{game_id}:{player_color}"
-
-    @staticmethod
-    def _clear_rematch_offers(game_id: int) -> None:
-        cache.delete(GameService._rematch_offer_key(game_id, "white"))
-        cache.delete(GameService._rematch_offer_key(game_id, "black"))
+    def _clear_cache(prefix: str, game_id: int) -> None:
+        """양측 캐시 키 삭제"""
+        cache.delete(GameService._cache_key(prefix, game_id, "white"))
+        cache.delete(GameService._cache_key(prefix, game_id, "black"))
 
     @staticmethod
     def _create_rematch_game(game: Game) -> Game:

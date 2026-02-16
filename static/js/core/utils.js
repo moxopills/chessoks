@@ -171,6 +171,29 @@ const Utils = (function() {
     }
 
     /**
+     * 게임 결과 라벨 (승/패/무)
+     */
+    const DRAW_RESULTS = new Set([
+        'draw', 'draw_agreement', 'draw_insufficient',
+        'draw_repetition', 'draw_fifty_move', 'stalemate',
+    ]);
+    const WHITE_WIN_RESULTS = new Set([
+        'white_win', 'checkmate_white', 'timeout_black', 'resignation_black',
+    ]);
+    const BLACK_WIN_RESULTS = new Set([
+        'black_win', 'checkmate_black', 'timeout_white', 'resignation_white',
+    ]);
+
+    function getGameResultLabel(result, isWhite) {
+        if (!result) return '-';
+        if (result === 'playing') return '진행';
+        if (DRAW_RESULTS.has(result)) return '무';
+        if (WHITE_WIN_RESULTS.has(result)) return isWhite ? '승' : '패';
+        if (BLACK_WIN_RESULTS.has(result)) return isWhite ? '패' : '승';
+        return '종료';
+    }
+
+    /**
      * 랭크 티어 색상
      */
     function getTierColor(tier) {
@@ -281,6 +304,33 @@ const Utils = (function() {
         return { notice, chat, move };
     })();
 
+    /**
+     * 친구 요청 전송 (공통)
+     * @returns {Promise<{success: boolean, accepted?: boolean}>}
+     */
+    async function sendFriendRequest(userId, currentUserId) {
+        if (!currentUserId) {
+            Toast.error('로그인 시 가능합니다.');
+            return { success: false };
+        }
+        if (userId === currentUserId) {
+            Toast.error('자기 자신에게 요청할 수 없습니다.');
+            return { success: false };
+        }
+        try {
+            const result = await API.post('/accounts/friends/requests/', { user_id: userId });
+            if (result.status === 'accepted') {
+                Toast.success('친구 요청이 자동 수락되었습니다.');
+                return { success: true, accepted: true };
+            }
+            Toast.success('친구 요청을 보냈습니다.');
+            return { success: true, accepted: false };
+        } catch (error) {
+            Toast.error(error.data?.message || '친구 요청에 실패했습니다.');
+            return { success: false };
+        }
+    }
+
     const ReportModal = (() => {
         let modal;
         let categoryEl;
@@ -366,6 +416,8 @@ const Utils = (function() {
         getPathParam,
         formatNumber,
         calculateWinRate,
+        getGameResultLabel,
+        sendFriendRequest,
         getTierColor,
         getTierIcon,
         bindDoubleTap,
