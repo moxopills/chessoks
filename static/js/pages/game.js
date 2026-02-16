@@ -437,10 +437,9 @@
                     ${topPlayer?.avatar_url
                         ? `<img src="${Utils.escapeHtml(topPlayer.avatar_url)}" alt="">`
                         : '<span class="avatar-placeholder">?</span>'}
-                    <span class="tier-badge" title="${Utils.escapeHtml(topTier)}">${Utils.getTierIcon(topTier)}</span>
                 </div>
                 <div class="player-bar-details">
-                    <span class="player-bar-name">${Utils.escapeHtml(topPlayer?.nickname || '상대')}</span>
+                    <span class="player-bar-name">${Utils.escapeHtml(topPlayer?.nickname || '상대')} <span class="tier-badge" title="${Utils.escapeHtml(topTier)}">${Utils.getTierIcon(topTier)}</span></span>
                     <span class="player-bar-rating">${topPlayer?.rating || '--'}</span>
                 </div>
             </div>
@@ -454,10 +453,9 @@
                     ${bottomPlayer?.avatar_url
                         ? `<img src="${Utils.escapeHtml(bottomPlayer.avatar_url)}" alt="">`
                         : '<span class="avatar-placeholder">?</span>'}
-                    <span class="tier-badge" title="${Utils.escapeHtml(bottomTier)}">${Utils.getTierIcon(bottomTier)}</span>
                 </div>
                 <div class="player-bar-details">
-                    <span class="player-bar-name">${Utils.escapeHtml(bottomPlayer?.nickname || '나')}</span>
+                    <span class="player-bar-name">${Utils.escapeHtml(bottomPlayer?.nickname || '나')} <span class="tier-badge" title="${Utils.escapeHtml(bottomTier)}">${Utils.getTierIcon(bottomTier)}</span></span>
                     <span class="player-bar-rating">${bottomPlayer?.rating || '--'}</span>
                 </div>
             </div>
@@ -1039,6 +1037,10 @@
                 }
                 break;
 
+            case 'draw_declined':
+                Toast.info('상대가 무승부를 거절했습니다.');
+                break;
+
             case 'rematch_offer':
                 if (data.from !== myColor) {
                     showRematchOfferModal();
@@ -1384,6 +1386,7 @@
             });
 
             declineDrawBtn.addEventListener('click', () => {
+                socket.send(JSON.stringify({ action: 'decline_draw', game_id: game.id }));
                 drawModal.classList.add('hidden');
                 Toast.info('무승부를 거절했습니다.');
             });
@@ -1720,6 +1723,13 @@
     async function loadRatingChange() {
         const ratingEl = document.getElementById('game-end-rating');
         if (!ratingEl || !currentUser || !game) return;
+
+        // 빠른 대전/AI 대전은 레이팅 변화 없음
+        const roomType = game.room_type || game.room?.room_type;
+        if (roomType === 'random' || roomType?.startsWith('ai_')) {
+            ratingEl.textContent = '';
+            return;
+        }
 
         try {
             const data = await API.get('/notifications/', { limit: 10, offset: 0, no_count: 1 });

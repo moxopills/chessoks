@@ -654,7 +654,7 @@
             if (randomMatchTimerInterval) clearInterval(randomMatchTimerInterval);
             randomMatchTimerInterval = setInterval(() => updateMatchTimer('random'), 1000);
         }
-        if (timerEl) timerEl.textContent = '대기 시간: 0:00';
+        if (timerEl) timerEl.textContent = '⏱️ 대기 시간: 0:00';
     }
 
     function stopMatchTimer(type) {
@@ -681,7 +681,7 @@
         const seconds = elapsed % 60;
         const timerEl = document.getElementById(`${type}-match-timer`);
         if (timerEl) {
-            timerEl.textContent = `대기 시간: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            timerEl.textContent = `⏱️ 대기 시간: ${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
     }
 
