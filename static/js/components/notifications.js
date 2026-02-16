@@ -158,8 +158,7 @@
                         Utils?.Sounds?.notice?.();
                     }
                 }
-                state.items.unshift(payload);
-                state.items = state.items.slice(0, 20);
+                state.items = [payload, ...state.items].slice(0, 20);
                 renderList(listEl, countEl);
                 updateMessageBadge(messageBadge);
                 if (payload.title || payload.message) {

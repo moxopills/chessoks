@@ -166,37 +166,9 @@
         if (!currentUser) return { className: '', label: result };
         const meId = Number(currentUser.id);
         const isWhite = Number(game.white_player?.id) === meId;
-        const isBlack = Number(game.black_player?.id) === meId;
-        const drawResults = new Set([
-            'draw',
-            'draw_agreement',
-            'draw_insufficient',
-            'draw_repetition',
-            'draw_fifty_move',
-            'stalemate',
-        ]);
-        const whiteWin = new Set([
-            'white_win',
-            'checkmate_white',
-            'timeout_black',
-            'resignation_black',
-        ]);
-        const blackWin = new Set([
-            'black_win',
-            'checkmate_black',
-            'timeout_white',
-            'resignation_white',
-        ]);
-        if (drawResults.has(result)) {
-            return { className: 'draw', label: '무' };
-        }
-        if (whiteWin.has(result)) {
-            return { className: isWhite ? 'win' : 'lose', label: isWhite ? '승' : '패' };
-        }
-        if (blackWin.has(result)) {
-            return { className: isBlack ? 'win' : 'lose', label: isBlack ? '승' : '패' };
-        }
-        return { className: '', label: result };
+        const label = Utils.getGameResultLabel(result, isWhite);
+        const classMap = { '승': 'win', '패': 'lose', '무': 'draw' };
+        return { className: classMap[label] || '', label };
     }
 
     function formatDate(value) {

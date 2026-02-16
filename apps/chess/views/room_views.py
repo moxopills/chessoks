@@ -1,7 +1,7 @@
 """방 조회 View"""
 
 from drf_spectacular.utils import extend_schema
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -81,7 +81,7 @@ class RoomDetailView(APIView):
 class RoomWaitingView(APIView):
     """내 대기 방 조회"""
 
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     @extend_schema(responses={200: RoomSerializer}, tags=["방"])
     def get(self, request):
