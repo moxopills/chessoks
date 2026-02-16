@@ -927,3 +927,121 @@ html:not([data-theme="dark"]) .btn-secondary.btn-arcade:hover:not(:disabled) {
     h1 { font-size: 1.25rem; }
     h2 { font-size: 1rem; }
 }
+
+/* ========================================
+   Custom Modal
+   ======================================== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1300;
+    padding: var(--space-md);
+    animation: fadeIn 0.15s ease;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal-dialog {
+    background-color: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 360px;
+    animation: slideUp 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.modal-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.modal-body {
+    padding: var(--space-lg);
+}
+
+.modal-message {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    margin: 0 0 var(--space-md);
+}
+
+.modal-input {
+    width: 100%;
+    margin-top: var(--space-sm);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
+    border-top: 1px solid var(--color-border);
+}
+
+.modal-footer .btn {
+    min-width: 80px;
+}
+
+@media (max-width: 480px) {
+    .modal-dialog {
+        max-width: 100%;
+        margin: var(--space-sm);
+    }
+
+    .modal-footer {
+        flex-direction: column-reverse;
+    }
+
+    .modal-footer .btn {
+        width: 100%;
+    }
+}
+
+/* Session Warning */
+.session-warning-dialog {
+    max-width: 340px;
+}
+
+.session-warning-dialog .modal-message strong {
+    color: var(--color-accent-error);
+}
+
+.session-warning-hint {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-top: var(--space-sm);
+}

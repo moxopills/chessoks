@@ -345,20 +345,24 @@
 
         if (isPrivate && !isFull) {
             // 비공개 방 - 비밀번호 입력
-            const password = prompt('비밀번호를 입력하세요:');
+            const password = await Modal.prompt('비밀번호를 입력하세요:', {
+                title: '비공개 방 입장',
+                inputType: 'password',
+                placeholder: '비밀번호'
+            });
             if (!password) return;
 
             try {
-            const joined = await API.post(`/chess/rooms/${roomId}/join/`, { password });
-            if (joined.room_type === 'quick' || joined.room_type === 'random' || joined.status === 'playing') {
-                window.location.href = `/games/${roomId}/`;
-            } else {
-                window.location.href = `/rooms/${roomId}/`;
+                const joined = await API.post(`/chess/rooms/${roomId}/join/`, { password });
+                if (joined.room_type === 'quick' || joined.room_type === 'random' || joined.status === 'playing') {
+                    window.location.href = `/games/${roomId}/`;
+                } else {
+                    window.location.href = `/rooms/${roomId}/`;
+                }
+            } catch (error) {
+                Toast.error(error.data?.message || '입장에 실패했습니다.');
             }
-        } catch (error) {
-            Toast.error(error.data?.message || '입장에 실패했습니다.');
-        }
-        return;
+            return;
         }
 
         // 일반 입장
