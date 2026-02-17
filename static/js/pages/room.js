@@ -14,6 +14,7 @@
     const roomSpectators = document.getElementById('room-spectators');
     const hostSlot = document.getElementById('host-slot');
     const guestSlot = document.getElementById('guest-slot');
+    const vsRecord = document.getElementById('vs-record');
     const actionButtons = document.getElementById('action-buttons');
     const leaveBtn = document.getElementById('leave-btn');
     const chatMessages = document.getElementById('chat-messages');
@@ -116,6 +117,9 @@
         // Action Buttons
         renderActionButtons();
 
+        // 1:1 전적 로드
+        loadVsRecord();
+
         // 게임 시작 체크
         if (room.status === 'playing') {
             Toast.success('게임이 시작됩니다!');
@@ -153,6 +157,43 @@
         const nextOpponentConfirm = isHost ? next.guest_start_confirmed : next.host_start_confirmed;
         if (prevOpponentConfirm === false && nextOpponentConfirm === true) {
             showStatusModal('상대가 게임 시작을 눌렀습니다. 시작 버튼을 눌러주세요.');
+        }
+    }
+
+    /**
+     * 1:1 전적 로드
+     */
+    async function loadVsRecord() {
+        if (!vsRecord || !room.guest) {
+            vsRecord?.classList.add('hidden');
+            return;
+        }
+
+        const opponentId = isHost ? room.guest.id : room.host.id;
+        if (!opponentId) {
+            vsRecord.classList.add('hidden');
+            return;
+        }
+
+        try {
+            const data = await API.get(`/accounts/users/${opponentId}/profile/`);
+            const vs = data.vs_summary;
+            if (!vs || (vs.wins === 0 && vs.losses === 0 && vs.draws === 0)) {
+                vsRecord.classList.add('hidden');
+                return;
+            }
+
+            vsRecord.classList.remove('hidden');
+            vsRecord.innerHTML = `
+                <div class="record-label">1:1 전적</div>
+                <div class="record-stat">
+                    <span class="win">${vs.wins}승</span>
+                    <span class="lose">${vs.losses}패</span>
+                    <span class="draw">${vs.draws}무</span>
+                </div>
+            `;
+        } catch {
+            vsRecord.classList.add('hidden');
         }
     }
 

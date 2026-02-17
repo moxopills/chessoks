@@ -37,6 +37,7 @@
                 <!-- VS -->
                 <div class="vs-divider">
                     <span class="vs-text">VS</span>
+                    <div class="vs-record hidden" id="vs-record"></div>
                 </div>
 
                 <!-- Guest -->
@@ -236,6 +237,27 @@
     color: var(--color-accent-primary);
     text-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
 }
+
+.vs-record {
+    font-size: 0.7rem;
+    color: var(--color-text-secondary);
+    margin-top: var(--space-xs);
+    text-align: center;
+}
+
+.vs-record.hidden {
+    display: none;
+}
+
+.vs-record .record-stat {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-sm);
+}
+
+.vs-record .win { color: var(--color-accent-success); }
+.vs-record .lose { color: var(--color-accent-error); }
+.vs-record .draw { color: var(--color-text-muted); }
 
 /* Action Area */
 .action-area {

@@ -111,6 +111,12 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD", "postgres"),
         "HOST": os.getenv("DB_HOST", "localhost"),  # 하이브리드: localhost, Docker: "db"
         "PORT": os.getenv("DB_PORT", "5432"),
+        # 연결 풀링 설정
+        "CONN_MAX_AGE": int(os.getenv("DB_CONN_MAX_AGE", "60")),  # 연결 유지 시간 (초)
+        "CONN_HEALTH_CHECKS": True,  # 연결 상태 확인
+        "OPTIONS": {
+            "connect_timeout": 10,
+        },
     }
 }
 
@@ -171,7 +177,7 @@ else:
         },
     }
 
-# 캐시 설정 (DEBUG 모드에서는 로컬 메모리 캐시, 프로덕션에서는 Redis)
+# 캐시 설정 (DEBUG 모드에서는 로컬 메모리 캐시, 프로덕션에서는 Redis with fallback)
 if DEBUG:
     CACHES = {
         "default": {
@@ -182,9 +188,20 @@ if DEBUG:
 else:
     CACHES = {
         "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "BACKEND": "django_redis.cache.RedisCache",
             "LOCATION": f"redis://{os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', '6379')}/1",
-        }
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "IGNORE_EXCEPTIONS": True,  # Redis 실패 시 예외 무시 (캐시 미스로 처리)
+                "SOCKET_CONNECT_TIMEOUT": 5,
+                "SOCKET_TIMEOUT": 5,
+            },
+        },
+        # 폴백용 로컬 메모리 캐시
+        "locmem": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "fallback-cache",
+        },
     }
 
 # CORS 설정 (템플릿 중심이면 기본 비활성)
