@@ -18,6 +18,9 @@
     const guestbookList = document.getElementById('guestbook-list');
     const guestbookInput = document.getElementById('guestbook-input');
     const guestbookSubmit = document.getElementById('guestbook-submit');
+    const winrateChart = document.getElementById('winrate-chart');
+    const winrateLegend = document.getElementById('winrate-legend');
+    const ratingChart = document.getElementById('rating-chart');
     let currentUserId = null;
 
     init();
@@ -93,6 +96,16 @@
         totalEl.textContent = summary.games_played ?? 0;
         winrateEl.textContent = `${summary.win_rate ?? 0}%`;
 
+        // 파이차트 렌더링
+        renderWinratePieChart(
+            summary.games_won ?? 0,
+            summary.games_lost ?? 0,
+            summary.games_draw ?? 0
+        );
+
+        // 레이팅 추이 차트 렌더링
+        renderRatingLineChart(data.rating_history || []);
+
         const games = data.recent_games || [];
         const userId = data.user?.id;
         if (!games.length) {
@@ -115,6 +128,115 @@
                 </div>
             `;
         }).join('');
+    }
+
+    function renderWinratePieChart(wins, losses, draws) {
+        if (!winrateChart) return;
+        const ctx = winrateChart.getContext('2d');
+        const total = wins + losses + draws;
+
+        if (total === 0) {
+            ctx.fillStyle = '#ccc';
+            ctx.beginPath();
+            ctx.arc(60, 60, 50, 0, Math.PI * 2);
+            ctx.fill();
+            if (winrateLegend) winrateLegend.innerHTML = '<span class="helper-text">데이터 없음</span>';
+            return;
+        }
+
+        const data = [
+            { value: wins, color: '#27ae60', label: '승' },
+            { value: losses, color: '#c0392b', label: '패' },
+            { value: draws, color: '#f39c12', label: '무' },
+        ];
+
+        let startAngle = -Math.PI / 2;
+        const centerX = 60;
+        const centerY = 60;
+        const radius = 50;
+
+        data.forEach(item => {
+            if (item.value === 0) return;
+            const sliceAngle = (item.value / total) * Math.PI * 2;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+            ctx.closePath();
+            ctx.fillStyle = item.color;
+            ctx.fill();
+            startAngle += sliceAngle;
+        });
+
+        // 가운데 구멍 (도넛 차트)
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 30, 0, Math.PI * 2);
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-bg-card').trim() || '#fff';
+        ctx.fill();
+
+        // 레전드
+        if (winrateLegend) {
+            winrateLegend.innerHTML = data.map(item => `
+                <span class="chart-legend-item">
+                    <span class="chart-legend-color" style="background:${item.color}"></span>
+                    ${item.label} ${item.value}
+                </span>
+            `).join('');
+        }
+    }
+
+    function renderRatingLineChart(history) {
+        if (!ratingChart) return;
+        const ctx = ratingChart.getContext('2d');
+        const width = ratingChart.width;
+        const height = ratingChart.height;
+        const padding = { top: 10, right: 10, bottom: 20, left: 35 };
+
+        ctx.clearRect(0, 0, width, height);
+
+        if (!history || history.length < 2) {
+            ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-text-muted').trim() || '#888';
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('데이터 부족', width / 2, height / 2);
+            return;
+        }
+
+        const ratings = history.map(h => h.rating);
+        const minRating = Math.min(...ratings) - 50;
+        const maxRating = Math.max(...ratings) + 50;
+        const chartWidth = width - padding.left - padding.right;
+        const chartHeight = height - padding.top - padding.bottom;
+
+        // 배경 그리드
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-border').trim() || '#ddd';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i <= 4; i++) {
+            const y = padding.top + (chartHeight / 4) * i;
+            ctx.beginPath();
+            ctx.moveTo(padding.left, y);
+            ctx.lineTo(width - padding.right, y);
+            ctx.stroke();
+        }
+
+        // 라인 그래프
+        ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-accent-primary').trim() || '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        history.forEach((point, i) => {
+            const x = padding.left + (chartWidth / (history.length - 1)) * i;
+            const y = padding.top + chartHeight - ((point.rating - minRating) / (maxRating - minRating)) * chartHeight;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        // Y축 레이블
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-text-muted').trim() || '#888';
+        ctx.font = '9px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(maxRating), padding.left - 5, padding.top + 10);
+        ctx.fillText(Math.round(minRating), padding.left - 5, height - padding.bottom);
     }
 
     function getResultInfo(game, userId) {

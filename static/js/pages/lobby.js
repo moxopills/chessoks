@@ -1027,6 +1027,7 @@
 
     function handleUserContextAction(action, targetId) {
         if (action === 'profile') window.location.href = `/users/${targetId}/`;
+        else if (action === 'invite') Notifications.sendGameInvite(targetId);
         else if (action === 'friend') sendFriendRequest(targetId);
         else if (action === 'chat') window.location.href = `/messages/${targetId}/`;
         else if (action === 'report') openReportForUser(targetId);

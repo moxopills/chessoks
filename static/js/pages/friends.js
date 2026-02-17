@@ -499,6 +499,7 @@
 
     function handleContextAction(action, targetId) {
         if (action === 'profile') openProfileDrawer(targetId);
+        else if (action === 'invite') Notifications.sendGameInvite(targetId);
         else if (action === 'friend') sendFriendRequestTo(targetId);
         else if (action === 'remove') removeFriend(targetId);
         else if (action === 'chat') openDirectMessage(targetId);

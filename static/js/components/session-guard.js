@@ -138,17 +138,27 @@ const SessionGuard = (function() {
         }
     }
 
-    function logout() {
-        window.location.href = '/accounts/logout/';
+    async function logout() {
+        try {
+            await API.post('/accounts/logout/');
+        } catch {
+            // 이미 로그아웃 상태일 수 있음
+        }
+        window.location.href = '/login/';
     }
 
-    function forceLogout() {
+    async function forceLogout() {
         if (checkInterval) {
             clearInterval(checkInterval);
             checkInterval = null;
         }
         // 실제 로그아웃 수행
-        window.location.href = '/accounts/logout/';
+        try {
+            await API.post('/accounts/logout/');
+        } catch {
+            // 이미 로그아웃 상태
+        }
+        window.location.href = '/login/';
     }
 
     return {

@@ -158,6 +158,13 @@
                         Utils?.Sounds?.notice?.();
                     }
                 }
+                if (payload?.type === 'game_invite') {
+                    openGameInviteModal(payload);
+                    if (Date.now() > state.noticeSoundReadyAt) {
+                        Utils?.Sounds?.notice?.();
+                    }
+                    return; // Don't show toast for invite
+                }
                 state.items = [payload, ...state.items].slice(0, 20);
                 renderList(listEl, countEl);
                 updateMessageBadge(messageBadge);
@@ -237,5 +244,82 @@
         modal.classList.remove('hidden');
     }
 
-    window.Notifications = { init, markDirectMessageRead };
+    function openGameInviteModal(payload) {
+        const modal = document.getElementById('game-invite-modal');
+        const avatarEl = document.getElementById('invite-avatar');
+        const nicknameEl = document.getElementById('invite-nickname');
+        const ratingEl = document.getElementById('invite-rating');
+        const timeLimitEl = document.getElementById('invite-time-limit');
+        const acceptBtn = document.getElementById('invite-accept');
+        const declineBtn = document.getElementById('invite-decline');
+
+        if (!modal || !acceptBtn || !declineBtn) return;
+
+        const inviteId = payload.payload?.invite_id;
+        const nickname = payload.payload?.from_user_nickname || '알 수 없음';
+        const avatar = payload.payload?.from_user_avatar;
+        const rating = payload.payload?.from_user_rating || 1500;
+        const timeLimit = payload.payload?.time_limit || 10;
+
+        if (avatarEl) {
+            avatarEl.innerHTML = avatar
+                ? `<img src="${Utils.escapeHtml(avatar)}" alt="">`
+                : '👤';
+        }
+        if (nicknameEl) nicknameEl.textContent = nickname;
+        if (ratingEl) ratingEl.textContent = `레이팅: ${rating}`;
+        if (timeLimitEl) timeLimitEl.textContent = `시간 제한: ${timeLimit}분`;
+
+        // Remove old listeners
+        const newAcceptBtn = acceptBtn.cloneNode(true);
+        const newDeclineBtn = declineBtn.cloneNode(true);
+        acceptBtn.parentNode.replaceChild(newAcceptBtn, acceptBtn);
+        declineBtn.parentNode.replaceChild(newDeclineBtn, declineBtn);
+
+        newAcceptBtn.addEventListener('click', async () => {
+            newAcceptBtn.disabled = true;
+            newDeclineBtn.disabled = true;
+            try {
+                const result = await API.post(`/chess/invite/${inviteId}/accept/`);
+                modal.classList.add('hidden');
+                Toast.success('초대를 수락했습니다.');
+                if (result.room_id) {
+                    window.location.href = `/rooms/${result.room_id}/`;
+                }
+            } catch (error) {
+                Toast.error(error.data?.detail || '초대 수락에 실패했습니다.');
+                newAcceptBtn.disabled = false;
+                newDeclineBtn.disabled = false;
+            }
+        });
+
+        newDeclineBtn.addEventListener('click', async () => {
+            newAcceptBtn.disabled = true;
+            newDeclineBtn.disabled = true;
+            try {
+                await API.post(`/chess/invite/${inviteId}/decline/`);
+                modal.classList.add('hidden');
+                Toast.info('초대를 거절했습니다.');
+            } catch (error) {
+                Toast.error(error.data?.detail || '초대 거절에 실패했습니다.');
+                newAcceptBtn.disabled = false;
+                newDeclineBtn.disabled = false;
+            }
+        });
+
+        modal.classList.remove('hidden');
+    }
+
+    async function sendGameInvite(userId, timeLimit = 10) {
+        try {
+            await API.post('/chess/invite/', { user_id: userId, time_limit: timeLimit });
+            Toast.success('초대를 보냈습니다.');
+            return true;
+        } catch (error) {
+            Toast.error(error.data?.detail || '초대 전송에 실패했습니다.');
+            return false;
+        }
+    }
+
+    window.Notifications = { init, markDirectMessageRead, sendGameInvite };
 })();

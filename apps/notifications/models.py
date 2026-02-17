@@ -11,6 +11,8 @@ class Notification(models.Model):
         ("match_found", "매칭 완료"),
         ("room_event", "방 이벤트"),
         ("rematch", "리매치"),
+        ("game_invite", "게임 초대"),
+        ("game_invite_declined", "초대 거절"),
         ("game_result", "게임 결과"),
         ("rating_change", "레이팅 변동"),
         ("tier_promotion", "티어 승격"),
