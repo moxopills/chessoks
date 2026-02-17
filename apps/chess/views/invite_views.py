@@ -22,9 +22,7 @@ class GameInviteView(APIView):
         time_limit = request.data.get("time_limit", 10)
 
         if not target_user_id:
-            return Response(
-                {"detail": "user_id는 필수입니다."}, status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"detail": "user_id는 필수입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             invite = InviteService.send_invite(

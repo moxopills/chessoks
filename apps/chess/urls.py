@@ -37,8 +37,14 @@ urlpatterns = [
     path("random-match/cancel/", CancelRandomMatchView.as_view(), name="cancel-random-match"),
     path("ai-match/", AiMatchView.as_view(), name="ai-match"),
     path("invite/", GameInviteView.as_view(), name="game-invite"),
-    path("invite/<int:invite_id>/accept/", GameInviteAcceptView.as_view(), name="game-invite-accept"),
-    path("invite/<int:invite_id>/decline/", GameInviteDeclineView.as_view(), name="game-invite-decline"),
+    path(
+        "invite/<int:invite_id>/accept/", GameInviteAcceptView.as_view(), name="game-invite-accept"
+    ),
+    path(
+        "invite/<int:invite_id>/decline/",
+        GameInviteDeclineView.as_view(),
+        name="game-invite-decline",
+    ),
     path("games/<int:game_id>/", GameDetailView.as_view(), name="game-detail"),
     path("games/<int:game_id>/moves/", GameMoveListView.as_view(), name="game-moves"),
     path("games/<int:game_id>/legal-moves/", GameLegalMoveView.as_view(), name="game-legal-moves"),
