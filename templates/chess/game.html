@@ -109,7 +109,10 @@
     </div>
 </div>
 
-<button class="chat-fab" id="chat-fab" aria-label="채팅 열기">💬</button>
+<button class="chat-fab" id="chat-fab" aria-label="채팅 열기">
+    💬
+    <span class="chat-fab-badge hidden" id="chat-fab-badge">0</span>
+</button>
 
 <div class="mobile-tabbar" id="mobile-tabbar">
     <button class="mobile-tab active" data-tab="main">게임</button>
@@ -303,12 +306,24 @@
 }
 
 .player-bar-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-size: 0.75rem;
     font-weight: 500;
-    max-width: 140px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: 160px;
+}
+
+.player-bar .tier-badge {
+    position: static !important;
+    right: auto !important;
+    bottom: auto !important;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    width: auto;
+    height: auto;
+    background: transparent;
+    border: none;
 }
 
 .player-bar-rating {
@@ -731,12 +746,35 @@
     justify-content: center;
     cursor: pointer;
     z-index: 1200;
+    /* 배지 위치 기준점 */
 }
 
 .chat-fab.is-active {
     background: var(--color-accent-primary);
     color: #fff;
     border-color: var(--color-accent-primary);
+}
+
+.chat-fab-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background-color: var(--color-accent-error);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.chat-fab-badge.hidden {
+    display: none;
 }
 
 @media (max-width: 768px) {

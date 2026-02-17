@@ -40,6 +40,7 @@
     const chatSection = document.getElementById('game-chat-section');
     const mobileTabbar = document.getElementById('mobile-tabbar');
     const chatBadge = document.getElementById('chat-badge');
+    const chatFabBadge = document.getElementById('chat-fab-badge');
     const gameActions = document.getElementById('game-actions');
     const drawBtn = document.getElementById('draw-btn');
     const resignBtn = document.getElementById('resign-btn');
@@ -394,6 +395,10 @@
             chatSection.classList.toggle('is-collapsed');
             chatSection.classList.toggle('is-floating', willOpen);
             chatFab.classList.toggle('is-active', willOpen);
+            // 채팅 열 때 배지 리셋
+            if (willOpen) {
+                resetChatBadge();
+            }
         });
     }
 
@@ -1418,15 +1423,24 @@
     }
 
     function handleChatBadge(data) {
-        if (isChatOpen || !chatSection?.classList.contains('is-hidden')) {
+        // 채팅이 열려있으면(FAB 토글 또는 모바일 탭) 배지 리셋
+        const isChatVisible = isChatOpen ||
+            (chatSection && !chatSection.classList.contains('is-collapsed') && !chatSection.classList.contains('is-hidden'));
+        if (isChatVisible) {
             resetChatBadge();
             return;
         }
         if (currentUser && data.user_id === currentUser.id) return;
         chatUnread += 1;
+        // 모바일 탭 배지
         if (chatBadge) {
             chatBadge.textContent = chatUnread;
             chatBadge.classList.remove('hidden');
+        }
+        // FAB 배지
+        if (chatFabBadge) {
+            chatFabBadge.textContent = chatUnread;
+            chatFabBadge.classList.remove('hidden');
         }
     }
 
@@ -1435,6 +1449,10 @@
         if (chatBadge) {
             chatBadge.textContent = '0';
             chatBadge.classList.add('hidden');
+        }
+        if (chatFabBadge) {
+            chatFabBadge.textContent = '0';
+            chatFabBadge.classList.add('hidden');
         }
     }
 
