@@ -1045,3 +1045,80 @@ html:not([data-theme="dark"]) .btn-secondary.btn-arcade:hover:not(:disabled) {
     color: var(--color-text-muted);
     margin-top: var(--space-sm);
 }
+
+/* ========================================
+   Touch Feedback (Mobile)
+   ======================================== */
+
+@media (hover: none) and (pointer: coarse) {
+    .btn:active,
+    .nav-link:active,
+    .card:active,
+    .room-item:active,
+    .user-item:active {
+        transform: scale(0.97);
+        opacity: 0.85;
+        transition: transform 0.1s ease, opacity 0.1s ease;
+    }
+
+    .btn {
+        -webkit-tap-highlight-color: transparent;
+    }
+}
+
+/* Focus visible for keyboard navigation */
+.btn:focus-visible,
+.square:focus-visible {
+    outline: 2px solid var(--color-accent-primary);
+    outline-offset: 2px;
+}
+
+/* ========================================
+   Loading Skeleton
+   ======================================== */
+
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--color-bg-tertiary) 25%,
+        var(--color-bg-secondary) 50%,
+        var(--color-bg-tertiary) 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: var(--radius-sm);
+}
+
+.skeleton-text {
+    height: 1em;
+    margin-bottom: var(--space-xs);
+}
+
+.skeleton-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.skeleton-card {
+    height: 60px;
+    margin-bottom: var(--space-sm);
+}
+
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.loading-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+    color: var(--color-text-muted);
+}
+
+.loading-placeholder .spinner {
+    margin-bottom: var(--space-sm);
+}

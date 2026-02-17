@@ -173,10 +173,10 @@
         </div>
         <div class="modal-body match-modal-body">
             <div class="match-spinner-wrap">
-                <span class="spinner spinner-lg"></span>
+                <span class="chess-spinner">♞</span>
             </div>
             <div class="match-status" id="quick-match-status">상대를 찾는 중...</div>
-            <div class="match-timer" id="quick-match-timer">대기 시간: 0:00</div>
+            <div class="match-timer" id="quick-match-timer">⏱️ 대기 시간: 0:00</div>
             <div class="match-hint">매칭되면 자동으로 게임이 시작됩니다.</div>
             <div class="modal-actions is-centered">
                 <button class="btn btn-secondary" id="quick-match-wait">로비에서 대기</button>
@@ -193,10 +193,10 @@
         </div>
         <div class="modal-body match-modal-body">
             <div class="match-spinner-wrap">
-                <span class="spinner spinner-lg"></span>
+                <span class="chess-spinner">♞</span>
             </div>
             <div class="match-status" id="random-match-status">상대를 찾는 중...</div>
-            <div class="match-timer" id="random-match-timer">대기 시간: 0:00</div>
+            <div class="match-timer" id="random-match-timer">⏱️ 대기 시간: 0:00</div>
             <div class="match-hint">매칭되면 자동으로 게임이 시작됩니다.</div>
             <div class="modal-actions is-centered">
                 <button class="btn btn-secondary" id="random-match-wait">로비에서 대기</button>
@@ -878,6 +878,27 @@
 
 .match-spinner-wrap {
     margin-bottom: var(--space-md);
+}
+
+.chess-spinner {
+    display: inline-block;
+    font-size: 3rem;
+    animation: chess-bounce 1s ease-in-out infinite;
+}
+
+@keyframes chess-bounce {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    25% {
+        transform: translateY(-10px) rotate(-15deg);
+    }
+    50% {
+        transform: translateY(0) rotate(0deg);
+    }
+    75% {
+        transform: translateY(-10px) rotate(15deg);
+    }
 }
 
 .spinner-lg {

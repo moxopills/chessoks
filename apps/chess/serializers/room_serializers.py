@@ -20,6 +20,7 @@ class RoomSerializer(serializers.Serializer):
     host_start_confirmed = serializers.BooleanField(read_only=True)
     guest_start_confirmed = serializers.BooleanField(read_only=True)
     player_count = serializers.IntegerField(read_only=True)
+    spectator_count = serializers.IntegerField(read_only=True)
     created_at = serializers.DateTimeField(read_only=True)
     started_at = serializers.DateTimeField(read_only=True, allow_null=True)
     finished_at = serializers.DateTimeField(read_only=True, allow_null=True)

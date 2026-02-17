@@ -69,6 +69,8 @@
     const replayCloseDock = document.getElementById('replay-close-dock');
     const reportOpenBtn = document.getElementById('report-btn');
     const chatFab = document.getElementById('chat-fab');
+    const shareBtn = document.getElementById('share-btn');
+    const gameEndStats = document.getElementById('game-end-stats');
     let pendingEnd = false;
 
     // State
@@ -107,6 +109,8 @@
     let chatUnread = 0;
     let opponentUserId = null;
     let guideEnabled = true;
+    let dragPiece = null;
+    let dragStartSquare = null;
     let isAiRoom = false;
     let movePage = 1;
     const movePageSize = 6;
@@ -153,6 +157,7 @@
         setupMovePagination();
         setupStatusModal();
         setupReplayControls();
+        setupShareButton();
         setupReport();
         setupChatToggle();
         setupExitGuard();
@@ -406,11 +411,186 @@
 
                 square.className = `square ${isLight ? 'light' : 'dark'}`;
                 square.dataset.square = squareName;
+                square.tabIndex = 0;
+                square.setAttribute('role', 'button');
+                square.setAttribute('aria-label', squareName);
 
                 square.addEventListener('click', () => handleSquareClick(squareName));
+                square.addEventListener('keydown', (e) => handleSquareKeydown(e, squareName));
+
+                // 터치 드래그 지원
+                square.addEventListener('touchstart', (e) => handleTouchStart(e, squareName), { passive: false });
 
                 chessBoard.appendChild(square);
             }
+        }
+
+        // 터치 이벤트 (보드 레벨)
+        chessBoard.addEventListener('touchmove', handleTouchMove, { passive: false });
+        chessBoard.addEventListener('touchend', handleTouchEnd, { passive: false });
+    }
+
+    async function handleTouchStart(e, squareName) {
+        if (!isMyTurn || !myColor) return;
+
+        const piece = getPieceAtSquare(squareName);
+        if (!piece) return;
+
+        const pieceColor = piece === piece.toUpperCase() ? 'white' : 'black';
+        if (pieceColor !== myColor) return;
+
+        e.preventDefault();
+        dragStartSquare = squareName;
+
+        // 드래그 중인 기물 표시 생성
+        const touch = e.touches[0];
+        createDragPiece(piece, touch.clientX, touch.clientY);
+
+        // 유효한 이동 표시
+        selectedSquare = squareName;
+        validMoves = await fetchLegalMoves(squareName);
+        renderBoard();
+    }
+
+    function getPieceAtSquare(squareName) {
+        if (!game || !game.fen) return null;
+        const fen = game.fen.split(' ')[0];
+        const ranks = fen.split('/');
+        const file = squareName.charCodeAt(0) - 97; // a=0, h=7
+        const rank = 8 - parseInt(squareName[1]); // 8=0, 1=7
+
+        if (rank < 0 || rank > 7 || file < 0 || file > 7) return null;
+
+        const rankStr = ranks[rank];
+        let currentFile = 0;
+        for (const char of rankStr) {
+            if (/\d/.test(char)) {
+                currentFile += parseInt(char);
+            } else {
+                if (currentFile === file) return char;
+                currentFile++;
+            }
+        }
+        return null;
+    }
+
+    function handleTouchMove(e) {
+        if (!dragPiece || !dragStartSquare) return;
+        e.preventDefault();
+
+        const touch = e.touches[0];
+        dragPiece.style.left = (touch.clientX - 25) + 'px';
+        dragPiece.style.top = (touch.clientY - 25) + 'px';
+
+        // 현재 위치의 칸 하이라이트
+        const targetSquare = getSquareFromPoint(touch.clientX, touch.clientY);
+        highlightDropTarget(targetSquare);
+    }
+
+    function handleTouchEnd(e) {
+        if (!dragStartSquare) return;
+        e.preventDefault();
+
+        const touch = e.changedTouches[0];
+        const targetSquare = getSquareFromPoint(touch.clientX, touch.clientY);
+
+        // 드래그 기물 제거
+        removeDragPiece();
+        clearDropHighlight();
+
+        if (targetSquare && targetSquare !== dragStartSquare) {
+            // 이동 시도
+            if (validMoves.includes(targetSquare)) {
+                handleSquareClick(targetSquare);
+            } else {
+                // 잘못된 위치 - 선택 해제
+                selectedSquare = null;
+                validMoves = [];
+                renderBoard();
+            }
+        } else {
+            // 같은 위치 또는 보드 밖 - 선택 유지 (탭으로 동작)
+        }
+
+        dragStartSquare = null;
+    }
+
+    function createDragPiece(piece, x, y) {
+        removeDragPiece();
+        dragPiece = document.createElement('div');
+        dragPiece.className = 'drag-piece';
+        dragPiece.innerHTML = PIECE_SYMBOLS[piece] || '';
+        dragPiece.style.left = (x - 25) + 'px';
+        dragPiece.style.top = (y - 25) + 'px';
+        document.body.appendChild(dragPiece);
+    }
+
+    function removeDragPiece() {
+        if (dragPiece) {
+            dragPiece.remove();
+            dragPiece = null;
+        }
+    }
+
+    function getSquareFromPoint(x, y) {
+        const element = document.elementFromPoint(x, y);
+        if (element && element.classList.contains('square')) {
+            return element.dataset.square;
+        }
+        return null;
+    }
+
+    function highlightDropTarget(squareName) {
+        clearDropHighlight();
+        if (squareName && validMoves.includes(squareName)) {
+            const square = getSquare(squareName);
+            if (square) square.classList.add('drop-target');
+        }
+    }
+
+    function clearDropHighlight() {
+        chessBoard.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+    }
+
+    function handleSquareKeydown(e, squareName) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleSquareClick(squareName);
+        } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+            e.preventDefault();
+            navigateSquare(squareName, e.key);
+        }
+    }
+
+    function navigateSquare(currentSquare, direction) {
+        const file = currentSquare.charCodeAt(0) - 97; // a=0
+        const rank = parseInt(currentSquare[1]) - 1; // 1=0
+
+        let newFile = file;
+        let newRank = rank;
+
+        // 보드가 뒤집혔을 때 방향 조정
+        const isFlipped = myColor === 'black';
+
+        switch (direction) {
+            case 'ArrowUp':
+                newRank += isFlipped ? -1 : 1;
+                break;
+            case 'ArrowDown':
+                newRank += isFlipped ? 1 : -1;
+                break;
+            case 'ArrowLeft':
+                newFile += isFlipped ? 1 : -1;
+                break;
+            case 'ArrowRight':
+                newFile += isFlipped ? -1 : 1;
+                break;
+        }
+
+        if (newFile >= 0 && newFile <= 7 && newRank >= 0 && newRank <= 7) {
+            const newSquare = String.fromCharCode(97 + newFile) + (newRank + 1);
+            const el = getSquare(toDisplaySquare(newSquare));
+            if (el) el.focus();
         }
     }
 
@@ -1492,6 +1672,41 @@
         replayNextDock?.addEventListener('click', () => stepReplay(1));
         replayPlayDock?.addEventListener('click', () => toggleReplay());
         replayCloseDock?.addEventListener('click', () => closeReplay());
+
+        // 키보드 단축키 (좌/우 화살표)
+        document.addEventListener('keydown', (e) => {
+            if (!replayActive) return;
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                stepReplay(-1);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                stepReplay(1);
+            } else if (e.key === ' ') {
+                e.preventDefault();
+                toggleReplay();
+            }
+        });
+    }
+
+    function setupShareButton() {
+        if (!shareBtn) return;
+        shareBtn.addEventListener('click', async () => {
+            const targetGameId = replayGameId || game?.id;
+            if (!targetGameId) {
+                Toast.error('공유할 게임 정보가 없습니다.');
+                return;
+            }
+            const shareUrl = `${window.location.origin}/games/${roomId}/?replay_game_id=${targetGameId}`;
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+                Toast.success('기보 링크가 복사되었습니다!');
+            } catch {
+                // 복사 실패 시 prompt로 표시
+                Modal.alert(`링크를 직접 복사해주세요:\n${shareUrl}`, { title: '기보 공유 링크' });
+            }
+        });
     }
 
     async function openReplay(targetGameId = null) {
@@ -1690,9 +1905,53 @@
 
         ratingPollAttempts = 0;
         loadRatingChange();
+        loadMoveTimeStats();
 
         gameEndModal.classList.remove('hidden');
         gameEndModal.style.display = 'flex';
+    }
+
+    async function loadMoveTimeStats() {
+        if (!gameEndStats || !game) return;
+        gameEndStats.innerHTML = '';
+
+        try {
+            const data = await API.get(`/chess/games/${game.id}/moves/`, { limit: 200, offset: 0 });
+            const moves = data.results || [];
+            if (!moves.length) return;
+
+            // 내 착수 시간 계산
+            const myMoves = moves.filter(m => m.color === myColor);
+            const opMoves = moves.filter(m => m.color !== myColor);
+
+            if (!myMoves.length) return;
+
+            const myTimes = myMoves.map(m => m.time_spent || 0).filter(t => t > 0);
+            const opTimes = opMoves.map(m => m.time_spent || 0).filter(t => t > 0);
+
+            if (!myTimes.length && !opTimes.length) return;
+
+            const avgTime = myTimes.length ? (myTimes.reduce((a, b) => a + b, 0) / myTimes.length).toFixed(1) : '--';
+            const maxTime = myTimes.length ? Math.max(...myTimes).toFixed(1) : '--';
+            const opAvgTime = opTimes.length ? (opTimes.reduce((a, b) => a + b, 0) / opTimes.length).toFixed(1) : '--';
+
+            gameEndStats.innerHTML = `
+                <div class="stats-row">
+                    <span class="stats-label">평균 착수 시간</span>
+                    <span class="stats-value">${avgTime}초</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-label">최장 고민 시간</span>
+                    <span class="stats-value">${maxTime}초</span>
+                </div>
+                <div class="stats-row">
+                    <span class="stats-label">상대 평균 착수</span>
+                    <span class="stats-value">${opAvgTime}초</span>
+                </div>
+            `;
+        } catch {
+            // 통계 로드 실패 시 무시
+        }
     }
 
     function showPendingEnd(message) {
@@ -1824,6 +2083,17 @@
             sendAiResign();
         }
     });
+
+    // 화면 회전 시 보드 크기 재계산
+    window.addEventListener('orientationchange', () => {
+        setTimeout(() => {
+            renderBoard();
+        }, 100);
+    });
+
+    window.addEventListener('resize', Utils.debounce(() => {
+        renderBoard();
+    }, 200));
 
     function sendAiResign() {
         if (aiExitTriggered) return;

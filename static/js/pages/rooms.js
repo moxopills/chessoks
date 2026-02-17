@@ -125,7 +125,7 @@
                             <span class="room-meta-item">
                                 👥 ${room.player_count || 1}/2
                             </span>
-                            ${room.allow_spectators ? '<span class="room-meta-item">👁 관전 가능</span>' : ''}
+                            ${room.allow_spectators ? `<span class="room-meta-item">👁 ${room.spectator_count || 0}명 관전</span>` : ''}
                         </div>
                     </div>
                     <span class="room-status ${room.status}">${safeStatusText}</span>

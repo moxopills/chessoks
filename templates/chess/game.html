@@ -127,7 +127,9 @@
             <h2 class="game-end-title" id="game-end-title">게임 종료</h2>
             <p class="game-end-result" id="game-end-result">--</p>
             <div class="game-end-rating" id="game-end-rating"></div>
+            <div class="game-end-stats" id="game-end-stats"></div>
             <div class="game-end-actions">
+                <button class="btn btn-secondary" id="share-btn" title="기보 공유">🔗 공유</button>
                 <button class="btn btn-secondary" id="replay-btn">기보 다시보기</button>
                 <button class="btn btn-primary btn-arcade" id="rematch-btn">리매치</button>
                 <button class="btn btn-secondary" id="history-btn">전적 보기</button>
@@ -923,6 +925,29 @@ body.competitive-room #rematch-modal {
     color: var(--color-accent-error);
 }
 
+.game-end-stats {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.game-end-stats .stats-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-md);
+}
+
+.game-end-stats .stats-label {
+    color: var(--color-text-muted);
+}
+
+.game-end-stats .stats-value {
+    font-weight: 500;
+}
+
 .game-end-actions {
     display: flex;
     justify-content: center;
@@ -1248,6 +1273,37 @@ body.competitive-room #rematch-modal {
 
     .piece {
         font-size: 2rem;
+    }
+}
+
+/* 터치 드래그 */
+.drag-piece {
+    position: fixed;
+    width: 50px;
+    height: 50px;
+    font-size: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.9;
+    filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.3));
+}
+
+.square.drop-target {
+    background-color: rgba(46, 204, 113, 0.5) !important;
+}
+
+/* 터치 피드백 강화 */
+@media (hover: none) and (pointer: coarse) {
+    .btn:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+
+    .square:active {
+        opacity: 0.7;
     }
 }
 </style>
