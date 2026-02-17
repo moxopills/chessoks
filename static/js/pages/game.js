@@ -641,10 +641,13 @@
     /**
      * 타이머 시작
      */
+    let timeoutHandled = false;
+
     function startTimer() {
         if (timerInterval) {
             clearInterval(timerInterval);
         }
+        timeoutHandled = false;
 
         updateTimerDisplay();
 
@@ -666,7 +669,30 @@
             }
 
             updateTimerDisplay();
+            checkTimeout();
         }, 1000);
+    }
+
+    function checkTimeout() {
+        if (timeoutHandled || !game || game.result !== 'playing') return;
+
+        const myTime = myColor === 'white' ? game.white_time_remaining : game.black_time_remaining;
+        const opponentTime = myColor === 'white' ? game.black_time_remaining : game.white_time_remaining;
+
+        if (myTime <= 0 && game.current_turn === myColor) {
+            timeoutHandled = true;
+            showPendingEnd('시간 초과 처리 중...');
+            // 서버에 timeout 알림 (빈 move 시도로 서버가 timeout 처리)
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ action: 'timeout', game_id: game.id }));
+            }
+        } else if (opponentTime <= 0 && game.current_turn !== myColor) {
+            timeoutHandled = true;
+            showPendingEnd('상대 시간 초과 처리 중...');
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ action: 'timeout', game_id: game.id }));
+            }
+        }
     }
 
     /**

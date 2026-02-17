@@ -8,14 +8,15 @@
 const SessionGuard = (function() {
     'use strict';
 
-    const WARNING_BEFORE_SECONDS = 5 * 60; // 5분 전 경고
-    const SESSION_TIMEOUT_SECONDS = 30 * 60; // 30분 비활동 시 타임아웃
+    const WARNING_TIMEOUT_SECONDS = 5 * 60; // 경고 후 5분 내 연장 안 하면 로그아웃
+    const SESSION_TIMEOUT_SECONDS = 25 * 60; // 25분 비활동 시 경고
     const CHECK_INTERVAL_SECONDS = 60; // 1분마다 체크
 
     let lastActivity = Date.now();
     let warningShown = false;
     let checkInterval = null;
     let warningModal = null;
+    let countdownInterval = null;
 
     function init() {
         // 활동 이벤트 감지
@@ -26,28 +27,21 @@ const SessionGuard = (function() {
 
         // 주기적 체크
         checkInterval = setInterval(checkSession, CHECK_INTERVAL_SECONDS * 1000);
-
-        // 초기 체크
-        checkSession();
     }
 
     function recordActivity() {
         lastActivity = Date.now();
-        if (warningShown) {
-            hideWarning();
-        }
+        // 경고 모달이 떠있을 때는 활동해도 자동으로 닫지 않음 (연장 버튼 눌러야 함)
     }
 
     function checkSession() {
-        const elapsed = (Date.now() - lastActivity) / 1000;
-        const remaining = SESSION_TIMEOUT_SECONDS - elapsed;
+        if (warningShown) return; // 이미 경고 중이면 체크 안 함
 
-        if (remaining <= 0) {
-            // 세션 만료
-            handleSessionExpired();
-        } else if (remaining <= WARNING_BEFORE_SECONDS && !warningShown) {
+        const elapsed = (Date.now() - lastActivity) / 1000;
+
+        if (elapsed >= SESSION_TIMEOUT_SECONDS) {
             // 경고 표시
-            showWarning(Math.ceil(remaining));
+            showWarning(WARNING_TIMEOUT_SECONDS);
         }
     }
 
@@ -60,6 +54,10 @@ const SessionGuard = (function() {
         warningShown = false;
         if (warningModal) {
             warningModal.classList.add('hidden');
+        }
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
         }
     }
 
@@ -98,8 +96,6 @@ const SessionGuard = (function() {
         startCountdown(remainingSeconds);
     }
 
-    let countdownInterval = null;
-
     function startCountdown(seconds) {
         if (countdownInterval) clearInterval(countdownInterval);
 
@@ -108,7 +104,8 @@ const SessionGuard = (function() {
             remaining -= 1;
             if (remaining <= 0) {
                 clearInterval(countdownInterval);
-                handleSessionExpired();
+                countdownInterval = null;
+                forceLogout();
             } else {
                 updateRemainingTime(remaining);
             }
@@ -130,18 +127,14 @@ const SessionGuard = (function() {
 
     async function extendSession() {
         try {
-            // API 호출로 세션 연장 (단순히 요청만 해도 세션 갱신됨)
+            // API 호출로 세션 연장
             await API.get('/accounts/me/');
-            recordActivity();
+            lastActivity = Date.now();
             hideWarning();
-            if (countdownInterval) {
-                clearInterval(countdownInterval);
-                countdownInterval = null;
-            }
             Toast.success('세션이 연장되었습니다.');
         } catch {
             // 이미 만료됨
-            handleSessionExpired();
+            forceLogout();
         }
     }
 
@@ -149,36 +142,13 @@ const SessionGuard = (function() {
         window.location.href = '/accounts/logout/';
     }
 
-    function handleSessionExpired() {
-        if (countdownInterval) {
-            clearInterval(countdownInterval);
-            countdownInterval = null;
-        }
+    function forceLogout() {
         if (checkInterval) {
             clearInterval(checkInterval);
             checkInterval = null;
         }
-
-        // 만료 모달 표시
-        if (warningModal) {
-            warningModal.innerHTML = `
-                <div class="modal-dialog session-warning-dialog">
-                    <div class="modal-header">
-                        <h3 class="modal-title">🔒 세션 만료</h3>
-                    </div>
-                    <div class="modal-body">
-                        <p class="modal-message">세션이 만료되었습니다. 다시 로그인해주세요.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-primary" id="session-relogin-btn">로그인</button>
-                    </div>
-                </div>
-            `;
-            warningModal.classList.remove('hidden');
-            document.getElementById('session-relogin-btn').addEventListener('click', () => {
-                window.location.href = '/accounts/login/';
-            });
-        }
+        // 실제 로그아웃 수행
+        window.location.href = '/accounts/logout/';
     }
 
     return {

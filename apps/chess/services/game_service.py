@@ -403,6 +403,22 @@ class GameService:
         GameService._clear_cache("disconnect", game.id)
 
     @staticmethod
+    def check_and_apply_timeout(game_id: int) -> Game | None:
+        """시간 초과 체크 및 적용"""
+        game = Game.objects.select_for_update().get(id=game_id)
+        if game.result != "playing" or not game.time_limit:
+            return game
+
+        now = timezone.now()
+        time_spent = GameService._calc_time_spent(game, now)
+        current_turn = game.current_turn
+        remaining = GameService._remaining_after_spent(game, current_turn, time_spent)
+
+        if remaining <= 0:
+            GameService.apply_timeout(game, current_turn, now)
+        return game
+
+    @staticmethod
     def apply_disconnect_forfeit(game: Game, player_color: str, now) -> None:
         if player_color == "white":
             game.result = "resignation_white"
