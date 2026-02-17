@@ -79,6 +79,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 "resign": self._handle_resign,
                 "draw": self._handle_draw,
                 "decline_draw": self._handle_decline_draw,
+                "timeout": self._handle_timeout,
                 "rematch": self._handle_rematch,
                 "decline_rematch": self._handle_decline_rematch,
                 "chat": self._handle_chat,
@@ -146,6 +147,15 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         payload = self._game_payload(game)
         payload["type"] = "game_end"
         await self._broadcast(payload)
+
+    async def _handle_timeout(self, content):
+        """클라이언트에서 시간 초과 감지 시 호출"""
+        game_id = content.get("game_id")
+        game = await self._check_timeout(game_id)
+        if game and game.result != "playing":
+            payload = self._game_payload(game)
+            payload["type"] = "game_end"
+            await self._broadcast(payload)
 
     async def _handle_draw(self, content):
         if not self.is_player:
@@ -367,6 +377,10 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def _decline_rematch(self, game_id):
         return GameService.decline_rematch(game_id, self.scope["user"])
+
+    @database_sync_to_async
+    def _check_timeout(self, game_id):
+        return GameService.check_and_apply_timeout(game_id)
 
     @staticmethod
     def _format_error(exc: ValidationError) -> str:
