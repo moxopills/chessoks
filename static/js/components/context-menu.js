@@ -82,6 +82,7 @@ const ContextMenu = (function() {
         const items = [{ action: 'profile', label: '프로필 보기' }];
         if (!currentUserId || targetUserId === currentUserId) return items;
 
+        items.push({ action: 'invite', label: '게임 초대' });
         if (!isFriend && !isPending) {
             items.push({ action: 'friend', label: '친구 추가' });
         }

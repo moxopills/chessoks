@@ -35,6 +35,30 @@
         </div>
     </div>
 
+    <!-- Game Invite Modal -->
+    <div class="modal-overlay hidden" id="game-invite-modal">
+        <div class="modal invite-modal">
+            <div class="modal-header">
+                <h3 class="modal-title">게임 초대</h3>
+            </div>
+            <div class="modal-body">
+                <div class="invite-user-info">
+                    <div class="invite-avatar" id="invite-avatar"></div>
+                    <div class="invite-details">
+                        <div class="invite-nickname" id="invite-nickname">--</div>
+                        <div class="invite-rating" id="invite-rating">레이팅: --</div>
+                    </div>
+                </div>
+                <p class="invite-message">게임 초대를 받았습니다.</p>
+                <p class="invite-time" id="invite-time-limit">시간 제한: 10분</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="invite-decline" type="button">거절</button>
+                <button class="btn btn-primary" id="invite-accept" type="button">수락</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Global Report Modal -->
     <div class="modal-overlay hidden" id="report-modal">
         <div class="modal report-modal">

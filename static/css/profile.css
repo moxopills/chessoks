@@ -280,6 +280,54 @@
     margin: var(--space-lg) 0;
 }
 
+/* Profile Charts */
+.profile-charts {
+    display: flex;
+    gap: var(--space-lg);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.chart-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.chart-title {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.chart-legend {
+    display: flex;
+    gap: var(--space-sm);
+    font-size: 0.65rem;
+}
+
+.chart-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.chart-legend-color {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+
+.chart-legend-color.win { background-color: #27ae60; }
+.chart-legend-color.lose { background-color: #c0392b; }
+.chart-legend-color.draw { background-color: #f39c12; }
+
+.chart-rating {
+    flex: 1;
+    min-width: 180px;
+}
+
 @media (max-width: 900px) {
     .profile-layout {
         grid-template-columns: 1fr;
