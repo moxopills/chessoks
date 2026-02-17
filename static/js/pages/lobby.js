@@ -216,6 +216,7 @@
                     <div class="room-meta">
                         ${Utils.escapeHtml(room.host?.nickname || '호스트')} ·
                         ${room.time_limit ? `${room.time_limit}분` : '무제한'}
+                        ${room.spectator_count > 0 ? ` · 👁 ${room.spectator_count}` : ''}
                     </div>
                 </div>
                 <span class="room-status ${room.status}">${room.status === 'waiting' ? '대기 중' : '게임 중'}</span>

@@ -159,3 +159,8 @@ class Room(models.Model):
     def player_count(self):
         """현재 플레이어 수 (읽기 전용 property)"""
         return 2 if self.is_full else 1
+
+    @property
+    def spectator_count(self):
+        """현재 관전자 수 (읽기 전용 property)"""
+        return self.spectators.count()
