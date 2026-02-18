@@ -58,8 +58,12 @@ class AuthService:
         return False
 
     @staticmethod
-    def handle_failed_login(email: str) -> tuple[int, str]:
+    def handle_failed_login(email: str, reason: str = "unknown") -> tuple[int, str]:
         """로그인 실패 처리
+
+        Args:
+            email: 이메일
+            reason: 실패 이유 ("email", "password", "unknown")
 
         Returns:
             (남은 시도 횟수, 에러 메시지) - 잠금 시 남은 시도 = 0
@@ -74,7 +78,12 @@ class AuthService:
 
         cache.set(attempts_key, attempts, LOGIN_LOCKOUT_DURATION)
         remaining = MAX_LOGIN_ATTEMPTS - attempts
-        return remaining, f"로그인 실패. 남은 시도: {remaining}회"
+
+        if reason == "email":
+            return remaining, f"존재하지 않는 이메일입니다. (남은 시도: {remaining}회)"
+        elif reason == "password":
+            return remaining, f"비밀번호가 일치하지 않습니다. (남은 시도: {remaining}회)"
+        return remaining, f"로그인 실패. (남은 시도: {remaining}회)"
 
     @staticmethod
     def handle_successful_login(request, user: User) -> User:
@@ -209,15 +218,26 @@ class AccountSessionService:
 
         AuthService.try_recover_account(email, password)
 
+        # 이메일 존재 여부 먼저 확인
+        try:
+            existing_user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            remaining, error_msg = AuthService.handle_failed_login(email, reason="email")
+            if remaining == 0:
+                raise Throttled(detail=error_msg) from None
+            raise AuthenticationFailed(detail=error_msg) from None
+
+        # 비활성 계정 체크 (Django authenticate는 is_active=False면 None 반환)
+        if not existing_user.is_active:
+            raise PermissionDenied(detail="비활성화된 계정입니다.")
+
+        # 비밀번호 확인
         user = authenticate(request, username=email, password=password)
         if not user:
-            remaining, error_msg = AuthService.handle_failed_login(email)
+            remaining, error_msg = AuthService.handle_failed_login(email, reason="password")
             if remaining == 0:
                 raise Throttled(detail=error_msg)
             raise AuthenticationFailed(detail=error_msg)
-
-        if not user.is_active:
-            raise PermissionDenied(detail="비활성화된 계정입니다.")
 
         if user.is_suspended:
             remaining = ""
