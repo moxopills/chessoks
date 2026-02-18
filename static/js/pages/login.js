@@ -89,7 +89,7 @@
                 formError.textContent = error.data.message;
             }
         } else if (error.status === 401) {
-            formError.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
+            formError.textContent = error.data?.message || '이메일 또는 비밀번호가 올바르지 않습니다.';
         } else if (error.status === 403) {
             formError.textContent = error.data?.message || '계정이 잠겨 있습니다. 잠시 후 다시 시도해주세요.';
         } else {

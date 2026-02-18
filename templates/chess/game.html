@@ -616,6 +616,19 @@
 .game-actions-panel .panel-header {
     border-bottom: 0;
     padding-bottom: var(--space-sm);
+    text-align: center;
+}
+
+.game-actions-panel .action-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-sm);
+}
+
+.game-actions-panel .action-grid .btn {
+    min-width: 100px;
+    flex: 0 1 calc(50% - var(--space-sm) / 2);
 }
 
 .panel-title {
@@ -688,11 +701,7 @@
     color: var(--color-text-secondary);
 }
 
-.game-actions-panel .action-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-sm);
-}
+/* action-grid 스타일은 위에서 정의됨 */
 
 .game-chat.is-collapsed .chat-messages,
 .game-chat.is-collapsed .chat-form {
@@ -796,9 +805,7 @@
     }
 }
 
-.game-actions-panel .btn {
-    width: 100%;
-}
+/* .game-actions-panel .btn 스타일은 위 action-grid에서 정의됨 */
 
 .move-list-empty {
     text-align: center;

@@ -209,10 +209,8 @@ class AuthE2ETestCase(ErrorResponseMixin, LiveServerTestCase):
                 response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN]
             )
             error_msg = self.get_error_message(response)
-            if response.status_code == status.HTTP_401_UNAUTHORIZED:
-                self.assertIn(f"남은 시도: {remaining}회", error_msg)
-            else:
-                self.assertIn("로그인", error_msg)
+            # 남은 시도 횟수가 메시지에 포함되어야 함
+            self.assertIn(f"남은 시도: {remaining}회", error_msg)
 
         # 3. 다섯 번째 실패 → 잠금
         response = self.client.post("/api/accounts/login/", wrong_data, format="json")
