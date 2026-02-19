@@ -26,24 +26,30 @@ class GuestTokenMiddleware(BaseMiddleware):
                 break
 
         if token:
-            guest = await self._get_guest_session(token)
-            if guest:
-                scope["guest"] = guest
+            guest_data, guest_user = await self._get_guest_session_and_user(token)
+            if guest_data:
+                scope["guest"] = guest_data
+                # 게스트 User가 있으면 scope["user"]로 설정 (게임 참여용)
+                if guest_user:
+                    scope["user"] = guest_user
 
         return await super().__call__(scope, receive, send)
 
     @database_sync_to_async
-    def _get_guest_session(self, token):
+    def _get_guest_session_and_user(self, token):
         from apps.accounts.models import GuestSession
 
         try:
-            guest = GuestSession.objects.get(token=token)
+            guest = GuestSession.objects.select_related("user").get(token=token)
             if not guest.is_expired:
-                return {
+                guest_data = {
                     "token": guest.token,
                     "nickname": guest.nickname,
                     "display_name": guest.display_name,
                 }
+                # 게스트 User가 있으면 반환
+                guest_user = guest.user if guest.user_id else None
+                return guest_data, guest_user
         except GuestSession.DoesNotExist:
             pass
-        return None
+        return None, None
