@@ -48,6 +48,9 @@
             <a class="btn btn-secondary btn-arcade btn-lg" href="/rooms/">
                 <span class="btn-text"><span class="btn-icon">＋</span> 방 만들기</span>
             </a>
+            <button class="btn btn-secondary btn-arcade btn-lg btn-guest hidden" id="guest-play-btn">
+                <span class="btn-text"><span class="btn-icon">👤</span> 게스트 플레이</span>
+            </button>
         </div>
     </section>
 
@@ -207,6 +210,48 @@
 </div>
 
 <div class="match-toast hidden" id="match-toast"></div>
+
+<!-- Guest Login Modal -->
+<div class="modal-overlay hidden" id="guest-login-modal">
+    <div class="modal guest-modal">
+        <div class="modal-header">
+            <h2 class="modal-title">게스트로 플레이</h2>
+        </div>
+        <div class="modal-body">
+            <p class="guest-modal-desc">닉네임을 입력하고 24시간 동안 게스트로 플레이하세요.</p>
+            <p class="guest-modal-notice">게스트는 랭킹/리더보드에 반영되지 않습니다.</p>
+            <form id="guest-login-form">
+                <div class="form-group">
+                    <input
+                        type="text"
+                        class="form-input"
+                        id="guest-nickname-input"
+                        placeholder="닉네임 (2~10자)"
+                        minlength="2"
+                        maxlength="10"
+                        required
+                        autocomplete="off"
+                    >
+                </div>
+                <div class="guest-login-error" id="guest-login-error"></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="guest-login-cancel">취소</button>
+                    <button type="submit" class="btn btn-primary">게스트 시작</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Guest Status Bar -->
+<div class="guest-status-bar hidden" id="guest-status-bar">
+    <div class="guest-status-info">
+        <span class="guest-status-icon">👤</span>
+        <span class="guest-status-name" id="guest-status-name"></span>
+        <span class="guest-status-timer" id="guest-status-timer"></span>
+    </div>
+    <button class="btn btn-secondary btn-xs" id="guest-logout-btn">종료</button>
+</div>
 {% endblock %}
 
 {% block extra_css %}
@@ -927,10 +972,104 @@
     margin-bottom: var(--space-lg);
 }
 
+/* Guest Modal */
+.guest-modal {
+    max-width: 360px;
+}
+
+.guest-modal-desc {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-sm);
+}
+
+.guest-modal-notice {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-md);
+    padding: var(--space-sm);
+    background: rgba(243, 156, 18, 0.1);
+    border-radius: var(--radius-sm);
+}
+
+.guest-login-error {
+    color: var(--color-accent-danger);
+    font-size: 0.75rem;
+    min-height: 1.2em;
+    margin-bottom: var(--space-sm);
+}
+
+/* Guest Button */
+.btn-guest {
+    border-color: rgba(156, 39, 176, 0.5);
+    position: relative;
+}
+
+.btn-guest::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(156, 39, 176, 0.15), transparent 70%);
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.btn-guest:hover::after {
+    opacity: 1;
+}
+
+/* Guest Status Bar */
+.guest-status-bar {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.guest-status-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 0.85rem;
+}
+
+.guest-status-icon {
+    font-size: 1rem;
+}
+
+.guest-status-name {
+    font-weight: 500;
+    color: var(--color-text-primary);
+}
+
+.guest-status-timer {
+    color: var(--color-accent-primary);
+    font-size: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .guest-status-bar {
+        bottom: 80px; /* Mobile tabbar height */
+        left: 16px;
+        right: 16px;
+        transform: none;
+    }
+}
+
 </style>
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/core/guest.js' %}"></script>
 <script src="{% static 'js/components/context-menu.js' %}"></script>
 <script src="{% static 'js/pages/lobby.js' %}"></script>
 {% endblock %}

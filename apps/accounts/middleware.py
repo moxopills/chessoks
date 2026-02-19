@@ -47,3 +47,35 @@ class SuspendedUserLogoutMiddleware:
             return redirect("/login/")
 
         return self.get_response(request)
+
+
+class GuestSessionMiddleware:
+    """게스트 세션 처리 미들웨어"""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        request.guest = None
+
+        # 로그인 유저는 게스트 처리 안 함
+        user = getattr(request, "user", None)
+        if user and user.is_authenticated:
+            return self.get_response(request)
+
+        # 게스트 토큰 확인
+        token = request.headers.get("X-Guest-Token") or request.COOKIES.get("guest_token")
+
+        if token:
+            from apps.accounts.models import GuestSession
+
+            try:
+                guest = GuestSession.objects.get(token=token)
+                if not guest.is_expired:
+                    request.guest = guest
+                    # 활동 시간 업데이트
+                    guest.save(update_fields=["last_activity"])
+            except GuestSession.DoesNotExist:
+                pass
+
+        return self.get_response(request)

@@ -116,3 +116,17 @@ def cleanup_expired_sanctions() -> dict:
         unsuspended,
     )
     return {"unmuted": unmuted, "unsuspended": unsuspended}
+
+
+@shared_task
+def cleanup_expired_guest_sessions() -> int:
+    """만료된 게스트 세션 정리
+
+    Returns:
+        삭제된 세션 수
+    """
+    from apps.accounts.models import GuestSession
+
+    deleted_count = GuestSession.cleanup_expired()
+    logger.info(f"만료된 게스트 세션 {deleted_count}개 삭제 완료")
+    return deleted_count

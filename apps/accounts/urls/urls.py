@@ -8,6 +8,7 @@ from apps.accounts.views.friend_views import (
     FriendRequestListCreateView,
     FriendRequestRejectView,
 )
+from apps.accounts.views.guest_views import GuestMeView, GuestSessionView
 from apps.accounts.views.message_views import (
     DirectMessageThreadView,
     DirectMessageView,
@@ -103,4 +104,7 @@ urlpatterns = [
     ),
     path("friends/<int:user_id>/remove/", FriendRemoveView.as_view(), name="friend-remove"),
     path("social/", include("apps.accounts.urls.social_urls")),
+    # 게스트 세션
+    path("guest/", GuestSessionView.as_view(), name="guest-create"),
+    path("guest/me/", GuestMeView.as_view(), name="guest-me"),
 ]
