@@ -1,6 +1,7 @@
 from .auth_token import AuthToken
 from .direct_message import DirectMessage, DirectMessageThread
 from .friend import Friend, FriendRequest
+from .guest import GuestSession
 from .guestbook import GuestbookEntry
 from .signup_email_token import SignupEmailToken
 from .social_user import SocialUser
@@ -16,6 +17,7 @@ __all__ = [
     "Friend",
     "FriendRequest",
     "GuestbookEntry",
+    "GuestSession",
     "DirectMessageThread",
     "DirectMessage",
 ]
