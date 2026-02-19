@@ -430,7 +430,8 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             await self.close(code=4001)
             return
 
-        self.is_guest = not user.is_authenticated and guest is not None
+        # 게스트 User인지 확인 (is_guest 속성 또는 guest 데이터 존재)
+        self.is_guest = getattr(user, "is_guest", False) or (guest is not None)
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
