@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.permissions import IsAuthenticatedOrGuest
 from apps.chess.models import Game
 from apps.chess.serializers import CancelMatchResponseSerializer, QuickMatchResponseSerializer
 from apps.chess.services import AiMatchService, MatchmakingService
@@ -12,7 +13,7 @@ from apps.chess.utils import assign_colors
 
 
 class QuickMatchView(APIView):
-    """빠른 대전 매칭"""
+    """빠른 대전 매칭 (경쟁전 - 로그인 유저만)"""
 
     permission_classes = [IsAuthenticated]
 
@@ -54,9 +55,9 @@ class CancelMatchView(APIView):
 
 
 class RandomMatchView(APIView):
-    """랜덤 대전 매칭"""
+    """랜덤 대전 매칭 (게스트 가능)"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     @extend_schema(
         request=None,
@@ -81,9 +82,9 @@ class RandomMatchView(APIView):
 
 
 class CancelRandomMatchView(APIView):
-    """랜덤 대전 매칭 취소"""
+    """랜덤 대전 매칭 취소 (게스트 가능)"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     @extend_schema(
         request=None,
@@ -96,9 +97,9 @@ class CancelRandomMatchView(APIView):
 
 
 class AiMatchView(APIView):
-    """AI 대전 매칭"""
+    """AI 대전 매칭 (게스트 가능)"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     @extend_schema(
         request=None,

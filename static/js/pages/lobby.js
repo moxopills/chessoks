@@ -420,8 +420,8 @@
     function setupRandomMatch() {
         if (!randomMatchBtn) return;
         randomMatchBtn.addEventListener('click', async function() {
-            if (isGuestUser) {
-                Toast.error('게스트는 매칭을 이용할 수 없습니다.');
+            if (!currentUserId && !isGuestUser) {
+                Toast.error('로그인 또는 게스트로 시작하세요.');
                 return;
             }
             if (isSuspended) {
@@ -1321,12 +1321,11 @@
             chatMessages.innerHTML = '<div class="chat-notice">게스트는 채팅을 이용할 수 없습니다.</div>';
         }
 
-        // 경쟁전/빠른대전 비활성화 (게스트는 매칭 불가)
+        // 경쟁전만 비활성화 (레이팅 게임)
         quickMatchBtn?.classList.add('btn-disabled');
         quickMatchBtn?.setAttribute('title', '게스트는 경쟁전을 이용할 수 없습니다.');
-        randomMatchBtn?.classList.add('btn-disabled');
-        randomMatchBtn?.setAttribute('title', '게스트는 매칭을 이용할 수 없습니다.');
 
+        // 빠른 대전, AI 대전, 방 만들기는 게스트도 가능
         // WebSocket 연결 (접속자 목록용)
         connectLobbyChat();
     }
