@@ -18,6 +18,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django_asgi_app = get_asgi_application()
 
 # Import routing after Django setup
+from apps.accounts.channels_middleware import GuestTokenMiddleware  # noqa: E402
 from apps.chess import routing as chess_routing  # noqa: E402
 from apps.notifications import routing as notifications_routing  # noqa: E402
 
@@ -28,6 +29,6 @@ websocket_urlpatterns = (
 application = ProtocolTypeRouter(
     {
         "http": django_asgi_app,
-        "websocket": AuthMiddlewareStack(URLRouter(websocket_urlpatterns)),
+        "websocket": GuestTokenMiddleware(AuthMiddlewareStack(URLRouter(websocket_urlpatterns))),
     }
 )
