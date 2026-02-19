@@ -58,6 +58,7 @@ class UserSerializer(serializers.ModelSerializer):
             "mute_reason",
             "is_muted",
             "is_suspended",
+            "is_guest",
             "stats",
         )
         read_only_fields = (

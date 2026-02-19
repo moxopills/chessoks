@@ -107,7 +107,14 @@ class GuestMeView(APIView):
     def delete(self, request):
         """게스트 세션 종료"""
         if hasattr(request, "guest") and request.guest:
-            request.guest.delete()
+            guest = request.guest
+            # 연결된 게스트 User도 삭제
+            if guest.user_id:
+                try:
+                    guest.user.delete()
+                except Exception:
+                    pass
+            guest.delete()
             return Response({"message": "게스트 세션이 종료되었습니다."})
 
         return Response(
