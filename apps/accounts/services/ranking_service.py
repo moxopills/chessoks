@@ -26,7 +26,11 @@ class RankingService:
     @staticmethod
     def get_user_with_rank(user_id: int):
         """특정 유저의 랭킹 정보 조회 (COUNT 기반 랭킹 계산) - 게스트 제외"""
-        user = User.objects.filter(pk=user_id, is_active=True, is_guest=False).select_related("stats").first()
+        user = (
+            User.objects.filter(pk=user_id, is_active=True, is_guest=False)
+            .select_related("stats")
+            .first()
+        )
         if user is None or not hasattr(user, "stats") or user.stats is None:
             return None
 
