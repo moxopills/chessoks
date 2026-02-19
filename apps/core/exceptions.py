@@ -3,7 +3,7 @@
 from django.db import IntegrityError
 
 from rest_framework import status
-from rest_framework.exceptions import APIException, NotAuthenticated, PermissionDenied
+from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
@@ -17,10 +17,9 @@ ERROR_CODES = {
     "MethodNotAllowed": "method_not_allowed",
 }
 
-# 인증 관련 커스텀 메시지
+# 인증 관련 커스텀 메시지 (NotAuthenticated만 변경)
 AUTH_ERROR_MESSAGES = {
     "NotAuthenticated": "로그인이 필요한 서비스입니다.",
-    "PermissionDenied": "로그인이 필요한 서비스입니다.",
 }
 
 
