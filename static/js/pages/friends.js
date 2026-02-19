@@ -85,13 +85,52 @@
 
         tabButtons.forEach((btn) => {
             btn.addEventListener('click', () => {
-                tabButtons.forEach((item) => item.classList.remove('active'));
-                btn.classList.add('active');
-                const tab = btn.dataset.tab;
-                friendsPanel.classList.toggle('hidden', tab !== 'friends');
-                requestsPanel.classList.toggle('hidden', tab !== 'requests');
+                switchTab(btn.dataset.tab);
             });
         });
+
+        // 모바일 스와이프 제스처
+        setupSwipeGestures();
+    }
+
+    function switchTab(tab) {
+        tabButtons.forEach((item) => item.classList.remove('active'));
+        const targetBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
+        targetBtn?.classList.add('active');
+        friendsPanel.classList.toggle('hidden', tab !== 'friends');
+        requestsPanel.classList.toggle('hidden', tab !== 'requests');
+    }
+
+    function setupSwipeGestures() {
+        const container = document.querySelector('.friends-card');
+        if (!container) return;
+
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const minSwipeDistance = 50;
+
+        container.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        container.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            const diff = touchStartX - touchEndX;
+            if (Math.abs(diff) < minSwipeDistance) return;
+
+            const currentTab = document.querySelector('.tab-btn.active')?.dataset.tab;
+            if (diff > 0 && currentTab === 'friends') {
+                // 왼쪽 스와이프 -> 요청 탭
+                switchTab('requests');
+            } else if (diff < 0 && currentTab === 'requests') {
+                // 오른쪽 스와이프 -> 친구 탭
+                switchTab('friends');
+            }
+        }
     }
 
     function applyTabFromUrl() {
@@ -171,7 +210,7 @@
 
     function renderFriends(friends) {
         if (!friends.length) {
-            friendListEl.innerHTML = '<div class="table-empty">친구가 없습니다.</div>';
+            friendListEl.innerHTML = '<div class="empty-state"><span class="empty-state-icon">👥</span><span class="empty-state-text">아직 친구가 없습니다</span><span class="empty-state-hint">닉네임으로 친구를 검색해보세요</span></div>';
             return;
         }
         const statusMap = JSON.parse(friendListEl.dataset.statusMap || '{}');
@@ -230,7 +269,9 @@
 
     function renderRequests(container, requests, direction) {
         if (!requests.length) {
-            container.innerHTML = `<div class="table-empty">${direction === 'incoming' ? '받은 요청이 없습니다.' : '보낸 요청이 없습니다.'}</div>`;
+            const icon = direction === 'incoming' ? '📬' : '📤';
+            const text = direction === 'incoming' ? '받은 요청이 없습니다' : '보낸 요청이 없습니다';
+            container.innerHTML = `<div class="empty-state"><span class="empty-state-icon">${icon}</span><span class="empty-state-text">${text}</span></div>`;
             return;
         }
         container.innerHTML = requests.map((req) => {
@@ -370,7 +411,7 @@
 
     function renderSearchResults(results, statusMap = {}) {
         if (!results.length) {
-            searchResultsEl.innerHTML = '<div class="table-empty">검색 결과가 없습니다.</div>';
+            searchResultsEl.innerHTML = '<div class="empty-state"><span class="empty-state-icon">🔍</span><span class="empty-state-text">검색 결과가 없습니다</span></div>';
             return;
         }
         searchResultsEl.innerHTML = results.map((user) => {

@@ -162,9 +162,70 @@
         setupReport();
         setupChatToggle();
         setupExitGuard();
+        setupKeyboardShortcuts();
         if (!replayOnly) {
             connectWebSocket();
         }
+    }
+
+    /**
+     * 키보드 단축키 설정
+     */
+    function setupKeyboardShortcuts() {
+        const shortcutHelpBtn = document.getElementById('shortcut-help-btn');
+        const shortcutModal = document.getElementById('shortcut-modal');
+        const shortcutClose = document.getElementById('shortcut-close');
+
+        // 단축키 모달 열기
+        shortcutHelpBtn?.addEventListener('click', () => {
+            shortcutModal?.classList.remove('hidden');
+        });
+
+        // 단축키 모달 닫기
+        shortcutClose?.addEventListener('click', () => {
+            shortcutModal?.classList.add('hidden');
+        });
+
+        shortcutModal?.addEventListener('click', (e) => {
+            if (e.target === shortcutModal) {
+                shortcutModal.classList.add('hidden');
+            }
+        });
+
+        // 전역 키보드 단축키
+        document.addEventListener('keydown', (e) => {
+            // 입력 필드에서는 무시
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            // 모달이 열려있을 때 ESC로 닫기
+            if (e.key === 'Escape') {
+                if (shortcutModal && !shortcutModal.classList.contains('hidden')) {
+                    shortcutModal.classList.add('hidden');
+                    return;
+                }
+            }
+
+            // 게임 중 단축키 (리플레이 모드가 아닐 때)
+            if (!replayActive && !gameOver) {
+                if (e.key === 'd' || e.key === 'D') {
+                    drawBtn?.click();
+                } else if (e.key === 'r' || e.key === 'R') {
+                    resignBtn?.click();
+                } else if (e.key === 'g' || e.key === 'G') {
+                    guideToggle?.click();
+                }
+            }
+
+            // 기보 이동 (게임 종료 후 또는 관전)
+            if (gameOver || isSpectator) {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    movePrevBtn?.click();
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    moveNextBtn?.click();
+                }
+            }
+        });
     }
 
     /**

@@ -98,6 +98,11 @@
         <button class="btn btn-secondary btn-xs" id="guest-logout-btn-global">세션 종료</button>
     </div>
 
+    <!-- Offline Banner -->
+    <div class="offline-banner" id="offline-banner">
+        ⚠️ 인터넷 연결이 끊겼습니다. 연결을 확인해주세요.
+    </div>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="footer-content">
@@ -198,6 +203,25 @@
                     setTimeout(() => window.location.href = '/', 500);
                 }
             });
+        })();
+    </script>
+    <script>
+        // 오프라인 감지
+        (function() {
+            const banner = document.getElementById('offline-banner');
+            if (!banner) return;
+
+            function updateStatus() {
+                if (navigator.onLine) {
+                    banner.classList.remove('show');
+                } else {
+                    banner.classList.add('show');
+                }
+            }
+
+            window.addEventListener('online', updateStatus);
+            window.addEventListener('offline', updateStatus);
+            updateStatus();
         })();
     </script>
     {% block extra_js %}{% endblock %}

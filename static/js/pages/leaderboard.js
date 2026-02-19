@@ -105,14 +105,14 @@
             renderPagination();
             renderMyRank(data.my_rank);
         } catch (error) {
-            leaderboardBody.innerHTML = '<tr><td colspan="5" class="table-empty">불러오기 실패</td></tr>';
+            leaderboardBody.innerHTML = '<tr><td colspan="5" class="table-empty"><span class="empty-state"><span class="empty-state-icon">⚠️</span><span class="empty-state-text">불러오기 실패</span></span></td></tr>';
             if (myRankBody) myRankBody.textContent = '로그인 시 가능합니다.';
         }
     }
 
     function renderRows(rows, myRank) {
         if (!rows.length) {
-            leaderboardBody.innerHTML = '<tr><td colspan="5" class="table-empty">표시할 랭킹이 없습니다.</td></tr>';
+            leaderboardBody.innerHTML = '<tr><td colspan="5" class="table-empty"><span class="empty-state"><span class="empty-state-icon">🏆</span><span class="empty-state-text">표시할 랭킹이 없습니다</span></span></td></tr>';
             return;
         }
 
