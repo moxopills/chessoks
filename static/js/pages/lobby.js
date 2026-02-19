@@ -327,6 +327,14 @@
         try {
             const user = await API.get('/accounts/me/');
             currentUserId = user.id;
+
+            // 게스트 유저인지 확인
+            if (user.is_guest) {
+                isGuestUser = true;
+                setupGuestSession();
+                return;
+            }
+
             isGuestUser = false;
             await loadFriendIds();
             setupChat();
@@ -1300,7 +1308,10 @@
         const session = Guest.getSession();
         if (!session) return;
 
-        // 게스트 상태바 표시
+        // 로비 전용 게스트 상태바 표시 (글로벌은 숨김)
+        const globalStatusBar = document.getElementById('guest-status-bar-global');
+        globalStatusBar?.classList.add('hidden');
+
         if (guestStatusBar) {
             guestStatusBar.classList.remove('hidden');
         }

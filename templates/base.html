@@ -88,6 +88,16 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- Guest Status Bar (Global) -->
+    <div class="guest-status-bar-global hidden" id="guest-status-bar-global">
+        <div class="guest-status-info">
+            <span class="guest-status-icon">👤</span>
+            <span class="guest-status-name" id="guest-status-name-global"></span>
+            <span class="guest-status-timer" id="guest-status-timer-global"></span>
+        </div>
+        <button class="btn btn-secondary btn-xs" id="guest-logout-btn-global">세션 종료</button>
+    </div>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="footer-content">
@@ -105,6 +115,7 @@
     <!-- Core Scripts -->
     <script src="{% static 'js/core/api.js' %}"></script>
     <script src="{% static 'js/core/utils.js' %}"></script>
+    <script src="{% static 'js/core/guest.js' %}"></script>
     <script src="{% static 'js/components/toast.js' %}"></script>
     <script src="{% static 'js/components/modal.js' %}"></script>
     <script src="{% static 'js/components/session-guard.js' %}"></script>
@@ -141,6 +152,52 @@
             });
 
             initTheme();
+        })();
+    </script>
+    <script>
+        // 글로벌 게스트 상태바 초기화
+        (function() {
+            if (typeof Guest === 'undefined') return;
+
+            const session = Guest.getSession();
+            if (!session) return;
+
+            const statusBar = document.getElementById('guest-status-bar-global');
+            const statusName = document.getElementById('guest-status-name-global');
+            const statusTimer = document.getElementById('guest-status-timer-global');
+            const logoutBtn = document.getElementById('guest-logout-btn-global');
+
+            if (statusBar) {
+                statusBar.classList.remove('hidden');
+            }
+            if (statusName) {
+                statusName.textContent = session.display_name;
+            }
+            if (statusTimer) {
+                statusTimer.textContent = Guest.getRemainingText();
+            }
+
+            // 타이머 업데이트
+            window.addEventListener('guest:timer-update', (e) => {
+                if (statusTimer) {
+                    statusTimer.textContent = e.detail.remaining;
+                }
+            });
+
+            // 세션 종료 버튼
+            logoutBtn?.addEventListener('click', async () => {
+                const confirmed = await Modal.confirm('게스트 세션을 종료하시겠습니까?', {
+                    title: '게스트 종료',
+                    confirmText: '종료',
+                    cancelText: '취소'
+                });
+
+                if (confirmed) {
+                    await Guest.endSession();
+                    Toast.info('게스트 세션이 종료되었습니다.');
+                    setTimeout(() => window.location.href = '/', 500);
+                }
+            });
         })();
     </script>
     {% block extra_js %}{% endblock %}

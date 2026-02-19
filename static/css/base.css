@@ -1184,3 +1184,53 @@ html:not([data-theme="dark"]) .btn-secondary.btn-arcade:hover:not(:disabled) {
 .loading-placeholder .spinner {
     margin-bottom: var(--space-sm);
 }
+
+/* ========================================
+   Guest Status Bar (Global)
+   ======================================== */
+
+.guest-status-bar-global {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.guest-status-bar-global .guest-status-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 0.85rem;
+}
+
+.guest-status-bar-global .guest-status-icon {
+    font-size: 1rem;
+}
+
+.guest-status-bar-global .guest-status-name {
+    font-weight: 500;
+    color: var(--color-text-primary);
+}
+
+.guest-status-bar-global .guest-status-timer {
+    color: var(--color-accent-primary);
+    font-size: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .guest-status-bar-global {
+        bottom: 80px;
+        left: 16px;
+        right: 16px;
+        transform: none;
+    }
+}
