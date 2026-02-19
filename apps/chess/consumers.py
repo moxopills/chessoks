@@ -413,24 +413,43 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
 
     group_name = "chess_lobby"
     lobby_users_key = "lobby_online_users"
+    lobby_guests_key = "lobby_online_guests"
 
     async def connect(self):
         user = self.scope["user"]
-        if not user.is_authenticated:
+        guest = self.scope.get("guest")
+
+        # 인증된 유저도 아니고 게스트도 아니면 거부
+        if not user.is_authenticated and not guest:
             await self.close(code=4001)
             return
 
+        self.is_guest = not user.is_authenticated and guest is not None
+
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
-        await self._set_user_online()
-        await self._add_to_lobby()
+
+        if self.is_guest:
+            await self._add_guest_to_lobby()
+        else:
+            await self._set_user_online()
+            await self._add_to_lobby()
+
         await self._send_recent_messages()
         await self._send_lobby_users()
-        await self._broadcast_user_joined()
+
+        if self.is_guest:
+            await self._broadcast_guest_joined()
+        else:
+            await self._broadcast_user_joined()
 
     async def disconnect(self, close_code):
-        await self._remove_from_lobby()
-        await self._broadcast_user_left()
+        if getattr(self, "is_guest", False):
+            await self._remove_guest_from_lobby()
+            await self._broadcast_guest_left()
+        else:
+            await self._remove_from_lobby()
+            await self._broadcast_user_left()
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     async def receive_json(self, content, **kwargs):
@@ -441,6 +460,12 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 return
             if action != "chat":
                 await self.send_json({"type": "error", "message": "지원하지 않는 액션입니다."})
+                return
+            # 게스트는 채팅 불가
+            if getattr(self, "is_guest", False):
+                await self.send_json(
+                    {"type": "error", "message": "게스트는 채팅을 이용할 수 없습니다."}
+                )
                 return
             if self.scope["user"].is_suspended:
                 await self.send_json({"type": "error", "message": "정지된 계정입니다."})
@@ -566,7 +591,9 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     async def _send_lobby_users(self):
         """연결 시 현재 접속자 목록 전송"""
         users = await self._get_lobby_users()
-        await self.send_json({"type": "lobby_users", "users": users})
+        guests = await self._get_lobby_guests()
+        all_users = users + guests
+        await self.send_json({"type": "lobby_users", "users": all_users})
 
     async def _broadcast_user_joined(self):
         """유저 입장 브로드캐스트"""
@@ -599,7 +626,87 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
 
     async def _broadcast_lobby_users(self):
         users = await self._get_lobby_users()
+        guests = await self._get_lobby_guests()
+        all_users = users + guests
         await self.channel_layer.group_send(
             self.group_name,
-            {"type": "broadcast", "payload": {"type": "lobby_users", "users": users}},
+            {"type": "broadcast", "payload": {"type": "lobby_users", "users": all_users}},
         )
+
+    # === 게스트 관련 메서드 ===
+
+    @database_sync_to_async
+    def _add_guest_to_lobby(self):
+        """게스트를 로비 접속자 목록에 추가"""
+        from django.core.cache import cache
+
+        guest = self.scope.get("guest")
+        if not guest:
+            return
+
+        guests = cache.get(self.lobby_guests_key, {})
+        guests[guest["token"]] = {
+            "id": f"guest_{guest['token'][:8]}",
+            "nickname": guest["display_name"],
+            "avatar_url": None,
+            "rank_tier": None,
+            "is_guest": True,
+        }
+        cache.set(self.lobby_guests_key, guests, timeout=3600)
+
+    @database_sync_to_async
+    def _remove_guest_from_lobby(self):
+        """게스트를 로비 접속자 목록에서 제거"""
+        from django.core.cache import cache
+
+        guest = self.scope.get("guest")
+        if not guest:
+            return
+
+        guests = cache.get(self.lobby_guests_key, {})
+        guests.pop(guest["token"], None)
+        cache.set(self.lobby_guests_key, guests, timeout=3600)
+
+    @database_sync_to_async
+    def _get_lobby_guests(self) -> list:
+        """로비의 게스트 목록 조회"""
+        from django.core.cache import cache
+
+        guests = cache.get(self.lobby_guests_key, {})
+        return list(guests.values())
+
+    async def _broadcast_guest_joined(self):
+        """게스트 입장 브로드캐스트"""
+        guest = self.scope.get("guest")
+        if not guest:
+            return
+
+        payload = {
+            "type": "user_joined",
+            "user": {
+                "id": f"guest_{guest['token'][:8]}",
+                "nickname": guest["display_name"],
+                "avatar_url": None,
+                "rank_tier": None,
+                "is_guest": True,
+            },
+        }
+        await self.channel_layer.group_send(
+            self.group_name, {"type": "broadcast", "payload": payload}
+        )
+        await self._broadcast_lobby_users()
+
+    async def _broadcast_guest_left(self):
+        """게스트 퇴장 브로드캐스트"""
+        guest = self.scope.get("guest")
+        if not guest:
+            return
+
+        payload = {
+            "type": "user_left",
+            "user_id": f"guest_{guest['token'][:8]}",
+        }
+        await self.channel_layer.group_send(
+            self.group_name, {"type": "broadcast", "payload": payload}
+        )
+        await self._broadcast_lobby_users()
