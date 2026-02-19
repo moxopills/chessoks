@@ -133,7 +133,8 @@ const Guest = (function() {
         stopExpiryTimer();
         warningShown = false;
 
-        expiryTimer = setInterval(() => {
+        // 타이머 체크 함수
+        function checkTimer() {
             const minutes = getRemainingMinutes();
 
             // 10분 전 경고
@@ -152,13 +153,20 @@ const Guest = (function() {
                 }
                 // 페이지 새로고침으로 상태 초기화
                 setTimeout(() => window.location.reload(), 1500);
+                return;
             }
 
             // UI 업데이트 이벤트
             window.dispatchEvent(new CustomEvent('guest:timer-update', {
                 detail: { remaining: getRemainingText() }
             }));
-        }, 60000); // 1분마다 체크
+        }
+
+        // 즉시 한 번 실행
+        checkTimer();
+
+        // 1분마다 체크
+        expiryTimer = setInterval(checkTimer, 60000);
     }
 
     /**

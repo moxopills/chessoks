@@ -15,9 +15,9 @@ class RankingService:
 
     @staticmethod
     def get_leaderboard_queryset():
-        """랭킹 보드 QuerySet 반환 (페이지네이션용)"""
+        """랭킹 보드 QuerySet 반환 (페이지네이션용) - 게스트 제외"""
         return (
-            User.objects.filter(is_active=True)
+            User.objects.filter(is_active=True, is_guest=False)
             .select_related("stats")
             .annotate(rank=RankingService._rank_window())
             .order_by("-stats__rating", "-stats__games_played", "id")
@@ -25,8 +25,8 @@ class RankingService:
 
     @staticmethod
     def get_user_with_rank(user_id: int):
-        """특정 유저의 랭킹 정보 조회 (COUNT 기반 랭킹 계산)"""
-        user = User.objects.filter(pk=user_id, is_active=True).select_related("stats").first()
+        """특정 유저의 랭킹 정보 조회 (COUNT 기반 랭킹 계산) - 게스트 제외"""
+        user = User.objects.filter(pk=user_id, is_active=True, is_guest=False).select_related("stats").first()
         if user is None or not hasattr(user, "stats") or user.stats is None:
             return None
 
@@ -35,6 +35,7 @@ class RankingService:
         higher_rank_count = (
             User.objects.filter(
                 is_active=True,
+                is_guest=False,
                 stats__isnull=False,
             )
             .filter(
@@ -86,9 +87,9 @@ class RankingService:
         if not user_ids:
             return {}
 
-        # Window 함수로 전체 랭킹 계산 후 필터링
+        # Window 함수로 전체 랭킹 계산 후 필터링 - 게스트 제외
         ranked_users = (
-            User.objects.filter(is_active=True, stats__isnull=False)
+            User.objects.filter(is_active=True, is_guest=False, stats__isnull=False)
             .select_related("stats")
             .annotate(rank=RankingService._rank_window())
             .filter(id__in=user_ids)
