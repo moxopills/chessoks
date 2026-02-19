@@ -3,19 +3,19 @@
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from drf_spectacular.utils import extend_schema
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.permissions import IsAuthenticatedOrGuest
 from apps.chess.serializers import GameDetailSerializer, MoveSerializer, PagedMoveSerializer
 from apps.chess.services import GameQueryService, GameService
 from apps.chess.utils import parse_int
 
 
 class GameDetailView(APIView):
-    """게임 상태 조회"""
+    """게임 상태 조회 (게스트 가능)"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     @extend_schema(responses={200: GameDetailSerializer}, tags=["게임"])
     def get(self, request, game_id: int):
@@ -24,9 +24,9 @@ class GameDetailView(APIView):
 
 
 class GameMoveListView(APIView):
-    """게임 착수 목록 조회"""
+    """게임 착수 목록 조회 (게스트 가능)"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     @extend_schema(responses={200: PagedMoveSerializer}, tags=["게임"])
     def get(self, request, game_id: int):
@@ -39,9 +39,9 @@ class GameMoveListView(APIView):
 
 
 class GameLegalMoveView(APIView):
-    """게임 합법 수 조회"""
+    """게임 합법 수 조회 (게스트 가능)"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     @extend_schema(
         responses={200: None},
@@ -55,9 +55,9 @@ class GameLegalMoveView(APIView):
 
 
 class GameCapturedView(APIView):
-    """잡힌 기물 요약"""
+    """잡힌 기물 요약 (게스트 가능)"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     @extend_schema(responses={200: None}, tags=["게임"])
     def get(self, request, game_id: int):
@@ -66,9 +66,9 @@ class GameCapturedView(APIView):
 
 
 class GameRematchView(APIView):
-    """리매치 요청/수락 (REST)"""
+    """리매치 요청/수락 (게스트 가능)"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     @extend_schema(responses={200: None}, tags=["게임"])
     def post(self, request, game_id: int):

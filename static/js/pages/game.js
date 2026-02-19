@@ -1155,7 +1155,13 @@
      */
     function connectWebSocket() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/chess/${roomId}/`;
+        let wsUrl = `${protocol}//${window.location.host}/ws/chess/${roomId}/`;
+
+        // 게스트 토큰이 있으면 쿼리 파라미터로 추가
+        const guestToken = localStorage.getItem('guest_token');
+        if (guestToken) {
+            wsUrl += `?guest_token=${encodeURIComponent(guestToken)}`;
+        }
 
         socket = new WebSocket(wsUrl);
 
