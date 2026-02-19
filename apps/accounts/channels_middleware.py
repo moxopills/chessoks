@@ -47,8 +47,8 @@ class GuestTokenMiddleware(BaseMiddleware):
                     "nickname": guest.nickname,
                     "display_name": guest.display_name,
                 }
-                # 게스트 User가 있으면 반환
-                guest_user = guest.user if guest.user_id else None
+                # 게스트 User가 없으면 생성
+                guest_user = guest.get_or_create_user()
                 return guest_data, guest_user
         except GuestSession.DoesNotExist:
             pass

@@ -1,10 +1,10 @@
 """전적 조회 View"""
 
 from drf_spectacular.utils import extend_schema
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.permissions import IsAuthenticatedOrGuest
 from apps.chess.serializers import GameHistorySerializer, PagedGameHistorySerializer
 from apps.chess.services import GameQueryService
 from apps.chess.utils import parse_int
@@ -13,7 +13,7 @@ from apps.chess.utils import parse_int
 class GameHistoryView(APIView):
     """전적 검색/목록"""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     @extend_schema(responses={200: PagedGameHistorySerializer}, tags=["전적"])
     def get(self, request):
