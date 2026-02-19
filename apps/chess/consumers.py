@@ -242,6 +242,12 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 {"type": "error", "message": "관전자는 플레이어 채팅을 사용할 수 없습니다."}
             )
             return
+        # 게스트는 채팅 불가
+        if getattr(self.scope["user"], "is_guest", False):
+            await self.send_json(
+                {"type": "error", "message": "게스트는 채팅을 이용할 수 없습니다."}
+            )
+            return
         valid, message = await self._validate_chat_message(content)
         if not valid:
             return

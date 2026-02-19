@@ -11,6 +11,7 @@ from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts.models import Friend, FriendRequest, User
+from apps.accounts.permissions import IsAuthenticatedOrGuest
 from apps.accounts.serializers import (
     AccountDeleteSerializer,
     DashboardSerializer,
@@ -165,10 +166,10 @@ class SignupEmailConfirmView(APIView):
 
 @extend_schema(tags=["프로필"])
 class CurrentUserView(CurrentUserMixin, RetrieveAPIView):
-    """현재 로그인한 유저 정보"""
+    """현재 로그인한 유저 정보 (게스트 포함)"""
 
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     @extend_schema(responses={200: UserSerializer})
     def retrieve(self, request, *args, **kwargs):
