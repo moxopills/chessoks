@@ -422,11 +422,12 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     lobby_guests_key = "lobby_online_guests"
 
     async def connect(self):
-        user = self.scope["user"]
+        user = self.scope.get("user")
         guest = self.scope.get("guest")
 
         # 인증된 유저도 아니고 게스트도 아니면 거부
-        if not user.is_authenticated and not guest:
+        is_authenticated = user and getattr(user, "is_authenticated", False)
+        if not is_authenticated and not guest:
             await self.close(code=4001)
             return
 
