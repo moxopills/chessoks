@@ -575,11 +575,11 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def _get_lobby_users(self) -> list:
-        """온라인 접속자 목록 조회"""
+        """온라인 접속자 목록 조회 - 게스트 제외"""
         online_ids = OnlineStatusService.list_online_ids()
         if not online_ids:
             return []
-        queryset = User.objects.select_related("stats").filter(id__in=online_ids)
+        queryset = User.objects.select_related("stats").filter(id__in=online_ids, is_guest=False)
         user_map = {user.id: user for user in queryset}
         users = []
         for user_id in online_ids:

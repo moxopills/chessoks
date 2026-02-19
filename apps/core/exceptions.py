@@ -3,7 +3,7 @@
 from django.db import IntegrityError
 
 from rest_framework import status
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, NotAuthenticated, PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
@@ -15,6 +15,12 @@ ERROR_CODES = {
     "Throttled": "throttled",
     "NotFound": "not_found",
     "MethodNotAllowed": "method_not_allowed",
+}
+
+# 인증 관련 커스텀 메시지
+AUTH_ERROR_MESSAGES = {
+    "NotAuthenticated": "로그인이 필요한 서비스입니다.",
+    "PermissionDenied": "로그인이 필요한 서비스입니다.",
 }
 
 
@@ -43,6 +49,12 @@ def custom_exception_handler(exc, context):
 
     error_code = ERROR_CODES.get(exc.__class__.__name__, "error")
     error_data = {"code": error_code}
+
+    # 인증 관련 예외: 커스텀 메시지 사용
+    if exc.__class__.__name__ in AUTH_ERROR_MESSAGES:
+        error_data["message"] = AUTH_ERROR_MESSAGES[exc.__class__.__name__]
+        response.data = {"error": error_data}
+        return response
 
     # ValidationError: 필드별 에러
     if hasattr(exc, "detail"):

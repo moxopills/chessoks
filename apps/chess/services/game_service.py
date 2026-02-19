@@ -468,6 +468,9 @@ class GameService:
 
     @staticmethod
     def _apply_stats_only(game: Game) -> None:
+        # 게스트는 통계 업데이트 제외
+        if game.white_player.is_guest or game.black_player.is_guest:
+            return
         white_stats, _ = UserStats.objects.get_or_create(user=game.white_player)
         black_stats, _ = UserStats.objects.get_or_create(user=game.black_player)
         RatingService.update_stats_only(white_stats, black_stats, game.result)
@@ -476,7 +479,10 @@ class GameService:
         RankingService.invalidate_leaderboard_cache()
 
     @staticmethod
-    def _apply_rating_update(game: Game) -> dict:
+    def _apply_rating_update(game: Game) -> dict | None:
+        # 게스트는 레이팅/통계 업데이트 제외
+        if game.white_player.is_guest or game.black_player.is_guest:
+            return None
         white_stats, _ = UserStats.objects.get_or_create(user=game.white_player)
         black_stats, _ = UserStats.objects.get_or_create(user=game.black_player)
 
