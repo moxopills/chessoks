@@ -45,6 +45,11 @@
     const matchToast = document.getElementById('match-toast');
     const aiLevelButtons = Array.from(document.querySelectorAll('.ai-level-btn'));
     const aiLevelLoading = document.getElementById('ai-level-loading');
+    const guestPlayBtn = document.getElementById('guest-play-btn');
+    const guestStatusBar = document.getElementById('guest-status-bar');
+    const guestStatusName = document.getElementById('guest-status-name');
+    const guestStatusTimer = document.getElementById('guest-status-timer');
+    const guestLogoutBtn = document.getElementById('guest-logout-btn');
 
     let isMatching = false;
     let isRandomMatching = false;
@@ -52,6 +57,7 @@
     let lobbySocket = null;
     let notificationSocket = null;
     let currentUserId = null;
+    let isGuestUser = false;
     let isSuspended = false;
     let friendIds = new Set();
     let lobbyUsers = {};
@@ -92,6 +98,7 @@
         setupReportModal();
         setupUserContextMenu();
         setupUserSearch();
+        setupGuestMode();
     }
 
     /**
@@ -320,6 +327,7 @@
         try {
             const user = await API.get('/accounts/me/');
             currentUserId = user.id;
+            isGuestUser = false;
             await loadFriendIds();
             setupChat();
             setupQuickMatch();
@@ -332,12 +340,23 @@
                 setSuspendedState(true, user.suspension_reason || '');
             }
             connectNotificationSocket();
+            // 로그인 유저는 게스트 버튼 숨김
+            guestPlayBtn?.classList.add('hidden');
+            guestStatusBar?.classList.add('hidden');
         } catch (error) {
-            // 비로그인 상태 - 채팅 비활성화
-            chatInput.disabled = true;
-            chatForm.querySelector('button').disabled = true;
-            if (chatMessages) {
-                chatMessages.innerHTML = '<div class="chat-notice">로그인 시 가능합니다.</div>';
+            // 비로그인 상태 - 게스트 체크
+            if (typeof Guest !== 'undefined' && Guest.isGuest()) {
+                isGuestUser = true;
+                setupGuestSession();
+            } else {
+                // 게스트도 아닌 순수 비로그인
+                chatInput.disabled = true;
+                chatForm.querySelector('button').disabled = true;
+                if (chatMessages) {
+                    chatMessages.innerHTML = '<div class="chat-notice">로그인 또는 게스트로 시작하세요.</div>';
+                }
+                // 게스트 플레이 버튼 표시
+                guestPlayBtn?.classList.remove('hidden');
             }
         }
     }
@@ -362,6 +381,10 @@
      */
     function setupQuickMatch() {
         quickMatchBtn.addEventListener('click', async function() {
+            if (isGuestUser) {
+                Toast.error('게스트는 경쟁전을 이용할 수 없습니다.');
+                return;
+            }
             if (isSuspended) {
                 Toast.error('계정이 정지되어 이용할 수 없습니다.');
                 return;
@@ -442,8 +465,8 @@
         };
 
         aiMatchBtn.addEventListener('click', () => {
-            if (!currentUserId) {
-                Toast.error('로그인 시 가능합니다.');
+            if (!currentUserId && !isGuestUser) {
+                Toast.error('로그인 또는 게스트로 시작하세요.');
                 return;
             }
             if (isSuspended) {
@@ -1215,5 +1238,119 @@
 
     function isHiddenRoomType(room) {
         return HIDDEN_ROOM_TYPES.has(room?.room_type);
+    }
+
+    /**
+     * 게스트 모드 설정
+     */
+    function setupGuestMode() {
+        // 게스트 플레이 버튼 클릭
+        guestPlayBtn?.addEventListener('click', async () => {
+            if (typeof Guest === 'undefined') return;
+
+            const result = await Guest.showLoginModal();
+            if (result) {
+                // 게스트 세션 생성 성공 - 페이지 새로고침
+                Toast.success('게스트로 시작합니다!');
+                setTimeout(() => window.location.reload(), 500);
+            }
+        });
+
+        // 게스트 로그아웃 버튼
+        guestLogoutBtn?.addEventListener('click', async () => {
+            if (typeof Guest === 'undefined') return;
+
+            const confirmed = await Modal.confirm('게스트 세션을 종료하시겠습니까?', {
+                title: '게스트 종료',
+                confirmText: '종료',
+                cancelText: '취소'
+            });
+
+            if (confirmed) {
+                await Guest.endSession();
+                Toast.info('게스트 세션이 종료되었습니다.');
+                setTimeout(() => window.location.reload(), 500);
+            }
+        });
+
+        // 게스트 타이머 업데이트 이벤트 리스너
+        window.addEventListener('guest:timer-update', (e) => {
+            if (guestStatusTimer) {
+                guestStatusTimer.textContent = e.detail.remaining;
+            }
+        });
+    }
+
+    /**
+     * 게스트 세션 초기화
+     */
+    function setupGuestSession() {
+        if (typeof Guest === 'undefined') return;
+
+        const session = Guest.getSession();
+        if (!session) return;
+
+        // 게스트 상태바 표시
+        if (guestStatusBar) {
+            guestStatusBar.classList.remove('hidden');
+        }
+        if (guestStatusName) {
+            guestStatusName.textContent = session.display_name;
+        }
+        if (guestStatusTimer) {
+            guestStatusTimer.textContent = Guest.getRemainingText();
+        }
+
+        // 게스트 플레이 버튼 숨김
+        guestPlayBtn?.classList.add('hidden');
+
+        // 채팅 비활성화 (게스트는 채팅 불가)
+        chatInput.disabled = true;
+        chatForm.querySelector('button').disabled = true;
+        if (chatMessages) {
+            chatMessages.innerHTML = '<div class="chat-notice">게스트는 채팅을 이용할 수 없습니다.</div>';
+        }
+
+        // 빠른 대전만 가능 (경쟁전 불가)
+        quickMatchBtn?.classList.add('btn-disabled');
+        quickMatchBtn?.setAttribute('title', '게스트는 경쟁전을 이용할 수 없습니다.');
+
+        // 빠른 대전 설정 (게스트용)
+        setupRandomMatchForGuest();
+    }
+
+    /**
+     * 게스트용 빠른 대전 설정
+     */
+    function setupRandomMatchForGuest() {
+        if (!randomMatchBtn) return;
+
+        randomMatchBtn.addEventListener('click', async function() {
+            if (isMatching || isAiMatching) {
+                Toast.error('다른 매칭이 진행 중입니다.');
+                return;
+            }
+            if (isRandomMatching) {
+                await cancelRandomMatch();
+            } else {
+                await startRandomMatch();
+            }
+        });
+
+        randomMatchCancel?.addEventListener('click', async () => {
+            if (!isRandomMatching) return;
+            await cancelRandomMatch();
+        });
+
+        randomMatchWait?.addEventListener('click', () => {
+            if (!isRandomMatching) return;
+            randomMatchModal?.classList.add('hidden');
+            showMatchToast('빠른 대전 매칭 중...', 'random');
+        });
+
+        randomMatchModal?.addEventListener('click', (event) => {
+            if (event.target === randomMatchModal && isRandomMatching) return;
+            if (event.target === randomMatchModal) randomMatchModal.classList.add('hidden');
+        });
     }
 })();

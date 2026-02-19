@@ -48,4 +48,8 @@ app.conf.beat_schedule = {
         "task": "apps.accounts.tasks.cleanup_expired_sanctions",
         "schedule": 60.0,  # 1분마다
     },
+    "cleanup-expired-guest-sessions": {
+        "task": "apps.accounts.tasks.cleanup_expired_guest_sessions",
+        "schedule": 3600.0,  # 1시간마다
+    },
 }

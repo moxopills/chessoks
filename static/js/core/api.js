@@ -18,12 +18,25 @@ const API = (function() {
     }
 
     /**
+     * 게스트 토큰 가져오기
+     */
+    function getGuestToken() {
+        return localStorage.getItem('guest_token') || '';
+    }
+
+    /**
      * 기본 헤더 생성
      */
     function getHeaders(isFormData = false) {
         const headers = {
             'X-CSRFToken': getCSRFToken(),
         };
+
+        // 게스트 토큰이 있으면 헤더에 추가
+        const guestToken = getGuestToken();
+        if (guestToken) {
+            headers['X-Guest-Token'] = guestToken;
+        }
 
         if (!isFormData) {
             headers['Content-Type'] = 'application/json';
