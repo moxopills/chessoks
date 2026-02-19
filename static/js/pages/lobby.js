@@ -1325,7 +1325,9 @@
         quickMatchBtn?.classList.add('btn-disabled');
         quickMatchBtn?.setAttribute('title', '게스트는 경쟁전을 이용할 수 없습니다.');
 
-        // 빠른 대전, AI 대전, 방 만들기는 게스트도 가능
+        // 빠른 대전 이벤트 설정 (AI 대전은 init에서 이미 설정됨)
+        setupRandomMatch();
+
         // WebSocket 연결 (접속자 목록용)
         connectLobbyChat();
     }
