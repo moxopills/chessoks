@@ -420,6 +420,10 @@
     function setupRandomMatch() {
         if (!randomMatchBtn) return;
         randomMatchBtn.addEventListener('click', async function() {
+            if (!currentUserId && !isGuestUser) {
+                Toast.error('로그인 또는 게스트로 시작하세요.');
+                return;
+            }
             if (isSuspended) {
                 Toast.error('계정이 정지되어 이용할 수 없습니다.');
                 return;
@@ -760,7 +764,13 @@
      */
     function connectLobbyChat() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/lobby/`;
+        let wsUrl = `${protocol}//${window.location.host}/ws/lobby/`;
+
+        // 게스트 토큰이 있으면 쿼리 파라미터로 추가
+        const guestToken = localStorage.getItem('guest_token');
+        if (guestToken) {
+            wsUrl += `?guest_token=${encodeURIComponent(guestToken)}`;
+        }
 
         lobbySocket = new WebSocket(wsUrl);
 
@@ -1311,46 +1321,13 @@
             chatMessages.innerHTML = '<div class="chat-notice">게스트는 채팅을 이용할 수 없습니다.</div>';
         }
 
-        // 빠른 대전만 가능 (경쟁전 불가)
+        // 경쟁전만 비활성화 (레이팅 게임)
         quickMatchBtn?.classList.add('btn-disabled');
         quickMatchBtn?.setAttribute('title', '게스트는 경쟁전을 이용할 수 없습니다.');
 
-        // 빠른 대전 설정 (게스트용)
-        setupRandomMatchForGuest();
+        // 빠른 대전, AI 대전, 방 만들기는 게스트도 가능
+        // WebSocket 연결 (접속자 목록용)
+        connectLobbyChat();
     }
 
-    /**
-     * 게스트용 빠른 대전 설정
-     */
-    function setupRandomMatchForGuest() {
-        if (!randomMatchBtn) return;
-
-        randomMatchBtn.addEventListener('click', async function() {
-            if (isMatching || isAiMatching) {
-                Toast.error('다른 매칭이 진행 중입니다.');
-                return;
-            }
-            if (isRandomMatching) {
-                await cancelRandomMatch();
-            } else {
-                await startRandomMatch();
-            }
-        });
-
-        randomMatchCancel?.addEventListener('click', async () => {
-            if (!isRandomMatching) return;
-            await cancelRandomMatch();
-        });
-
-        randomMatchWait?.addEventListener('click', () => {
-            if (!isRandomMatching) return;
-            randomMatchModal?.classList.add('hidden');
-            showMatchToast('빠른 대전 매칭 중...', 'random');
-        });
-
-        randomMatchModal?.addEventListener('click', (event) => {
-            if (event.target === randomMatchModal && isRandomMatching) return;
-            if (event.target === randomMatchModal) randomMatchModal.classList.add('hidden');
-        });
-    }
 })();

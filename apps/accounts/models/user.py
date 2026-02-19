@@ -74,6 +74,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     # Django Admin용 필드
     is_staff = models.BooleanField(default=False, help_text="관리자 권한")
     is_active = models.BooleanField(default=True, help_text="활성 계정")
+    is_guest = models.BooleanField(default=False, help_text="게스트 임시 계정")
     date_joined = models.DateTimeField(default=timezone.now, help_text="가입일")
 
     # 제재 관련
