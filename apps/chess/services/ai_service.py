@@ -79,9 +79,10 @@ class AiService:
         level = AiService._normalize_level(level)
         config = AiService._get_level_config(level)
         ai_color = board.turn
+
+        # 쉬움 난이도: 간단한 평가 후 랜덤성 높게 선택
         if config["depth"] <= 0:
-            move = random.choice(moves)
-            return AiMoveDecision(uci=move.uci(), score=0.0)
+            return AiService._choose_easy_move(board, moves, config["randomness"])
 
         if level == "hard":
             stockfish_move = AiService._choose_with_stockfish(board, depth=config["depth"])
@@ -111,8 +112,13 @@ class AiService:
         randomness: int,
         ai_color: bool,
     ) -> AiMoveDecision | None:
+        """중간/어려움 난이도: minimax 평가 + 랜덤성"""
         ordered_moves = AiService._order_moves(board, moves)
         scored: list[AiMoveDecision] = []
+
+        # randomness에 따른 노이즈 범위 (randomness가 클수록 노이즈도 큼)
+        noise_range = randomness * 0.1
+
         for move in ordered_moves:
             board.push(move)
             if board.is_checkmate():
@@ -120,8 +126,13 @@ class AiService:
                 return AiMoveDecision(uci=move.uci(), score=9999.0)
             score = AiService._minimax(board, depth - 1, maximizing=False, ai_color=ai_color)
             board.pop()
+
+            # 작은 랜덤 노이즈 추가 (같은 점수일 때 다양성 확보)
+            score += random.uniform(-noise_range, noise_range)
             scored.append(AiMoveDecision(uci=move.uci(), score=score))
 
+        # 먼저 섞어서 동점일 때 다양성 확보
+        random.shuffle(scored)
         scored.sort(key=lambda item: item.score, reverse=True)
         return AiService._pick_from_top(scored, randomness)
 
@@ -131,6 +142,46 @@ class AiService:
             return None
         top_n = max(1, min(randomness, len(scored)))
         return random.choice(scored[:top_n])
+
+    @staticmethod
+    def _choose_easy_move(
+        board: chess.Board, moves: list[chess.Move], randomness: int
+    ) -> AiMoveDecision:
+        """쉬움 난이도: 간단한 휴리스틱으로 점수 매기고 랜덤하게 선택"""
+        scored: list[AiMoveDecision] = []
+
+        for move in moves:
+            score = random.uniform(0, 5)  # 기본 랜덤 점수
+
+            # 체크메이트는 항상 선택
+            board.push(move)
+            if board.is_checkmate():
+                board.pop()
+                return AiMoveDecision(uci=move.uci(), score=100.0)
+            board.pop()
+
+            # 캡처에 약간의 가중치
+            if board.is_capture(move):
+                captured = board.piece_at(move.to_square)
+                if captured:
+                    score += AiService.PIECE_VALUES.get(captured.piece_type, 1) * 0.5
+
+            # 체크에 약간의 가중치
+            if board.gives_check(move):
+                score += 1.0
+
+            # 프로모션에 가중치
+            if move.promotion:
+                score += 3.0
+
+            scored.append(AiMoveDecision(uci=move.uci(), score=score))
+
+        # 점수로 정렬하되 랜덤성이 높아서 다양한 수 선택
+        random.shuffle(scored)  # 먼저 섞어서 같은 점수일 때 다양성 확보
+        scored.sort(key=lambda item: item.score, reverse=True)
+
+        # randomness 값만큼의 상위 수 중에서 랜덤 선택
+        return AiService._pick_from_top(scored, randomness)
 
     @staticmethod
     def _order_moves(board: chess.Board, moves: list[chess.Move]) -> list[chess.Move]:

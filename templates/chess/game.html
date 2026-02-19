@@ -38,6 +38,7 @@
         <div class="panel-section game-actions-panel" id="game-actions">
             <div class="panel-header">
                 <h3 class="panel-title">대전 메뉴</h3>
+                <button class="shortcut-help-btn" id="shortcut-help-btn" title="키보드 단축키" aria-label="키보드 단축키">⌨️</button>
             </div>
             <div class="action-grid">
                 <button class="btn btn-secondary btn-sm" id="draw-btn" title="무승부 제안">
@@ -235,6 +236,42 @@
         </div>
     </div>
 </div>
+
+<!-- Keyboard Shortcuts Modal -->
+<div class="modal-overlay hidden" id="shortcut-modal">
+    <div class="modal shortcut-modal">
+        <div class="modal-header">
+            <h2 class="modal-title">키보드 단축키</h2>
+        </div>
+        <div class="modal-body">
+            <div class="shortcut-list">
+                <div class="shortcut-item">
+                    <kbd>←</kbd> / <kbd>→</kbd>
+                    <span>기보 이동 (이전/다음)</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>D</kbd>
+                    <span>무승부 제안</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>R</kbd>
+                    <span>기권</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>G</kbd>
+                    <span>가이드 토글</span>
+                </div>
+                <div class="shortcut-item">
+                    <kbd>Esc</kbd>
+                    <span>선택 취소 / 모달 닫기</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="shortcut-close">확인</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_css %}
@@ -248,7 +285,8 @@
     max-width: 1200px;
     width: 100%;
     margin: 0 auto;
-    padding: 0 var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    padding-top: max(var(--space-sm), env(safe-area-inset-top, 0px));
     overflow-x: hidden;
 }
 
@@ -1062,6 +1100,61 @@ body.competitive-room #rematch-modal {
     transform: scale(1.1);
 }
 
+/* Shortcut Help Button */
+.shortcut-help-btn {
+    background: transparent;
+    border: none;
+    font-size: 0.9rem;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    padding: 4px;
+}
+
+.shortcut-help-btn:hover {
+    opacity: 1;
+}
+
+/* Shortcut Modal */
+.shortcut-modal {
+    max-width: 320px;
+}
+
+.shortcut-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.shortcut-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.shortcut-item:last-child {
+    border-bottom: none;
+}
+
+.shortcut-item kbd {
+    display: inline-block;
+    padding: 4px 8px;
+    font-family: monospace;
+    font-size: 0.75rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    min-width: 28px;
+    text-align: center;
+}
+
+.shortcut-item span {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+}
+
 /* Modal */
 .modal-overlay {
     position: fixed;
@@ -1291,6 +1384,7 @@ body.competitive-room #rematch-modal {
 @media (max-width: 900px) {
     .game-container {
         grid-template-columns: 1fr;
+        padding-top: var(--space-md);
     }
 
     .game-side-panel {
@@ -1312,12 +1406,24 @@ body.competitive-room #rematch-modal {
 }
 
 @media (max-width: 600px) {
+    .game-container {
+        padding-top: var(--space-md);
+    }
+
     .game-side-panel {
         grid-template-columns: 1fr;
     }
 
     .piece {
         font-size: 2rem;
+    }
+
+    .match-header {
+        margin-bottom: var(--space-xs);
+    }
+
+    .player-bar {
+        padding: var(--space-sm);
     }
 }
 

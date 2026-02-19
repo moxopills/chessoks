@@ -23,7 +23,9 @@
     const noticeModalClose = document.getElementById('admin-notice-modal-close');
     const adminTabbar = document.getElementById('admin-tabbar');
     const adminTabs = adminTabbar ? adminTabbar.querySelectorAll('.mobile-tab') : [];
-    const aiCurrentSettings = document.getElementById('ai-current-settings');
+    const aiEasyCurrent = document.getElementById('ai-easy-current');
+    const aiMediumCurrent = document.getElementById('ai-medium-current');
+    const aiHardCurrent = document.getElementById('ai-hard-current');
     const aiEasyDepth = document.getElementById('ai-easy-depth');
     const aiEasyRandom = document.getElementById('ai-easy-random');
     const aiEasyDelay = document.getElementById('ai-easy-delay');
@@ -155,6 +157,10 @@
 
         userTable.querySelectorAll('tbody tr').forEach(row => {
             row.addEventListener('click', () => {
+                // 이전 선택 해제
+                userTable.querySelectorAll('tbody tr.selected').forEach(r => r.classList.remove('selected'));
+                // 현재 행 선택
+                row.classList.add('selected');
                 const id = row.dataset.userId;
                 const nickname = row.dataset.nickname;
                 selectedUser = { id, nickname };
@@ -344,15 +350,17 @@
     }
 
     async function loadAiSettings() {
-        if (!aiCurrentSettings) return;
+        if (!aiEasyDepth) return;
         try {
             const data = await API.get('/admin/ai-settings/');
             const byLevel = {};
             data.forEach((item) => {
                 byLevel[item.level] = item;
             });
+
+            // 폼 값 설정
             if (aiEasyDepth) aiEasyDepth.value = byLevel.easy?.depth ?? 0;
-            if (aiEasyRandom) aiEasyRandom.value = byLevel.easy?.randomness ?? 4;
+            if (aiEasyRandom) aiEasyRandom.value = byLevel.easy?.randomness ?? 8;
             if (aiEasyDelay) aiEasyDelay.value = byLevel.easy?.delay_ms ?? 1200;
             if (aiMediumDepth) aiMediumDepth.value = byLevel.medium?.depth ?? 1;
             if (aiMediumRandom) aiMediumRandom.value = byLevel.medium?.randomness ?? 4;
@@ -361,16 +369,27 @@
             if (aiHardRandom) aiHardRandom.value = byLevel.hard?.randomness ?? 2;
             if (aiHardDelay) aiHardDelay.value = byLevel.hard?.delay_ms ?? 700;
 
-            const easyText = `쉬움: depth=${byLevel.easy?.depth ?? 0}, rand=${byLevel.easy?.randomness ?? 4}, delay=${byLevel.easy?.delay_ms ?? 1200}ms`;
-            const mediumText = `중간: depth=${byLevel.medium?.depth ?? 1}, rand=${byLevel.medium?.randomness ?? 4}, delay=${byLevel.medium?.delay_ms ?? 900}ms`;
-            const hardText = `어려움: depth=${byLevel.hard?.depth ?? 2}, rand=${byLevel.hard?.randomness ?? 2}, delay=${byLevel.hard?.delay_ms ?? 700}ms`;
-            aiCurrentSettings.innerHTML = [
-                `<div>${easyText}</div>`,
-                `<div>${mediumText}</div>`,
-                `<div>${hardText}</div>`,
-            ].join('');
+            // 현재 설정 표시 (카드 하단)
+            const formatCurrent = (level, defaults) => {
+                const d = byLevel[level]?.depth ?? defaults.depth;
+                const r = byLevel[level]?.randomness ?? defaults.randomness;
+                const delay = byLevel[level]?.delay_ms ?? defaults.delay_ms;
+                return `현재: 깊이 ${d} · 랜덤 ${r} · ${delay}ms`;
+            };
+
+            if (aiEasyCurrent) {
+                aiEasyCurrent.textContent = formatCurrent('easy', { depth: 0, randomness: 8, delay_ms: 1200 });
+            }
+            if (aiMediumCurrent) {
+                aiMediumCurrent.textContent = formatCurrent('medium', { depth: 1, randomness: 4, delay_ms: 900 });
+            }
+            if (aiHardCurrent) {
+                aiHardCurrent.textContent = formatCurrent('hard', { depth: 2, randomness: 2, delay_ms: 700 });
+            }
         } catch (error) {
-            aiCurrentSettings.textContent = '현재 설정을 불러오지 못했습니다.';
+            if (aiEasyCurrent) aiEasyCurrent.textContent = '설정 로드 실패';
+            if (aiMediumCurrent) aiMediumCurrent.textContent = '설정 로드 실패';
+            if (aiHardCurrent) aiHardCurrent.textContent = '설정 로드 실패';
         }
     }
 
