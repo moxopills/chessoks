@@ -13,7 +13,7 @@ class GuestTokenMiddleware(BaseMiddleware):
 
         # 인증된 유저가 아닌 경우에만 게스트 토큰 확인
         user = scope.get("user")
-        if user and user.is_authenticated:
+        if user and getattr(user, "is_authenticated", False):
             return await super().__call__(scope, receive, send)
 
         # 쿼리 스트링에서 게스트 토큰 추출
