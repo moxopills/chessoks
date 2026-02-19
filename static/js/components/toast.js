@@ -6,6 +6,14 @@ const Toast = (function() {
     const DURATION = 4000;
     const container = document.getElementById('toast-container');
 
+    // 타입별 아이콘
+    const ICONS = {
+        success: '✓',
+        error: '✕',
+        warning: '⚠',
+        info: 'ℹ'
+    };
+
     /**
      * 토스트 생성
      */
@@ -14,7 +22,9 @@ const Toast = (function() {
 
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
-        toast.textContent = message;
+
+        const icon = ICONS[type] || ICONS.info;
+        toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-message">${Utils.escapeHtml(message)}</span>`;
 
         container.appendChild(toast);
 
