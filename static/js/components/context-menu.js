@@ -24,7 +24,17 @@ const ContextMenu = (function() {
         document.addEventListener('click', (e) => {
             if (!menuEl.contains(e.target)) hide();
         });
+
+        // 스크롤 시 메뉴 숨기기 (모든 스크롤 이벤트 캡처)
         document.addEventListener('scroll', hide, true);
+        window.addEventListener('scroll', hide, { passive: true });
+
+        // 모바일 터치 스크롤 시 메뉴 숨기기
+        document.addEventListener('touchmove', hide, { passive: true });
+
+        // 화면 크기 변경 시 메뉴 숨기기 (iOS 주소창 변화 대응)
+        window.addEventListener('resize', hide);
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') hide();
         });
@@ -56,8 +66,10 @@ const ContextMenu = (function() {
         const rect = menuEl.getBoundingClientRect();
         const maxX = window.innerWidth - rect.width - padding;
         const maxY = window.innerHeight - rect.height - padding;
-        const clientX = event.clientX ?? event.touches?.[0]?.clientX ?? 0;
-        const clientY = event.clientY ?? event.touches?.[0]?.clientY ?? 0;
+        // touchend 이벤트는 changedTouches 사용, touchstart/touchmove는 touches 사용
+        const touch = event.changedTouches?.[0] || event.touches?.[0];
+        const clientX = event.clientX ?? touch?.clientX ?? 0;
+        const clientY = event.clientY ?? touch?.clientY ?? 0;
         menuEl.style.left = `${Math.min(clientX, maxX)}px`;
         menuEl.style.top = `${Math.min(clientY, maxY)}px`;
     }
