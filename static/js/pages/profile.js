@@ -33,6 +33,13 @@
             await loadGuestbook();
         } catch (error) {
             Toast.error('프로필 정보를 불러올 수 없습니다.');
+            // 에러 상태 표시
+            if (nicknameEl) nicknameEl.textContent = '불러오기 실패';
+            if (emailEl) emailEl.textContent = '';
+            if (tierEl) tierEl.textContent = '-';
+            if (avatarEl) {
+                avatarEl.innerHTML = '<span class="profile-avatar-placeholder">!</span>';
+            }
         }
 
         try {

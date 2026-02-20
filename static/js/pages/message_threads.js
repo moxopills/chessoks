@@ -45,7 +45,7 @@
         const user = thread.other_user || {};
         const nickname = user.nickname || '알 수 없음';
         const avatar = user.avatar_url
-            ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="">`
+            ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="${Utils.escapeHtml(nickname)}">`
             : '<span>👤</span>';
         const time = thread.last_message_at ? formatTime(thread.last_message_at) : '';
         const message = thread.last_message || '대화를 시작해보세요.';
