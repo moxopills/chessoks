@@ -413,7 +413,7 @@
     .page-header {
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
     }
 
     .page-title-block {
@@ -470,7 +470,7 @@
     .page-header {
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
     }
 
     .profile-stats {

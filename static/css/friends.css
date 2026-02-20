@@ -346,7 +346,7 @@
 @media (max-width: 900px) {
     .page-header {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
     }
 
     .profile-drawer {
@@ -393,7 +393,7 @@
 @media (max-width: 640px) {
     .page-header {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
     }
 
     .profile-stats {

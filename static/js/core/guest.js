@@ -132,41 +132,60 @@ const Guest = (function() {
     function startExpiryTimer() {
         stopExpiryTimer();
         warningShown = false;
+        let warning5Shown = false;
 
         // 타이머 체크 함수
         function checkTimer() {
             const minutes = getRemainingMinutes();
 
             // 10분 전 경고
-            if (minutes <= 10 && minutes > 0 && !warningShown) {
+            if (minutes <= 10 && minutes > 5 && !warningShown) {
                 warningShown = true;
                 if (typeof Toast !== 'undefined') {
                     Toast.warning(`게스트 세션이 ${minutes}분 후 만료됩니다.`);
                 }
             }
 
-            // 만료 시 세션 정리
-            if (minutes <= 0) {
-                clearSession();
+            // 5분 전 긴급 경고
+            if (minutes <= 5 && minutes > 0 && !warning5Shown) {
+                warning5Shown = true;
                 if (typeof Toast !== 'undefined') {
-                    Toast.error('게스트 세션이 만료되었습니다.');
+                    Toast.error(`게스트 세션이 ${minutes}분 후 만료됩니다!`);
                 }
-                // 페이지 새로고침으로 상태 초기화
-                setTimeout(() => window.location.reload(), 1500);
+            }
+
+            // 만료 시 자동 로그아웃
+            if (minutes <= 0) {
+                stopExpiryTimer();
+                // 서버에 세션 종료 알림
+                API.delete('/accounts/guest/me/').catch(() => {});
+                clearSession();
+
+                if (typeof Toast !== 'undefined') {
+                    Toast.error('게스트 세션이 만료되어 로그아웃됩니다.');
+                }
+
+                // 만료 이벤트 발생 (게임 페이지에서 처리 가능)
+                window.dispatchEvent(new CustomEvent('guest:expired'));
+
+                // 로비로 이동
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
                 return;
             }
 
             // UI 업데이트 이벤트
             window.dispatchEvent(new CustomEvent('guest:timer-update', {
-                detail: { remaining: getRemainingText() }
+                detail: { remaining: getRemainingText(), minutes }
             }));
         }
 
         // 즉시 한 번 실행
         checkTimer();
 
-        // 1분마다 체크
-        expiryTimer = setInterval(checkTimer, 60000);
+        // 30초마다 체크 (더 정확한 타이밍)
+        expiryTimer = setInterval(checkTimer, 30000);
     }
 
     /**
