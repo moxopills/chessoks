@@ -118,6 +118,7 @@
     let guideEnabled = true;
     let dragPiece = null;
     let dragStartSquare = null;
+    let touchHandled = false; // 터치 이벤트 처리 플래그
     let isAiRoom = false;
     let movePage = 1;
     const movePageSize = 6;
@@ -169,9 +170,22 @@
         setupChatToggle();
         setupExitGuard();
         setupKeyboardShortcuts();
+        setupGuestExpiryHandler();
         if (!replayOnly) {
             connectWebSocket();
         }
+    }
+
+    /**
+     * 게스트 세션 만료 처리
+     */
+    function setupGuestExpiryHandler() {
+        window.addEventListener('guest:expired', () => {
+            // 게임 중이면 자동 기권
+            if (game?.result === 'playing' && myColor && socket?.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
+            }
+        });
     }
 
     /**
@@ -511,12 +525,46 @@
         // 실제 좌표로 변환 (흑색일 때 반전)
         const actualSquare = toActualSquare(squareName);
         const piece = getPieceAtSquare(actualSquare);
+
+        // 이미 기물이 선택된 상태에서 다른 칸 터치
+        if (selectedSquare) {
+            // 유효한 이동 위치인 경우 이동 실행
+            if (validMoves.includes(actualSquare)) {
+                e.preventDefault();
+                touchHandled = true;
+                makeMove(selectedSquare, actualSquare);
+                clearSelection();
+                return;
+            }
+
+            // 내 다른 기물 선택
+            if (piece) {
+                const pieceColor = piece === piece.toUpperCase() ? 'white' : 'black';
+                if (pieceColor === myColor) {
+                    e.preventDefault();
+                    touchHandled = true;
+                    clearSelection();
+                    // 새 기물 선택 (아래 로직 계속)
+                } else {
+                    // 상대 기물 - 선택 해제
+                    clearSelection();
+                    return;
+                }
+            } else {
+                // 빈 칸 (유효하지 않은 이동) - 선택 해제
+                clearSelection();
+                return;
+            }
+        }
+
+        // 기물이 없으면 리턴
         if (!piece) return;
 
         const pieceColor = piece === piece.toUpperCase() ? 'white' : 'black';
         if (pieceColor !== myColor) return;
 
         e.preventDefault();
+        touchHandled = true; // 터치 처리됨 플래그
         dragStartSquare = squareName;
 
         // 드래그 중인 기물 표시 생성
@@ -587,7 +635,25 @@
         removeDragPiece();
         clearDropHighlight();
 
-        if (!startSquare) return;
+        if (!startSquare) {
+            // 드래그 시작이 없었던 경우 - 이미 선택된 기물이 있으면 이동 시도
+            if (selectedSquare && e.changedTouches && e.changedTouches[0]) {
+                const touch = e.changedTouches[0];
+                const targetDisplaySquare = getSquareFromPoint(touch.clientX, touch.clientY);
+                if (targetDisplaySquare) {
+                    const targetActualSquare = toActualSquare(targetDisplaySquare);
+                    if (validMoves.includes(targetActualSquare)) {
+                        e.preventDefault();
+                        touchHandled = true;
+                        makeMove(selectedSquare, targetActualSquare);
+                        clearSelection();
+                        return;
+                    }
+                }
+            }
+            return;
+        }
+
         e.preventDefault();
 
         const touch = e.changedTouches[0];
@@ -601,20 +667,17 @@
                 makeMove(selectedSquare, targetActualSquare);
                 clearSelection();
             } else {
-                // 잘못된 위치 - 선택 해제
-                clearSelection();
-                renderBoard();
+                // 잘못된 위치 - 선택 해제하지 않고 유지 (다른 칸 탭 가능)
             }
-        } else if (targetDisplaySquare === startSquare) {
-            // 같은 위치 탭 - 선택 상태 유지 (이미 handleTouchStart에서 선택됨)
         }
+        // 같은 위치 탭 - 선택 상태 유지 (이미 handleTouchStart에서 선택됨)
     }
 
     function createDragPiece(piece, x, y) {
         removeDragPiece();
         dragPiece = document.createElement('div');
         dragPiece.className = 'drag-piece';
-        dragPiece.innerHTML = PIECE_SYMBOLS[piece] || '';
+        dragPiece.innerHTML = PIECES[piece] || '';
         dragPiece.style.left = (x - 25) + 'px';
         dragPiece.style.top = (y - 25) + 'px';
         document.body.appendChild(dragPiece);
@@ -637,9 +700,13 @@
 
     function highlightDropTarget(squareName) {
         clearDropHighlight();
-        if (squareName && validMoves.includes(squareName)) {
-            const square = getSquare(squareName);
-            if (square) square.classList.add('drop-target');
+        if (squareName) {
+            // 디스플레이 좌표를 실제 좌표로 변환 후 비교
+            const actualSquare = toActualSquare(squareName);
+            if (validMoves.includes(actualSquare)) {
+                const square = getSquare(squareName);
+                if (square) square.classList.add('drop-target');
+            }
         }
     }
 
@@ -1006,6 +1073,11 @@
      * 칸 클릭 핸들러
      */
     async function handleSquareClick(squareName) {
+        // 터치 이벤트로 이미 처리된 경우 클릭 무시
+        if (touchHandled) {
+            touchHandled = false;
+            return;
+        }
         if (!isMyTurn || !myColor) return;
 
         if (selectedSquare) {
