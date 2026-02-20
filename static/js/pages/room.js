@@ -209,7 +209,7 @@
             <div class="player-card ${cardClass}">
                 <div class="avatar avatar-lg">
                     ${player?.avatar_url
-                        ? `<img src="${Utils.escapeHtml(player.avatar_url)}" alt="">`
+                        ? `<img src="${Utils.escapeHtml(player.avatar_url)}" alt="${Utils.escapeHtml(player?.nickname || '플레이어')}">`
                         : '<span class="avatar-placeholder">?</span>'}
                 </div>
                 <div class="player-info">
@@ -470,7 +470,7 @@
         const isMine = data.user_id === currentUser.id;
         const avatar = !isMine
             ? (data.avatar_url
-                ? `<img src="${Utils.escapeHtml(data.avatar_url)}" alt="">`
+                ? `<img src="${Utils.escapeHtml(data.avatar_url)}" alt="${Utils.escapeHtml(data.nickname || '')}">`
                 : '<span class="avatar-placeholder">?</span>')
             : '';
         const messageEl = document.createElement('div');

@@ -63,10 +63,29 @@
 
     function bindEvents() {
         refreshBtn?.addEventListener('click', refreshAll);
-        drawerClose?.addEventListener('click', () => {
-            drawer.classList.add('hidden');
-            syncDrawerState();
-        });
+
+        // Close drawer with both click and touch
+        if (drawerClose) {
+            const closeDrawer = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                drawer.classList.add('hidden');
+                syncDrawerState();
+            };
+            drawerClose.addEventListener('click', closeDrawer);
+            drawerClose.addEventListener('touchend', closeDrawer);
+        }
+
+        // Close drawer when clicking backdrop on mobile
+        if (isTouchDevice && drawer) {
+            drawer.addEventListener('click', (e) => {
+                if (e.target === drawer) {
+                    drawer.classList.add('hidden');
+                    syncDrawerState();
+                }
+            });
+        }
+
         reportToggle?.addEventListener('click', () => {
             if (!selectedUserId) return;
             if (currentUserId && selectedUserId === currentUserId) {

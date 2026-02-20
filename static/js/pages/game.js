@@ -16,6 +16,12 @@
         'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
     };
 
+    // 접근성용 기물 이름
+    const PIECE_NAMES = {
+        'K': '백 킹', 'Q': '백 퀸', 'R': '백 룩', 'B': '백 비숍', 'N': '백 나이트', 'P': '백 폰',
+        'k': '흑 킹', 'q': '흑 퀸', 'r': '흑 룩', 'b': '흑 비숍', 'n': '흑 나이트', 'p': '흑 폰'
+    };
+
     const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
@@ -205,7 +211,9 @@
             }
 
             // 게임 중 단축키 (리플레이 모드가 아닐 때)
-            if (!replayActive && !gameOver) {
+            const isPlaying = game?.result === 'playing';
+            const isWatching = !myColor; // 관전자
+            if (!replayActive && isPlaying) {
                 if (e.key === 'd' || e.key === 'D') {
                     drawBtn?.click();
                 } else if (e.key === 'r' || e.key === 'R') {
@@ -216,7 +224,7 @@
             }
 
             // 기보 이동 (게임 종료 후 또는 관전)
-            if (gameOver || isSpectator) {
+            if (!isPlaying || isWatching) {
                 if (e.key === 'ArrowLeft') {
                     e.preventDefault();
                     movePrevBtn?.click();
@@ -467,7 +475,8 @@
      * 보드 초기 설정
      */
     function setupBoard() {
-        // 빈 보드 생성
+        // 스켈레톤 로딩 제거 및 빈 보드 생성
+        chessBoard.classList.remove('chess-board--loading');
         chessBoard.innerHTML = '';
         for (let rank = 0; rank < 8; rank++) {
             for (let file = 0; file < 8; file++) {
@@ -499,7 +508,9 @@
     async function handleTouchStart(e, squareName) {
         if (!isMyTurn || !myColor) return;
 
-        const piece = getPieceAtSquare(squareName);
+        // 실제 좌표로 변환 (흑색일 때 반전)
+        const actualSquare = toActualSquare(squareName);
+        const piece = getPieceAtSquare(actualSquare);
         if (!piece) return;
 
         const pieceColor = piece === piece.toUpperCase() ? 'white' : 'black';
@@ -512,10 +523,25 @@
         const touch = e.touches[0];
         createDragPiece(piece, touch.clientX, touch.clientY);
 
-        // 유효한 이동 표시
-        selectedSquare = squareName;
-        validMoves = await fetchLegalMoves(squareName);
-        renderBoard();
+        // 유효한 이동 표시 (selectSquare와 동일한 로직)
+        clearSelection();
+        selectedSquare = actualSquare;
+        selectedDisplaySquare = squareName;
+
+        const squareEl = getSquare(squareName);
+        squareEl?.classList.add('selected');
+
+        validMoves = await fetchLegalMoves(actualSquare);
+
+        // 유효한 이동 위치 표시
+        validMoves.forEach(sq => {
+            const displaySquare = toDisplaySquare(sq);
+            const el = getSquare(displaySquare);
+            if (el && sq !== actualSquare) {
+                const hasPiece = el.querySelector('.piece');
+                el.classList.add(hasPiece ? 'valid-capture' : 'valid-move');
+            }
+        });
     }
 
     function getPieceAtSquare(squareName) {
@@ -554,31 +580,34 @@
     }
 
     function handleTouchEnd(e) {
-        if (!dragStartSquare) return;
-        e.preventDefault();
-
-        const touch = e.changedTouches[0];
-        const targetSquare = getSquareFromPoint(touch.clientX, touch.clientY);
+        const startSquare = dragStartSquare;
+        dragStartSquare = null;
 
         // 드래그 기물 제거
         removeDragPiece();
         clearDropHighlight();
 
-        if (targetSquare && targetSquare !== dragStartSquare) {
-            // 이동 시도
-            if (validMoves.includes(targetSquare)) {
-                handleSquareClick(targetSquare);
+        if (!startSquare) return;
+        e.preventDefault();
+
+        const touch = e.changedTouches[0];
+        const targetDisplaySquare = getSquareFromPoint(touch.clientX, touch.clientY);
+
+        if (targetDisplaySquare && targetDisplaySquare !== startSquare) {
+            // 드래그 이동 시도 - 실제 좌표로 변환
+            const targetActualSquare = toActualSquare(targetDisplaySquare);
+            if (validMoves.includes(targetActualSquare)) {
+                // 이동 실행
+                makeMove(selectedSquare, targetActualSquare);
+                clearSelection();
             } else {
                 // 잘못된 위치 - 선택 해제
-                selectedSquare = null;
-                validMoves = [];
+                clearSelection();
                 renderBoard();
             }
-        } else {
-            // 같은 위치 또는 보드 밖 - 선택 유지 (탭으로 동작)
+        } else if (targetDisplaySquare === startSquare) {
+            // 같은 위치 탭 - 선택 상태 유지 (이미 handleTouchStart에서 선택됨)
         }
-
-        dragStartSquare = null;
     }
 
     function createDragPiece(piece, x, y) {
@@ -681,7 +710,7 @@
             <div class="player-bar-info">
                 <div class="avatar avatar-sm">
                     ${topPlayer?.avatar_url
-                        ? `<img src="${Utils.escapeHtml(topPlayer.avatar_url)}" alt="">`
+                        ? `<img src="${Utils.escapeHtml(topPlayer.avatar_url)}" alt="${Utils.escapeHtml(topPlayer?.nickname || '상대')}">`
                         : '<span class="avatar-placeholder">?</span>'}
                 </div>
                 <div class="player-bar-details">
@@ -697,7 +726,7 @@
             <div class="player-bar-info">
                 <div class="avatar avatar-sm">
                     ${bottomPlayer?.avatar_url
-                        ? `<img src="${Utils.escapeHtml(bottomPlayer.avatar_url)}" alt="">`
+                        ? `<img src="${Utils.escapeHtml(bottomPlayer.avatar_url)}" alt="${Utils.escapeHtml(bottomPlayer?.nickname || '나')}">`
                         : '<span class="avatar-placeholder">?</span>'}
                 </div>
                 <div class="player-bar-details">
@@ -747,17 +776,24 @@
             sq.classList.remove('selected', 'valid-move', 'valid-capture', 'last-move', 'check');
         }
 
-        // 기물 배치
+        // 기물 배치 및 aria-label 업데이트
         for (let rank = 0; rank < 8; rank++) {
             for (let file = 0; file < 8; file++) {
+                const actualFile = isFlipped ? 7 - file : file;
+                const actualRank = isFlipped ? 7 - rank : rank;
+                const actualSquareName = FILES[actualFile] + RANKS[actualRank];
                 const piece = position[rank][file];
-                if (piece) {
-                    const displayRank = isFlipped ? 7 - rank : rank;
-                    const displayFile = isFlipped ? 7 - file : file;
-                    const squareName = FILES[displayFile] + RANKS[displayRank];
-                    const squareEl = getSquare(squareName);
+                const displayRank = isFlipped ? 7 - rank : rank;
+                const displayFile = isFlipped ? 7 - file : file;
+                const squareName = FILES[displayFile] + RANKS[displayRank];
+                const squareEl = getSquare(squareName);
 
-                    if (squareEl) {
+                if (squareEl) {
+                    // aria-label 업데이트 (기물 정보 포함)
+                    if (piece) {
+                        const pieceName = PIECE_NAMES[piece] || piece;
+                        squareEl.setAttribute('aria-label', `${actualSquareName} ${pieceName}`);
+
                         const pieceEl = document.createElement('span');
                         const isWhite = piece === piece.toUpperCase();
                         pieceEl.className = `piece ${isWhite ? 'white' : 'black'}`;
@@ -765,6 +801,8 @@
                         pieceEl.draggable = true;
                         pieceEl.addEventListener('dragstart', (e) => handleDragStart(e, squareName));
                         squareEl.appendChild(pieceEl);
+                    } else {
+                        squareEl.setAttribute('aria-label', `${actualSquareName} 빈 칸`);
                     }
                 }
             }
@@ -1445,7 +1483,7 @@
         const isMine = currentUser && data.user_id === currentUser.id;
         const avatar = !isMine
             ? (data.avatar_url
-                ? `<img src="${Utils.escapeHtml(data.avatar_url)}" alt="">`
+                ? `<img src="${Utils.escapeHtml(data.avatar_url)}" alt="${Utils.escapeHtml(data.nickname || '')}">`
                 : '<span class="avatar-placeholder">?</span>')
             : '';
         const messageEl = document.createElement('div');
@@ -1618,16 +1656,76 @@
 
     function setupExitGuard() {
         const logo = document.querySelector('.navbar-logo');
-        if (!logo) return;
-        logo.addEventListener('click', async (e) => {
-            e.preventDefault();
-            const leave = await Modal.confirm('게임을 나가시겠습니까?', {
-                title: '게임 나가기',
-                confirmText: '나가기',
-                danger: true
+
+        // 게임 중인지 확인하는 헬퍼 함수
+        const isGameInProgress = () => {
+            // game.result가 'playing'이고, 내가 참여자이며, 소켓 연결 상태
+            return game?.result === 'playing' && myColor && socket?.readyState === WebSocket.OPEN;
+        };
+
+        // 기권 후 이동 처리
+        const resignAndLeave = (targetUrl = '/') => {
+            if (isGameInProgress()) {
+                socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
+            }
+            // 약간의 딜레이 후 이동 (서버에 기권 전송 보장)
+            setTimeout(() => {
+                window.location.href = targetUrl;
+            }, 100);
+        };
+
+        // 나가기 확인 다이얼로그
+        const confirmExit = async (targetUrl = '/') => {
+            if (isGameInProgress()) {
+                const confirmed = await Modal.confirm('나가면 기권 처리됩니다. 나가시겠습니까?', {
+                    title: '기권 확인',
+                    confirmText: '기권하고 나가기',
+                    danger: true
+                });
+                if (confirmed) {
+                    resignAndLeave(targetUrl);
+                }
+                return confirmed;
+            } else {
+                // 게임 종료 상태면 바로 이동
+                window.location.href = targetUrl;
+                return true;
+            }
+        };
+
+        // 로고 클릭 시
+        if (logo) {
+            logo.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await confirmExit('/');
             });
-            if (leave) {
-                window.location.href = '/';
+        }
+
+        // 브라우저 뒤로가기 처리
+        // 게임 로드 후 히스토리 상태 추가
+        const pushGuardState = () => {
+            if (!history.state?.gameGuard) {
+                history.pushState({ gameGuard: true }, '');
+            }
+        };
+
+        // 초기 히스토리 상태 추가 (게임 로드 후)
+        setTimeout(pushGuardState, 500);
+
+        window.addEventListener('popstate', async () => {
+            if (isGameInProgress()) {
+                // 뒤로가기 방지를 위해 다시 히스토리 추가
+                pushGuardState();
+                await confirmExit('/');
+            }
+        });
+
+        // 페이지 나가기 전 경고 (새로고침, 탭 닫기 등)
+        window.addEventListener('beforeunload', (e) => {
+            if (isGameInProgress()) {
+                e.preventDefault();
+                // 브라우저 호환성을 위해 returnValue 설정
+                return (e.returnValue = '게임이 진행 중입니다. 나가면 기권 처리됩니다.');
             }
         });
     }

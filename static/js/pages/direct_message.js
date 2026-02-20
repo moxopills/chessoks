@@ -103,7 +103,7 @@
             const time = formatTime(item.created_at);
             const avatar = !isMe
                 ? (item.sender?.avatar_url
-                    ? `<img src="${Utils.escapeHtml(item.sender.avatar_url)}" alt="">`
+                    ? `<img src="${Utils.escapeHtml(item.sender.avatar_url)}" alt="${Utils.escapeHtml(item.sender?.nickname || '')}">`
                     : '<span class="avatar-placeholder">?</span>')
                 : '';
             return `

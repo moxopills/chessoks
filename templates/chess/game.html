@@ -16,8 +16,9 @@
 
         <!-- Chess Board -->
         <div class="chess-board-wrapper">
-            <div class="chess-board" id="chess-board">
-                <!-- 8x8 그리드 동적 생성 -->
+            <div class="chess-board chess-board--loading" id="chess-board">
+                <!-- 8x8 스켈레톤 로딩 -->
+                <div class="board-skeleton"></div>
             </div>
             <div class="board-labels-files">
                 <span>a</span><span>b</span><span>c</span><span>d</span>
@@ -228,10 +229,10 @@
         <div class="modal-body">
             <p>승진할 기물을 선택하세요:</p>
             <div class="promotion-options">
-                <button class="promotion-piece" data-piece="q">♛</button>
-                <button class="promotion-piece" data-piece="r">♜</button>
-                <button class="promotion-piece" data-piece="b">♝</button>
-                <button class="promotion-piece" data-piece="n">♞</button>
+                <button class="promotion-piece" data-piece="q" aria-label="퀸으로 승진">♛</button>
+                <button class="promotion-piece" data-piece="r" aria-label="룩으로 승진">♜</button>
+                <button class="promotion-piece" data-piece="b" aria-label="비숍으로 승진">♝</button>
+                <button class="promotion-piece" data-piece="n" aria-label="나이트로 승진">♞</button>
             </div>
         </div>
     </div>
@@ -276,7 +277,6 @@
 
 {% block extra_css %}
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Symbols+2&display=swap');
 /* Game Container */
 .game-container {
     display: grid;
@@ -286,8 +286,21 @@
     width: 100%;
     margin: 0 auto;
     padding: var(--space-sm) var(--space-md);
-    padding-top: max(var(--space-sm), env(safe-area-inset-top, 0px));
     overflow-x: hidden;
+}
+
+/* Override main-content padding for game page */
+.main-content:has(.game-container) {
+    padding-top: calc(var(--navbar-height) + var(--space-sm));
+    padding-bottom: var(--space-sm);
+}
+
+@media (max-width: 768px) {
+    .main-content:has(.game-container) {
+        padding: var(--space-xs);
+        padding-top: calc(var(--navbar-height) + var(--space-xs));
+        padding-bottom: 70px;
+    }
 }
 
 /* Board Area */
@@ -411,6 +424,22 @@
     border: 2px solid var(--color-border);
     border-radius: var(--radius-sm);
     overflow: hidden;
+    position: relative;
+}
+
+/* 보드 스켈레톤 로딩 */
+.chess-board--loading .board-skeleton {
+    position: absolute;
+    inset: 0;
+    background: repeating-conic-gradient(
+        var(--color-bg-tertiary) 0% 25%,
+        var(--color-bg-secondary) 25% 50%
+    ) 0 0 / 25% 25%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+.chess-board:not(.chess-board--loading) .board-skeleton {
+    display: none;
 }
 
 .turn-indicator {
@@ -1093,11 +1122,33 @@ body.competitive-room #rematch-modal {
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all var(--transition-fast);
+    min-width: 60px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .promotion-piece:hover {
     border-color: var(--color-accent-primary);
     transform: scale(1.1);
+}
+
+@media (max-width: 480px) {
+    .promotion-modal {
+        max-width: 90vw;
+    }
+
+    .promotion-options {
+        gap: var(--space-sm);
+    }
+
+    .promotion-piece {
+        font-size: 2.5rem;
+        padding: var(--space-sm);
+        min-width: 50px;
+        min-height: 50px;
+    }
 }
 
 /* Shortcut Help Button */
@@ -1209,6 +1260,18 @@ body.competitive-room #rematch-modal {
     margin-top: var(--space-lg);
 }
 
+@media (max-width: 480px) {
+    .modal-actions {
+        flex-direction: column;
+        gap: var(--space-xs);
+    }
+
+    .modal-actions .btn {
+        width: 100%;
+        min-height: 44px;
+    }
+}
+
 .modal-body p {
     letter-spacing: 0;
     word-spacing: 0;
@@ -1277,6 +1340,18 @@ body.competitive-room #rematch-modal {
 @media (max-width: 768px) {
     #replay-modal {
         display: none;
+    }
+
+    .replay-dock {
+        bottom: 80px;
+        width: calc(100% - 24px);
+        left: 12px;
+        transform: none;
+    }
+
+    .replay-dock .btn {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: 0.7rem;
     }
 }
 
@@ -1381,19 +1456,6 @@ body.competitive-room #rematch-modal {
 }
 
 /* Responsive */
-@media (max-width: 900px) {
-    .game-container {
-        grid-template-columns: 1fr;
-        padding-top: var(--space-md);
-    }
-
-    .game-side-panel {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: var(--space-md);
-    }
-}
-
 @media (max-width: 1200px) {
     .game-container {
         grid-template-columns: 1fr;
@@ -1405,25 +1467,159 @@ body.competitive-room #rematch-modal {
     }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 900px) {
     .game-container {
-        padding-top: var(--space-md);
+        grid-template-columns: 1fr;
+        padding: var(--space-sm);
+        padding-top: var(--space-sm);
+        gap: var(--space-sm);
+    }
+
+    .game-side-panel {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-sm);
+    }
+}
+
+@media (max-width: 768px) {
+    .game-container {
+        padding: var(--space-xs) var(--space-sm);
+        padding-top: var(--space-xs);
+        gap: var(--space-xs);
+    }
+
+    .match-header {
+        flex-direction: row;
+        gap: var(--space-xs);
+        margin-bottom: var(--space-xs);
+    }
+
+    .match-vs {
+        font-size: 0.75rem;
+        padding: 0 2px;
+    }
+
+    .player-bar {
+        padding: var(--space-xs) var(--space-sm);
+        flex-direction: column;
+        gap: var(--space-xs);
+        align-items: stretch;
+    }
+
+    .player-bar-info {
+        gap: var(--space-xs);
+    }
+
+    .player-bar-name {
+        font-size: 0.7rem;
+        max-width: 80px;
+    }
+
+    .player-bar-rating {
+        font-size: 0.65rem;
+    }
+
+    .player-bar-timer {
+        font-size: 0.9rem;
+        padding: var(--space-xs) var(--space-sm);
+        min-width: 56px;
+    }
+
+    .player-bar .tier-badge {
+        font-size: 0.75rem;
+    }
+
+    .chess-board-wrapper {
+        --board-label-size: 18px;
+    }
+
+    .turn-indicator {
+        font-size: 0.7rem;
+        padding: var(--space-xs) 0;
     }
 
     .game-side-panel {
         grid-template-columns: 1fr;
+        gap: var(--space-xs);
     }
 
-    .piece {
-        font-size: 2rem;
+    .panel-section {
+        border-radius: var(--radius-md);
+    }
+
+    .panel-header {
+        padding: var(--space-sm);
+    }
+
+    .panel-title {
+        font-size: 0.6rem;
+    }
+
+    .game-actions-panel .action-grid {
+        gap: var(--space-xs);
+        padding: 0 var(--space-sm) var(--space-sm);
+    }
+
+    .game-actions-panel .action-grid .btn {
+        min-width: 80px;
+        font-size: 0.7rem;
+        padding: var(--space-xs) var(--space-sm);
+    }
+}
+
+@media (max-width: 480px) {
+    .game-container {
+        padding: 2px var(--space-xs);
+        padding-top: 2px;
     }
 
     .match-header {
-        margin-bottom: var(--space-xs);
+        gap: 2px;
     }
 
     .player-bar {
-        padding: var(--space-sm);
+        padding: 6px 8px;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .player-bar-name {
+        max-width: 60px;
+        font-size: 0.65rem;
+    }
+
+    .player-bar-timer {
+        font-size: 0.85rem;
+        min-width: 48px;
+        padding: 4px 6px;
+    }
+
+    .chess-board-wrapper {
+        --board-label-size: 14px;
+    }
+
+    .board-labels-files,
+    .board-labels-ranks {
+        font-size: 0.5rem;
+    }
+
+    .piece {
+        font-size: 1.8rem;
+    }
+
+    .game-side-panel {
+        margin-bottom: 60px;
+    }
+}
+
+/* Safe area support for notched devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+    @media (max-width: 768px) {
+        .game-container {
+            padding-top: max(var(--space-xs), env(safe-area-inset-top));
+        }
     }
 }
 
@@ -1463,35 +1659,3 @@ body.competitive-room #rematch-modal {
 {% block extra_js %}
 <script src="{% static 'js/pages/game.js' %}?v=20260129-1"></script>
 {% endblock %}
-.chat-avatar {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    overflow: hidden;
-    background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border-light);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.chat-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.chat-content {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.chat-message.mine .chat-content {
-    align-items: flex-end;
-}
-
-.chat-message.mine .chat-avatar {
-    align-self: flex-end;
-}

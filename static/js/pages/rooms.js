@@ -107,7 +107,7 @@
                     <div class="room-host">
                         <div class="avatar">
                             ${room.host?.avatar_url
-                                ? `<img src="${Utils.escapeHtml(room.host.avatar_url)}" alt="">`
+                                ? `<img src="${Utils.escapeHtml(room.host.avatar_url)}" alt="${Utils.escapeHtml(room.host?.nickname || '호스트')}">`
                                 : '<span class="avatar-placeholder">?</span>'}
                         </div>
                         <div class="room-host-name">${Utils.escapeHtml(room.host?.nickname || '호스트')}</div>

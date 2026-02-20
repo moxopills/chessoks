@@ -263,7 +263,7 @@
 
         if (avatarEl) {
             avatarEl.innerHTML = avatar
-                ? `<img src="${Utils.escapeHtml(avatar)}" alt="">`
+                ? `<img src="${Utils.escapeHtml(avatar)}" alt="${Utils.escapeHtml(nickname)}">`
                 : '👤';
         }
         if (nicknameEl) nicknameEl.textContent = nickname;

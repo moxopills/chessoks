@@ -348,6 +348,46 @@
         flex-direction: column;
         align-items: flex-start;
     }
+
+    .profile-drawer {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(82vw, 380px);
+        max-height: 70vh;
+        overflow-y: auto;
+        z-index: 1100;
+        box-shadow: var(--shadow-lg);
+    }
+
+    .profile-drawer::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: -1;
+    }
+
+    .profile-drawer.hidden::before {
+        display: none;
+    }
+
+    .profile-drawer-header {
+        position: sticky;
+        top: 0;
+        background-color: var(--color-bg-card);
+        padding-bottom: var(--space-sm);
+        z-index: 1;
+    }
+
+    .profile-drawer #profile-close {
+        min-height: 44px;
+        min-width: 60px;
+    }
 }
 
 @media (max-width: 640px) {

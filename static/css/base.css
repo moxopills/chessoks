@@ -152,6 +152,7 @@ textarea {
         justify-content: center;
         gap: var(--space-sm);
         padding: var(--space-sm) var(--space-md);
+        padding-bottom: max(var(--space-sm), env(safe-area-inset-bottom, 0px));
         background-color: var(--color-bg-secondary);
         border-top: 1px solid var(--color-border);
         z-index: 999;
@@ -230,7 +231,7 @@ a:hover {
 .main-content {
     flex: 1;
     padding: clamp(0.75rem, 2.8vw, var(--space-lg));
-    padding-top: calc(var(--navbar-height) + clamp(0.75rem, 2.8vw, var(--space-lg)));
+    padding-top: calc(var(--navbar-height) + env(safe-area-inset-top, 0px) + clamp(0.75rem, 2.8vw, var(--space-lg)));
     width: min(100%, var(--content-max-width));
     margin: 0 auto;
     overflow-x: hidden;
@@ -273,7 +274,7 @@ html[data-theme="dark"] .footer {
     }
 
     .footer {
-        padding-bottom: calc(var(--space-sm) + 56px);
+        padding-bottom: calc(var(--space-sm) + 56px + env(safe-area-inset-bottom, 0px));
     }
 }
 
@@ -1382,5 +1383,30 @@ html[data-theme="dark"] .form-input:focus {
         left: 16px;
         right: 16px;
         transform: none;
+    }
+}
+
+/* ========================================
+   Reduced Motion Support
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .spinner,
+    .loading-spinner::before {
+        animation: none;
+    }
+
+    .skeleton {
+        animation: none;
+        background: var(--color-bg-tertiary);
     }
 }
