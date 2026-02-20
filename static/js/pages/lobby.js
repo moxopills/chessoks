@@ -42,7 +42,7 @@
     const quickMatchWait = document.getElementById('quick-match-wait');
     const randomMatchWait = document.getElementById('random-match-wait');
     const matchToast = document.getElementById('match-toast');
-    const aiLevelButtons = Array.from(document.querySelectorAll('.ai-level-btn'));
+    const aiLevelButtons = Array.from(document.querySelectorAll('.ai-level-card'));
     const aiLevelLoading = document.getElementById('ai-level-loading');
     const guestPlayBtn = document.getElementById('guest-play-btn');
     const guestStatusBar = document.getElementById('guest-status-bar');

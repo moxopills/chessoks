@@ -147,20 +147,34 @@
 </div>
 
 <div class="modal-overlay hidden" id="ai-match-modal">
-    <div class="modal">
+    <div class="modal ai-modal">
         <div class="modal-header">
-            <h2 class="modal-title">AI 대전 난이도 선택</h2>
+            <h2 class="modal-title">AI 대전</h2>
         </div>
         <div class="modal-body">
-            <div class="ai-level-grid">
-                <button class="btn btn-secondary ai-level-btn" data-level="easy">쉬움</button>
-                <button class="btn btn-secondary ai-level-btn" data-level="medium">중간</button>
-                <button class="btn btn-secondary ai-level-btn" data-level="hard">어려움</button>
+            <div class="ai-level-cards">
+                <button class="ai-level-card" data-level="easy">
+                    <span class="ai-level-icon">🌱</span>
+                    <span class="ai-level-name">쉬움</span>
+                    <span class="ai-level-desc">체스 입문자용</span>
+                    <span class="ai-level-rating">~800</span>
+                </button>
+                <button class="ai-level-card" data-level="medium">
+                    <span class="ai-level-icon">⚔️</span>
+                    <span class="ai-level-name">중간</span>
+                    <span class="ai-level-desc">기본기를 익힌 분</span>
+                    <span class="ai-level-rating">~1400</span>
+                </button>
+                <button class="ai-level-card" data-level="hard">
+                    <span class="ai-level-icon">🔥</span>
+                    <span class="ai-level-name">어려움</span>
+                    <span class="ai-level-desc">전략적 플레이어</span>
+                    <span class="ai-level-rating">~2000</span>
+                </button>
             </div>
-            <div class="ai-level-hint">난이도를 선택하면 바로 게임이 시작됩니다.</div>
             <div class="ai-level-loading hidden" id="ai-level-loading">
                 <span class="spinner"></span>
-                <span>AI 매칭 중...</span>
+                <span>AI 게임 준비 중...</span>
             </div>
             <div class="modal-actions is-centered">
                 <button class="btn btn-secondary" id="ai-match-cancel">취소</button>
@@ -489,15 +503,80 @@
     color: var(--color-text-muted);
 }
 
-.ai-level-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+.ai-modal {
+    max-width: 420px;
+}
+
+.ai-level-cards {
+    display: flex;
+    flex-direction: column;
     gap: var(--space-sm);
     margin-bottom: var(--space-md);
 }
 
-.ai-level-btn {
+.ai-level-card {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 2px var(--space-sm);
+    align-items: center;
+    padding: var(--space-md);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+}
+
+.ai-level-card:hover {
+    border-color: var(--color-accent-primary);
+    background: var(--color-bg-tertiary);
+    transform: translateX(4px);
+}
+
+.ai-level-card:active {
+    transform: translateX(2px);
+}
+
+.ai-level-icon {
+    grid-row: span 2;
+    font-size: 1.5rem;
+    text-align: center;
+}
+
+.ai-level-name {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
     font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.ai-level-desc {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.ai-level-rating {
+    grid-row: span 2;
+    font-family: var(--font-display);
+    font-size: 0.7rem;
+    color: var(--color-text-secondary);
+    background: var(--color-bg-primary);
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+}
+
+.ai-level-card[data-level="easy"]:hover {
+    border-color: var(--color-accent-success);
+}
+
+.ai-level-card[data-level="medium"]:hover {
+    border-color: var(--color-accent-warning);
+}
+
+.ai-level-card[data-level="hard"]:hover {
+    border-color: var(--color-accent-error);
 }
 
 .ai-level-hint {
