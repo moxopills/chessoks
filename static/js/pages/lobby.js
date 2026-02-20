@@ -33,7 +33,6 @@
     const tierPanel = document.getElementById('tier-panel');
     const modeToggle = document.getElementById('mode-toggle');
     const modePanel = document.getElementById('mode-panel');
-    const reportModal = document.getElementById('report-modal');
     const aiMatchModal = document.getElementById('ai-match-modal');
     const aiMatchCancel = document.getElementById('ai-match-cancel');
     const quickMatchModal = document.getElementById('quick-match-modal');
@@ -82,6 +81,8 @@
     let quickMatchStartTime = null;
     let randomMatchTimerInterval = null;
     let randomMatchStartTime = null;
+    let quickMatchPollInterval = null;
+    let randomMatchPollInterval = null;
 
     // 초기화
     init();
@@ -95,7 +96,6 @@
         setupMobileTabs();
         setupTierToggle();
         setupAiMatch();
-        setupReportModal();
         setupUserContextMenu();
         setupUserSearch();
         setupGuestMode();
@@ -420,6 +420,16 @@
             if (event.target === quickMatchModal && isMatching) return;
             if (event.target === quickMatchModal) quickMatchModal.classList.add('hidden');
         });
+
+        // ESC 키로 매칭 모달 닫기 (매칭 취소는 하지 않고 모달만 숨김)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (quickMatchModal && !quickMatchModal.classList.contains('hidden') && isMatching) {
+                    quickMatchModal.classList.add('hidden');
+                    showMatchToast('경쟁전 매칭 중...', 'quick');
+                }
+            }
+        });
     }
 
     /**
@@ -458,6 +468,16 @@
         randomMatchModal?.addEventListener('click', (event) => {
             if (event.target === randomMatchModal && isRandomMatching) return;
             if (event.target === randomMatchModal) randomMatchModal.classList.add('hidden');
+        });
+
+        // ESC 키로 매칭 모달 닫기 (매칭 취소는 하지 않고 모달만 숨김)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (randomMatchModal && !randomMatchModal.classList.contains('hidden') && isRandomMatching) {
+                    randomMatchModal.classList.add('hidden');
+                    showMatchToast('빠른 대전 매칭 중...', 'random');
+                }
+            }
         });
     }
 
@@ -520,6 +540,15 @@
                     closeModal();
                 }
             });
+        });
+
+        // ESC 키로 모달 닫기
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (aiMatchModal && !aiMatchModal.classList.contains('hidden') && !isAiMatching) {
+                    closeModal();
+                }
+            }
         });
     }
 
@@ -594,10 +623,12 @@
      */
     function pollMatchStatus() {
         if (!isMatching) return;
+        if (quickMatchPollInterval) clearInterval(quickMatchPollInterval);
 
-        const pollInterval = setInterval(async () => {
+        quickMatchPollInterval = setInterval(async () => {
             if (!isMatching) {
-                clearInterval(pollInterval);
+                clearInterval(quickMatchPollInterval);
+                quickMatchPollInterval = null;
                 return;
             }
 
@@ -605,12 +636,14 @@
                 const result = await API.post('/chess/quick-match/');
 
                 if (result.status === 'matched') {
-                    clearInterval(pollInterval);
+                    clearInterval(quickMatchPollInterval);
+                    quickMatchPollInterval = null;
                     Toast.success('매칭되었습니다!');
                     window.location.href = `/games/${result.room_id}/`;
                 }
             } catch (error) {
-                clearInterval(pollInterval);
+                clearInterval(quickMatchPollInterval);
+                quickMatchPollInterval = null;
                 setMatchingState(false);
                 Toast.error('매칭 중 오류가 발생했습니다. 다시 시도해주세요.');
             }
@@ -619,10 +652,12 @@
 
     function pollRandomMatchStatus() {
         if (!isRandomMatching) return;
+        if (randomMatchPollInterval) clearInterval(randomMatchPollInterval);
 
-        const pollInterval = setInterval(async () => {
+        randomMatchPollInterval = setInterval(async () => {
             if (!isRandomMatching) {
-                clearInterval(pollInterval);
+                clearInterval(randomMatchPollInterval);
+                randomMatchPollInterval = null;
                 return;
             }
 
@@ -630,12 +665,14 @@
                 const result = await API.post('/chess/random-match/');
 
                 if (result.status === 'matched') {
-                    clearInterval(pollInterval);
+                    clearInterval(randomMatchPollInterval);
+                    randomMatchPollInterval = null;
                     Toast.success('매칭되었습니다!');
                     window.location.href = `/games/${result.room_id}/`;
                 }
             } catch (error) {
-                clearInterval(pollInterval);
+                clearInterval(randomMatchPollInterval);
+                randomMatchPollInterval = null;
                 setRandomMatchingState(false);
                 Toast.error('매칭 중 오류가 발생했습니다. 다시 시도해주세요.');
             }
@@ -649,16 +686,23 @@
         isMatching = matching;
         quickMatchBtn.classList.toggle('btn-danger', matching);
         quickMatchBtn.classList.toggle('btn-primary', !matching);
-        quickMatchBtn.disabled = matching;
+        // 버튼 텍스트 변경 (취소 가능하도록 disabled 해제)
+        const btnText = quickMatchBtn.querySelector('.btn-text') || quickMatchBtn;
         if (matching) {
+            btnText.textContent = '매칭 취소';
             quickMatchModal?.classList.remove('hidden');
             showMatchToast('경쟁전 매칭 중...', 'quick');
             waitingRoomCard?.classList.add('hidden');
             startMatchTimer('quick');
         } else {
+            btnText.textContent = '경쟁전';
             quickMatchModal?.classList.add('hidden');
             hideMatchToast();
             stopMatchTimer('quick');
+            if (quickMatchPollInterval) {
+                clearInterval(quickMatchPollInterval);
+                quickMatchPollInterval = null;
+            }
         }
     }
 
@@ -666,16 +710,23 @@
         isRandomMatching = matching;
         if (!randomMatchBtn) return;
         randomMatchBtn.classList.toggle('btn-danger', matching);
-        randomMatchBtn.disabled = matching;
+        // 버튼 텍스트 변경 (취소 가능하도록 disabled 해제)
+        const btnText = randomMatchBtn.querySelector('.btn-text') || randomMatchBtn;
         if (matching) {
+            btnText.textContent = '매칭 취소';
             randomMatchModal?.classList.remove('hidden');
             showMatchToast('빠른 대전 매칭 중...', 'random');
             waitingRoomCard?.classList.add('hidden');
             startMatchTimer('random');
         } else {
+            btnText.textContent = '빠른 대전';
             randomMatchModal?.classList.add('hidden');
             hideMatchToast();
             stopMatchTimer('random');
+            if (randomMatchPollInterval) {
+                clearInterval(randomMatchPollInterval);
+                randomMatchPollInterval = null;
+            }
         }
     }
 
@@ -934,7 +985,7 @@
         const isMine = data.user_id === currentUserId;
         const avatar = !isMine
             ? (data.avatar_url
-                ? `<img src="${Utils.escapeHtml(data.avatar_url)}" alt="">`
+                ? `<img src="${Utils.escapeHtml(data.avatar_url)}" alt="${Utils.escapeHtml(data.nickname || '')}">`
                 : '<span class="avatar-placeholder">?</span>')
             : '';
         const messageEl = document.createElement('div');
@@ -989,10 +1040,6 @@
             modePanel.classList.toggle('hidden', !willOpen);
             modeToggle.setAttribute('aria-expanded', String(willOpen));
         });
-    }
-
-    function setupReportModal() {
-        if (!reportModal) return;
     }
 
     function handleChatBadge(data) {
@@ -1161,7 +1208,7 @@
             <div class="user-item" data-user-id="${user.id}">
                 <div class="user-avatar">
                     ${user.avatar_url
-                        ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="">`
+                        ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="${Utils.escapeHtml(user.nickname || '')}">`
                         : '👤'}
                 </div>
                 <div class="user-info">

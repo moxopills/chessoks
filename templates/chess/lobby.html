@@ -993,7 +993,7 @@
 }
 
 .guest-login-error {
-    color: var(--color-accent-danger);
+    color: var(--color-accent-error);
     font-size: 0.75rem;
     min-height: 1.2em;
     margin-bottom: var(--space-sm);
@@ -1058,7 +1058,7 @@
 
 @media (max-width: 768px) {
     .guest-status-bar {
-        bottom: 80px; /* Mobile tabbar height */
+        bottom: calc(80px + env(safe-area-inset-bottom, 0px));
         left: 16px;
         right: 16px;
         transform: none;
