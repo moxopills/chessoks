@@ -262,6 +262,7 @@
 }
 
 .profile-actions {
+    position: relative;
     display: flex;
     gap: var(--space-sm);
     margin: var(--space-md) 0;
@@ -428,20 +429,22 @@
         transform: translate(-50%, -50%);
         width: min(82vw, 380px);
         max-height: 70vh;
+        overflow: hidden;
         overflow-y: auto;
         z-index: 1100;
         box-shadow: var(--shadow-lg);
+        isolation: isolate;
     }
 
     .profile-drawer::before {
         content: '';
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
         background-color: rgba(0, 0, 0, 0.5);
         z-index: -1;
+        pointer-events: none;
     }
 
     .profile-drawer.hidden::before {
@@ -459,6 +462,12 @@
     .profile-drawer #profile-close {
         min-height: 44px;
         min-width: 60px;
+    }
+
+    .profile-drawer .profile-actions {
+        position: relative;
+        width: 100%;
+        transform: none;
     }
 
     .user-menu-btn {
