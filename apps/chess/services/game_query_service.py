@@ -12,16 +12,16 @@ class GameQueryService:
     """게임 조회 관련 서비스"""
 
     WHITE_WIN_RESULTS = {
-        "white_win",
-        "checkmate_white",
-        "timeout_black",
-        "resignation_black",
+        Game.Status.WHITE_WIN,
+        Game.Status.CHECKMATE_WHITE,
+        Game.Status.TIMEOUT_BLACK,
+        Game.Status.RESIGNATION_BLACK,
     }
     BLACK_WIN_RESULTS = {
-        "black_win",
-        "checkmate_black",
-        "timeout_white",
-        "resignation_white",
+        Game.Status.BLACK_WIN,
+        Game.Status.CHECKMATE_BLACK,
+        Game.Status.TIMEOUT_WHITE,
+        Game.Status.RESIGNATION_WHITE,
     }
 
     @staticmethod
@@ -84,7 +84,7 @@ class GameQueryService:
             game = Game.objects.select_related("room").get(pk=game_id)
         except Game.DoesNotExist:
             raise NotFound("게임을 찾을 수 없습니다.") from None
-        if game.result != "playing":
+        if game.result != Game.Status.PLAYING:
             raise ValidationError({"game": "진행 중인 게임이 아닙니다."})
         if user_id not in {game.white_player_id, game.black_player_id}:
             return []
@@ -217,12 +217,12 @@ class GameQueryService:
         if result:
             if result in {"win", "lose", "draw"}:
                 draw_results = {
-                    "draw",
-                    "stalemate",
-                    "draw_agreement",
-                    "draw_repetition",
-                    "draw_fifty_move",
-                    "draw_insufficient",
+                    Game.Status.DRAW,
+                    Game.Status.STALEMATE,
+                    Game.Status.DRAW_AGREEMENT,
+                    Game.Status.DRAW_REPETITION,
+                    Game.Status.DRAW_FIFTY_MOVE,
+                    Game.Status.DRAW_INSUFFICIENT,
                 }
                 white_win_results = GameQueryService.WHITE_WIN_RESULTS
                 black_win_results = GameQueryService.BLACK_WIN_RESULTS
@@ -239,12 +239,12 @@ class GameQueryService:
                         | (Q(black_player=user) & Q(result__in=white_win_results))
                     )
             else:
-                valid_results = {choice[0] for choice in Game.RESULT_CHOICES}
+                valid_results = {choice[0] for choice in Game.Status.choices}
                 if result not in valid_results:
                     raise ValidationError({"result": "유효하지 않은 결과입니다."})
                 queryset = queryset.filter(result=result)
         else:
-            queryset = queryset.exclude(result="playing")
+            queryset = queryset.exclude(result=Game.Status.PLAYING)
 
         if room_type:
             if room_type not in {"quick", "random", "custom", "ai_easy", "ai_medium", "ai_hard"}:
@@ -262,7 +262,7 @@ class GameQueryService:
         return list(
             Game.objects.user_games(user)
             .select_related("room", "white_player__stats", "black_player__stats")
-            .exclude(result="playing")
+            .exclude(result=Game.Status.PLAYING)
             .exclude(room__room_type__startswith="ai_")
             .order_by("-created_at")[:limit]
         )
@@ -273,12 +273,12 @@ class GameQueryService:
         white_win_results = GameQueryService.WHITE_WIN_RESULTS
         black_win_results = GameQueryService.BLACK_WIN_RESULTS
         draw_results = {
-            "draw",
-            "stalemate",
-            "draw_agreement",
-            "draw_repetition",
-            "draw_fifty_move",
-            "draw_insufficient",
+            Game.Status.DRAW,
+            Game.Status.STALEMATE,
+            Game.Status.DRAW_AGREEMENT,
+            Game.Status.DRAW_REPETITION,
+            Game.Status.DRAW_FIFTY_MOVE,
+            Game.Status.DRAW_INSUFFICIENT,
         }
 
         base_qs = (
@@ -286,7 +286,7 @@ class GameQueryService:
                 Q(white_player=user, black_player=opponent)
                 | Q(white_player=opponent, black_player=user)
             )
-            .exclude(result="playing")
+            .exclude(result=Game.Status.PLAYING)
             .exclude(room__room_type__startswith="ai_")
         )
 

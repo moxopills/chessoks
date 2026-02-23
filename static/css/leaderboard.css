@@ -424,27 +424,24 @@
 
     .profile-drawer {
         position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        inset: 0;
+        margin: auto;
+        transform: none;
         width: min(82vw, 380px);
-        max-height: 70vh;
+        height: fit-content;
+        max-height: 85dvh;
         overflow: hidden;
         overflow-y: auto;
         z-index: 1100;
-        box-shadow: var(--shadow-lg);
+        background-color: var(--color-bg-card);
+        box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.6), var(--shadow-lg);
         isolation: isolate;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
     }
 
     .profile-drawer::before {
-        content: '';
-        position: fixed;
-        inset: 0;
-        width: 100vw;
-        height: 100vh;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: -1;
-        pointer-events: none;
+        display: none;
     }
 
     .profile-drawer.hidden::before {
