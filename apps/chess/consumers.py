@@ -10,7 +10,7 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from apps.accounts.models import User
 from apps.accounts.services import OnlineStatusService
 from apps.chess.models import LobbyMessage, Room
-from apps.chess.services import AiService, GameService
+from apps.chess.services import GameService
 from apps.chess.utils import check_profanity, get_profanity_warning
 
 logger = logging.getLogger(__name__)
@@ -614,7 +614,6 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             self.group_name, {"type": "broadcast", "payload": payload}
         )
 
-
     async def _broadcast_user_left(self):
         """유저 퇴장 브로드캐스트"""
         user = self.scope["user"]
@@ -625,7 +624,6 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}
         )
-
 
     async def _broadcast_lobby_users(self):
         users = await self._get_lobby_users()
@@ -698,7 +696,6 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             self.group_name, {"type": "broadcast", "payload": payload}
         )
 
-
     async def _broadcast_guest_left(self):
         """게스트 퇴장 브로드캐스트"""
         guest = self.scope.get("guest")
@@ -712,4 +709,3 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}
         )
-

@@ -101,7 +101,9 @@ class GameService:
             captured_piece = board.piece_at(capture_square)
             if captured_piece:
                 captured_letter = captured_piece.symbol().upper()
-                captured_color = Game.Color.WHITE if captured_piece.color == chess.WHITE else Game.Color.BLACK
+                captured_color = (
+                    Game.Color.WHITE if captured_piece.color == chess.WHITE else Game.Color.BLACK
+                )
 
         board.push(move)
         new_fen = board.fen()
@@ -188,7 +190,7 @@ class GameService:
 
         if result != Game.Status.PLAYING:
             transaction.on_commit(lambda: GameService._notify_game_end(game, rating_info))
-        
+
         # AI 턴 처리
         from apps.chess.services import AiService
         from apps.chess.tasks import handle_ai_move
@@ -238,9 +240,7 @@ class GameService:
             raise ValidationError("이미 종료된 게임입니다.")
 
         player_color = GameService._player_color(game, player)
-        opponent_color = (
-            Game.Color.BLACK if player_color == Game.Color.WHITE else Game.Color.WHITE
-        )
+        opponent_color = Game.Color.BLACK if player_color == Game.Color.WHITE else Game.Color.WHITE
         key = GameService._cache_key("draw_offer", game.id, player_color)
         opponent_key = GameService._cache_key("draw_offer", game.id, opponent_color)
 
@@ -266,9 +266,7 @@ class GameService:
             raise ValidationError("경쟁전에서는 리매치를 요청할 수 없습니다.")
 
         player_color = GameService._player_color(game, player)
-        opponent_color = (
-            Game.Color.BLACK if player_color == Game.Color.WHITE else Game.Color.WHITE
-        )
+        opponent_color = Game.Color.BLACK if player_color == Game.Color.WHITE else Game.Color.WHITE
         key = GameService._cache_key("rematch_offer", game.id, player_color)
         opponent_key = GameService._cache_key("rematch_offer", game.id, opponent_color)
 
@@ -287,9 +285,7 @@ class GameService:
 
         cache.set(key, True, timeout=GameService.REMATCH_OFFER_TTL)
         transaction.on_commit(
-            lambda: GameService._notify_rematch(
-                game, status="requested", sender_color=player_color
-            )
+            lambda: GameService._notify_rematch(game, status="requested", sender_color=player_color)
         )
         return None, "pending", player_color
 
@@ -303,9 +299,7 @@ class GameService:
             raise ValidationError("경쟁전에서는 리매치를 사용할 수 없습니다.")
 
         player_color = GameService._player_color(game, player)
-        opponent_color = (
-            Game.Color.BLACK if player_color == Game.Color.WHITE else Game.Color.WHITE
-        )
+        opponent_color = Game.Color.BLACK if player_color == Game.Color.WHITE else Game.Color.WHITE
         opponent_key = GameService._cache_key("rematch_offer", game.id, opponent_color)
 
         # 상대방의 리매치 요청이 있으면 삭제
@@ -622,7 +616,10 @@ class GameService:
         ai_room = game.room.room_type.startswith("ai_")
         competitive_room = GameService._is_competitive_room(game.room.room_type)
 
-        for color, player in ((Game.Color.WHITE, game.white_player), (Game.Color.BLACK, game.black_player)):
+        for color, player in (
+            (Game.Color.WHITE, game.white_player),
+            (Game.Color.BLACK, game.black_player),
+        ):
             cache.delete(f"user_profile_{player.id}")
             outcome = GameService._result_outcome(game.result, color)
             outcome_text = {"win": "승리", "loss": "패배", "draw": "무승부"}[outcome]
