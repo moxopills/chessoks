@@ -10,8 +10,7 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from apps.accounts.models import User
 from apps.accounts.services import OnlineStatusService
 from apps.chess.models import LobbyMessage, Room
-from apps.chess.services import AiService, GameService
-from apps.chess.tasks import handle_ai_move
+from apps.chess.services import GameService
 from apps.chess.utils import check_profanity, get_profanity_warning
 
 logger = logging.getLogger(__name__)
@@ -134,10 +133,6 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             payload["commentary_level"] = result.commentary_level
             payload["commentary_color"] = result.commentary_color
         await self._broadcast(payload)
-
-        room_type = result.game.room.room_type
-        if room_type in AiService.ROOM_TYPE_TO_LEVEL and result.game.result == "playing":
-            handle_ai_move.delay(result.game.id)
 
     async def _handle_resign(self, content):
         if not self.is_player:
@@ -320,7 +315,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
 
         # prefetch_related 대신 직접 Game 쿼리
         game = (
-            Game.objects.filter(room_id=self.room_id, result="playing")
+            Game.objects.filter(room_id=self.room_id, result=Game.Status.PLAYING)
             .only("id", "white_player_id", "black_player_id")
             .first()
         )
@@ -348,7 +343,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
 
         # prefetch_related 대신 직접 Game 쿼리
         game = (
-            Game.objects.filter(room_id=self.room_id, result="playing")
+            Game.objects.filter(room_id=self.room_id, result=Game.Status.PLAYING)
             .only("id", "white_player_id", "black_player_id")
             .first()
         )
@@ -618,7 +613,6 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}
         )
-        await self._broadcast_lobby_users()
 
     async def _broadcast_user_left(self):
         """유저 퇴장 브로드캐스트"""
@@ -630,7 +624,6 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}
         )
-        await self._broadcast_lobby_users()
 
     async def _broadcast_lobby_users(self):
         users = await self._get_lobby_users()
@@ -702,7 +695,6 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}
         )
-        await self._broadcast_lobby_users()
 
     async def _broadcast_guest_left(self):
         """게스트 퇴장 브로드캐스트"""
@@ -717,4 +709,3 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}
         )
-        await self._broadcast_lobby_users()

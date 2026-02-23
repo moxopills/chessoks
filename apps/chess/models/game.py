@@ -11,11 +11,11 @@ class GameManager(models.Manager):
 
     def ongoing_games(self):
         """진행 중인 게임"""
-        return self.filter(result="playing")
+        return self.filter(result=self.model.Status.PLAYING)
 
     def finished_games(self):
         """종료된 게임"""
-        return self.exclude(result="playing")
+        return self.exclude(result=self.model.Status.PLAYING)
 
     def user_games(self, user):
         """유저가 참여한 게임"""
@@ -49,23 +49,26 @@ class Game(models.Model):
     Note: 비즈니스 로직은 chess.services.GameService 참조
     """
 
-    RESULT_CHOICES = [
-        ("playing", "진행 중"),
-        ("white_win", "백 승리"),
-        ("black_win", "흑 승리"),
-        ("draw", "무승부"),
-        ("stalemate", "스테일메이트"),
-        ("checkmate_white", "체크메이트 - 백 승리"),
-        ("checkmate_black", "체크메이트 - 흑 승리"),
-        ("timeout_white", "시간 초과 - 흑 승리"),
-        ("timeout_black", "시간 초과 - 백 승리"),
-        ("resignation_white", "기권 - 흑 승리"),
-        ("resignation_black", "기권 - 백 승리"),
-        ("draw_agreement", "합의 무승부"),
-        ("draw_repetition", "3회 반복 무승부"),
-        ("draw_fifty_move", "50수 규칙 무승부"),
-        ("draw_insufficient", "기물 부족 무승부"),
-    ]
+    class Status(models.TextChoices):
+        PLAYING = "playing", "진행 중"
+        WHITE_WIN = "white_win", "백 승리"
+        BLACK_WIN = "black_win", "흑 승리"
+        DRAW = "draw", "무승부"
+        STALEMATE = "stalemate", "스테일메이트"
+        CHECKMATE_WHITE = "checkmate_white", "체크메이트 - 백 승리"
+        CHECKMATE_BLACK = "checkmate_black", "체크메이트 - 흑 승리"
+        TIMEOUT_WHITE = "timeout_white", "시간 초과 - 흑 승리"
+        TIMEOUT_BLACK = "timeout_black", "시간 초과 - 백 승리"
+        RESIGNATION_WHITE = "resignation_white", "기권 - 흑 승리"
+        RESIGNATION_BLACK = "resignation_black", "기권 - 백 승리"
+        DRAW_AGREEMENT = "draw_agreement", "합의 무승부"
+        DRAW_REPETITION = "draw_repetition", "3회 반복 무승부"
+        DRAW_FIFTY_MOVE = "draw_fifty_move", "50수 규칙 무승부"
+        DRAW_INSUFFICIENT = "draw_insufficient", "기물 부족 무승부"
+
+    class Color(models.TextChoices):
+        WHITE = "white", "백"
+        BLACK = "black", "흑"
 
     # 게임이 속한 방 (한 방에서 여러 게임 가능 - 리매치)
     room = models.ForeignKey(
@@ -100,7 +103,7 @@ class Game(models.Model):
 
     # 게임 결과
     result = models.CharField(
-        max_length=20, choices=RESULT_CHOICES, default="playing", help_text="게임 결과"
+        max_length=20, choices=Status.choices, default=Status.PLAYING, help_text="게임 결과"
     )
 
     # 총 수 (move count)
@@ -115,8 +118,8 @@ class Game(models.Model):
     # 현재 차례
     current_turn = models.CharField(
         max_length=5,
-        choices=[("white", "백"), ("black", "흑")],
-        default="white",
+        choices=Color.choices,
+        default=Color.WHITE,
         help_text="현재 차례 플레이어",
     )
 
@@ -185,13 +188,25 @@ class Game(models.Model):
     @property
     def is_finished(self):
         """게임 종료 여부 (읽기 전용 property)"""
-        return self.result != "playing"
+        return self.result != self.Status.PLAYING
 
     @property
     def winner(self):
         """승자 반환 (읽기 전용 property)"""
-        if self.result in ["white_win", "checkmate_white", "timeout_black", "resignation_black"]:
+        white_wins = [
+            self.Status.WHITE_WIN,
+            self.Status.CHECKMATE_WHITE,
+            self.Status.TIMEOUT_BLACK,
+            self.Status.RESIGNATION_BLACK,
+        ]
+        black_wins = [
+            self.Status.BLACK_WIN,
+            self.Status.CHECKMATE_BLACK,
+            self.Status.TIMEOUT_WHITE,
+            self.Status.RESIGNATION_WHITE,
+        ]
+        if self.result in white_wins:
             return self.white_player
-        elif self.result in ["black_win", "checkmate_black", "timeout_white", "resignation_white"]:
+        elif self.result in black_wins:
             return self.black_player
         return None
