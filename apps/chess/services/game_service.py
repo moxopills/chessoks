@@ -50,7 +50,7 @@ class GameService:
     def make_move(game_id: int, player, uci: str, promotion: str | None = None) -> MoveResult:
         game = GameService._get_game_for_update(game_id)
 
-        if game.result != "playing":
+        if game.result != Game.Status.PLAYING:
             raise ValidationError("이미 종료된 게임입니다.")
 
         if game.room.status != "playing":
@@ -69,7 +69,9 @@ class GameService:
         now = timezone.now()
         time_spent = GameService._calc_time_spent(game, now)
         remaining_after = GameService._remaining_after_spent(game, player_color, time_spent)
-        if remaining_after <= 0:
+
+        # 시간 초과 체크 (0.5초 Grace Period 적용)
+        if remaining_after <= -0.5:
             GameService.apply_timeout(game, player_color, now)
             return MoveResult(game=game, move=None)
 
@@ -99,7 +101,7 @@ class GameService:
             captured_piece = board.piece_at(capture_square)
             if captured_piece:
                 captured_letter = captured_piece.symbol().upper()
-                captured_color = "white" if captured_piece.color == chess.WHITE else "black"
+                captured_color = Game.Color.WHITE if captured_piece.color == chess.WHITE else Game.Color.BLACK
 
         board.push(move)
         new_fen = board.fen()
@@ -107,11 +109,15 @@ class GameService:
         is_check = board.is_check()
         is_checkmate = board.is_checkmate()
         result = GameService._determine_result(board)
-        if result == "playing" and not any(board.legal_moves):
+        if result == Game.Status.PLAYING and not any(board.legal_moves):
             if board.is_check():
-                result = "checkmate_black" if board.turn == chess.WHITE else "checkmate_white"
+                result = (
+                    Game.Status.CHECKMATE_BLACK
+                    if board.turn == chess.WHITE
+                    else Game.Status.CHECKMATE_WHITE
+                )
             else:
-                result = "stalemate"
+                result = Game.Status.STALEMATE
 
         move_number = (game.move_count // 2) + 1
         move_obj = Move.objects.create(
@@ -128,8 +134,8 @@ class GameService:
             is_checkmate=is_checkmate,
             is_castling=is_castling,
             is_en_passant=is_en_passant,
-            captured_piece=captured_letter or "",  # 잡힌 기물 저장 (성능 최적화)
-            captured_color=captured_color or "",  # 잡힌 기물 색상 저장
+            captured_piece=captured_letter or "",
+            captured_color=captured_color or "",
             promotion=GameService._promotion_symbol(move),
             fen_after_move=new_fen,
             time_spent=time_spent,
@@ -151,12 +157,12 @@ class GameService:
         game.fen = new_fen
         game.pgn = GameService._append_pgn(game.pgn, san, move_number, player_color)
         game.move_count += 1
-        game.current_turn = "white" if board.turn == chess.WHITE else "black"
+        game.current_turn = Game.Color.WHITE if board.turn == chess.WHITE else Game.Color.BLACK
         game.turn_started_at = now
 
         started_at_set = False
         rating_info = None
-        if result != "playing":
+        if result != Game.Status.PLAYING:
             game.result = result
             game.finished_at = now
             rating_info = GameService._apply_post_game_updates(game)
@@ -173,14 +179,26 @@ class GameService:
             "white_time_remaining",
             "black_time_remaining",
         ]
-        if result != "playing":
+        if result != Game.Status.PLAYING:
             update_fields += ["result", "finished_at"]
         elif started_at_set:
             update_fields += ["started_at"]
 
         game.save(update_fields=update_fields)
-        if result != "playing":
-            GameService._notify_game_end(game, rating_info)
+
+        if result != Game.Status.PLAYING:
+            transaction.on_commit(lambda: GameService._notify_game_end(game, rating_info))
+        
+        # AI 턴 처리
+        from apps.chess.services import AiService
+        from apps.chess.tasks import handle_ai_move
+
+        if (
+            game.room.room_type in AiService.ROOM_TYPE_TO_LEVEL
+            and game.result == Game.Status.PLAYING
+        ):
+            transaction.on_commit(lambda: handle_ai_move.delay(game.id))
+
         return MoveResult(
             game=game,
             move=move_obj,
@@ -195,15 +213,19 @@ class GameService:
     @transaction.atomic
     def resign(game_id: int, player) -> Game:
         game = GameService._get_game_for_update(game_id)
-        if game.result != "playing":
+        if game.result != Game.Status.PLAYING:
             raise ValidationError("이미 종료된 게임입니다.")
 
         player_color = GameService._player_color(game, player)
-        game.result = "resignation_white" if player_color == "white" else "resignation_black"
+        game.result = (
+            Game.Status.RESIGNATION_WHITE
+            if player_color == Game.Color.WHITE
+            else Game.Status.RESIGNATION_BLACK
+        )
         game.finished_at = timezone.now()
         rating_info = GameService._apply_post_game_updates(game)
         game.save(update_fields=["result", "finished_at"])
-        GameService._notify_game_end(game, rating_info)
+        transaction.on_commit(lambda: GameService._notify_game_end(game, rating_info))
         GameService._clear_cache("draw_offer", game.id)
         GameService._clear_cache("disconnect", game.id)
         return game
@@ -212,21 +234,23 @@ class GameService:
     @transaction.atomic
     def request_draw(game_id: int, player) -> tuple[Game | None, str, str]:
         game = GameService._get_game_for_update(game_id)
-        if game.result != "playing":
+        if game.result != Game.Status.PLAYING:
             raise ValidationError("이미 종료된 게임입니다.")
 
         player_color = GameService._player_color(game, player)
-        opponent_color = "black" if player_color == "white" else "white"
+        opponent_color = (
+            Game.Color.BLACK if player_color == Game.Color.WHITE else Game.Color.WHITE
+        )
         key = GameService._cache_key("draw_offer", game.id, player_color)
         opponent_key = GameService._cache_key("draw_offer", game.id, opponent_color)
 
         # cache.delete()는 삭제 성공 시 True 반환 (원자적 연산)
         if cache.delete(opponent_key):
-            game.result = "draw_agreement"
+            game.result = Game.Status.DRAW_AGREEMENT
             game.finished_at = timezone.now()
             rating_info = GameService._apply_post_game_updates(game)
             game.save(update_fields=["result", "finished_at"])
-            GameService._notify_game_end(game, rating_info)
+            transaction.on_commit(lambda: GameService._notify_game_end(game, rating_info))
             return game, "accepted", player_color
 
         cache.set(key, True, timeout=GameService.DRAW_OFFER_TTL)
@@ -236,61 +260,75 @@ class GameService:
     @transaction.atomic
     def request_rematch(game_id: int, player) -> tuple[Game | None, str, str]:
         game = GameService._get_game_for_update(game_id)
-        if game.result == "playing":
+        if game.result == Game.Status.PLAYING:
             raise ValidationError("진행 중인 게임에는 리매치를 요청할 수 없습니다.")
         if GameService._is_competitive_room(game.room.room_type):
             raise ValidationError("경쟁전에서는 리매치를 요청할 수 없습니다.")
 
         player_color = GameService._player_color(game, player)
-        opponent_color = "black" if player_color == "white" else "white"
+        opponent_color = (
+            Game.Color.BLACK if player_color == Game.Color.WHITE else Game.Color.WHITE
+        )
         key = GameService._cache_key("rematch_offer", game.id, player_color)
         opponent_key = GameService._cache_key("rematch_offer", game.id, opponent_color)
 
         # cache.delete()는 삭제 성공 시 True 반환 (원자적 연산)
         if cache.delete(opponent_key):
             rematch_game = GameService._create_rematch_game(game)
-            GameService._notify_rematch(
-                game,
-                status="accepted",
-                sender_color=player_color,
-                rematch_game_id=rematch_game.id,
+            transaction.on_commit(
+                lambda: GameService._notify_rematch(
+                    game,
+                    status="accepted",
+                    sender_color=player_color,
+                    rematch_game_id=rematch_game.id,
+                )
             )
             return rematch_game, "accepted", player_color
 
         cache.set(key, True, timeout=GameService.REMATCH_OFFER_TTL)
-        GameService._notify_rematch(game, status="requested", sender_color=player_color)
+        transaction.on_commit(
+            lambda: GameService._notify_rematch(
+                game, status="requested", sender_color=player_color
+            )
+        )
         return None, "pending", player_color
 
     @staticmethod
     def decline_rematch(game_id: int, player) -> tuple[bool, str]:
         """리매치 요청 거절"""
         game = Game.objects.select_related("white_player", "black_player").get(pk=game_id)
-        if game.result == "playing":
+        if game.result == Game.Status.PLAYING:
             raise ValidationError("진행 중인 게임입니다.")
         if GameService._is_competitive_room(game.room.room_type):
             raise ValidationError("경쟁전에서는 리매치를 사용할 수 없습니다.")
 
         player_color = GameService._player_color(game, player)
-        opponent_color = "black" if player_color == "white" else "white"
+        opponent_color = (
+            Game.Color.BLACK if player_color == Game.Color.WHITE else Game.Color.WHITE
+        )
         opponent_key = GameService._cache_key("rematch_offer", game.id, opponent_color)
 
         # 상대방의 리매치 요청이 있으면 삭제
         if cache.delete(opponent_key):
-            GameService._notify_rematch(game, status="declined", sender_color=player_color)
+            transaction.on_commit(
+                lambda: GameService._notify_rematch(
+                    game, status="declined", sender_color=player_color
+                )
+            )
             return True, player_color
         return False, player_color
 
     @staticmethod
     def _player_color(game: Game, player) -> str:
         if player == game.white_player:
-            return "white"
+            return Game.Color.WHITE
         if player == game.black_player:
-            return "black"
+            return Game.Color.BLACK
         raise ValidationError("게임 참가자가 아닙니다.")
 
     @staticmethod
     def _ensure_turn_matches(board: chess.Board, player_color: str) -> None:
-        expected = chess.WHITE if player_color == "white" else chess.BLACK
+        expected = chess.WHITE if player_color == Game.Color.WHITE else chess.BLACK
         if board.turn != expected:
             raise ValidationError("현재 보드 턴과 요청이 일치하지 않습니다.")
 
@@ -356,7 +394,7 @@ class GameService:
             return "중앙을 장악했습니다. 좋은 전개입니다.", "positive"
 
         # 기물 노출 경고 (단순 휴리스틱)
-        moved_color = chess.WHITE if player_color == "white" else chess.BLACK
+        moved_color = chess.WHITE if player_color == Game.Color.WHITE else chess.BLACK
         opponent = not moved_color
         if post_board.is_attacked_by(opponent, move.to_square) and not post_board.is_attacked_by(
             moved_color, move.to_square
@@ -367,25 +405,25 @@ class GameService:
 
     @staticmethod
     def _remaining_after_spent(game: Game, player_color: str, time_spent: float) -> int:
-        if player_color == "white":
+        if player_color == Game.Color.WHITE:
             return int(game.white_time_remaining - time_spent)
         return int(game.black_time_remaining - time_spent)
 
     @staticmethod
     def _apply_time_increment(game: Game, player_color: str, remaining_after: int) -> None:
         increment = game.room.increment_seconds
-        if player_color == "white":
+        if player_color == Game.Color.WHITE:
             game.white_time_remaining = remaining_after + increment
         else:
             game.black_time_remaining = remaining_after + increment
 
     @staticmethod
     def apply_timeout(game: Game, player_color: str, now) -> None:
-        if player_color == "white":
-            game.result = "timeout_white"
+        if player_color == Game.Color.WHITE:
+            game.result = Game.Status.TIMEOUT_WHITE
             game.white_time_remaining = 0
         else:
-            game.result = "timeout_black"
+            game.result = Game.Status.TIMEOUT_BLACK
             game.black_time_remaining = 0
         rating_info = GameService._apply_post_game_updates(game)
         game.finished_at = now
@@ -397,7 +435,7 @@ class GameService:
                 "black_time_remaining",
             ]
         )
-        GameService._notify_game_end(game, rating_info)
+        transaction.on_commit(lambda: GameService._notify_game_end(game, rating_info))
         GameService._clear_cache("draw_offer", game.id)
         GameService._clear_cache("rematch_offer", game.id)
         GameService._clear_cache("disconnect", game.id)
@@ -406,7 +444,7 @@ class GameService:
     def check_and_apply_timeout(game_id: int) -> Game | None:
         """시간 초과 체크 및 적용"""
         game = Game.objects.select_for_update().get(id=game_id)
-        if game.result != "playing" or not game.time_limit:
+        if game.result != Game.Status.PLAYING or not game.time_limit:
             return game
 
         now = timezone.now()
@@ -420,14 +458,14 @@ class GameService:
 
     @staticmethod
     def apply_disconnect_forfeit(game: Game, player_color: str, now) -> None:
-        if player_color == "white":
-            game.result = "resignation_white"
+        if player_color == Game.Color.WHITE:
+            game.result = Game.Status.RESIGNATION_WHITE
         else:
-            game.result = "resignation_black"
+            game.result = Game.Status.RESIGNATION_BLACK
         rating_info = GameService._apply_post_game_updates(game)
         game.finished_at = now
         game.save(update_fields=["result", "finished_at"])
-        GameService._notify_game_end(game, rating_info)
+        transaction.on_commit(lambda: GameService._notify_game_end(game, rating_info))
         GameService._clear_cache("draw_offer", game.id)
         GameService._clear_cache("rematch_offer", game.id)
         GameService._clear_cache("disconnect", game.id)
@@ -435,20 +473,24 @@ class GameService:
     @staticmethod
     def _determine_result(board: chess.Board) -> str:
         if board.is_checkmate():
-            return "checkmate_black" if board.turn == chess.WHITE else "checkmate_white"
+            return (
+                Game.Status.CHECKMATE_BLACK
+                if board.turn == chess.WHITE
+                else Game.Status.CHECKMATE_WHITE
+            )
         if board.is_stalemate():
-            return "stalemate"
+            return Game.Status.STALEMATE
         if board.is_insufficient_material():
-            return "draw_insufficient"
+            return Game.Status.DRAW_INSUFFICIENT
         if board.can_claim_threefold_repetition():
-            return "draw_repetition"
+            return Game.Status.DRAW_REPETITION
         if board.can_claim_fifty_moves():
-            return "draw_fifty_move"
-        return "playing"
+            return Game.Status.DRAW_FIFTY_MOVE
+        return Game.Status.PLAYING
 
     @staticmethod
     def _append_pgn(pgn: str, san: str, move_number: int, player_color: str) -> str:
-        prefix = f"{move_number}. {san}" if player_color == "white" else san
+        prefix = f"{move_number}. {san}" if player_color == Game.Color.WHITE else san
         if not pgn:
             return prefix
         return f"{pgn} {prefix}"
@@ -526,8 +568,8 @@ class GameService:
     @staticmethod
     def _clear_cache(prefix: str, game_id: int) -> None:
         """양측 캐시 키 삭제"""
-        cache.delete(GameService._cache_key(prefix, game_id, "white"))
-        cache.delete(GameService._cache_key(prefix, game_id, "black"))
+        cache.delete(GameService._cache_key(prefix, game_id, Game.Color.WHITE))
+        cache.delete(GameService._cache_key(prefix, game_id, Game.Color.BLACK))
 
     @staticmethod
     def _create_rematch_game(game: Game) -> Game:
@@ -563,8 +605,12 @@ class GameService:
 
         from apps.chess.utils import broadcast_room_state, broadcast_room_update
 
-        broadcast_room_update(room)
-        broadcast_room_state(room)
+        # Room 관련 브로드캐스트는 Transaction 내에서 실행되어야 Room 변경 사항이 보임
+        # 하지만 Redis 메시지 전송은 DB 락을 잡을 필요가 없으므로 on_commit 사용 권장.
+        # 그러나 여기서는 Room 저장이 완료되었으므로 호출해도 무방.
+        # 더 완벽하게 하려면:
+        transaction.on_commit(lambda: broadcast_room_update(room))
+        transaction.on_commit(lambda: broadcast_room_state(room))
 
         return Game.objects.create(room=room, white_player=white_player, black_player=black_player)
 
@@ -576,7 +622,7 @@ class GameService:
         ai_room = game.room.room_type.startswith("ai_")
         competitive_room = GameService._is_competitive_room(game.room.room_type)
 
-        for color, player in (("white", game.white_player), ("black", game.black_player)):
+        for color, player in ((Game.Color.WHITE, game.white_player), (Game.Color.BLACK, game.black_player)):
             cache.delete(f"user_profile_{player.id}")
             outcome = GameService._result_outcome(game.result, color)
             outcome_text = {"win": "승리", "loss": "패배", "draw": "무승부"}[outcome]
@@ -648,14 +694,19 @@ class GameService:
         room.status = "finished"
         room.finished_at = game.finished_at or timezone.now()
         room.save(update_fields=["status", "finished_at"])
+        # 여기서도 on_commit을 쓰면 좋지만, _notify_game_end 자체가 이미 on_commit으로 호출되므로 중복 래핑됨.
+        # 하지만 _notify_game_end가 동기적으로 호출될 수도 있으므로 안전장치로 놔둠.
+        # 주의: 람다 내부에서 호출되므로 트랜잭션이 이미 끝난 상태일 수 있음.
+        # 따라서 _notify_game_end는 트랜잭션 밖에서 실행되므로 on_commit을 또 쓸 필요는 없음.
+        # 하지만 일관성을 위해 둠 (어차피 즉시 실행됨).
         broadcast_room_update(room)
 
     @staticmethod
     def _notify_rematch(
         game: Game, *, status: str, sender_color: str, rematch_game_id: int | None = None
     ) -> None:
-        sender = game.white_player if sender_color == "white" else game.black_player
-        opponent = game.black_player if sender_color == "white" else game.white_player
+        sender = game.white_player if sender_color == Game.Color.WHITE else game.black_player
+        opponent = game.black_player if sender_color == Game.Color.WHITE else game.white_player
         if status == "requested":
             NotificationService.create_notification(
                 user=opponent,
@@ -707,36 +758,36 @@ class GameService:
     @staticmethod
     def _result_outcome(result: str, player_color: str) -> str:
         white_win = {
-            "white_win",
-            "checkmate_white",
-            "timeout_black",
-            "resignation_black",
+            Game.Status.WHITE_WIN,
+            Game.Status.CHECKMATE_WHITE,
+            Game.Status.TIMEOUT_BLACK,
+            Game.Status.RESIGNATION_BLACK,
         }
         black_win = {
-            "black_win",
-            "checkmate_black",
-            "timeout_white",
-            "resignation_white",
+            Game.Status.BLACK_WIN,
+            Game.Status.CHECKMATE_BLACK,
+            Game.Status.TIMEOUT_WHITE,
+            Game.Status.RESIGNATION_WHITE,
         }
         if result in white_win:
-            return "win" if player_color == "white" else "loss"
+            return "win" if player_color == Game.Color.WHITE else "loss"
         if result in black_win:
-            return "loss" if player_color == "white" else "win"
+            return "loss" if player_color == Game.Color.WHITE else "win"
         return "draw"
 
     @staticmethod
     def _result_reason(result: str) -> str:
         reasons = {
-            "checkmate_white": "체크메이트",
-            "checkmate_black": "체크메이트",
-            "timeout_white": "시간 초과",
-            "timeout_black": "시간 초과",
-            "resignation_white": "기권",
-            "resignation_black": "기권",
-            "stalemate": "스테일메이트",
-            "draw_insufficient": "기물 부족",
-            "draw_repetition": "삼중 반복",
-            "draw_fifty_move": "50수 규칙",
-            "draw_agreement": "합의 무승부",
+            Game.Status.CHECKMATE_WHITE: "체크메이트",
+            Game.Status.CHECKMATE_BLACK: "체크메이트",
+            Game.Status.TIMEOUT_WHITE: "시간 초과",
+            Game.Status.TIMEOUT_BLACK: "시간 초과",
+            Game.Status.RESIGNATION_WHITE: "기권",
+            Game.Status.RESIGNATION_BLACK: "기권",
+            Game.Status.STALEMATE: "스테일메이트",
+            Game.Status.DRAW_INSUFFICIENT: "기물 부족",
+            Game.Status.DRAW_REPETITION: "삼중 반복",
+            Game.Status.DRAW_FIFTY_MOVE: "50수 규칙",
+            Game.Status.DRAW_AGREEMENT: "합의 무승부",
         }
         return reasons.get(result, "")
