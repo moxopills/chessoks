@@ -72,8 +72,16 @@
     gap: var(--space-xs);
 }
 
+.profile-nickname-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
 .profile-nickname {
     font-size: clamp(0.9rem, 1.6vw, 1rem);
+    font-weight: 700;
 }
 
 .profile-email {
@@ -91,13 +99,13 @@
 .profile-tier {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-xs);
-    font-size: clamp(0.6rem, 1.1vw, 0.7rem);
-    padding: var(--space-xs) var(--space-sm);
+    gap: 4px;
+    font-size: 0.65rem;
+    padding: 2px 6px;
     border-radius: var(--radius-sm);
     background-color: var(--color-bg-secondary);
     border: 1px solid var(--color-border);
-    width: fit-content;
+    white-space: nowrap;
 }
 
 .profile-stats {

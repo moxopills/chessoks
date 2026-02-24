@@ -449,11 +449,10 @@
     }
 
     .profile-drawer-header {
-        position: sticky;
-        top: 0;
-        background-color: var(--color-bg-card);
-        padding-bottom: var(--space-sm);
-        z-index: 1;
+        position: static;
+        background-color: transparent;
+        padding-bottom: 0;
+        z-index: auto;
     }
 
     .profile-drawer #profile-close {
