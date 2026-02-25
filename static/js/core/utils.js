@@ -258,8 +258,14 @@ const Utils = (function() {
     const Sounds = (() => {
         let ctx = null;
         let bgmAudio = null;
-        let bgmVolume = Storage.get('chessok-bgm-vol', 30); // 0 ~ 100
+        let bgmVolume = normalizeVolume(Storage.get('chessok-bgm-vol', 30)); // 0 ~ 100
         let isMuted = (bgmVolume === 0);
+
+        function normalizeVolume(value) {
+            const num = Number(value);
+            if (!Number.isFinite(num)) return 30;
+            return Math.max(0, Math.min(100, Math.round(num)));
+        }
 
         function getContext() {
             if (!ctx) {
@@ -341,7 +347,7 @@ const Utils = (function() {
         }
 
         function setVolume(val) {
-            bgmVolume = parseInt(val, 10);
+            bgmVolume = normalizeVolume(val);
             Storage.set('chessok-bgm-vol', bgmVolume);
             isMuted = (bgmVolume === 0);
             
@@ -368,7 +374,7 @@ const Utils = (function() {
                 Storage.set('chessok-prev-vol', bgmVolume);
                 setVolume(0);
             } else {
-                let prev = Storage.get('chessok-prev-vol', 30);
+                let prev = normalizeVolume(Storage.get('chessok-prev-vol', 30));
                 if (prev === 0) prev = 30;
                 setVolume(prev);
             }
