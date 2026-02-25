@@ -90,6 +90,17 @@
     init();
 
     async function init() {
+        if (chatFab) {
+            document.body.classList.add('has-chat-fab');
+        }
+        const globalDmFab = document.getElementById('global-dm-fab');
+        globalDmFab?.classList.add('hidden');
+        if (window.innerWidth <= 768 && chatSection) {
+            // 모바일은 로비 채팅 패널을 기본 레이아웃에서 숨기고 FAB 플로팅으로만 사용
+            chatSection.classList.add('is-hidden');
+            chatSection.classList.remove('is-floating');
+            isChatOpen = false;
+        }
         await loadRooms();
         await loadWaitingRoom();
         await loadActiveGame();
@@ -795,6 +806,8 @@
         chatInput.disabled = false;
         chatForm.querySelector('button').disabled = false;
         chatMessages.innerHTML = '';
+        const switchToDmBtn = document.getElementById('switch-to-dm-btn');
+        switchToDmBtn?.classList.remove('hidden');
 
         // WebSocket 연결
         connectLobbyChat();
@@ -868,6 +881,7 @@
     function sendChatMessage() {
         const message = chatInput.value.trim();
         if (!message || !lobbySocket) return;
+        Utils?.Sounds?.unlock?.();
 
         lobbySocket.send(JSON.stringify({
             action: 'chat',
@@ -1007,7 +1021,16 @@
 
 
     function setupMobileTabs() {
-        if (!mobileTabbar) return;
+        if (!mobileTabbar) {
+            if (window.innerWidth <= 768 && chatSection && chatFab) {
+                isChatOpen = false;
+                chatSection.classList.add('is-hidden');
+                chatSection.classList.remove('is-floating');
+                chatFab.classList.remove('is-active');
+                chatFab.classList.remove('hidden');
+            }
+            return;
+        }
         document.body.classList.add('has-mobile-tabbar');
         const tabs = mobileTabbar.querySelectorAll('.mobile-tab');
         tabs.forEach(tab => {
@@ -1046,6 +1069,7 @@
         if (!chatFab || !chatSection) return;
 
         chatFab.addEventListener('click', () => {
+            Utils?.Sounds?.unlock?.();
             const isHidden = chatSection.classList.contains('is-hidden');
             
             if (isHidden) {
@@ -1053,12 +1077,14 @@
                 chatSection.classList.remove('is-hidden');
                 chatSection.classList.add('is-floating');
                 chatFab.classList.add('is-active');
+                isChatOpen = true;
                 resetChatBadge();
             } else {
                 // 닫기
                 chatSection.classList.add('is-hidden');
                 chatSection.classList.remove('is-floating');
                 chatFab.classList.remove('is-active');
+                isChatOpen = false;
             }
         });
 
@@ -1070,6 +1096,7 @@
                 chatSection.classList.add('is-hidden');
                 chatSection.classList.remove('is-floating');
                 chatFab.classList.remove('is-active');
+                isChatOpen = false;
                 
                 // 1:1 채팅창 열기
                 globalDmFab.click();

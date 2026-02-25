@@ -29,6 +29,8 @@
 
     if (!fabBtn || !panel) return;
 
+    init();
+
     window.addEventListener('user:updated', (event) => {
         const user = event.detail?.user;
         if (user && !user.is_guest) {
@@ -46,22 +48,58 @@
 
     // Custom Event Listener to open chat from outside
     window.addEventListener('global-dm:open-room', (event) => {
+        openRoomFromExternal(event.detail || {});
+    });
+
+    bindEvents();
+
+    async function init() {
+        await ensureCurrentUser();
+        if (currentUser) {
+            fabBtn.style.display = 'flex';
+            document.body.classList.remove('is-guest');
+            startThreadPolling();
+        } else {
+            fabBtn.style.display = 'none';
+            document.body.classList.add('is-guest');
+        }
+    }
+
+    async function ensureCurrentUser() {
+        if (currentUser) return currentUser;
+        try {
+            const me = await API.get('/accounts/me/');
+            if (!me?.id || me?.is_guest) {
+                currentUser = null;
+                return null;
+            }
+            currentUser = me;
+            return currentUser;
+        } catch {
+            currentUser = null;
+            return null;
+        }
+    }
+
+    async function openRoomFromExternal(detail) {
+        if (!currentUser) {
+            await ensureCurrentUser();
+        }
         if (!currentUser) {
             Toast.error('로그인 시 가능합니다.');
             return;
         }
-        const { userId, nickname } = event.detail || {};
+        const { userId, nickname } = detail;
         if (userId) {
             panel.classList.remove('hidden');
             fabBtn.classList.add('is-active');
             showRoomView(userId, nickname || '상대');
         }
-    });
-
-    bindEvents();
+    }
 
     function bindEvents() {
         fabBtn.addEventListener('click', () => {
+            Utils?.Sounds?.unlock?.();
             const isHidden = panel.classList.contains('hidden');
             if (isHidden) {
                 openPanel();
@@ -83,6 +121,7 @@
             if (!currentRoomUserId) return;
             const message = inputEl.value.trim();
             if (!message) return;
+            Utils?.Sounds?.unlock?.();
             
             try {
                 await API.post(`/accounts/messages/${currentRoomUserId}/`, { message });
@@ -97,6 +136,10 @@
     }
 
     function openPanel() {
+        if (!currentUser) {
+            Toast.error('로그인 시 가능합니다.');
+            return;
+        }
         panel.classList.remove('hidden');
         fabBtn.classList.add('is-active');
         if (currentRoomUserId) {
@@ -245,7 +288,7 @@
 
                 if (data.count > lastMessageCount && reversedItems.length) {
                     const lastItem = reversedItems[reversedItems.length - 1];
-                    if (lastItem.sender?.id !== currentUser.id) {
+                    if (lastItem.sender?.id !== currentUser?.id) {
                         Utils?.Sounds?.chat?.();
                     }
                 }

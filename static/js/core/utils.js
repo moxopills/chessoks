@@ -301,6 +301,18 @@ const Utils = (function() {
             }
         }
 
+        function unlock() {
+            try {
+                const context = getContext();
+                if (!context) return;
+                if (context.state === 'suspended') {
+                    context.resume().catch(() => {});
+                }
+            } catch {
+                // ignore
+            }
+        }
+
         function vibrate(pattern) {
             if (isMuted) return;
             if (navigator.vibrate) {
@@ -374,7 +386,7 @@ const Utils = (function() {
             return isMuted;
         }
 
-        return { notice, chat, move, vibrate, toggleMute, playBGM, isMuted: isMutedState, setVolume, getVolume };
+        return { notice, chat, move, vibrate, toggleMute, playBGM, isMuted: isMutedState, setVolume, getVolume, unlock };
     })();
 
     /**

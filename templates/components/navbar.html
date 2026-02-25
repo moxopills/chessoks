@@ -531,8 +531,19 @@ document.addEventListener('DOMContentLoaded', function() {
     if (soundToggle && window.Utils && Utils.Sounds) {
         // Initialize UI with saved volume
         updateSoundUI(Utils.Sounds.getVolume());
+        const unlockAudio = () => Utils.Sounds.unlock?.();
+        document.addEventListener('pointerdown', unlockAudio, { once: true });
+        document.addEventListener('keydown', unlockAudio, { once: true });
         
         soundToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            Utils.Sounds.unlock?.();
+            const muted = Utils.Sounds.toggleMute();
+            updateSoundUI(muted ? 0 : Utils.Sounds.getVolume());
+        });
+
+        soundToggle.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
             e.stopPropagation();
             if (soundDropdown) {
                 soundDropdown.classList.toggle('hidden');
@@ -546,10 +557,14 @@ document.addEventListener('DOMContentLoaded', function() {
             soundSlider.addEventListener('input', function(e) {
                 const vol = parseInt(e.target.value, 10);
                 if (soundVolText) soundVolText.textContent = `${vol}%`;
+                Utils.Sounds.unlock?.();
+                Utils.Sounds.setVolume(vol);
+                updateSoundUI(vol);
             });
             // Apply volume on release
             soundSlider.addEventListener('change', function(e) {
                 const vol = parseInt(e.target.value, 10);
+                Utils.Sounds.unlock?.();
                 Utils.Sounds.setVolume(vol);
                 updateSoundUI(vol);
             });
