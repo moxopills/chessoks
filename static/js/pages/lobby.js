@@ -1061,6 +1061,20 @@
                 chatFab.classList.remove('is-active');
             }
         });
+
+        const switchToDmBtn = document.getElementById('switch-to-dm-btn');
+        const globalDmFab = document.getElementById('global-dm-fab');
+        if (switchToDmBtn && globalDmFab) {
+            switchToDmBtn.addEventListener('click', () => {
+                // 닫기
+                chatSection.classList.add('is-hidden');
+                chatSection.classList.remove('is-floating');
+                chatFab.classList.remove('is-active');
+                
+                // 1:1 채팅창 열기
+                globalDmFab.click();
+            });
+        }
     }
 
     function setupTierToggle() {
@@ -1161,7 +1175,25 @@
         if (action === 'profile') window.location.href = `/users/${targetId}/`;
         else if (action === 'invite') Notifications.sendGameInvite(targetId);
         else if (action === 'friend') sendFriendRequest(targetId);
-        else if (action === 'chat') window.location.href = `/messages/${targetId}/`;
+        else if (action === 'chat') {
+            const globalDmFab = document.getElementById('global-dm-fab');
+            if (globalDmFab) {
+                // 플로팅 채팅 열기 전, chatSection이 열려있다면 닫아줌
+                if (chatSection && !chatSection.classList.contains('is-hidden')) {
+                    chatSection.classList.add('is-hidden');
+                    chatSection.classList.remove('is-floating');
+                    if (chatFab) chatFab.classList.remove('is-active');
+                }
+                
+                // global-dm 패널을 열고 상대방 룸 뷰를 트리거하는 이벤트를 발생시키거나 꼼수를 활용함
+                // 가장 간단한 건, 패널을 연 다음 잠시 후 유저 항목을 찾아서 클릭 이벤트를 보내는 것인데, 
+                // 해당 유저와의 채팅 기록이 없을 수도 있음. 
+                // 따라서 window 이벤트를 디스패치하여 global_dm.js에서 수신하도록 하는게 정석임.
+                window.dispatchEvent(new CustomEvent('global-dm:open-room', { detail: { userId: targetId } }));
+            } else {
+                window.location.href = `/messages/${targetId}/`;
+            }
+        }
         else if (action === 'report') openReportForUser(targetId);
     }
 

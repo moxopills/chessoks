@@ -1469,7 +1469,7 @@ body.has-chat-fab .chat-fab {
 
 @media (max-width: 768px) {
     .chat-fab {
-        bottom: 80px; /* 모바일 탭바 고려 */
+        bottom: 24px;
         right: 16px;
     }
 }
