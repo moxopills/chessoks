@@ -79,10 +79,11 @@
         try {
             const data = await API.get(`/accounts/messages/${targetUserId}/`, { limit: 200, offset: 0, no_count: 1 });
             const items = data.results || [];
-            renderMessages(items);
+            const reversedItems = items.slice().reverse();
+            renderMessages(reversedItems);
             messagesEl.scrollTop = messagesEl.scrollHeight;
-            if (data.count > lastCount && items.length) {
-                const lastItem = items[items.length - 1];
+            if (data.count > lastCount && reversedItems.length) {
+                const lastItem = reversedItems[reversedItems.length - 1];
                 if (lastItem.sender?.id !== currentUser.id) {
                     Utils?.Sounds?.chat?.();
                 }

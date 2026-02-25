@@ -94,6 +94,7 @@
         <section class="lobby-section lobby-chat-section">
             <div class="section-header">
                 <h2 class="section-title">💬 로비채팅</h2>
+                <button class="btn btn-secondary btn-xs auth-only hidden" id="switch-to-dm-btn">👤 1:1 채팅</button>
             </div>
             <div class="chat-container" id="lobby-chat">
                 <div class="chat-messages" id="chat-messages">
@@ -138,13 +139,7 @@
     </div>
 </div>
 
-<div class="mobile-tabbar" id="mobile-tabbar">
-    <button class="mobile-tab active" data-tab="main">로비</button>
-    <button class="mobile-tab" data-tab="chat">
-        채팅
-        <span class="mobile-tab-badge hidden" id="chat-badge">0</span>
-    </button>
-</div>
+
 
 <div class="modal-overlay hidden" id="ai-match-modal">
     <div class="modal ai-modal">
@@ -616,7 +611,7 @@
     .lobby-chat-section.is-floating {
         position: fixed;
         right: 12px;
-        bottom: 140px;
+        bottom: 90px;
         left: 12px;
         width: auto;
         z-index: 1200;
