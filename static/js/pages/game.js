@@ -11,13 +11,28 @@
     'use strict';
 
     // Constants
-    const PIECE_THEME_URL = 'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/';
-    function getPieceUrl(piece) {
-        if (!piece) return '';
-        const color = piece === piece.toUpperCase() ? 'w' : 'b';
-        const role = piece.toUpperCase();
-        return `${PIECE_THEME_URL}${color}${role}.svg`;
-    }
+    const PIECE_SPRITE = {
+        K: '♔',
+        Q: '♕',
+        R: '♖',
+        B: '♗',
+        N: '♘',
+        P: '♙',
+        k: '♚',
+        q: '♛',
+        r: '♜',
+        b: '♝',
+        n: '♞',
+        p: '♟',
+    };
+    const PIECE_VALUE = {
+        p: 1,
+        n: 3,
+        b: 3,
+        r: 5,
+        q: 9,
+        k: 0,
+    };
 
     // 접근성용 기물 이름
     const PIECE_NAMES = {
@@ -84,6 +99,8 @@
     const chatFab = document.getElementById('chat-fab');
     const shareBtn = document.getElementById('share-btn');
     const gameEndStats = document.getElementById('game-end-stats');
+    const analysisCanvas = document.getElementById('analysis-canvas');
+    const analysisSummary = document.getElementById('analysis-summary');
     let pendingEnd = false;
 
     // State
@@ -103,6 +120,8 @@
     let selectedDisplaySquare = null;
     let validMoves = [];
     let pendingPromotion = null;
+    let pendingConfirmedMove = null;
+    let moveConfirmEnabled = false;
     const arrowLayer = document.getElementById('arrow-layer');
     let premove = null;
     let drawings = { arrows: [], circles: [] };
@@ -139,6 +158,7 @@
     const WS_BASE_RECONNECT_DELAY = 1000;
     let ratingPollAttempts = 0;
     const RATING_POLL_MAX_ATTEMPTS = 30;
+    const localReactionState = new Map();
 
     // Init
     init();
@@ -160,6 +180,17 @@
 
         guideEnabled = Utils.Storage.get('guide_enabled', true);
         setupGuideToggle();
+
+        moveConfirmEnabled = Utils.Storage.get('move_confirm_enabled', false);
+        const confirmToggle = document.getElementById('move-confirm-toggle');
+        if (confirmToggle) {
+            confirmToggle.checked = moveConfirmEnabled;
+            confirmToggle.addEventListener('change', (e) => {
+                moveConfirmEnabled = e.target.checked;
+                Utils.Storage.set('move_confirm_enabled', moveConfirmEnabled);
+            });
+        }
+        injectPieceSpriteStyles();
 
         try {
             currentUser = await API.get('/accounts/me/');
@@ -729,7 +760,8 @@
         removeDragPiece();
         dragPiece = document.createElement('div');
         dragPiece.className = 'drag-piece';
-        dragPiece.style.backgroundImage = `url("${getPieceUrl(piece)}")`;
+        dragPiece.textContent = PIECE_SPRITE[piece] || '';
+        dragPiece.classList.add(piece === piece.toUpperCase() ? 'white' : 'black');
         dragPiece.style.left = (x - 32) + 'px';
         dragPiece.style.top = (y - 32) + 'px';
         document.body.appendChild(dragPiece);
@@ -889,9 +921,8 @@
         const position = parseFEN(fen);
         const isFlipped = myColor === 'black';
 
-        // 모든 칸 초기화 (캐시 사용)
+        // 모든 칸의 하이라이트 클래스만 제거 (기물 제거 방지)
         for (const sq of getAllSquareElements()) {
-            sq.innerHTML = '';
             sq.classList.remove('selected', 'valid-move', 'valid-capture', 'last-move', 'check');
         }
 
@@ -908,20 +939,43 @@
                 const squareEl = getSquare(squareName);
 
                 if (squareEl) {
-                    // aria-label 업데이트 (기물 정보 포함)
+                    const existingPieceEl = squareEl.querySelector('.piece');
+                    const existingPiece = existingPieceEl?.dataset.piece;
+
                     if (piece) {
                         const pieceName = PIECE_NAMES[piece] || piece;
                         squareEl.setAttribute('aria-label', `${actualSquareName} ${pieceName}`);
 
-                        const pieceEl = document.createElement('div');
-                        const isWhite = piece === piece.toUpperCase();
-                        pieceEl.className = `piece ${isWhite ? 'white' : 'black'}`;
-                        pieceEl.style.backgroundImage = `url("${getPieceUrl(piece)}")`;
-                        pieceEl.dataset.piece = piece;
-                        pieceEl.draggable = true;
-                        pieceEl.addEventListener('dragstart', (e) => handleDragStart(e, squareName));
-                        squareEl.appendChild(pieceEl);
+                        if (existingPiece !== piece) {
+                            // 기물이 바뀌었거나 새로 생성됨
+                            if (existingPieceEl) existingPieceEl.remove();
+                            
+                            const pieceEl = createPieceElement(piece);
+                            
+                            // 등장 애니메이션 준비
+                            pieceEl.style.opacity = '0';
+                            pieceEl.style.transform = 'scale(0.6)';
+                            squareEl.appendChild(pieceEl);
+                            
+                            // 애니메이션 실행
+                            requestAnimationFrame(() => {
+                                pieceEl.style.opacity = '1';
+                                pieceEl.style.transform = 'scale(1)';
+                            });
+
+                            pieceEl.addEventListener('dragstart', (e) => handleDragStart(e, squareName));
+                        }
                     } else {
+                        // 빈 칸인데 기물이 남아있는 경우 부드럽게 제거
+                        if (existingPieceEl) {
+                            existingPieceEl.style.opacity = '0';
+                            existingPieceEl.style.transform = 'scale(0.6)';
+                            setTimeout(() => {
+                                if (existingPieceEl.parentNode === squareEl) {
+                                    existingPieceEl.remove();
+                                }
+                            }, 200);
+                        }
                         squareEl.setAttribute('aria-label', `${actualSquareName} 빈 칸`);
                     }
                 }
@@ -929,12 +983,6 @@
         }
 
         applyLastMoveHighlight();
-
-        // 마지막 수 하이라이트
-        if (game.pgn) {
-            // PGN에서 마지막 수 추출 (간단한 구현)
-            // 실제로는 서버에서 last_move 정보를 받아야 함
-        }
     }
 
     /**
@@ -1354,14 +1402,14 @@
 
     function renderCapturedPieces() {
         if (!capturedWhite || !capturedBlack) return;
-        
+
         // 백이 잡은 기물은 흑(소문자), 흑이 잡은 기물은 백(대문자)
         capturedWhite.innerHTML = captured.white
-            .map(letter => `<span class="captured-piece" style="background-image: url('${getPieceUrl(letter.toLowerCase())}')"></span>`)
+            .map((letter) => createCapturedPieceMarkup(letter.toLowerCase()))
             .join('');
-            
+
         capturedBlack.innerHTML = captured.black
-            .map(letter => `<span class="captured-piece" style="background-image: url('${getPieceUrl(letter.toUpperCase())}')"></span>`)
+            .map((letter) => createCapturedPieceMarkup(letter.toUpperCase()))
             .join('');
     }
 
@@ -1375,15 +1423,27 @@
         const fromEl = getSquare(toDisplaySquare(from));
         const piece = fromEl?.querySelector('.piece');
 
+        let isPromotion = false;
         if (piece) {
             const isPawn = piece.dataset.piece && piece.dataset.piece.toLowerCase() === 'p';
-            const isPromotion = isPawn && (to[1] === '8' || to[1] === '1');
+            isPromotion = isPawn && (to[1] === '8' || to[1] === '1');
+        }
 
+        if (moveConfirmEnabled) {
             if (isPromotion) {
                 pendingPromotion = { from, to };
                 showPromotionModal();
-                return;
+            } else {
+                pendingConfirmedMove = { uci, promotion: '' };
+                document.getElementById('move-confirm-overlay')?.classList.remove('hidden');
             }
+            return;
+        }
+
+        if (isPromotion) {
+            pendingPromotion = { from, to };
+            showPromotionModal();
+            return;
         }
 
         sendMove(uci);
@@ -1415,11 +1475,16 @@
         document.querySelectorAll('.promotion-piece').forEach(btn => {
             const piece = btn.dataset.piece;
             const pieceChar = myColor === 'white' ? piece.toUpperCase() : piece.toLowerCase();
-            btn.style.backgroundImage = `url("${getPieceUrl(pieceChar)}")`;
+            btn.textContent = PIECE_SPRITE[pieceChar] || '';
             
             btn.onclick = () => {
                 const uci = pendingPromotion.from + pendingPromotion.to;
-                sendMove(uci, piece);
+                if (moveConfirmEnabled) {
+                    pendingConfirmedMove = { uci, promotion: piece };
+                    document.getElementById('move-confirm-overlay')?.classList.remove('hidden');
+                } else {
+                    sendMove(uci, piece);
+                }
                 promotionModal.classList.add('hidden');
                 pendingPromotion = null;
             };
@@ -1477,6 +1542,9 @@
     async function handleSocketMessage(data) {
         switch (data.type) {
             case 'move':
+                if (data.last_move && !replayActive) {
+                    await animateIncomingMove(data.last_move);
+                }
                 // 게임 상태 업데이트
                 game.fen = data.fen;
                 game.pgn = data.pgn;
@@ -1581,6 +1649,56 @@
         }
     }
 
+    async function animateIncomingMove(lastMove) {
+        if (!lastMove || !lastMove.from || !lastMove.to) return;
+        const fromSquare = toDisplaySquare(lastMove.from);
+        const toSquare = toDisplaySquare(lastMove.to);
+        const fromEl = getSquare(fromSquare);
+        const toEl = getSquare(toSquare);
+        const movingPiece = fromEl?.querySelector('.piece');
+        if (!fromEl || !toEl || !movingPiece) return;
+
+        const fromRect = fromEl.getBoundingClientRect();
+        const toRect = toEl.getBoundingClientRect();
+        const clone = movingPiece.cloneNode(true);
+
+        clone.style.position = 'fixed';
+        clone.style.left = `${fromRect.left}px`;
+        clone.style.top = `${fromRect.top}px`;
+        clone.style.width = `${fromRect.width}px`;
+        clone.style.height = `${fromRect.height}px`;
+        clone.style.margin = '0';
+        clone.style.pointerEvents = 'none';
+        clone.style.zIndex = '2000';
+        clone.style.transition = 'transform 180ms cubic-bezier(0.25, 0.8, 0.25, 1)';
+        clone.style.willChange = 'transform';
+
+        const capturedPiece = toEl.querySelector('.piece');
+        if (capturedPiece) {
+            capturedPiece.style.transition = 'opacity 120ms ease';
+            capturedPiece.style.opacity = '0.2';
+        }
+
+        document.body.appendChild(clone);
+        movingPiece.style.visibility = 'hidden';
+
+        await new Promise((resolve) => {
+            requestAnimationFrame(() => {
+                const dx = toRect.left - fromRect.left;
+                const dy = toRect.top - fromRect.top;
+                clone.style.transform = `translate(${dx}px, ${dy}px)`;
+            });
+            setTimeout(resolve, 190);
+        });
+
+        clone.remove();
+        movingPiece.style.visibility = '';
+        if (capturedPiece) {
+            capturedPiece.style.opacity = '';
+            capturedPiece.style.transition = '';
+        }
+    }
+
     /**
      * 채팅 설정
      */
@@ -1677,12 +1795,17 @@
             <div class="chat-content">
                 <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
                 <div class="chat-bubble">${Utils.escapeHtml(data.message)}</div>
+                <div class="chat-reactions" data-reaction-key="${data.id || `${data.user_id}:${data.created_at || Date.now()}`}">
+                    <button type="button" class="reaction-btn" data-reaction="👍">👍 <span>0</span></button>
+                    <button type="button" class="reaction-btn" data-reaction="👏">👏 <span>0</span></button>
+                </div>
             </div>
         `;
         chatMessages.appendChild(messageEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
         if (!isMine) Utils?.Sounds?.chat?.();
         handleChatBadge(data);
+        bindReactionButtons(messageEl);
     }
 
     async function refreshSpectatorList() {
@@ -1800,6 +1923,26 @@
             gameActions?.classList.add('hidden');
             return;
         }
+
+        // Move confirmation buttons
+        const confirmOverlay = document.getElementById('move-confirm-overlay');
+        const confirmYes = document.getElementById('move-confirm-yes');
+        const confirmNo = document.getElementById('move-confirm-no');
+
+        confirmYes?.addEventListener('click', () => {
+            if (pendingConfirmedMove) {
+                sendMove(pendingConfirmedMove.uci, pendingConfirmedMove.promotion);
+                pendingConfirmedMove = null;
+                confirmOverlay?.classList.add('hidden');
+            }
+        });
+
+        confirmNo?.addEventListener('click', () => {
+            pendingConfirmedMove = null;
+            confirmOverlay?.classList.add('hidden');
+            renderBoard();
+        });
+
         if (isAiRoom) {
             gameActions?.classList.remove('hidden');
             drawBtn?.remove();
@@ -2267,6 +2410,13 @@
         const titleEl = document.getElementById('game-end-title');
         const resultEl = document.getElementById('game-end-result');
 
+        // 분석 UI 초기화
+        const analysisLoading = document.getElementById('analysis-loading');
+        const analysisContent = document.getElementById('analysis-content');
+        if (analysisLoading) analysisLoading.classList.remove('hidden');
+        if (analysisContent) analysisContent.classList.add('hidden');
+        if (analysisSummary) analysisSummary.textContent = '';
+
         let icon = '🎮';
         let title = '게임 종료';
         let resultText = result;
@@ -2313,6 +2463,139 @@
 
         gameEndModal.classList.remove('hidden');
         gameEndModal.style.display = 'flex';
+        loadGameAnalysis();
+    }
+
+    async function loadGameAnalysis() {
+        if (!analysisCanvas) return;
+        const analysisLoading = document.getElementById('analysis-loading');
+        const analysisContent = document.getElementById('analysis-content');
+        try {
+            const data = await API.get(`/chess/games/${game.id}/moves/`, { limit: 300, offset: 0 });
+            const moves = data.results || [];
+            const series = buildEvalSeries(moves);
+            drawAnalysisGraph(series);
+            if (analysisSummary) {
+                const maxSwing = series.length > 1
+                    ? Math.max(...series.map((v, i) => i === 0 ? 0 : Math.abs(v - series[i - 1])))
+                    : 0;
+                analysisSummary.textContent = `평균 평가값: ${avg(series).toFixed(2)} · 최대 변동: ${maxSwing.toFixed(2)}`;
+            }
+            analysisLoading?.classList.add('hidden');
+            analysisContent?.classList.remove('hidden');
+        } catch (error) {
+            if (analysisLoading) {
+                analysisLoading.textContent = '분석을 불러오지 못했습니다.';
+            }
+        }
+    }
+
+    function buildEvalSeries(moves) {
+        const series = [0];
+        for (const move of moves) {
+            const fen = move.fen_after_move;
+            if (!fen) {
+                series.push(series[series.length - 1]);
+                continue;
+            }
+            series.push(scoreFenMaterial(fen));
+        }
+        return series;
+    }
+
+    function scoreFenMaterial(fen) {
+        const board = fen.split(' ')[0];
+        let score = 0;
+        for (const ch of board) {
+            if (ch === '/' || /\d/.test(ch)) continue;
+            const value = PIECE_VALUE[ch.toLowerCase()] || 0;
+            score += ch === ch.toUpperCase() ? value : -value;
+        }
+        return score;
+    }
+
+    function drawAnalysisGraph(series) {
+        const ctx = analysisCanvas.getContext('2d');
+        const w = analysisCanvas.width;
+        const h = analysisCanvas.height;
+        ctx.clearRect(0, 0, w, h);
+        if (!series.length) return;
+        const maxAbs = Math.max(1, ...series.map((v) => Math.abs(v)));
+        const pad = 12;
+        const graphW = w - pad * 2;
+        const graphH = h - pad * 2;
+        const yMid = pad + graphH / 2;
+
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(pad, yMid);
+        ctx.lineTo(w - pad, yMid);
+        ctx.stroke();
+
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        series.forEach((val, i) => {
+            const x = pad + (series.length === 1 ? 0 : (i / (series.length - 1)) * graphW);
+            const y = yMid - (val / maxAbs) * (graphH / 2 - 4);
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+    }
+
+    function avg(arr) {
+        if (!arr.length) return 0;
+        return arr.reduce((sum, x) => sum + x, 0) / arr.length;
+    }
+
+    function createPieceElement(piece) {
+        const pieceEl = document.createElement('div');
+        const isWhite = piece === piece.toUpperCase();
+        pieceEl.className = `piece ${isWhite ? 'white' : 'black'}`;
+        pieceEl.dataset.piece = piece;
+        pieceEl.draggable = true;
+        pieceEl.textContent = PIECE_SPRITE[piece] || '';
+        return pieceEl;
+    }
+
+    function createCapturedPieceMarkup(piece) {
+        const isWhite = piece === piece.toUpperCase();
+        const glyph = PIECE_SPRITE[piece] || '';
+        return `<span class="captured-piece ${isWhite ? 'white' : 'black'}">${glyph}</span>`;
+    }
+
+    function bindReactionButtons(messageEl) {
+        messageEl.querySelectorAll('.reaction-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const wrap = btn.closest('.chat-reactions');
+                const key = wrap?.dataset.reactionKey;
+                const reaction = btn.dataset.reaction;
+                if (!key || !reaction) return;
+                const stateKey = `${key}:${reaction}`;
+                const current = localReactionState.get(stateKey) || 0;
+                const next = current + 1;
+                localReactionState.set(stateKey, next);
+                const countEl = btn.querySelector('span');
+                if (countEl) countEl.textContent = String(next);
+            });
+        });
+    }
+
+    function injectPieceSpriteStyles() {
+        if (document.getElementById('piece-sprite-font-style')) return;
+        const style = document.createElement('style');
+        style.id = 'piece-sprite-font-style';
+        style.textContent = `
+            .piece, .captured-piece, .promotion-piece, .drag-piece {
+                font-family: "Noto Sans Symbols 2", "Noto Sans KR", sans-serif;
+                line-height: 1;
+                text-align: center;
+                user-select: none;
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     async function loadMoveTimeStats() {

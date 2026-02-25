@@ -157,11 +157,17 @@
                     if (Date.now() > state.noticeSoundReadyAt) {
                         Utils?.Sounds?.notice?.();
                     }
+                    if (document.hidden) {
+                        ChessokPush?.show?.(payload.title || '공지', payload.message || '', '/');
+                    }
                 }
                 if (payload?.type === 'game_invite') {
                     openGameInviteModal(payload);
                     if (Date.now() > state.noticeSoundReadyAt) {
                         Utils?.Sounds?.notice?.();
+                    }
+                    if (document.hidden) {
+                        ChessokPush?.show?.('게임 초대', payload.message || '게임 초대가 도착했습니다.', '/');
                     }
                     return; // Don't show toast for invite
                 }
@@ -170,6 +176,12 @@
                 updateMessageBadge(messageBadge);
                 if (payload.title || payload.message) {
                     Toast.info(payload.message || payload.title);
+                }
+                if (document.hidden && (payload.title || payload.message)) {
+                    const targetUrl = payload.payload?.room_id
+                        ? `/rooms/${payload.payload.room_id}/`
+                        : '/';
+                    ChessokPush?.show?.(payload.title || '알림', payload.message || '', targetUrl);
                 }
             } catch {
                 // ignore invalid payloads

@@ -78,6 +78,8 @@ class RankingService:
             "games_draw": user.stats.games_draw,
             "games_lost": user.stats.games_lost,
             "rank_tier": user.stats.rank_tier,
+            "nickname_color": user.stats.nickname_color,
+            "profile_border": user.stats.profile_border,
             "rank": user.rank,
         }
 

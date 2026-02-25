@@ -26,6 +26,13 @@ class UserStats(models.Model):
     competitive_draw = models.IntegerField(default=0, help_text="경쟁전 무승부 수")
     win_streak = models.IntegerField(default=0, help_text="연승 수")
     lose_streak = models.IntegerField(default=0, help_text="연패 수")
+    style_points = models.IntegerField(default=0, help_text="커스터마이징 포인트")
+    nickname_color = models.CharField(
+        max_length=20, blank=True, default="", help_text="닉네임 색상 키"
+    )
+    profile_border = models.CharField(
+        max_length=20, blank=True, default="", help_text="프로필 테두리 키"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -79,6 +86,10 @@ class UserStats(models.Model):
                 condition=models.Q(lose_streak__gte=0),
                 name="stats_lose_streak_positive",
             ),
+            models.CheckConstraint(
+                condition=models.Q(style_points__gte=0),
+                name="stats_style_points_positive",
+            ),
         ]
         indexes = [
             models.Index(fields=["-rating", "-games_played"], name="stats_ranking_idx"),
@@ -118,3 +129,25 @@ class UserStats(models.Model):
         if rating >= 1200:
             return "Junior"
         return "Beginner"
+
+    @property
+    def unlocked_nickname_colors(self):
+        unlocks = [{"key": "", "label": "기본", "cost": 0}]
+        if self.style_points >= 100:
+            unlocks.append({"key": "mint", "label": "민트", "cost": 100})
+        if self.style_points >= 250:
+            unlocks.append({"key": "sunset", "label": "선셋", "cost": 250})
+        if self.style_points >= 450:
+            unlocks.append({"key": "gold", "label": "골드", "cost": 450})
+        return unlocks
+
+    @property
+    def unlocked_profile_borders(self):
+        unlocks = [{"key": "", "label": "기본", "cost": 0}]
+        if self.style_points >= 120:
+            unlocks.append({"key": "mint_ring", "label": "민트 링", "cost": 120})
+        if self.style_points >= 300:
+            unlocks.append({"key": "royal_ring", "label": "로열 링", "cost": 300})
+        if self.style_points >= 500:
+            unlocks.append({"key": "champion_ring", "label": "챔피언 링", "cost": 500})
+        return unlocks

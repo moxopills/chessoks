@@ -5,6 +5,7 @@ import uuid
 
 from django.contrib.auth import update_session_auth_hash
 from django.core.cache import cache
+from django.db import transaction
 from django.utils import timezone
 
 from rest_framework import status
@@ -378,11 +379,35 @@ class UserProfileService:
             if not result["available"]:
                 raise ValidationError({"nickname": [result["message"]]})
 
+        nickname_color = serializer.validated_data.pop("nickname_color", None)
+        profile_border = serializer.validated_data.pop("profile_border", None)
+        stats = getattr(user, "stats", None)
+
+        if stats and nickname_color is not None:
+            unlocked_colors = {item["key"] for item in stats.unlocked_nickname_colors}
+            if nickname_color not in unlocked_colors:
+                raise ValidationError({"nickname_color": ["해금되지 않은 닉네임 색상입니다."]})
+
+        if stats and profile_border is not None:
+            unlocked_borders = {item["key"] for item in stats.unlocked_profile_borders}
+            if profile_border not in unlocked_borders:
+                raise ValidationError({"profile_border": ["해금되지 않은 프로필 테두리입니다."]})
+
         old_nickname = user.nickname
-        serializer.save()
-        if new_nickname and new_nickname != old_nickname:
-            user.nickname_changed_at = timezone.now()
-            user.save(update_fields=["nickname_changed_at"])
+        with transaction.atomic():
+            serializer.save()
+            if nickname_color is not None:
+                stats.nickname_color = nickname_color
+
+            if profile_border is not None:
+                stats.profile_border = profile_border
+
+            if nickname_color is not None or profile_border is not None:
+                stats.save(update_fields=["nickname_color", "profile_border"])
+
+            if new_nickname and new_nickname != old_nickname:
+                user.nickname_changed_at = timezone.now()
+                user.save(update_fields=["nickname_changed_at"])
         cache.delete(f"user_profile_{user.id}")
         return _ok({"message": "프로필이 업데이트되었습니다."}, status.HTTP_200_OK)
 

@@ -515,7 +515,16 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Sound toggle and volume slider
+    // DOM Elements
+    const navbarToggle = document.getElementById('navbar-toggle');
+    const navbarMenu = document.getElementById('navbar-menu');
+    const userToggle = document.getElementById('user-toggle');
+    const userDropdown = document.getElementById('user-dropdown');
+    const notificationToggle = document.getElementById('notification-toggle');
+    const notificationDropdown = document.getElementById('notification-dropdown');
+    const logoutBtn = document.getElementById('logout-btn');
+    
+    // Sound elements
     const soundToggle = document.getElementById('sound-toggle');
     const soundIcon = document.getElementById('sound-icon');
     const soundDropdown = document.getElementById('sound-dropdown');
@@ -553,21 +562,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         if (soundSlider) {
-            // Update text on drag
             soundSlider.addEventListener('input', function(e) {
                 const vol = parseInt(e.target.value, 10);
                 if (soundVolText) soundVolText.textContent = `${vol}%`;
-                Utils.Sounds.unlock?.();
                 Utils.Sounds.setVolume(vol);
-                Utils.Sounds.playBGM();
                 updateSoundUI(vol);
             });
-            // Apply volume on release
             soundSlider.addEventListener('change', function(e) {
                 const vol = parseInt(e.target.value, 10);
-                Utils.Sounds.unlock?.();
                 Utils.Sounds.setVolume(vol);
-                Utils.Sounds.playBGM();
                 updateSoundUI(vol);
             });
         }
@@ -575,14 +578,13 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             e.stopPropagation();
             Utils.Sounds.unlock?.();
-            const muted = Utils.Sounds.toggleMute();
-            updateSoundUI(muted ? 0 : Utils.Sounds.getVolume());
+            const isMutedNow = Utils.Sounds.toggleMute();
+            updateSoundUI(isMutedNow ? 0 : Utils.Sounds.getVolume());
         });
         soundDropdown?.addEventListener('click', function(e) {
             e.stopPropagation();
         });
         
-        // 페이지 아무곳이나 클릭 시 BGM 자동재생 시도 (브라우저 정책 우회)
         document.body.addEventListener('click', function playOnce() {
             Utils.Sounds.playBGM();
             document.body.removeEventListener('click', playOnce);
@@ -590,9 +592,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Mobile menu toggle
-    const navbarToggle = document.getElementById('navbar-toggle');
-    const navbarMenu = document.getElementById('navbar-menu');
-
     if (navbarToggle && navbarMenu) {
         navbarToggle.addEventListener('click', function(e) {
             e.stopPropagation();
@@ -618,26 +617,22 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // User dropdown toggle
-    const userToggle = document.getElementById('user-toggle');
-    const userDropdown = document.getElementById('user-dropdown');
-
     if (userToggle && userDropdown) {
         userToggle.addEventListener('click', function(e) {
             e.stopPropagation();
             userDropdown.classList.toggle('hidden');
             notificationDropdown?.classList.add('hidden');
+            soundDropdown?.classList.add('hidden');
         });
     }
 
     // Notification dropdown toggle
-    const notificationToggle = document.getElementById('notification-toggle');
-    const notificationDropdown = document.getElementById('notification-dropdown');
-
     if (notificationToggle && notificationDropdown) {
         notificationToggle.addEventListener('click', function(e) {
             e.stopPropagation();
             notificationDropdown.classList.toggle('hidden');
             userDropdown?.classList.add('hidden');
+            soundDropdown?.classList.add('hidden');
         });
     }
 
@@ -649,7 +644,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Logout button
-    const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async function() {
             try {

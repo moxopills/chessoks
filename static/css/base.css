@@ -63,30 +63,30 @@
 
 /* Dark Theme */
 html[data-theme="dark"] {
-    --color-bg-primary: #0f172a;
-    --color-bg-secondary: #162235;
-    --color-bg-tertiary: #1b2a3d;
-    --color-bg-card: #152036;
+    --color-bg-primary: #0b1220;
+    --color-bg-secondary: #142038;
+    --color-bg-tertiary: #1e2d4c;
+    --color-bg-card: #13233f;
 
     --color-accent-primary: #38bdf8;
-    --color-accent-secondary: #60a5fa;
-    --color-accent-warning: #fbbf24;
-    --color-accent-success: #22c55e;
-    --color-accent-error: #f87171;
+    --color-accent-secondary: #0ea5e9;
+    --color-accent-warning: #f59e0b;
+    --color-accent-success: #10b981;
+    --color-accent-error: #ef4444;
 
-    --color-text-primary: #e2e8f0;
-    --color-text-secondary: #b0becf;
-    --color-text-muted: #7b8aa6;
+    --color-text-primary: #e6edf7;
+    --color-text-secondary: #bfd0e7;
+    --color-text-muted: #8fa7c7;
 
-    --color-border: #2a3a5a;
-    --color-border-light: #3a4a6a;
+    --color-border: #2a3a59;
+    --color-border-light: #39527b;
 
-    --btn-arcade-shadow-primary: #2b7db3;
-    --btn-arcade-shadow-secondary: #22314a;
+    --btn-arcade-shadow-primary: #0369a1;
+    --btn-arcade-shadow-secondary: #1e293b;
 
-    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.6);
 }
 
 /* Reset */
@@ -689,6 +689,28 @@ html[data-theme="dark"] .form-input:focus {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+/* Tier Name Colors */
+.tier-name-Beginner { color: #94a3b8; }
+.tier-name-Junior { color: #22c55e; }
+.tier-name-Intermediate { color: #3b82f6; }
+.tier-name-Advanced { color: #a855f7; }
+.tier-name-Expert { 
+    color: #f59e0b; 
+    text-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
+    font-weight: 700;
+}
+.tier-name-Master { 
+    color: #ef4444; 
+    text-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+    font-weight: 700;
+    animation: master-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes master-glow {
+    from { text-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
+    to { text-shadow: 0 0 16px rgba(239, 68, 68, 0.7); }
 }
 
 /* Badges */
