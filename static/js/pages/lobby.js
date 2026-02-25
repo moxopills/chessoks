@@ -92,9 +92,10 @@
     async function init() {
         if (chatFab) {
             document.body.classList.add('has-chat-fab');
+            chatFab.classList.remove('hidden');
         }
         const globalDmFab = document.getElementById('global-dm-fab');
-        globalDmFab?.classList.add('hidden');
+        globalDmFab?.classList.remove('hidden');
         if (window.innerWidth <= 768 && chatSection) {
             // 모바일은 로비 채팅 패널을 기본 레이아웃에서 숨기고 FAB 플로팅으로만 사용
             chatSection.classList.add('is-hidden');
@@ -808,6 +809,9 @@
         chatMessages.innerHTML = '';
         const switchToDmBtn = document.getElementById('switch-to-dm-btn');
         switchToDmBtn?.classList.remove('hidden');
+        if (chatFab) {
+            chatFab.classList.remove('hidden');
+        }
 
         // WebSocket 연결
         connectLobbyChat();

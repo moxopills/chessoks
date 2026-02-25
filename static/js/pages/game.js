@@ -146,6 +146,9 @@
             return;
         }
 
+        const globalDmFab = document.getElementById('global-dm-fab');
+        globalDmFab?.classList.add('hidden');
+
         guideEnabled = Utils.Storage.get('guide_enabled', true);
         setupGuideToggle();
 
