@@ -481,6 +481,7 @@
         if (!chatFab || !chatSection) return;
         chatSection.classList.add('is-collapsed');
         chatFab.addEventListener('click', () => {
+            Utils?.Sounds?.unlock?.();
             const willOpen = chatSection.classList.contains('is-collapsed');
             chatSection.classList.toggle('is-collapsed');
             chatSection.classList.toggle('is-floating', willOpen);
@@ -1570,6 +1571,7 @@
             e.preventDefault();
             const message = chatInput.value.trim();
             if (!message || !socket) return;
+            Utils?.Sounds?.unlock?.();
 
             const action = myColor ? 'chat' : 'spectator_chat';
             socket.send(JSON.stringify({ action, message }));
