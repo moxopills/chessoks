@@ -61,10 +61,16 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self._set_user_online()
         if self.is_player:
             await self._clear_disconnect_marker()
+        else:
+            await self._add_spectator_presence(user)
 
     async def disconnect(self, close_code):
         if getattr(self, "is_player", False):
             await self._mark_disconnect()
+        else:
+            user = self.scope.get("user")
+            if user and user.is_authenticated:
+                await self._remove_spectator_presence(user)
         if hasattr(self, "player_group"):
             await self.channel_layer.group_discard(self.player_group, self.channel_name)
         if hasattr(self, "spectator_group"):
@@ -99,6 +105,9 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         except DatabaseError as exc:
             logger.error("Database error in ChessConsumer: %s", exc)
             await self.send_json({"type": "error", "message": "데이터베이스 오류가 발생했습니다."})
+        except Exception as exc:
+            logger.exception("Unexpected error in ChessConsumer.receive_json: %s", exc)
+            await self.send_json({"type": "error", "message": "처리 중 오류가 발생했습니다."})
 
     async def _handle_move(self, content):
         if not self.is_player:
@@ -301,11 +310,22 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             if room.host_id == user.id or room.guest_id == user.id:
                 return True
             if room.allow_spectators:
-                room.spectators.add(user)
                 return False
             return None
         except Room.DoesNotExist:
             return None
+
+    @database_sync_to_async
+    def _add_spectator_presence(self, user) -> None:
+        room = Room.objects.filter(pk=self.room_id).first()
+        if room:
+            room.spectators.add(user)
+
+    @database_sync_to_async
+    def _remove_spectator_presence(self, user) -> None:
+        room = Room.objects.filter(pk=self.room_id).first()
+        if room:
+            room.spectators.remove(user)
 
     @database_sync_to_async
     def _mark_disconnect(self) -> None:

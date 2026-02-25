@@ -7,7 +7,6 @@ from rest_framework.views import APIView
 
 from apps.chess.serializers import BaseUserSerializer, SpectatorListSerializer
 from apps.chess.services import SpectatorService
-from apps.chess.utils import broadcast_spectator_event
 
 
 class SpectatorListView(APIView):
@@ -34,7 +33,6 @@ class SpectatorJoinView(APIView):
     @extend_schema(responses={200: SpectatorListSerializer}, tags=["관전"])
     def post(self, request, room_id: int):
         room = SpectatorService.add_spectator(room_id, request.user)
-        broadcast_spectator_event(room.id, request.user, "join")
         return Response(
             {
                 "room_id": room.id,
@@ -51,7 +49,6 @@ class SpectatorLeaveView(APIView):
     @extend_schema(responses={200: SpectatorListSerializer}, tags=["관전"])
     def post(self, request, room_id: int):
         room = SpectatorService.remove_spectator(room_id, request.user)
-        broadcast_spectator_event(room.id, request.user, "leave")
         return Response(
             {
                 "room_id": room.id,
