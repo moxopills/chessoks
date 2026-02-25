@@ -63,7 +63,6 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             await self._clear_disconnect_marker()
         else:
             await self._add_spectator_presence(user)
-            await self._broadcast_spectator_presence("join", user)
 
     async def disconnect(self, close_code):
         if getattr(self, "is_player", False):
@@ -72,7 +71,6 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             user = self.scope.get("user")
             if user and user.is_authenticated:
                 await self._remove_spectator_presence(user)
-                await self._broadcast_spectator_presence("leave", user)
         if hasattr(self, "player_group"):
             await self.channel_layer.group_discard(self.player_group, self.channel_name)
         if hasattr(self, "spectator_group"):
@@ -296,18 +294,6 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
 
     async def _broadcast_to_group(self, group_name, payload):
         await self.channel_layer.group_send(group_name, {"type": "broadcast", "payload": payload})
-
-    async def _broadcast_spectator_presence(self, action: str, user) -> None:
-        payload = {
-            "type": "spectator_event",
-            "action": action,
-            "user": {
-                "id": user.id,
-                "nickname": user.nickname,
-                "avatar_url": user.avatar_url,
-            },
-        }
-        await self._broadcast(payload)
 
     async def broadcast(self, event):
         try:
