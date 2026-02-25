@@ -24,6 +24,7 @@
 
     <!-- Styles -->
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/global_dm.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -94,6 +95,9 @@
     <main class="main-content">
         {% block content %}{% endblock %}
     </main>
+
+    <!-- Global DM Panel -->
+    {% include 'components/global_dm.html' %}
 
     <!-- Guest Status Bar (Global) -->
     <div class="guest-status-bar-global hidden" id="guest-status-bar-global">
@@ -231,6 +235,7 @@
             updateStatus();
         })();
     </script>
+    <script src="{% static 'js/components/global_dm.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

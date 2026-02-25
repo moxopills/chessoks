@@ -258,7 +258,8 @@ const Utils = (function() {
     const Sounds = (() => {
         let ctx = null;
         let bgmAudio = null;
-        let isMuted = Storage.get('chessok-muted', false);
+        let bgmVolume = Storage.get('chessok-bgm-vol', 30); // 0 ~ 100
+        let isMuted = (bgmVolume === 0);
 
         function getContext() {
             if (!ctx) {
@@ -271,10 +272,10 @@ const Utils = (function() {
 
         function initBGM() {
             if (!bgmAudio) {
-                bgmAudio = new Audio('https://cdn.pixabay.com/download/audio/2022/02/22/audio_d1718ab41b.mp3?filename=relaxing-light-music-106526.mp3');
+                bgmAudio = new Audio('https://upload.wikimedia.org/wikipedia/commons/e/eb/Lo-Fi_Hip_Hop_Music.ogg');
                 bgmAudio.loop = true;
-                bgmAudio.volume = 0.3;
             }
+            bgmAudio.volume = bgmVolume / 100;
         }
 
         function playTone(freq, duration = 0.12, volume = 0.12) {
@@ -326,14 +327,37 @@ const Utils = (function() {
             vibrate(15);
         }
 
-        function toggleMute() {
-            isMuted = !isMuted;
-            Storage.set('chessok-muted', isMuted);
-            if (isMuted) {
-                if (bgmAudio) bgmAudio.pause();
-            } else {
+        function setVolume(val) {
+            bgmVolume = parseInt(val, 10);
+            Storage.set('chessok-bgm-vol', bgmVolume);
+            isMuted = (bgmVolume === 0);
+            
+            if (bgmAudio) {
+                bgmAudio.volume = bgmVolume / 100;
+                if (bgmVolume > 0 && bgmAudio.paused) {
+                    bgmAudio.play().catch(() => {});
+                } else if (bgmVolume === 0) {
+                    bgmAudio.pause();
+                }
+            } else if (bgmVolume > 0) {
                 initBGM();
                 bgmAudio.play().catch(() => {});
+            }
+            return isMuted;
+        }
+
+        function getVolume() {
+            return bgmVolume;
+        }
+
+        function toggleMute() {
+            if (bgmVolume > 0) {
+                Storage.set('chessok-prev-vol', bgmVolume);
+                setVolume(0);
+            } else {
+                let prev = Storage.get('chessok-prev-vol', 30);
+                if (prev === 0) prev = 30;
+                setVolume(prev);
             }
             return isMuted;
         }
@@ -349,7 +373,7 @@ const Utils = (function() {
             return isMuted;
         }
 
-        return { notice, chat, move, vibrate, toggleMute, playBGM, isMuted: isMutedState };
+        return { notice, chat, move, vibrate, toggleMute, playBGM, isMuted: isMutedState, setVolume, getVolume };
     })();
 
     /**
