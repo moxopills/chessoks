@@ -1,0 +1,17 @@
+{
+  "name": "ChessOK",
+  "short_name": "ChessOK",
+  "description": "실시간 체스 멀티플레이 게임",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f1ea",
+  "theme_color": "#f5f1ea",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/images/icons/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

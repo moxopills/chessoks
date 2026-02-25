@@ -84,6 +84,11 @@
                 </div>
             </div>
 
+            <!-- Sound Toggle -->
+            <button class="theme-toggle" id="sound-toggle" aria-label="소리 켜기/끄기" style="margin-right: 8px;">
+                <span class="theme-icon" id="sound-icon">🔊</span>
+            </button>
+
             <!-- Theme Toggle -->
             <button class="theme-toggle" id="theme-toggle" aria-label="테마 변경">
                 <span class="theme-icon" id="theme-icon">🌙</span>
@@ -503,6 +508,31 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Sound toggle
+    const soundToggle = document.getElementById('sound-toggle');
+    const soundIcon = document.getElementById('sound-icon');
+    
+    function updateSoundIcon(muted) {
+        if (soundIcon) soundIcon.textContent = muted ? '🔇' : '🔊';
+        if (soundToggle) soundToggle.setAttribute('aria-label', muted ? '소리 켜기' : '소리 끄기');
+    }
+    
+    if (soundToggle && window.Utils && Utils.Sounds) {
+        updateSoundIcon(Utils.Sounds.isMuted());
+        
+        soundToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isMuted = Utils.Sounds.toggleMute();
+            updateSoundIcon(isMuted);
+        });
+        
+        // 페이지 아무곳이나 클릭 시 BGM 자동재생 시도 (브라우저 정책 우회)
+        document.body.addEventListener('click', function playOnce() {
+            Utils.Sounds.playBGM();
+            document.body.removeEventListener('click', playOnce);
+        }, { once: true });
+    }
+
     // Mobile menu toggle
     const navbarToggle = document.getElementById('navbar-toggle');
     const navbarMenu = document.getElementById('navbar-menu');
