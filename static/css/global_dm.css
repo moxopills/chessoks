@@ -76,6 +76,30 @@
     text-align: center;
 }
 
+.global-dm-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.global-dm-tab {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-card);
+    color: var(--color-text-secondary);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.global-dm-tab.is-active {
+    background: var(--color-accent-primary);
+    border-color: var(--color-accent-primary);
+    color: #fff;
+}
+
 .global-dm-subtitle {
     font-size: 0.7rem;
     color: var(--color-text-secondary);
@@ -113,6 +137,28 @@
     overflow-y: auto;
     overflow-x: hidden;
     background: var(--color-bg-primary);
+}
+
+.global-dm-lobby-body {
+    padding: 0;
+}
+
+#global-dm-lobby-slot .chat-container {
+    min-height: 0;
+    height: 100%;
+    margin: 0;
+}
+
+#global-dm-lobby-slot .chat-messages {
+    max-height: none;
+    border-radius: 0;
+    margin-bottom: 0;
+}
+
+#global-dm-lobby-slot .chat-form {
+    padding: var(--space-sm);
+    background: var(--color-bg-card);
+    border-top: 1px solid var(--color-border);
 }
 
 /* Reusing some direct_message and message_threads styles */
