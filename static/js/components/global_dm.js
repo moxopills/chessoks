@@ -1,6 +1,10 @@
 (function() {
     'use strict';
 
+    function isGamePage() {
+        return /^\/games\/\d+\/?$/.test(window.location.pathname);
+    }
+
     let currentUser = null;
     let pollTimer = null;
     let currentRoomUserId = null;
@@ -33,6 +37,13 @@
 
     window.addEventListener('user:updated', (event) => {
         const user = event.detail?.user;
+        if (isGamePage()) {
+            currentUser = user && !user.is_guest ? user : null;
+            fabBtn.style.display = 'none';
+            panel.classList.add('hidden');
+            fabBtn.classList.remove('is-active');
+            return;
+        }
         if (user && !user.is_guest) {
             currentUser = user;
             fabBtn.style.display = 'flex';
@@ -50,10 +61,25 @@
     window.addEventListener('global-dm:open-room', (event) => {
         openRoomFromExternal(event.detail || {});
     });
+    window.addEventListener('global-dm:open-panel', async () => {
+        if (!currentUser) {
+            await ensureCurrentUser();
+        }
+        if (!currentUser) {
+            Toast.error('로그인 시 가능합니다.');
+            return;
+        }
+        openPanel();
+    });
 
     bindEvents();
 
     async function init() {
+        if (isGamePage()) {
+            fabBtn.style.display = 'none';
+            panel.classList.add('hidden');
+            return;
+        }
         await ensureCurrentUser();
         if (currentUser) {
             fabBtn.style.display = 'flex';
@@ -136,6 +162,7 @@
     }
 
     function openPanel() {
+        if (isGamePage()) return;
         if (!currentUser) {
             Toast.error('로그인 시 가능합니다.');
             return;
