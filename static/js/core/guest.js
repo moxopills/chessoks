@@ -3,7 +3,10 @@
  * 비회원 게스트 세션 관리
  */
 
-const Guest = (function() {
+(function(global) {
+    if (global.Guest) return;
+
+    global.Guest = (function() {
     'use strict';
 
     const STORAGE_KEY = 'guest_token';
@@ -281,4 +284,5 @@ const Guest = (function() {
         showLoginModal,
         clearSession,
     };
-})();
+    })();
+})(window);

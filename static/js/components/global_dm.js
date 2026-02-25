@@ -2,7 +2,7 @@
     'use strict';
 
     function isGamePage() {
-        return /^\/games\/\d+\/?$/.test(window.location.pathname);
+        return /^\/games\/\d+(?:\/spectate)?\/?$/.test(window.location.pathname);
     }
     function isMobileLobbyPage() {
         const isLobbyPath = window.location.pathname === '/' || window.location.pathname === '/lobby/';
