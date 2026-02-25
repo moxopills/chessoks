@@ -23,8 +23,6 @@
     const mobileTabbar = document.getElementById('mobile-tabbar');
     const chatBadge = document.getElementById('chat-badge');
     const chatSection = document.querySelector('.lobby-chat-section');
-    const chatFab = document.getElementById('chat-fab');
-    const chatFabBadge = document.getElementById('chat-fab-badge');
     const waitingRoomCard = document.getElementById('waiting-room-card');
     const waitingRoomInfo = document.getElementById('waiting-room-info');
     const waitingRoomEnter = document.getElementById('waiting-room-enter');
@@ -90,16 +88,17 @@
     init();
 
     async function init() {
-        if (chatFab) {
-            document.body.classList.add('has-chat-fab');
-        }
+        const isMobile = window.innerWidth <= 768;
         const globalDmFab = document.getElementById('global-dm-fab');
-        globalDmFab?.classList.add('hidden');
-        if (window.innerWidth <= 768 && chatSection) {
-            // 모바일은 로비 채팅 패널을 기본 레이아웃에서 숨기고 FAB 플로팅으로만 사용
-            chatSection.classList.add('is-hidden');
-            chatSection.classList.remove('is-floating');
-            isChatOpen = false;
+        globalDmFab?.classList.remove('hidden');
+        if (chatSection) {
+            if (isMobile) {
+                chatSection.classList.add('is-hidden');
+                isChatOpen = false;
+            } else {
+                chatSection.classList.remove('is-hidden');
+                isChatOpen = true;
+            }
         }
         await loadRooms();
         await loadWaitingRoom();
@@ -1021,16 +1020,7 @@
 
 
     function setupMobileTabs() {
-        if (!mobileTabbar) {
-            if (window.innerWidth <= 768 && chatSection && chatFab) {
-                isChatOpen = false;
-                chatSection.classList.add('is-hidden');
-                chatSection.classList.remove('is-floating');
-                chatFab.classList.remove('is-active');
-                chatFab.classList.remove('hidden');
-            }
-            return;
-        }
+        if (!mobileTabbar) return;
         document.body.classList.add('has-mobile-tabbar');
         const tabs = mobileTabbar.querySelectorAll('.mobile-tab');
         tabs.forEach(tab => {
@@ -1042,64 +1032,28 @@
                     isChatOpen = true;
                     if (chatSection) {
                         chatSection.classList.remove('is-hidden');
-                        chatSection.classList.remove('is-floating');
                     }
-                    if (chatFab) chatFab.classList.remove('is-active');
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                     resetChatBadge();
                 } else {
                     isChatOpen = false;
                     if (chatSection) {
                         chatSection.classList.add('is-hidden');
-                        chatSection.classList.remove('is-floating');
                     }
-                    if (chatFab) chatFab.classList.remove('is-active');
                 }
             });
         });
         
-        // 초기 모바일 상태: 채팅 숨김
-        if (window.innerWidth <= 768) {
-            isChatOpen = false;
-            if (chatSection) chatSection.classList.add('is-hidden');
-        }
     }
 
     function setupChatToggle() {
-        if (!chatFab || !chatSection) return;
-
-        chatFab.addEventListener('click', () => {
-            Utils?.Sounds?.unlock?.();
-            const isHidden = chatSection.classList.contains('is-hidden');
-            
-            if (isHidden) {
-                // 열기 (플로팅)
-                chatSection.classList.remove('is-hidden');
-                chatSection.classList.add('is-floating');
-                chatFab.classList.add('is-active');
-                isChatOpen = true;
-                resetChatBadge();
-            } else {
-                // 닫기
-                chatSection.classList.add('is-hidden');
-                chatSection.classList.remove('is-floating');
-                chatFab.classList.remove('is-active');
-                isChatOpen = false;
-            }
-        });
-
         const switchToDmBtn = document.getElementById('switch-to-dm-btn');
-        const globalDmFab = document.getElementById('global-dm-fab');
-        if (switchToDmBtn && globalDmFab) {
+        if (switchToDmBtn) {
             switchToDmBtn.addEventListener('click', () => {
-                // 닫기
-                chatSection.classList.add('is-hidden');
-                chatSection.classList.remove('is-floating');
-                chatFab.classList.remove('is-active');
-                isChatOpen = false;
-                
-                // 1:1 채팅창 열기
-                globalDmFab.click();
+                if (chatSection) {
+                    chatSection.classList.remove('is-hidden');
+                }
+                window.dispatchEvent(new CustomEvent('global-dm:open-panel'));
             });
         }
     }
@@ -1130,10 +1084,6 @@
             chatBadge.textContent = chatUnread;
             chatBadge.classList.remove('hidden');
         }
-        if (chatFabBadge) {
-            chatFabBadge.textContent = chatUnread;
-            chatFabBadge.classList.remove('hidden');
-        }
     }
 
     function resetChatBadge() {
@@ -1141,10 +1091,6 @@
         if (chatBadge) {
             chatBadge.textContent = '0';
             chatBadge.classList.add('hidden');
-        }
-        if (chatFabBadge) {
-            chatFabBadge.textContent = '0';
-            chatFabBadge.classList.add('hidden');
         }
     }
 
@@ -1205,17 +1151,9 @@
         else if (action === 'chat') {
             const globalDmFab = document.getElementById('global-dm-fab');
             if (globalDmFab) {
-                // 플로팅 채팅 열기 전, chatSection이 열려있다면 닫아줌
                 if (chatSection && !chatSection.classList.contains('is-hidden')) {
                     chatSection.classList.add('is-hidden');
-                    chatSection.classList.remove('is-floating');
-                    if (chatFab) chatFab.classList.remove('is-active');
                 }
-                
-                // global-dm 패널을 열고 상대방 룸 뷰를 트리거하는 이벤트를 발생시키거나 꼼수를 활용함
-                // 가장 간단한 건, 패널을 연 다음 잠시 후 유저 항목을 찾아서 클릭 이벤트를 보내는 것인데, 
-                // 해당 유저와의 채팅 기록이 없을 수도 있음. 
-                // 따라서 window 이벤트를 디스패치하여 global_dm.js에서 수신하도록 하는게 정석임.
                 window.dispatchEvent(new CustomEvent('global-dm:open-room', { detail: { userId: targetId } }));
             } else {
                 window.location.href = `/messages/${targetId}/`;
