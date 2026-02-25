@@ -221,6 +221,7 @@
         setupExitGuard();
         setupKeyboardShortcuts();
         setupGuestExpiryHandler();
+        ensureReactionUIForExistingMessages();
         if (!replayOnly) {
             connectWebSocket();
         }
@@ -857,15 +858,19 @@
         // 상대 (위)
         const topTier = topPlayer?.rank_tier || 'Junior';
         const bottomTier = bottomPlayer?.rank_tier || 'Junior';
+        const topNicknameColor = Utils.getNicknameColorValue(topPlayer?.nickname_color || '');
+        const bottomNicknameColor = Utils.getNicknameColorValue(bottomPlayer?.nickname_color || '');
+        const topProfileRing = Utils.getProfileBorderValue(topPlayer?.profile_border || '');
+        const bottomProfileRing = Utils.getProfileBorderValue(bottomPlayer?.profile_border || '');
         opponentBar.innerHTML = `
             <div class="player-bar-info">
-                <div class="avatar avatar-sm">
+                <div class="avatar avatar-sm" style="box-shadow:${topProfileRing}">
                     ${topPlayer?.avatar_url
                         ? `<img src="${Utils.escapeHtml(topPlayer.avatar_url)}" alt="${Utils.escapeHtml(topPlayer?.nickname || '상대')}">`
                         : '<span class="avatar-placeholder">?</span>'}
                 </div>
                 <div class="player-bar-details">
-                    <span class="player-bar-name">${Utils.escapeHtml(topPlayer?.nickname || '상대')} <span class="tier-badge" title="${Utils.escapeHtml(topTier)}">${Utils.getTierIcon(topTier)}</span></span>
+                    <span class="player-bar-name" style="color:${topNicknameColor}">${Utils.escapeHtml(topPlayer?.nickname || '상대')} <span class="tier-badge" title="${Utils.escapeHtml(topTier)}">${Utils.getTierIcon(topTier)}</span></span>
                     <span class="player-bar-rating">${topPlayer?.rating || '--'}</span>
                 </div>
             </div>
@@ -875,13 +880,13 @@
         // 나 (아래)
         myBar.innerHTML = `
             <div class="player-bar-info">
-                <div class="avatar avatar-sm">
+                <div class="avatar avatar-sm" style="box-shadow:${bottomProfileRing}">
                     ${bottomPlayer?.avatar_url
                         ? `<img src="${Utils.escapeHtml(bottomPlayer.avatar_url)}" alt="${Utils.escapeHtml(bottomPlayer?.nickname || '나')}">`
                         : '<span class="avatar-placeholder">?</span>'}
                 </div>
                 <div class="player-bar-details">
-                    <span class="player-bar-name">${Utils.escapeHtml(bottomPlayer?.nickname || '나')} <span class="tier-badge" title="${Utils.escapeHtml(bottomTier)}">${Utils.getTierIcon(bottomTier)}</span></span>
+                    <span class="player-bar-name" style="color:${bottomNicknameColor}">${Utils.escapeHtml(bottomPlayer?.nickname || '나')} <span class="tier-badge" title="${Utils.escapeHtml(bottomTier)}">${Utils.getTierIcon(bottomTier)}</span></span>
                     <span class="player-bar-rating">${bottomPlayer?.rating || '--'}</span>
                 </div>
             </div>
@@ -1834,12 +1839,12 @@
         spectatorList.innerHTML = users
             .map((user) => `
                 <div class="spectator-item">
-                    <div class="avatar avatar-xs">
+                    <div class="avatar avatar-xs" style="box-shadow:${Utils.getProfileBorderValue(user.profile_border || '')}">
                         ${user.avatar_url
                             ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="${Utils.escapeHtml(user.nickname || '관전자')}">`
                             : '<span class="avatar-placeholder">?</span>'}
                     </div>
-                    <span>${Utils.escapeHtml(user.nickname || '관전자')}</span>
+                    <span style="color:${Utils.getNicknameColorValue(user.nickname_color || '')}">${Utils.escapeHtml(user.nickname || '관전자')}</span>
                 </div>
             `)
             .join('');
@@ -2579,7 +2584,25 @@
                 localReactionState.set(stateKey, next);
                 const countEl = btn.querySelector('span');
                 if (countEl) countEl.textContent = String(next);
+                btn.classList.add('active');
             });
+        });
+    }
+
+    function ensureReactionUIForExistingMessages() {
+        if (!chatMessages) return;
+        const messageEls = chatMessages.querySelectorAll('.chat-message .chat-content');
+        messageEls.forEach((contentEl, idx) => {
+            if (contentEl.querySelector('.chat-reactions')) return;
+            const reactions = document.createElement('div');
+            reactions.className = 'chat-reactions';
+            reactions.dataset.reactionKey = `legacy:${idx}:${Date.now()}`;
+            reactions.innerHTML = `
+                <button type="button" class="reaction-btn" data-reaction="👍">👍 <span>0</span></button>
+                <button type="button" class="reaction-btn" data-reaction="👏">👏 <span>0</span></button>
+            `;
+            contentEl.appendChild(reactions);
+            bindReactionButtons(contentEl.closest('.chat-message'));
         });
     }
 

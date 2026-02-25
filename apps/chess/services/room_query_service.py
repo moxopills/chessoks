@@ -11,9 +11,8 @@ class RoomQueryService:
 
     VALID_ROOM_TYPES = {choice[0] for choice in Room.ROOM_TYPE_CHOICES}
     VALID_STATUSES = {choice[0] for choice in Room.STATUS_CHOICES}
-    HIDDEN_ROOM_TYPES = {"random"}
     HIDDEN_ROOM_PREFIXES = ("ai_",)
-    QUICK_HIDE_STATUSES = {"waiting", "ready"}
+    MATCH_HIDE_STATUSES = {"waiting", "ready"}
 
     @staticmethod
     def list_rooms(
@@ -41,13 +40,12 @@ class RoomQueryService:
                 raise ValidationError({"room_type": "유효하지 않은 방 타입입니다."})
             queryset = queryset.filter(room_type=room_type)
         else:
-            # 랜덤 대전은 목록에서 항상 숨김
-            queryset = queryset.exclude(room_type__in=RoomQueryService.HIDDEN_ROOM_TYPES)
-            # 기본 목록에서는 빠른 대전의 대기/준비 방을 숨기되,
-            # 게임 중 상태에서는 관전 가능하도록 제외하지 않는다.
-            if status is None or status in RoomQueryService.QUICK_HIDE_STATUSES:
+            # 기본 목록에서는 매칭형 방(quick/random)의 대기/준비만 숨기고
+            # 게임 중(playing)은 관전 가능하도록 노출한다.
+            if status is None or status in RoomQueryService.MATCH_HIDE_STATUSES:
                 queryset = queryset.exclude(
-                    room_type="quick", status__in=RoomQueryService.QUICK_HIDE_STATUSES
+                    room_type__in=["quick", "random"],
+                    status__in=RoomQueryService.MATCH_HIDE_STATUSES,
                 )
             # AI 방은 기본 목록에서 제외
             for prefix in RoomQueryService.HIDDEN_ROOM_PREFIXES:
@@ -83,7 +81,9 @@ class RoomQueryService:
             return None
         return (
             Room.objects.select_related("host__stats", "guest__stats")
-            .filter(host=user, status__in=["waiting", "ready"], guest__isnull=True)
+            .filter(status__in=["waiting", "ready"])
+            .filter(models.Q(host=user) | models.Q(guest=user))
+            .order_by("-created_at")
             .first()
         )
 

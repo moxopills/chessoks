@@ -21,9 +21,17 @@ class BaseUserSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     nickname = serializers.CharField(read_only=True)
     avatar_url = serializers.SerializerMethodField()
+    nickname_color = serializers.SerializerMethodField()
+    profile_border = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
         return _avatar_with_cache_bust(obj)
+
+    def get_nickname_color(self, obj):
+        return getattr(getattr(obj, "stats", None), "nickname_color", "")
+
+    def get_profile_border(self, obj):
+        return getattr(getattr(obj, "stats", None), "profile_border", "")
 
 
 class PlayerSerializer(BaseUserSerializer):

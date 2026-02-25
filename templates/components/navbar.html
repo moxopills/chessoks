@@ -540,9 +540,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (soundMuteToggle) soundMuteToggle.textContent = vol === 0 ? '소리 켜기' : '음소거';
     }
     
-    if (soundToggle && window.Utils && Utils.Sounds) {
+    if (soundToggle && typeof Utils !== 'undefined' && Utils?.Sounds) {
         // Initialize UI with saved volume
         updateSoundUI(Utils.Sounds.getVolume());
+        // 페이지 진입 즉시 BGM 재생 시도
+        Utils.Sounds.playBGM();
         const unlockAudio = () => Utils.Sounds.unlock?.();
         document.addEventListener('pointerdown', unlockAudio, { once: true });
         document.addEventListener('keydown', unlockAudio, { once: true });
@@ -555,10 +557,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 soundDropdown.classList.toggle('hidden');
                 if (!soundDropdown.classList.contains('hidden')) {
                     Utils.Sounds.playBGM();
+                    Utils.Sounds.chat?.(); // 즉시 반응 확인용
                 }
                 userDropdown?.classList.add('hidden');
                 notificationDropdown?.classList.add('hidden');
             }
+        });
+
+        // 모바일/특정 브라우저에서 click 누락 대비
+        soundToggle.addEventListener('pointerdown', function(e) {
+            e.preventDefault();
+            Utils.Sounds.unlock?.();
         });
 
         if (soundSlider) {
@@ -567,6 +576,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (soundVolText) soundVolText.textContent = `${vol}%`;
                 Utils.Sounds.setVolume(vol);
                 updateSoundUI(vol);
+                Utils.Sounds.chat?.(); // 볼륨 조절 즉시 피드백
             });
             soundSlider.addEventListener('change', function(e) {
                 const vol = parseInt(e.target.value, 10);
@@ -585,6 +595,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.stopPropagation();
         });
         
+        // 자동재생 차단 브라우저를 위해 첫 클릭 시 재시도
         document.body.addEventListener('click', function playOnce() {
             Utils.Sounds.playBGM();
             document.body.removeEventListener('click', playOnce);

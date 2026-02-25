@@ -299,12 +299,28 @@ const Utils = (function() {
             }
         }
 
+        function ensureContextRunning() {
+            const context = getContext();
+            if (!context) return Promise.resolve(null);
+            if (context.state === 'running') return Promise.resolve(context);
+            return context.resume().then(() => context).catch(() => context);
+        }
+
         function initBGM() {
             if (!bgmAudio) {
                 bgmAudio = new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73456.mp3');
                 bgmAudio.crossOrigin = "anonymous";
                 bgmAudio.loop = true;
                 bgmAudio.preload = 'auto';
+                bgmAudio.addEventListener('playing', () => {
+                    stopSynthBGM();
+                });
+                bgmAudio.addEventListener('error', () => {
+                    if (!isMuted && bgmVolume > 0) startSynthBGM();
+                });
+                bgmAudio.addEventListener('stalled', () => {
+                    if (!isMuted && bgmVolume > 0) startSynthBGM();
+                });
             }
             bgmAudio.volume = bgmVolume / 100;
         }
@@ -316,7 +332,7 @@ const Utils = (function() {
                 if (isMuted || bgmVolume === 0) return;
                 const freq = seq[bgmStep % seq.length];
                 bgmStep += 1;
-                playTone(freq, 0.55, Math.max(0.01, (bgmVolume / 100) * 0.035));
+                playTone(freq, 0.55, Math.max(0.015, (bgmVolume / 100) * 0.08));
             }, 1200);
         }
 
@@ -329,10 +345,7 @@ const Utils = (function() {
 
         function unlock() {
             try {
-                const context = getContext();
-                if (context && context.state === 'suspended') {
-                    context.resume().catch(() => {});
-                }
+                ensureContextRunning();
                 if (!isMuted && bgmVolume > 0) {
                     playBGM();
                 }
@@ -342,22 +355,20 @@ const Utils = (function() {
         function playTone(freq, duration = 0.12, volume = 0.12) {
             if (isMuted || bgmVolume === 0) return;
             try {
-                const context = getContext();
-                if (!context) return;
-                if (context.state === 'suspended') {
-                    context.resume().catch(() => {});
-                }
-                const osc = context.createOscillator();
-                const gain = context.createGain();
-                osc.type = 'sine';
-                osc.frequency.value = freq;
-                gain.gain.value = 0.0001;
-                osc.connect(gain);
-                gain.connect(context.destination);
-                osc.start();
-                gain.gain.exponentialRampToValueAtTime(volume, context.currentTime + 0.01);
-                gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + duration);
-                osc.stop(context.currentTime + duration + 0.02);
+                ensureContextRunning().then((context) => {
+                    if (!context || isMuted || bgmVolume === 0) return;
+                    const osc = context.createOscillator();
+                    const gain = context.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.value = 0.0001;
+                    osc.connect(gain);
+                    gain.connect(context.destination);
+                    osc.start();
+                    gain.gain.exponentialRampToValueAtTime(volume, context.currentTime + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + duration);
+                    osc.stop(context.currentTime + duration + 0.02);
+                });
             } catch (e) {}
         }
 
@@ -420,17 +431,32 @@ const Utils = (function() {
 
         function playBGM() {
             if (isMuted || bgmVolume === 0) return;
+            // 즉시 배경음 보장(외부 음원 지연/실패 대비)
+            startSynthBGM();
             initBGM();
             if (bgmAudio) {
-                bgmAudio.play()
+                const playPromise = bgmAudio.play()
                     .then(() => stopSynthBGM())
                     .catch(() => startSynthBGM());
+                // 일부 브라우저에서 play Promise가 resolve/reject 없이 지연될 수 있어 타임아웃 백업
+                setTimeout(() => {
+                    if (playPromise && bgmAudio && bgmAudio.paused && !isMuted && bgmVolume > 0) {
+                        startSynthBGM();
+                    }
+                }, 1200);
             } else {
                 startSynthBGM();
             }
         }
 
-        return { 
+        // 페이지 어디서든 첫 사용자 제스처 시 오디오 언락
+        if (typeof document !== 'undefined') {
+            const onceUnlock = () => unlock();
+            document.addEventListener('pointerdown', onceUnlock, { once: true });
+            document.addEventListener('keydown', onceUnlock, { once: true });
+        }
+
+        return {
             notice, chat, move, vibrate, unlock,
             toggleMute, playBGM, setVolume, 
             getVolume: () => bgmVolume,

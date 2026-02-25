@@ -607,6 +607,8 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                     "nickname": user.nickname,
                     "avatar_url": user.avatar_url,
                     "rank_tier": getattr(getattr(user, "stats", None), "rank_tier", "Junior"),
+                    "nickname_color": getattr(getattr(user, "stats", None), "nickname_color", ""),
+                    "profile_border": getattr(getattr(user, "stats", None), "profile_border", ""),
                 }
             )
         return users
@@ -628,6 +630,8 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 "nickname": user.nickname,
                 "avatar_url": user.avatar_url,
                 "rank_tier": getattr(getattr(user, "stats", None), "rank_tier", "Junior"),
+                "nickname_color": getattr(getattr(user, "stats", None), "nickname_color", ""),
+                "profile_border": getattr(getattr(user, "stats", None), "profile_border", ""),
             },
         }
         await self.channel_layer.group_send(
