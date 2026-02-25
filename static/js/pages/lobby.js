@@ -44,6 +44,15 @@
     const matchToast = document.getElementById('match-toast');
     const aiLevelButtons = Array.from(document.querySelectorAll('.ai-level-card'));
     const aiLevelLoading = document.getElementById('ai-level-loading');
+    const lobbyCustomizeOpen = document.getElementById('lobby-customize-open');
+    const lobbyCustomizeModal = document.getElementById('lobby-customize-modal');
+    const lobbyCustomizeCancel = document.getElementById('lobby-customize-cancel');
+    const lobbyCustomizeSave = document.getElementById('lobby-customize-save');
+    const lobbyNicknameColor = document.getElementById('lobby-nickname-color');
+    const lobbyProfileBorder = document.getElementById('lobby-profile-border');
+    const lobbyStylePointsText = document.getElementById('lobby-style-points-text');
+    const lobbyCustomizePreviewAvatar = document.getElementById('lobby-customize-preview-avatar');
+    const lobbyCustomizePreviewNickname = document.getElementById('lobby-customize-preview-nickname');
     const guestPlayBtn = document.getElementById('guest-play-btn');
     const guestStatusBar = document.getElementById('guest-status-bar');
     const guestStatusName = document.getElementById('guest-status-name');
@@ -56,6 +65,7 @@
     let lobbySocket = null;
     let notificationSocket = null;
     let currentUserId = null;
+    let currentMe = null;
     let isGuestUser = false;
     let isSuspended = false;
     let friendIds = new Set();
@@ -72,7 +82,7 @@
     let lastRoomsSignature = null;
     let lastWaitingSignature = '';
     let waitingTick = 0;
-    const HIDDEN_ROOM_TYPES = new Set(['quick', 'random']);
+    const MATCH_ROOM_TYPES = new Set(['quick', 'random']);
     let activeMatchToast = null;
     let lobbyWsReconnectAttempts = 0;
     const LOBBY_WS_MAX_RECONNECT = 10;
@@ -83,6 +93,7 @@
     let randomMatchStartTime = null;
     let quickMatchPollInterval = null;
     let randomMatchPollInterval = null;
+    const localReactionState = new Map();
 
     // 초기화
     init();
@@ -109,6 +120,7 @@
         setupChatToggle();
         setupTierToggle();
         setupAiMatch();
+        setupLobbyCustomization();
         setupUserContextMenu();
         setupUserSearch();
         setupGuestMode();
@@ -165,7 +177,11 @@
             waitingRoomCard.classList.remove('hidden');
             const title = room.title || '빠른 대전';
             const timeText = room.time_limit ? `${room.time_limit}분` : '무제한';
-            waitingRoomInfo.textContent = `${Utils.escapeHtml(title)} · ${timeText}`;
+            const hostHtml = styledUserInline(room.host);
+            waitingRoomInfo.innerHTML = `
+                <div style="font-weight:700; margin-bottom:4px;">${Utils.escapeHtml(title)} · ${timeText}</div>
+                <div style="opacity:0.95;">${hostHtml}</div>
+            `;
             waitingRoomEnter.onclick = () => {
                 window.location.href = `/rooms/${room.id}/`;
             };
@@ -199,9 +215,15 @@
                 activeRoomId = room.id;
             }
             activeGameCard.classList.remove('hidden');
-            const white = room.host?.nickname || '화이트';
-            const black = room.guest?.nickname || '블랙';
-            activeGameInfo.textContent = `${white} vs ${black}`;
+            const whiteHtml = styledUserInline(room.host, '화이트');
+            const blackHtml = styledUserInline(room.guest, '블랙');
+            activeGameInfo.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span>${whiteHtml}</span>
+                    <span style="opacity:0.7;">vs</span>
+                    <span>${blackHtml}</span>
+                </div>
+            `;
             activeGameEnter.onclick = () => {
                 window.location.href = `/games/${room.id}/`;
             };
@@ -234,7 +256,9 @@
                 <div class="room-info">
                     <div class="room-title">${Utils.escapeHtml(room.title || '빠른 대전')}</div>
                     <div class="room-meta">
-                        ${Utils.escapeHtml(room.host?.nickname || '호스트')} ·
+                        <span style="color:${Utils.getNicknameColorValue(room.host?.nickname_color || '')}">
+                            ${Utils.escapeHtml(room.host?.nickname || '호스트')}
+                        </span> ·
                         ${room.time_limit ? `${room.time_limit}분` : '무제한'}
                         ${room.spectator_count > 0 ? ` · 👁 ${room.spectator_count}` : ''}
                     </div>
@@ -300,7 +324,8 @@
             return;
         }
 
-        if ((room.guest || room.player_count >= 2) && room.guest?.id !== currentUserId) {
+        const isParticipant = room.host?.id === currentUserId || room.guest?.id === currentUserId;
+        if (!isParticipant && (room.guest || room.player_count >= 2)) {
             Toast.error('이미 인원이 찬 방입니다.');
             return;
         }
@@ -340,15 +365,19 @@
         try {
             const user = await API.get('/accounts/me/');
             currentUserId = user.id;
+            currentMe = user;
 
             // 게스트 유저인지 확인
             if (user.is_guest) {
                 isGuestUser = true;
+                lobbyCustomizeOpen?.classList.add('hidden');
                 setupGuestSession();
                 return;
             }
 
             isGuestUser = false;
+            lobbyCustomizeOpen?.classList.remove('hidden');
+            populateLobbyCustomization(user.stats || {});
             await loadFriendIds();
             setupChat();
             setupQuickMatch();
@@ -365,6 +394,7 @@
             guestPlayBtn?.classList.add('hidden');
             guestStatusBar?.classList.add('hidden');
         } catch (error) {
+            lobbyCustomizeOpen?.classList.add('hidden');
             // 비로그인 상태 - 게스트 체크
             if (typeof Guest !== 'undefined' && Guest.isGuest()) {
                 isGuestUser = true;
@@ -563,6 +593,103 @@
                 }
             }
         });
+    }
+
+    function setupLobbyCustomization() {
+        if (!lobbyCustomizeOpen || !lobbyCustomizeModal) return;
+
+        lobbyCustomizeOpen.addEventListener('click', () => {
+            if (!currentUserId || isGuestUser) {
+                Toast.error('로그인 시 가능합니다.');
+                return;
+            }
+            lobbyCustomizeModal.classList.remove('hidden');
+        });
+
+        lobbyCustomizeCancel?.addEventListener('click', () => {
+            lobbyCustomizeModal.classList.add('hidden');
+        });
+
+        lobbyCustomizeModal.addEventListener('click', (event) => {
+            if (event.target === lobbyCustomizeModal) {
+                lobbyCustomizeModal.classList.add('hidden');
+            }
+        });
+
+        lobbyCustomizeSave?.addEventListener('click', async () => {
+            if (!currentUserId || isGuestUser) {
+                Toast.error('로그인 시 가능합니다.');
+                return;
+            }
+            const payload = {
+                nickname_color: lobbyNicknameColor?.value || '',
+                profile_border: lobbyProfileBorder?.value || '',
+            };
+
+            try {
+                const updated = await API.patch('/accounts/profile/', payload);
+                currentMe = { ...(currentMe || {}), ...updated };
+                populateLobbyCustomization(updated.stats || currentMe.stats || {});
+
+                if (lobbyUsers[currentUserId]) {
+                    lobbyUsers[currentUserId].nickname_color = updated.stats?.nickname_color || payload.nickname_color;
+                    lobbyUsers[currentUserId].profile_border = updated.stats?.profile_border || payload.profile_border;
+                }
+
+                renderUsers();
+                loadRooms();
+                loadWaitingRoom();
+                loadActiveGame();
+                window.dispatchEvent(new CustomEvent('user:updated', { detail: { user: updated } }));
+                Toast.success('커스터마이징이 저장되었습니다.');
+                lobbyCustomizeModal.classList.add('hidden');
+            } catch (error) {
+                Toast.error(error.data?.message || '커스터마이징 저장에 실패했습니다.');
+            }
+        });
+
+        lobbyNicknameColor?.addEventListener('change', renderLobbyCustomizationPreview);
+        lobbyProfileBorder?.addEventListener('change', renderLobbyCustomizationPreview);
+    }
+
+    function populateLobbyCustomization(stats) {
+        fillSelect(
+            lobbyNicknameColor,
+            stats.unlocked_nickname_colors || [{ key: '', label: '기본', cost: 0 }],
+            stats.nickname_color || ''
+        );
+        fillSelect(
+            lobbyProfileBorder,
+            stats.unlocked_profile_borders || [{ key: '', label: '기본', cost: 0 }],
+            stats.profile_border || ''
+        );
+        if (lobbyStylePointsText) {
+            lobbyStylePointsText.textContent = `보유 포인트: ${stats.style_points ?? 0}P`;
+        }
+        renderLobbyCustomizationPreview();
+    }
+
+    function fillSelect(selectEl, options, selectedKey) {
+        if (!selectEl) return;
+        selectEl.innerHTML = options
+            .map((item) => `<option value="${item.key}">${item.label}${item.cost ? ` (${item.cost}P)` : ''}</option>`)
+            .join('');
+        selectEl.value = selectedKey || '';
+    }
+
+    function renderLobbyCustomizationPreview() {
+        if (!lobbyCustomizePreviewNickname || !lobbyCustomizePreviewAvatar) return;
+        const nickname = currentMe?.nickname || '내 닉네임';
+        const avatarUrl = currentMe?.avatar_url || '';
+        const color = Utils.getNicknameColorValue(lobbyNicknameColor?.value || '');
+        const ring = Utils.getProfileBorderValue(lobbyProfileBorder?.value || '');
+
+        lobbyCustomizePreviewNickname.textContent = nickname;
+        lobbyCustomizePreviewNickname.style.color = color;
+        lobbyCustomizePreviewAvatar.style.boxShadow = ring;
+        lobbyCustomizePreviewAvatar.innerHTML = avatarUrl
+            ? `<img src="${Utils.escapeHtml(avatarUrl)}" alt="${Utils.escapeHtml(nickname)}">`
+            : '👤';
     }
 
     /**
@@ -1011,11 +1138,42 @@
             <div class="chat-content">
                 <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
                 <div class="chat-bubble">${Utils.escapeHtml(data.message)}</div>
+                <div class="chat-reactions" data-reaction-key="${data.id || `${data.user_id}:${data.sent_at || Date.now()}`}">
+                    <button type="button" class="reaction-btn" data-reaction="👍">👍 <span>0</span></button>
+                    <button type="button" class="reaction-btn" data-reaction="👏">👏 <span>0</span></button>
+                </div>
             </div>
             <span class="chat-time">${formatChatTime(data.sent_at)}</span>
         `;
         chatMessages.appendChild(messageEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+        bindReactionButtons(messageEl);
+    }
+
+    function bindReactionButtons(messageEl) {
+        messageEl.querySelectorAll('.reaction-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const wrap = btn.closest('.chat-reactions');
+                const key = wrap?.dataset.reactionKey;
+                const reaction = btn.dataset.reaction;
+                if (!key || !reaction) return;
+                const stateKey = `${key}:${reaction}`;
+                const countEl = btn.querySelector('span');
+                if (!countEl) return;
+
+                const current = parseInt(countEl.textContent || '0', 10);
+                const selected = localReactionState.get(stateKey) === true;
+                if (selected) {
+                    countEl.textContent = String(Math.max(0, current - 1));
+                    btn.classList.remove('active');
+                    localReactionState.set(stateKey, false);
+                } else {
+                    countEl.textContent = String(current + 1);
+                    btn.classList.add('active');
+                    localReactionState.set(stateKey, true);
+                }
+            });
+        });
     }
 
 
@@ -1245,21 +1403,38 @@
         const statusClass = online ? 'online' : 'offline';
         const tier = user.rank_tier || user.stats?.rank_tier || 'Junior';
         const tierIcon = Utils.getTierIcon(tier);
+        const nicknameColor = Utils.getNicknameColorValue(user.nickname_color || user.stats?.nickname_color || '');
+        const profileRing = Utils.getProfileBorderValue(user.profile_border || user.stats?.profile_border || '');
         return `
             <div class="user-item" data-user-id="${user.id}">
-                <div class="user-avatar">
+                <div class="user-avatar" style="box-shadow:${profileRing}">
                     ${user.avatar_url
                         ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="${Utils.escapeHtml(user.nickname || '')}">`
                         : '👤'}
                 </div>
                 <div class="user-info">
-                    <div class="user-nickname">
+                    <div class="user-nickname" style="color:${nicknameColor}">
                         ${Utils.escapeHtml(user.nickname)}
                         <span class="user-tier-icon" title="${Utils.escapeHtml(tier)}">${tierIcon}</span>
                     </div>
                     <div class="user-status ${statusClass}">${statusText}</div>
                 </div>
             </div>
+        `;
+    }
+
+    function styledUserInline(user, fallback = '플레이어') {
+        const nickname = user?.nickname || fallback;
+        const color = Utils.getNicknameColorValue(user?.nickname_color || user?.stats?.nickname_color || '');
+        const ring = Utils.getProfileBorderValue(user?.profile_border || user?.stats?.profile_border || '');
+        const avatarUrl = user?.avatar_url ? Utils.escapeHtml(user.avatar_url) : '';
+        return `
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+                <span style="width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;background:rgba(255,255,255,.08);box-shadow:${ring};">
+                    ${avatarUrl ? `<img src="${avatarUrl}" alt="${Utils.escapeHtml(nickname)}" style="width:100%;height:100%;object-fit:cover;">` : '👤'}
+                </span>
+                <span style="color:${color};font-weight:600;">${Utils.escapeHtml(nickname)}</span>
+            </span>
         `;
     }
 
@@ -1343,7 +1518,12 @@
     }
 
     function isHiddenRoomType(room) {
-        return HIDDEN_ROOM_TYPES.has(room?.room_type);
+        if (!room?.room_type) return false;
+        // 매칭형 방은 대기/준비 상태만 숨기고, 게임 중은 관전 가능하게 노출
+        if (MATCH_ROOM_TYPES.has(room.room_type)) {
+            return room.status === 'waiting' || room.status === 'ready';
+        }
+        return false;
     }
 
     /**

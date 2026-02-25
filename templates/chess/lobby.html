@@ -16,6 +16,9 @@
             <button class="hero-tier-toggle" id="mode-toggle" type="button" aria-expanded="false">
                 게임 시작 안내
             </button>
+            <button class="hero-tier-toggle hidden" id="lobby-customize-open" type="button" aria-expanded="false">
+                커스터마이징
+            </button>
         </div>
         <div class="hero-tier-panel hidden" id="tier-panel">
             <div class="tier-row"><span class="tier-icon">🥉</span> Beginner: 0-1199</div>
@@ -228,6 +231,33 @@
 </div>
 
 <div class="match-toast hidden" id="match-toast"></div>
+
+<div class="modal-overlay hidden" id="lobby-customize-modal">
+    <div class="modal ai-modal">
+        <div class="modal-header">
+            <h2 class="modal-title">로비 커스터마이징</h2>
+        </div>
+        <div class="modal-body">
+            <div class="lobby-customize-preview" id="lobby-customize-preview">
+                <div class="lobby-customize-avatar" id="lobby-customize-preview-avatar">👤</div>
+                <div class="lobby-customize-nickname" id="lobby-customize-preview-nickname">내 닉네임</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="lobby-nickname-color">닉네임 색상</label>
+                <select class="form-input" id="lobby-nickname-color"></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="lobby-profile-border">프로필 테두리</label>
+                <select class="form-input" id="lobby-profile-border"></select>
+            </div>
+            <div class="guest-modal-notice" id="lobby-style-points-text">보유 포인트: 0P</div>
+            <div class="modal-actions is-centered">
+                <button class="btn btn-secondary" id="lobby-customize-cancel">취소</button>
+                <button class="btn btn-primary" id="lobby-customize-save">저장</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Guest Login Modal -->
 <div class="modal-overlay hidden" id="guest-login-modal">
@@ -749,6 +779,37 @@
     margin-bottom: 2px;
 }
 
+.chat-reactions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.reaction-btn {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-tertiary);
+    color: var(--color-text-secondary);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 0.72rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.reaction-btn:hover {
+    border-color: var(--color-accent-secondary);
+    color: var(--color-text-primary);
+}
+
+.reaction-btn.active {
+    border-color: var(--color-accent-secondary);
+    color: var(--color-accent-secondary);
+}
+
 .chat-notice {
     text-align: center;
     padding: var(--space-md);
@@ -970,6 +1031,39 @@
 
 .hero-tier-panel .tier-icon {
     font-size: 0.9rem;
+}
+
+.lobby-customize-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: 12px;
+    background: var(--color-bg-tertiary);
+}
+
+.lobby-customize-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.lobby-customize-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.lobby-customize-nickname {
+    font-weight: 700;
+    font-size: 0.95rem;
 }
 
 .user-status {

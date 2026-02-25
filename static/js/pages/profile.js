@@ -54,13 +54,16 @@
 
     function renderProfile(user) {
         if (!user) return;
-        nicknameEl.textContent = user.nickname || '닉네임 없음';
+        const nickname = user.nickname || '닉네임 없음';
+        nicknameEl.textContent = nickname;
         emailEl.textContent = user.email || '';
         bioEl.textContent = user.bio || '소개가 없습니다.';
         const rating = user.stats?.rating ?? user.rating ?? 0;
         const tier = user.stats?.rank_tier || deriveTierFromRating(rating);
         tierEl.textContent = `티어 · ${tier}`;
         tierEl.style.color = Utils.getTierColor(tier);
+        const tierIcon = Utils.getTierIcon(tier);
+        nicknameEl.innerHTML = `${Utils.escapeHtml(nickname)} <span class="profile-tier-icon-inline" title="${Utils.escapeHtml(tier)}">${tierIcon}</span>`;
         applyProfileCustomization({
             nicknameColor: user.stats?.nickname_color || '',
             profileBorder: user.stats?.profile_border || '',
@@ -79,11 +82,6 @@
                 span.textContent = user.nickname?.[0] || '?';
                 avatarEl.appendChild(span);
             }
-            const tierBadge = document.createElement('span');
-            tierBadge.className = 'tier-badge';
-            tierBadge.title = tier;
-            tierBadge.textContent = Utils.getTierIcon(tier);
-            avatarEl.appendChild(tierBadge);
         }
     }
 
