@@ -510,6 +510,7 @@ class GameService:
         white_stats, _ = UserStats.objects.get_or_create(user=game.white_player)
         black_stats, _ = UserStats.objects.get_or_create(user=game.black_player)
         RatingService.update_stats_only(white_stats, black_stats, game.result)
+        GameService._apply_style_points(white_stats, black_stats, game.result)
         white_stats.save()
         black_stats.save()
         RankingService.invalidate_leaderboard_cache()
@@ -528,6 +529,7 @@ class GameService:
         black_tier_before = black_stats.rank_tier
 
         RatingService.update_ratings_and_stats(white_stats, black_stats, game.result)
+        GameService._apply_style_points(white_stats, black_stats, game.result)
         white_stats.save()
         black_stats.save()
         RankingService.invalidate_leaderboard_cache()
@@ -747,6 +749,41 @@ class GameService:
                 message=f"{sender.nickname}님이 리매치를 거절했습니다.",
                 payload={"game_id": game.id, "room_id": game.room_id, "from": sender_color},
             )
+
+    @staticmethod
+    def _apply_style_points(white_stats: UserStats, black_stats: UserStats, result: str) -> None:
+        # 기본 지급: 완료한 경기당 10점
+        white_stats.style_points = (white_stats.style_points or 0) + 10
+        black_stats.style_points = (black_stats.style_points or 0) + 10
+
+        white_win = {
+            Game.Status.WHITE_WIN,
+            Game.Status.CHECKMATE_WHITE,
+            Game.Status.TIMEOUT_BLACK,
+            Game.Status.RESIGNATION_BLACK,
+        }
+        black_win = {
+            Game.Status.BLACK_WIN,
+            Game.Status.CHECKMATE_BLACK,
+            Game.Status.TIMEOUT_WHITE,
+            Game.Status.RESIGNATION_WHITE,
+        }
+        draw_set = {
+            Game.Status.DRAW,
+            Game.Status.STALEMATE,
+            Game.Status.DRAW_AGREEMENT,
+            Game.Status.DRAW_REPETITION,
+            Game.Status.DRAW_FIFTY_MOVE,
+            Game.Status.DRAW_INSUFFICIENT,
+        }
+
+        if result in white_win:
+            white_stats.style_points += 5
+        elif result in black_win:
+            black_stats.style_points += 5
+        elif result in draw_set:
+            white_stats.style_points += 2
+            black_stats.style_points += 2
 
     @staticmethod
     def _tier_rank(tier: str) -> int:

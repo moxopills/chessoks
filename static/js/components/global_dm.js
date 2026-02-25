@@ -180,6 +180,16 @@
                 Toast.error(error.data?.detail || error.data?.message || '메시지 전송에 실패했습니다.');
             }
         });
+
+        // Emoji buttons logic
+        panel.querySelectorAll('.emoji-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const emoji = btn.textContent;
+                inputEl.value += emoji;
+                inputEl.focus();
+                Utils?.Sounds?.unlock?.();
+            });
+        });
     }
 
     function openPanel() {
@@ -228,7 +238,10 @@
         setTabActive('lobby');
     }
 
-    function showRoomView(userId, nickname = '상대') {
+    async function showRoomView(userId, nickname = '상대') {
+        if (!currentUser) {
+            await ensureCurrentUser();
+        }
         threadsView.classList.add('hidden');
         lobbyView?.classList.add('hidden');
         roomView.classList.remove('hidden');
@@ -368,6 +381,8 @@
 
     async function loadMessages(forceScroll = false) {
         if (!currentRoomUserId) return;
+        if (!currentUser) await ensureCurrentUser();
+
         try {
             const data = await API.get(`/accounts/messages/${currentRoomUserId}/`, { limit: 100, offset: 0, no_count: 1 });
             const items = data.results || [];
@@ -406,7 +421,7 @@
     }
 
     function renderMessageItem(item) {
-        const isMe = item.sender?.id === currentUser?.id;
+        const isMe = currentUser && item.sender?.id === currentUser.id;
         const time = formatTimeOnly(item.created_at);
         const avatar = !isMe
             ? (item.sender?.avatar_url

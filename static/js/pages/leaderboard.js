@@ -139,16 +139,20 @@
         leaderboardBody.innerHTML = rows.map((row) => {
             const isMe = myId && row.id === myId;
             const winRate = Utils.calculateWinRate(row.games_won, row.games_played || 0);
+            const nameColor = Utils.getNicknameColorValue(row.nickname_color);
+            const avatarRing = Utils.getProfileBorderValue(row.profile_border);
             return `
                 <tr class="leaderboard-row ${isMe ? 'is-me' : ''}" data-user-id="${row.id}">
                     <td>${row.rank}</td>
                     <td>
                         <div class="user-cell">
                             <div class="avatar avatar-sm">
-                                ${row.avatar_url ? `<img src="${row.avatar_url}" alt="${Utils.escapeHtml(row.nickname)}">` : '<span class="avatar-placeholder">?</span>'}
+                                ${row.avatar_url
+                                    ? `<img src="${row.avatar_url}" alt="${Utils.escapeHtml(row.nickname)}" style="${avatarRing ? `box-shadow:${avatarRing};` : ''}">`
+                                    : '<span class="avatar-placeholder">?</span>'}
                             </div>
                             <div class="user-name">
-                                <strong>
+                                <strong style="${nameColor ? `color:${nameColor};` : ''}">
                                     ${Utils.escapeHtml(row.nickname)}
                                     <span class="user-tier-icon" title="${Utils.escapeHtml(row.rank_tier)}">${Utils.getTierIcon(row.rank_tier)}</span>
                                 </strong>

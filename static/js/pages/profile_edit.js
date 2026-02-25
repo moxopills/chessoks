@@ -11,6 +11,9 @@
     const nicknameInput = document.getElementById('nickname');
     const bioInput = document.getElementById('bio');
     const nicknameError = document.getElementById('nickname-error');
+    const nicknameColorSelect = document.getElementById('nickname-color');
+    const profileBorderSelect = document.getElementById('profile-border');
+    const stylePointsText = document.getElementById('style-points-text');
 
     const emailChangeBtn = document.getElementById('email-change-btn');
     const emailConfirmBtn = document.getElementById('email-confirm-btn');
@@ -50,9 +53,34 @@
             nicknameInput.value = me.nickname || '';
             bioInput.value = me.bio || '';
             renderAvatar(me.avatar_url, me.nickname);
+            renderCustomization(me.stats || {});
         } catch (error) {
             Toast.error('프로필 정보를 불러올 수 없습니다.');
         }
+    }
+
+    function renderCustomization(stats) {
+        if (stylePointsText) {
+            stylePointsText.textContent = `보유 포인트: ${stats.style_points ?? 0}P`;
+        }
+        fillSelect(
+            nicknameColorSelect,
+            stats.unlocked_nickname_colors || [{ key: '', label: '기본', cost: 0 }],
+            stats.nickname_color || ''
+        );
+        fillSelect(
+            profileBorderSelect,
+            stats.unlocked_profile_borders || [{ key: '', label: '기본', cost: 0 }],
+            stats.profile_border || ''
+        );
+    }
+
+    function fillSelect(selectEl, options, selectedKey) {
+        if (!selectEl) return;
+        selectEl.innerHTML = options
+            .map((item) => `<option value="${item.key}">${item.label}${item.cost ? ` (${item.cost}P)` : ''}</option>`)
+            .join('');
+        selectEl.value = selectedKey || '';
     }
 
     function renderAvatar(url, nickname) {
@@ -109,11 +137,14 @@
             const payload = {
                 nickname: nicknameInput.value.trim(),
                 bio: bioInput.value.trim(),
+                nickname_color: nicknameColorSelect?.value || '',
+                profile_border: profileBorderSelect?.value || '',
             };
             try {
                 const updated = await API.patch('/accounts/profile/', payload);
                 Toast.success('프로필이 업데이트되었습니다.');
                 renderAvatar(updated.avatar_url, updated.nickname);
+                renderCustomization(updated.stats || {});
                 await refreshAuthUser();
             } catch (error) {
                 const fieldError = error.data?.nickname?.[0];
