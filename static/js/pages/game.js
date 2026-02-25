@@ -43,6 +43,9 @@
     const guideToggle = document.getElementById('guide-toggle');
     const capturedWhite = document.getElementById('captured-white');
     const capturedBlack = document.getElementById('captured-black');
+    const spectatorSection = document.getElementById('spectator-section');
+    const spectatorList = document.getElementById('spectator-list');
+    const spectatorCount = document.getElementById('spectator-count');
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
@@ -127,6 +130,7 @@
     let dragStartSquare = null;
     let touchHandled = false; // 터치 이벤트 처리 플래그
     let isAiRoom = false;
+    let isSpectator = false;
     let movePage = 1;
     const movePageSize = 6;
     let aiExitTriggered = false;
@@ -147,7 +151,12 @@
         }
 
         const globalDmFab = document.getElementById('global-dm-fab');
+        const globalDmPanel = document.getElementById('global-dm-panel');
         globalDmFab?.classList.add('hidden');
+        if (globalDmFab) {
+            globalDmFab.style.display = 'none';
+        }
+        globalDmPanel?.classList.add('hidden');
 
         guideEnabled = Utils.Storage.get('guide_enabled', true);
         setupGuideToggle();
@@ -325,6 +334,8 @@
                 opponentUserId = game.white_player?.id || null;
             }
 
+            isSpectator = !myColor;
+
             if (!myColor || replayOnly) {
                 gameActions?.classList.add('hidden');
             }
@@ -348,6 +359,7 @@
                 drawModal?.remove();
                 reportOpenBtn?.remove();
                 chatSection?.classList.add('is-hidden');
+                spectatorSection?.classList.add('hidden');
                 document.querySelector('.mobile-tab[data-tab="chat"]')?.classList.add('hidden');
             }
 
@@ -356,6 +368,7 @@
             renderMoveList();
             await loadCapturedPieces();
             renderCapturedPieces();
+            await refreshSpectatorList();
             updateTurn();
             startTimer();
             if (game.move_count > 0) {
@@ -1432,6 +1445,7 @@
             addChatNotice('연결되었습니다.');
             wsReconnectAttempts = 0;
             startHeartbeat();
+            refreshSpectatorList();
         };
 
         socket.onmessage = (e) => {
@@ -1547,8 +1561,13 @@
                     Toast.info(`${nickname}님이 관전에 ${actionText}했습니다.`);
                     addChatNotice(`${nickname}님이 관전에 ${actionText}했습니다.`);
                 }
+                await refreshSpectatorList();
                 break;
             }
+
+            case 'room_update':
+                await refreshSpectatorList();
+                break;
 
             case 'error':
                 Toast.error(data.message);
@@ -1664,6 +1683,43 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
         if (!isMine) Utils?.Sounds?.chat?.();
         handleChatBadge(data);
+    }
+
+    async function refreshSpectatorList() {
+        if (!spectatorSection || !spectatorList || !spectatorCount || isAiRoom) return;
+        try {
+            const data = await API.get(`/chess/rooms/${roomId}/spectators/`);
+            const spectators = data?.spectators || [];
+            spectatorCount.textContent = `${spectators.length}명`;
+            renderSpectatorList(spectators);
+        } catch (error) {
+            if (error?.status === 403 || error?.status === 404) {
+                spectatorSection.classList.add('hidden');
+                return;
+            }
+            spectatorCount.textContent = '--';
+            spectatorList.innerHTML = '<div class="spectator-empty">목록을 불러오지 못했습니다.</div>';
+        }
+    }
+
+    function renderSpectatorList(users) {
+        if (!spectatorList) return;
+        if (!users.length) {
+            spectatorList.innerHTML = '<div class="spectator-empty">관전자가 없습니다.</div>';
+            return;
+        }
+        spectatorList.innerHTML = users
+            .map((user) => `
+                <div class="spectator-item">
+                    <div class="avatar avatar-xs">
+                        ${user.avatar_url
+                            ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="${Utils.escapeHtml(user.nickname || '관전자')}">`
+                            : '<span class="avatar-placeholder">?</span>'}
+                    </div>
+                    <span>${Utils.escapeHtml(user.nickname || '관전자')}</span>
+                </div>
+            `)
+            .join('');
     }
 
     function setupMobileTabs() {
