@@ -84,6 +84,11 @@
                 </div>
             </div>
 
+            <!-- Install App Button (PWA) -->
+            <button class="btn btn-primary btn-sm" id="install-app-btn" style="display: none; padding: 4px 8px; font-size: 0.75rem; white-space: nowrap; margin-right: 4px;">
+                앱 다운로드
+            </button>
+
             <!-- Sound Toggle -->
             <button class="theme-toggle" id="sound-toggle" aria-label="소리 켜기/끄기" style="margin-right: 8px;">
                 <span class="theme-icon" id="sound-icon">🔊</span>
@@ -193,15 +198,15 @@
 .navbar-right {
     display: flex;
     align-items: center;
-    gap: var(--space-md);
+    gap: 8px; /* 기존 var(--space-md)에서 축소 */
 }
 
 .theme-toggle {
     border: 1px solid var(--color-border);
     background: var(--color-bg-tertiary);
     color: var(--color-text-primary);
-    width: 36px;
-    height: 36px;
+    width: 32px; /* 36px에서 축소 */
+    height: 32px; /* 36px에서 축소 */
     border-radius: 999px;
     display: flex;
     align-items: center;
@@ -215,7 +220,7 @@
 }
 
 .theme-icon {
-    font-size: 1rem;
+    font-size: 0.9rem; /* 1rem에서 축소 */
     line-height: 1;
 }
 
@@ -227,10 +232,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--space-sm);
+    padding: var(--space-xs) 4px; /* 패딩 축소 */
     color: var(--color-text-secondary);
     text-decoration: none;
-    font-size: 1.1rem;
+    font-size: 1rem; /* 1.1rem에서 축소 */
     transition: color var(--transition-fast);
 }
 
@@ -245,12 +250,12 @@
 
 .notification-btn {
     position: relative;
-    padding: var(--space-sm);
+    padding: var(--space-xs) 4px; /* 패딩 축소 */
     background: none;
     border: none;
     cursor: pointer;
     color: var(--color-text-secondary);
-    font-size: 1.25rem;
+    font-size: 1.1rem; /* 1.25rem에서 축소 */
     transition: color var(--transition-fast);
 }
 
@@ -648,4 +653,26 @@ function showGuestUI() {
     document.querySelectorAll('.auth-only').forEach(el => el.classList.add('hidden'));
     document.querySelectorAll('.guest-only').forEach(el => el.classList.remove('hidden'));
 }
+
+// PWA Install Prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    const installBtn = document.getElementById('install-app-btn');
+    if (installBtn) {
+        installBtn.style.display = 'inline-flex';
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('App installed');
+                }
+                deferredPrompt = null;
+                installBtn.style.display = 'none';
+            }
+        }, { once: true });
+    }
+});
 </script>

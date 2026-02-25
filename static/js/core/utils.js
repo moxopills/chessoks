@@ -271,7 +271,7 @@ const Utils = (function() {
 
         function initBGM() {
             if (!bgmAudio) {
-                bgmAudio = new Audio('https://cdn.pixabay.com/download/audio/2022/02/22/audio_d1718ab41b.mp3?filename=relaxing-light-music-106526.mp3');
+                bgmAudio = new Audio('https://upload.wikimedia.org/wikipedia/commons/e/eb/Lo-Fi_Hip_Hop_Music.ogg');
                 bgmAudio.loop = true;
                 bgmAudio.volume = 0.3;
             }
