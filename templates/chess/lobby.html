@@ -139,6 +139,11 @@
     </div>
 </div>
 
+<button class="chat-fab" id="chat-fab" aria-label="로비 채팅 열기">
+    💬
+    <span class="chat-fab-badge hidden" id="chat-fab-badge">0</span>
+</button>
+
 
 
 <div class="modal-overlay hidden" id="ai-match-modal">
@@ -372,6 +377,20 @@
     .lobby-users-section {
         grid-column: span 1;
     }
+
+    .hero-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-sm);
+        max-width: 520px;
+        margin: 0 auto;
+    }
+
+    .hero-actions .btn-arcade {
+        min-width: 0;
+        width: 100%;
+        min-height: 50px;
+    }
 }
 
 /* Section */
@@ -604,16 +623,17 @@
 }
 
 @media (max-width: 768px) {
-    .lobby-chat-section.is-hidden {
-        display: none;
+    /* 모바일: 로비 채팅은 플로팅으로만 노출 */
+    .lobby-chat-section {
+        display: none !important;
     }
 
     .lobby-chat-section.is-floating {
         position: fixed;
         right: 12px;
-        bottom: 90px;
-        left: 12px;
-        width: auto;
+        bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+        width: min(420px, calc(100vw - 24px));
+        left: auto;
         z-index: 1200;
         box-shadow: var(--shadow-lg);
         background: var(--color-bg-card);
@@ -621,11 +641,13 @@
         border-radius: var(--radius-lg);
         display: flex !important;
         flex-direction: column;
-        max-height: 50vh;
+        max-height: min(520px, 62vh);
     }
 
     .chat-fab {
         display: flex !important;
+        right: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     }
 }
 
