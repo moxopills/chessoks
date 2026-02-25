@@ -15,6 +15,11 @@ class UserStatsSerializer(serializers.Serializer):
     games_draw = serializers.IntegerField(read_only=True)
     rank_tier = serializers.CharField(read_only=True)
     win_rate = serializers.FloatField(read_only=True)
+    style_points = serializers.IntegerField(read_only=True)
+    nickname_color = serializers.CharField(read_only=True)
+    profile_border = serializers.CharField(read_only=True)
+    unlocked_nickname_colors = serializers.ListField(read_only=True)
+    unlocked_profile_borders = serializers.ListField(read_only=True)
 
 
 def _avatar_with_cache_bust(user) -> str | None:
@@ -109,6 +114,8 @@ class LeaderboardEntrySerializer(serializers.Serializer):
     games_draw = serializers.IntegerField(source="stats.games_draw", read_only=True)
     games_lost = serializers.IntegerField(source="stats.games_lost", read_only=True)
     rank_tier = serializers.CharField(source="stats.rank_tier", read_only=True)
+    nickname_color = serializers.CharField(source="stats.nickname_color", read_only=True)
+    profile_border = serializers.CharField(source="stats.profile_border", read_only=True)
     rank = serializers.IntegerField(read_only=True)
 
     def get_avatar_url(self, obj):
@@ -127,6 +134,8 @@ class MyRankSerializer(serializers.Serializer):
     games_draw = serializers.IntegerField()
     games_lost = serializers.IntegerField()
     rank_tier = serializers.CharField()
+    nickname_color = serializers.CharField(required=False, allow_blank=True)
+    profile_border = serializers.CharField(required=False, allow_blank=True)
     rank = serializers.IntegerField()
 
     def get_avatar_url(self, obj):
@@ -241,9 +250,12 @@ class SignupEmailConfirmSerializer(serializers.Serializer):
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     """프로필 수정용 Serializer"""
 
+    nickname_color = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    profile_border = serializers.CharField(required=False, allow_blank=True, write_only=True)
+
     class Meta:
         model = User
-        fields = ("nickname", "bio", "avatar_url")
+        fields = ("nickname", "bio", "avatar_url", "nickname_color", "profile_border")
         extra_kwargs = {
             "nickname": {"validators": []},  # 서비스에서 검증
         }

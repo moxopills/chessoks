@@ -61,6 +61,10 @@
         const tier = user.stats?.rank_tier || deriveTierFromRating(rating);
         tierEl.textContent = `티어 · ${tier}`;
         tierEl.style.color = Utils.getTierColor(tier);
+        applyProfileCustomization({
+            nicknameColor: user.stats?.nickname_color || '',
+            profileBorder: user.stats?.profile_border || '',
+        });
 
         if (avatarEl) {
             avatarEl.innerHTML = '';
@@ -80,6 +84,15 @@
             tierBadge.title = tier;
             tierBadge.textContent = Utils.getTierIcon(tier);
             avatarEl.appendChild(tierBadge);
+        }
+    }
+
+    function applyProfileCustomization({ nicknameColor, profileBorder }) {
+        if (nicknameEl) {
+            nicknameEl.style.color = Utils.getNicknameColorValue(nicknameColor);
+        }
+        if (avatarEl) {
+            avatarEl.style.boxShadow = Utils.getProfileBorderValue(profileBorder);
         }
     }
 

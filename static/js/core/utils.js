@@ -216,6 +216,24 @@ const Utils = (function() {
         return icons[tier] || '♟️';
     }
 
+    function getNicknameColorValue(key) {
+        const colorMap = {
+            mint: '#2dd4bf',
+            sunset: '#fb7185',
+            gold: '#f59e0b',
+        };
+        return colorMap[key] || '';
+    }
+
+    function getProfileBorderValue(key) {
+        const borderMap = {
+            mint_ring: '0 0 0 3px rgba(45, 212, 191, 0.45)',
+            royal_ring: '0 0 0 3px rgba(99, 102, 241, 0.45)',
+            champion_ring: '0 0 0 3px rgba(245, 158, 11, 0.45)',
+        };
+        return borderMap[key] || '';
+    }
+
     /**
      * 더블 탭 바인딩 (모바일용)
      */
@@ -258,39 +276,77 @@ const Utils = (function() {
     const Sounds = (() => {
         let ctx = null;
         let bgmAudio = null;
-        let bgmVolume = normalizeVolume(Storage.get('chessok-bgm-vol', 30)); // 0 ~ 100
+        let bgmTimer = null;
+        let bgmStep = 0;
+        let bgmVolume = normalizeVolume(Storage.get('chessok-bgm-vol', 30));
         let isMuted = (bgmVolume === 0);
 
         function normalizeVolume(value) {
-            const num = Number(value);
-            if (!Number.isFinite(num)) return 30;
-            return Math.max(0, Math.min(100, Math.round(num)));
+            const num = parseInt(value, 10);
+            return isNaN(num) ? 30 : Math.max(0, Math.min(100, num));
         }
 
         function getContext() {
-            if (!ctx) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (!AudioContext) return null;
-                ctx = new AudioContext();
+            try {
+                if (!ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioContext) return null;
+                    ctx = new AudioContext();
+                }
+                return ctx;
+            } catch (e) {
+                return null;
             }
-            return ctx;
         }
 
         function initBGM() {
             if (!bgmAudio) {
-                bgmAudio = new Audio('https://upload.wikimedia.org/wikipedia/commons/e/eb/Lo-Fi_Hip_Hop_Music.ogg');
+                bgmAudio = new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73456.mp3');
                 bgmAudio.crossOrigin = "anonymous";
                 bgmAudio.loop = true;
+                bgmAudio.preload = 'auto';
             }
             bgmAudio.volume = bgmVolume / 100;
         }
 
+        function startSynthBGM() {
+            if (bgmTimer) return;
+            const seq = [220, 247, 277, 330];
+            bgmTimer = setInterval(() => {
+                if (isMuted || bgmVolume === 0) return;
+                const freq = seq[bgmStep % seq.length];
+                bgmStep += 1;
+                playTone(freq, 0.55, Math.max(0.01, (bgmVolume / 100) * 0.035));
+            }, 1200);
+        }
+
+        function stopSynthBGM() {
+            if (bgmTimer) {
+                clearInterval(bgmTimer);
+                bgmTimer = null;
+            }
+        }
+
+        function unlock() {
+            try {
+                const context = getContext();
+                if (context && context.state === 'suspended') {
+                    context.resume().catch(() => {});
+                }
+                if (!isMuted && bgmVolume > 0) {
+                    playBGM();
+                }
+            } catch (e) {}
+        }
+
         function playTone(freq, duration = 0.12, volume = 0.12) {
-            if (isMuted) return;
+            if (isMuted || bgmVolume === 0) return;
             try {
                 const context = getContext();
                 if (!context) return;
-                if (context.state === 'suspended') context.resume();
+                if (context.state === 'suspended') {
+                    context.resume().catch(() => {});
+                }
                 const osc = context.createOscillator();
                 const gain = context.createGain();
                 osc.type = 'sine';
@@ -302,32 +358,12 @@ const Utils = (function() {
                 gain.gain.exponentialRampToValueAtTime(volume, context.currentTime + 0.01);
                 gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + duration);
                 osc.stop(context.currentTime + duration + 0.02);
-            } catch {
-                // ignore
-            }
-        }
-
-        function unlock() {
-            try {
-                const context = getContext();
-                if (!context) return;
-                if (context.state === 'suspended') {
-                    context.resume().catch(() => {});
-                }
-            } catch {
-                // ignore
-            }
+            } catch (e) {}
         }
 
         function vibrate(pattern) {
-            if (isMuted) return;
-            if (navigator.vibrate) {
-                try {
-                    navigator.vibrate(pattern);
-                } catch {
-                    // ignore
-                }
-            }
+            if (isMuted || !navigator.vibrate) return;
+            try { navigator.vibrate(pattern); } catch (e) {}
         }
 
         function notice() {
@@ -354,13 +390,15 @@ const Utils = (function() {
             if (bgmAudio) {
                 bgmAudio.volume = bgmVolume / 100;
                 if (bgmVolume > 0 && bgmAudio.paused) {
-                    bgmAudio.play().catch(() => {});
+                    bgmAudio.play().catch(() => startSynthBGM());
                 } else if (bgmVolume === 0) {
                     bgmAudio.pause();
                 }
             } else if (bgmVolume > 0) {
-                initBGM();
-                bgmAudio.play().catch(() => {});
+                playBGM();
+            }
+            if (bgmVolume === 0) {
+                stopSynthBGM();
             }
             return isMuted;
         }
@@ -375,24 +413,29 @@ const Utils = (function() {
                 setVolume(0);
             } else {
                 let prev = normalizeVolume(Storage.get('chessok-prev-vol', 30));
-                if (prev === 0) prev = 30;
-                setVolume(prev);
+                setVolume(prev || 30);
             }
             return isMuted;
         }
 
         function playBGM() {
-            if (!isMuted) {
-                initBGM();
-                bgmAudio.play().catch(() => {});
+            if (isMuted || bgmVolume === 0) return;
+            initBGM();
+            if (bgmAudio) {
+                bgmAudio.play()
+                    .then(() => stopSynthBGM())
+                    .catch(() => startSynthBGM());
+            } else {
+                startSynthBGM();
             }
         }
 
-        function isMutedState() {
-            return isMuted;
-        }
-
-        return { notice, chat, move, vibrate, toggleMute, playBGM, isMuted: isMutedState, setVolume, getVolume, unlock };
+        return { 
+            notice, chat, move, vibrate, unlock,
+            toggleMute, playBGM, setVolume, 
+            getVolume: () => bgmVolume,
+            isMuted: () => isMuted 
+        };
     })();
 
     /**
@@ -511,6 +554,8 @@ const Utils = (function() {
         sendFriendRequest,
         getTierColor,
         getTierIcon,
+        getNicknameColorValue,
+        getProfileBorderValue,
         bindDoubleTap,
         ReportModal,
         Sounds,
