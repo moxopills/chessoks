@@ -257,6 +257,8 @@ const Utils = (function() {
 
     const Sounds = (() => {
         let ctx = null;
+        let bgmAudio = null;
+        let isMuted = Storage.get('chessok-muted', false);
 
         function getContext() {
             if (!ctx) {
@@ -267,7 +269,16 @@ const Utils = (function() {
             return ctx;
         }
 
+        function initBGM() {
+            if (!bgmAudio) {
+                bgmAudio = new Audio('https://cdn.pixabay.com/download/audio/2022/02/22/audio_d1718ab41b.mp3?filename=relaxing-light-music-106526.mp3');
+                bgmAudio.loop = true;
+                bgmAudio.volume = 0.3;
+            }
+        }
+
         function playTone(freq, duration = 0.12, volume = 0.12) {
+            if (isMuted) return;
             try {
                 const context = getContext();
                 if (!context) return;
@@ -288,20 +299,57 @@ const Utils = (function() {
             }
         }
 
+        function vibrate(pattern) {
+            if (isMuted) return;
+            if (navigator.vibrate) {
+                try {
+                    navigator.vibrate(pattern);
+                } catch {
+                    // ignore
+                }
+            }
+        }
+
         function notice() {
             playTone(880, 0.16, 0.1);
             setTimeout(() => playTone(1320, 0.12, 0.08), 90);
+            vibrate([50, 50, 50]);
         }
 
         function chat() {
             playTone(880, 0.12, 0.06);
+            vibrate([30, 50, 30]);
         }
 
         function move() {
             playTone(440, 0.08, 0.05);
+            vibrate(15);
         }
 
-        return { notice, chat, move };
+        function toggleMute() {
+            isMuted = !isMuted;
+            Storage.set('chessok-muted', isMuted);
+            if (isMuted) {
+                if (bgmAudio) bgmAudio.pause();
+            } else {
+                initBGM();
+                bgmAudio.play().catch(() => {});
+            }
+            return isMuted;
+        }
+
+        function playBGM() {
+            if (!isMuted) {
+                initBGM();
+                bgmAudio.play().catch(() => {});
+            }
+        }
+
+        function isMutedState() {
+            return isMuted;
+        }
+
+        return { notice, chat, move, vibrate, toggleMute, playBGM, isMuted: isMutedState };
     })();
 
     /**

@@ -19,6 +19,8 @@
             <div class="chess-board chess-board--loading" id="chess-board">
                 <!-- 8x8 스켈레톤 로딩 -->
                 <div class="board-skeleton"></div>
+                <!-- 화살표 및 하이라이트 SVG 레이어 -->
+                <svg id="arrow-layer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></svg>
             </div>
             <div class="board-labels-files">
                 <span>a</span><span>b</span><span>c</span><span>d</span>
@@ -229,10 +231,10 @@
         <div class="modal-body">
             <p>승진할 기물을 선택하세요:</p>
             <div class="promotion-options">
-                <button class="promotion-piece" data-piece="q" aria-label="퀸으로 승진">♛</button>
-                <button class="promotion-piece" data-piece="r" aria-label="룩으로 승진">♜</button>
-                <button class="promotion-piece" data-piece="b" aria-label="비숍으로 승진">♝</button>
-                <button class="promotion-piece" data-piece="n" aria-label="나이트로 승진">♞</button>
+                <button class="promotion-piece" data-piece="q" aria-label="퀸으로 승진"></button>
+                <button class="promotion-piece" data-piece="r" aria-label="룩으로 승진"></button>
+                <button class="promotion-piece" data-piece="b" aria-label="비숍으로 승진"></button>
+                <button class="promotion-piece" data-piece="n" aria-label="나이트로 승진"></button>
             </div>
         </div>
     </div>
@@ -547,43 +549,19 @@
 }
 
 .piece {
-    font-size: 2.4rem;
-    line-height: 1;
+    width: 100%;
+    height: 100%;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
     cursor: grab;
     transition: transform 0.1s;
-    font-family: 'Noto Sans Symbols 2', 'Noto Sans Symbols2', 'Apple Symbols', 'Symbola', 'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Sans KR', sans-serif;
-    text-shadow:
-        1px 0 0 #0b0f1f,
-        -1px 0 0 #0b0f1f,
-        0 1px 0 #0b0f1f,
-        0 -1px 0 #0b0f1f,
-        2px 2px 0 rgba(0, 0, 0, 0.35);
-    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.35));
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
 }
 
 .piece:active {
     cursor: grabbing;
     transform: scale(1.1);
-}
-
-.piece.white {
-    color: #fff;
-    text-shadow:
-        1px 0 0 #0b0f1f,
-        -1px 0 0 #0b0f1f,
-        0 1px 0 #0b0f1f,
-        0 -1px 0 #0b0f1f,
-        2px 2px 0 rgba(0, 0, 0, 0.35);
-}
-
-.piece.black {
-    color: #000;
-    text-shadow:
-        1px 0 0 #0b0f1f,
-        -1px 0 0 #0b0f1f,
-        0 1px 0 #0b0f1f,
-        0 -1px 0 #0b0f1f,
-        2px 2px 0 rgba(0, 0, 0, 0.35);
 }
 
 /* Board Labels */
@@ -731,22 +709,13 @@
 }
 
 .captured-piece {
-    font-size: 1.1rem;
-    line-height: 1;
-    font-family: 'Noto Sans Symbols 2', 'Noto Sans Symbols2', 'Apple Symbols', 'Symbola', 'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Sans KR', sans-serif;
-    text-shadow:
-        1px 0 0 #0b0f1f,
-        -1px 0 0 #0b0f1f,
-        0 1px 0 #0b0f1f,
-        0 -1px 0 #0b0f1f;
-}
-
-.captured-piece.white {
-    color: #fff;
-}
-
-.captured-piece.black {
-    color: #000;
+    width: 24px;
+    height: 24px;
+    display: inline-block;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
 }
 
 /* Move List */
@@ -1116,7 +1085,6 @@ body.competitive-room #rematch-modal {
 }
 
 .promotion-piece {
-    font-size: 3rem;
     padding: var(--space-md);
     background-color: var(--color-bg-secondary);
     border: 2px solid var(--color-border);
@@ -1128,6 +1096,9 @@ body.competitive-room #rematch-modal {
     display: flex;
     align-items: center;
     justify-content: center;
+    background-size: 80%;
+    background-repeat: no-repeat;
+    background-position: center;
 }
 
 .promotion-piece:hover {
@@ -1627,16 +1598,15 @@ body.competitive-room #rematch-modal {
 /* 터치 드래그 */
 .drag-piece {
     position: fixed;
-    width: 50px;
-    height: 50px;
-    font-size: 2.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 64px;
+    height: 64px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
     pointer-events: none;
     z-index: 1000;
-    opacity: 0.9;
-    filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.3));
+    opacity: 0.95;
+    filter: drop-shadow(4px 8px 12px rgba(0, 0, 0, 0.4));
 }
 
 .square.drop-target {
