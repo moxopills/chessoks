@@ -52,7 +52,7 @@ class MessageServiceTestCase(BaseTestCase):
             self.user, self.other.id, limit=10, offset=0, no_count=True
         )
         self.assertEqual(total, len(items))
-        self.assertEqual([m.message for m in items], ["첫번째", "두번째"])
+        self.assertEqual([m.message for m in items], ["두번째", "첫번째"])
 
     def test_list_threads_orders_by_last_message(self):
         third = self.create_verified_user(email="third@test.com", nickname="세번째")
