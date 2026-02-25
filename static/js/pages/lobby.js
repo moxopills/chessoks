@@ -90,17 +90,27 @@
     init();
 
     async function init() {
+        const isMobile = window.innerWidth <= 768;
         if (chatFab) {
             document.body.classList.add('has-chat-fab');
-            chatFab.classList.remove('hidden');
+            if (isMobile) {
+                chatFab.classList.remove('hidden');
+            } else {
+                chatFab.classList.add('hidden');
+            }
         }
         const globalDmFab = document.getElementById('global-dm-fab');
         globalDmFab?.classList.remove('hidden');
-        if (window.innerWidth <= 768 && chatSection) {
-            // 모바일은 로비 채팅 패널을 기본 레이아웃에서 숨기고 FAB 플로팅으로만 사용
-            chatSection.classList.add('is-hidden');
-            chatSection.classList.remove('is-floating');
-            isChatOpen = false;
+        if (chatSection) {
+            if (isMobile) {
+                chatSection.classList.add('is-hidden');
+                chatSection.classList.remove('is-floating');
+                isChatOpen = false;
+            } else {
+                chatSection.classList.remove('is-hidden');
+                chatSection.classList.remove('is-floating');
+                isChatOpen = true;
+            }
         }
         await loadRooms();
         await loadWaitingRoom();
@@ -1025,16 +1035,7 @@
 
 
     function setupMobileTabs() {
-        if (!mobileTabbar) {
-            if (window.innerWidth <= 768 && chatSection && chatFab) {
-                isChatOpen = false;
-                chatSection.classList.add('is-hidden');
-                chatSection.classList.remove('is-floating');
-                chatFab.classList.remove('is-active');
-                chatFab.classList.remove('hidden');
-            }
-            return;
-        }
+        if (!mobileTabbar) return;
         document.body.classList.add('has-mobile-tabbar');
         const tabs = mobileTabbar.querySelectorAll('.mobile-tab');
         tabs.forEach(tab => {
@@ -1062,17 +1063,27 @@
             });
         });
         
-        // 초기 모바일 상태: 채팅 숨김
-        if (window.innerWidth <= 768) {
-            isChatOpen = false;
-            if (chatSection) chatSection.classList.add('is-hidden');
-        }
     }
 
     function setupChatToggle() {
+        const switchToDmBtn = document.getElementById('switch-to-dm-btn');
+        if (switchToDmBtn) {
+            switchToDmBtn.addEventListener('click', () => {
+                if (chatSection) {
+                    chatSection.classList.remove('is-floating');
+                    chatSection.classList.remove('is-hidden');
+                }
+                if (chatFab) chatFab.classList.remove('is-active');
+                
+                // 1:1 채팅창 열기
+                window.dispatchEvent(new CustomEvent('global-dm:open-panel'));
+            });
+        }
+
         if (!chatFab || !chatSection) return;
 
         chatFab.addEventListener('click', () => {
+            if (window.innerWidth > 768) return;
             Utils?.Sounds?.unlock?.();
             const isHidden = chatSection.classList.contains('is-hidden');
             
@@ -1091,21 +1102,6 @@
                 isChatOpen = false;
             }
         });
-
-        const switchToDmBtn = document.getElementById('switch-to-dm-btn');
-        const globalDmFab = document.getElementById('global-dm-fab');
-        if (switchToDmBtn && globalDmFab) {
-            switchToDmBtn.addEventListener('click', () => {
-                // 닫기
-                chatSection.classList.add('is-hidden');
-                chatSection.classList.remove('is-floating');
-                chatFab.classList.remove('is-active');
-                isChatOpen = false;
-                
-                // 1:1 채팅창 열기
-                globalDmFab.click();
-            });
-        }
     }
 
     function setupTierToggle() {

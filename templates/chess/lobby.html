@@ -139,12 +139,10 @@
     </div>
 </div>
 
-<button class="chat-fab" id="chat-fab" aria-label="로비 채팅 열기">
+<button class="chat-fab hidden" id="chat-fab" aria-label="로비 채팅 열기">
     💬
     <span class="chat-fab-badge hidden" id="chat-fab-badge">0</span>
 </button>
-
-
 
 <div class="modal-overlay hidden" id="ai-match-modal">
     <div class="modal ai-modal">
@@ -623,8 +621,7 @@
 }
 
 @media (max-width: 768px) {
-    /* 모바일: 로비 채팅은 플로팅으로만 노출 */
-    .lobby-chat-section {
+    .lobby-chat-section.is-hidden {
         display: none !important;
     }
 
@@ -648,6 +645,10 @@
         display: flex !important;
         right: 12px;
         bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .lobby-chat-section {
+        display: flex;
     }
 }
 
