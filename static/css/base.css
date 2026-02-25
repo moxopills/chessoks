@@ -1274,7 +1274,8 @@ html[data-theme="dark"] .form-input:focus {
         transition: transform 0.1s ease, opacity 0.1s ease;
     }
 
-    .btn {
+    /* 전역 탭 하이라이트 제거 */
+    a, button, input, select, textarea, .card, .square {
         -webkit-tap-highlight-color: transparent;
     }
 }
@@ -1409,4 +1410,105 @@ html[data-theme="dark"] .form-input:focus {
         animation: none;
         background: var(--color-bg-tertiary);
     }
+}
+
+/* ========================================
+   Floating Chat Button (FAB)
+   ======================================== */
+
+.chat-fab {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-card);
+    box-shadow: var(--shadow-md);
+    font-size: 1.1rem;
+    display: none; /* 기본적으로 숨김 (필요한 페이지에서 표시하거나 JS로 제어) */
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1200;
+}
+
+/* 로비나 게임 페이지에서 표시 */
+body.has-chat-fab .chat-fab {
+    display: flex;
+}
+
+.chat-fab.is-active {
+    background: var(--color-accent-primary);
+    color: #fff;
+    border-color: var(--color-accent-primary);
+}
+
+.chat-fab-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background-color: var(--color-accent-error);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.chat-fab-badge.hidden {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .chat-fab {
+        bottom: 80px; /* 모바일 탭바 고려 */
+        right: 16px;
+    }
+}
+
+/* ========================================
+   Mobile Modal (Bottom Sheet) & Performance
+   ======================================== */
+
+.modal, .modal-dialog, .toast, .spinner {
+    will-change: transform, opacity;
+}
+
+@media (max-width: 480px) {
+    .modal-overlay {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .modal, 
+    .modal-dialog, 
+    .report-modal, 
+    .invite-modal, 
+    .notice-modal,
+    .game-end-modal {
+        width: 100%;
+        max-width: 100%;
+        border-radius: 16px 16px 0 0;
+        margin: 0;
+        max-height: 85vh;
+        animation: slideUpBottom 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .game-end-modal {
+        /* 게임 종료 모달은 중앙 정렬 유지하고 싶을 수 있으나 일관성을 위해 바텀시트 적용 */
+        /* 만약 중앙 정렬을 유지하려면 이 블록에서 제외 */
+    }
+}
+
+@keyframes slideUpBottom {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
 }

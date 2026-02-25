@@ -23,6 +23,8 @@
     const mobileTabbar = document.getElementById('mobile-tabbar');
     const chatBadge = document.getElementById('chat-badge');
     const chatSection = document.querySelector('.lobby-chat-section');
+    const chatFab = document.getElementById('chat-fab');
+    const chatFabBadge = document.getElementById('chat-fab-badge');
     const waitingRoomCard = document.getElementById('waiting-room-card');
     const waitingRoomInfo = document.getElementById('waiting-room-info');
     const waitingRoomEnter = document.getElementById('waiting-room-enter');
@@ -94,6 +96,7 @@
         await checkAuthAndSetupChat();
         startRoomAutoRefresh();
         setupMobileTabs();
+        setupChatToggle();
         setupTierToggle();
         setupAiMatch();
         setupUserContextMenu();
@@ -1014,17 +1017,50 @@
                 tab.classList.add('active');
                 if (target === 'chat') {
                     isChatOpen = true;
-                    if (chatSection) chatSection.classList.remove('is-hidden');
+                    if (chatSection) {
+                        chatSection.classList.remove('is-hidden');
+                        chatSection.classList.remove('is-floating');
+                    }
+                    if (chatFab) chatFab.classList.remove('is-active');
                     chatMessages.scrollTop = chatMessages.scrollHeight;
                     resetChatBadge();
                 } else {
                     isChatOpen = false;
-                    if (chatSection) chatSection.classList.add('is-hidden');
+                    if (chatSection) {
+                        chatSection.classList.add('is-hidden');
+                        chatSection.classList.remove('is-floating');
+                    }
+                    if (chatFab) chatFab.classList.remove('is-active');
                 }
             });
         });
-        isChatOpen = false;
-        if (chatSection) chatSection.classList.add('is-hidden');
+        
+        // 초기 모바일 상태: 채팅 숨김
+        if (window.innerWidth <= 768) {
+            isChatOpen = false;
+            if (chatSection) chatSection.classList.add('is-hidden');
+        }
+    }
+
+    function setupChatToggle() {
+        if (!chatFab || !chatSection) return;
+
+        chatFab.addEventListener('click', () => {
+            const isHidden = chatSection.classList.contains('is-hidden');
+            
+            if (isHidden) {
+                // 열기 (플로팅)
+                chatSection.classList.remove('is-hidden');
+                chatSection.classList.add('is-floating');
+                chatFab.classList.add('is-active');
+                resetChatBadge();
+            } else {
+                // 닫기
+                chatSection.classList.add('is-hidden');
+                chatSection.classList.remove('is-floating');
+                chatFab.classList.remove('is-active');
+            }
+        });
     }
 
     function setupTierToggle() {
@@ -1053,6 +1089,10 @@
             chatBadge.textContent = chatUnread;
             chatBadge.classList.remove('hidden');
         }
+        if (chatFabBadge) {
+            chatFabBadge.textContent = chatUnread;
+            chatFabBadge.classList.remove('hidden');
+        }
     }
 
     function resetChatBadge() {
@@ -1060,6 +1100,10 @@
         if (chatBadge) {
             chatBadge.textContent = '0';
             chatBadge.classList.add('hidden');
+        }
+        if (chatFabBadge) {
+            chatFabBadge.textContent = '0';
+            chatFabBadge.classList.add('hidden');
         }
     }
 

@@ -11,10 +11,13 @@
     'use strict';
 
     // Constants
-    const PIECES = {
-        'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
-        'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
-    };
+    const PIECE_THEME_URL = 'https://raw.githubusercontent.com/lichess-org/lila/master/public/piece/cburnett/';
+    function getPieceUrl(piece) {
+        if (!piece) return '';
+        const color = piece === piece.toUpperCase() ? 'w' : 'b';
+        const role = piece.toUpperCase();
+        return `${PIECE_THEME_URL}${color}${role}.svg`;
+    }
 
     // 접근성용 기물 이름
     const PIECE_NAMES = {
@@ -97,6 +100,10 @@
     let selectedDisplaySquare = null;
     let validMoves = [];
     let pendingPromotion = null;
+    const arrowLayer = document.getElementById('arrow-layer');
+    let premove = null;
+    let drawings = { arrows: [], circles: [] };
+    let rightClickStartSq = null;
     let timerInterval = null;
     let heartbeatInterval = null;
     let hasShownStartGuide = false;
@@ -677,9 +684,9 @@
         removeDragPiece();
         dragPiece = document.createElement('div');
         dragPiece.className = 'drag-piece';
-        dragPiece.innerHTML = PIECES[piece] || '';
-        dragPiece.style.left = (x - 25) + 'px';
-        dragPiece.style.top = (y - 25) + 'px';
+        dragPiece.style.backgroundImage = `url("${getPieceUrl(piece)}")`;
+        dragPiece.style.left = (x - 32) + 'px';
+        dragPiece.style.top = (y - 32) + 'px';
         document.body.appendChild(dragPiece);
     }
 
@@ -861,10 +868,11 @@
                         const pieceName = PIECE_NAMES[piece] || piece;
                         squareEl.setAttribute('aria-label', `${actualSquareName} ${pieceName}`);
 
-                        const pieceEl = document.createElement('span');
+                        const pieceEl = document.createElement('div');
                         const isWhite = piece === piece.toUpperCase();
                         pieceEl.className = `piece ${isWhite ? 'white' : 'black'}`;
-                        pieceEl.textContent = PIECES[piece];
+                        pieceEl.style.backgroundImage = `url("${getPieceUrl(piece)}")`;
+                        pieceEl.dataset.piece = piece;
                         pieceEl.draggable = true;
                         pieceEl.addEventListener('dragstart', (e) => handleDragStart(e, squareName));
                         squareEl.appendChild(pieceEl);
@@ -1225,8 +1233,8 @@
         try {
             const data = await API.get(`/chess/games/${game.id}/captured/`);
             captured = {
-                white: (data.white || []).map(letter => pieceSymbolFromLetter(letter, 'white')).filter(Boolean),
-                black: (data.black || []).map(letter => pieceSymbolFromLetter(letter, 'black')).filter(Boolean),
+                white: data.white || [],
+                black: data.black || [],
             };
         } catch (error) {
             console.error('Failed to load captured pieces:', error);
@@ -1236,31 +1244,20 @@
     function updateCapturedFromMove(data) {
         const capture = data?.last_move?.capture;
         if (!capture) return;
-        const symbol = pieceSymbolFromLetter(capture.piece, capture.color);
-        if (!symbol) return;
-        captured[capture.color].push(symbol);
+        captured[capture.color].push(capture.piece);
     }
 
     function renderCapturedPieces() {
         if (!capturedWhite || !capturedBlack) return;
+        
+        // 백이 잡은 기물은 흑(소문자), 흑이 잡은 기물은 백(대문자)
         capturedWhite.innerHTML = captured.white
-            .map(symbol => `<span class="captured-piece white">${symbol}</span>`)
+            .map(letter => `<span class="captured-piece" style="background-image: url('${getPieceUrl(letter.toLowerCase())}')"></span>`)
             .join('');
+            
         capturedBlack.innerHTML = captured.black
-            .map(symbol => `<span class="captured-piece black">${symbol}</span>`)
+            .map(letter => `<span class="captured-piece" style="background-image: url('${getPieceUrl(letter.toUpperCase())}')"></span>`)
             .join('');
-    }
-
-    function pieceSymbolFromLetter(letter, color) {
-        const map = {
-            K: color === 'white' ? '♔' : '♚',
-            Q: color === 'white' ? '♕' : '♛',
-            R: color === 'white' ? '♖' : '♜',
-            B: color === 'white' ? '♗' : '♝',
-            N: color === 'white' ? '♘' : '♞',
-            P: color === 'white' ? '♙' : '♟',
-        };
-        return map[letter] || null;
     }
 
     /**
@@ -1274,7 +1271,7 @@
         const piece = fromEl?.querySelector('.piece');
 
         if (piece) {
-            const isPawn = piece.textContent === '♙' || piece.textContent === '♟';
+            const isPawn = piece.dataset.piece && piece.dataset.piece.toLowerCase() === 'p';
             const isPromotion = isPawn && (to[1] === '8' || to[1] === '1');
 
             if (isPromotion) {
@@ -1311,8 +1308,11 @@
         promotionModal.classList.remove('hidden');
 
         document.querySelectorAll('.promotion-piece').forEach(btn => {
+            const piece = btn.dataset.piece;
+            const pieceChar = myColor === 'white' ? piece.toUpperCase() : piece.toLowerCase();
+            btn.style.backgroundImage = `url("${getPieceUrl(pieceChar)}")`;
+            
             btn.onclick = () => {
-                const piece = btn.dataset.piece;
                 const uci = pendingPromotion.from + pendingPromotion.to;
                 sendMove(uci, piece);
                 promotionModal.classList.add('hidden');
