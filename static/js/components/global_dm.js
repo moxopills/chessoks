@@ -4,12 +4,17 @@
     function isGamePage() {
         return /^\/games\/\d+\/?$/.test(window.location.pathname);
     }
+    function isMobileLobbyPage() {
+        const isLobbyPath = window.location.pathname === '/' || window.location.pathname === '/lobby/';
+        return isLobbyPath && window.innerWidth <= 768;
+    }
 
     let currentUser = null;
     let pollTimer = null;
     let currentRoomUserId = null;
     let lastMessageCount = 0;
     let threadPollTimer = null;
+    let lobbyChatMoved = false;
     
     // DOM Elements
     const fabBtn = document.getElementById('global-dm-fab');
@@ -17,19 +22,30 @@
     const panel = document.getElementById('global-dm-panel');
     
     const threadsView = document.getElementById('global-dm-threads-view');
+    const lobbyView = document.getElementById('global-dm-lobby-view');
     const roomView = document.getElementById('global-dm-room-view');
     
     const closeBtn = document.getElementById('global-dm-close');
+    const lobbyCloseBtn = document.getElementById('global-dm-lobby-close');
     const roomCloseBtn = document.getElementById('global-dm-room-close');
     const backBtn = document.getElementById('global-dm-back');
     
     const threadListEl = document.getElementById('global-dm-threads-list');
+    const lobbySlot = document.getElementById('global-dm-lobby-slot');
+    const tabs = document.getElementById('global-dm-tabs');
+    const tabsMirror = document.getElementById('global-dm-tabs-mirror');
+    const tabLobby = document.getElementById('global-dm-tab-lobby');
+    const tabDirect = document.getElementById('global-dm-tab-direct');
+    const tabLobbyMirror = document.getElementById('global-dm-tab-lobby-mirror');
+    const tabDirectMirror = document.getElementById('global-dm-tab-direct-mirror');
     
     const messagesEl = document.getElementById('global-dm-messages');
     const formEl = document.getElementById('global-dm-form');
     const inputEl = document.getElementById('global-dm-input');
     const roomTitle = document.getElementById('global-dm-room-title');
     const roomSubtitle = document.getElementById('global-dm-room-subtitle');
+    const lobbyChatContainer = document.getElementById('lobby-chat');
+    const lobbyChatSection = document.querySelector('.lobby-chat-section');
 
     if (!fabBtn || !panel) return;
 
@@ -135,12 +151,17 @@
         });
 
         closeBtn.addEventListener('click', closePanel);
+        lobbyCloseBtn?.addEventListener('click', closePanel);
         roomCloseBtn.addEventListener('click', closePanel);
 
         backBtn.addEventListener('click', () => {
             stopRoomPolling();
             showThreadsView();
         });
+        tabLobby?.addEventListener('click', showLobbyView);
+        tabDirect?.addEventListener('click', showThreadsView);
+        tabLobbyMirror?.addEventListener('click', showLobbyView);
+        tabDirectMirror?.addEventListener('click', showThreadsView);
 
         formEl.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -169,35 +190,87 @@
         }
         panel.classList.remove('hidden');
         fabBtn.classList.add('is-active');
+        syncLobbyTabsVisibility();
         if (currentRoomUserId) {
             showRoomView(currentRoomUserId);
+        } else if (isMobileLobbyPage() && lobbyChatContainer && lobbySlot) {
+            showLobbyView();
         } else {
             showThreadsView();
         }
     }
 
     function closePanel() {
+        restoreLobbyChatContainer();
         panel.classList.add('hidden');
         fabBtn.classList.remove('is-active');
     }
 
     function showThreadsView() {
         threadsView.classList.remove('hidden');
+        lobbyView?.classList.add('hidden');
         roomView.classList.add('hidden');
         currentRoomUserId = null;
+        setTabActive('direct');
         loadThreads();
+    }
+
+    function showLobbyView() {
+        if (!isMobileLobbyPage() || !lobbyChatContainer || !lobbySlot || !lobbyView) {
+            showThreadsView();
+            return;
+        }
+        moveLobbyChatContainer();
+        threadsView.classList.add('hidden');
+        roomView.classList.add('hidden');
+        lobbyView.classList.remove('hidden');
+        currentRoomUserId = null;
+        setTabActive('lobby');
     }
 
     function showRoomView(userId, nickname = '상대') {
         threadsView.classList.add('hidden');
+        lobbyView?.classList.add('hidden');
         roomView.classList.remove('hidden');
         currentRoomUserId = userId;
+        setTabActive('direct');
         roomTitle.textContent = nickname;
         roomSubtitle.textContent = '';
         
         loadTargetInfo(userId);
         loadMessages(true);
         startRoomPolling();
+    }
+
+    function syncLobbyTabsVisibility() {
+        const enabled = isMobileLobbyPage() && !!lobbyChatContainer && !!lobbySlot;
+        tabs?.classList.toggle('hidden', !enabled);
+        tabsMirror?.classList.toggle('hidden', !enabled);
+        if (!enabled) {
+            restoreLobbyChatContainer();
+            setTabActive('direct');
+        }
+    }
+
+    function setTabActive(type) {
+        const lobbyActive = type === 'lobby';
+        tabLobby?.classList.toggle('is-active', lobbyActive);
+        tabLobbyMirror?.classList.toggle('is-active', lobbyActive);
+        tabDirect?.classList.toggle('is-active', !lobbyActive);
+        tabDirectMirror?.classList.toggle('is-active', !lobbyActive);
+    }
+
+    function moveLobbyChatContainer() {
+        if (lobbyChatMoved || !lobbyChatContainer || !lobbySlot) return;
+        lobbySlot.appendChild(lobbyChatContainer);
+        lobbyChatMoved = true;
+        lobbyChatSection?.classList.add('is-hidden');
+    }
+
+    function restoreLobbyChatContainer() {
+        if (!lobbyChatMoved || !lobbyChatContainer || !lobbyChatSection) return;
+        lobbyChatSection.appendChild(lobbyChatContainer);
+        lobbyChatMoved = false;
     }
 
     // Thread List Logic
@@ -423,6 +496,15 @@
     }
 
     window.addEventListener('beforeunload', stopPolling);
+    window.addEventListener('resize', () => {
+        syncLobbyTabsVisibility();
+        if (!isMobileLobbyPage()) {
+            restoreLobbyChatContainer();
+            if (!panel.classList.contains('hidden') && lobbyView && !lobbyView.classList.contains('hidden')) {
+                showThreadsView();
+            }
+        }
+    });
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden && currentUser) {
             loadThreads();
