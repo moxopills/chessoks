@@ -89,10 +89,19 @@
                 앱 다운로드
             </button>
 
-            <!-- Sound Toggle -->
-            <button class="theme-toggle" id="sound-toggle" aria-label="소리 켜기/끄기" style="margin-right: 8px;">
-                <span class="theme-icon" id="sound-icon">🔊</span>
-            </button>
+            <!-- Sound Dropdown -->
+            <div class="navbar-sound" style="position: relative; display: flex; align-items: center;">
+                <button class="theme-toggle" id="sound-toggle" aria-label="볼륨 조절" style="margin-right: 8px;">
+                    <span class="theme-icon" id="sound-icon">🔊</span>
+                </button>
+                <div class="sound-dropdown hidden" id="sound-dropdown" style="position: absolute; top: 100%; right: 0; margin-top: 12px; background: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px; box-shadow: var(--shadow-lg); z-index: 1000; width: 160px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--color-text-primary); display: flex; justify-content: space-between;">
+                        <span>배경음악</span>
+                        <span id="sound-vol-text">30%</span>
+                    </div>
+                    <input type="range" id="sound-slider" min="0" max="100" step="10" value="30" style="width: 100%; cursor: pointer;">
+                </div>
+            </div>
 
             <!-- Theme Toggle -->
             <button class="theme-toggle" id="theme-toggle" aria-label="테마 변경">
@@ -513,23 +522,51 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Sound toggle
+    // Sound toggle and volume slider
     const soundToggle = document.getElementById('sound-toggle');
     const soundIcon = document.getElementById('sound-icon');
+    const soundDropdown = document.getElementById('sound-dropdown');
+    const soundSlider = document.getElementById('sound-slider');
+    const soundVolText = document.getElementById('sound-vol-text');
     
-    function updateSoundIcon(muted) {
-        if (soundIcon) soundIcon.textContent = muted ? '🔇' : '🔊';
-        if (soundToggle) soundToggle.setAttribute('aria-label', muted ? '소리 켜기' : '소리 끄기');
+    function updateSoundUI(vol) {
+        if (soundIcon) soundIcon.textContent = vol === 0 ? '🔇' : '🔊';
+        if (soundToggle) soundToggle.setAttribute('aria-label', vol === 0 ? '소리 켜기' : '소리 끄기');
+        if (soundSlider) soundSlider.value = vol;
+        if (soundVolText) soundVolText.textContent = `${vol}%`;
     }
     
     if (soundToggle && window.Utils && Utils.Sounds) {
-        updateSoundIcon(Utils.Sounds.isMuted());
+        // Initialize UI with saved volume
+        updateSoundUI(Utils.Sounds.getVolume());
         
         soundToggle.addEventListener('click', function(e) {
             e.stopPropagation();
-            const isMuted = Utils.Sounds.toggleMute();
-            updateSoundIcon(isMuted);
+            if (soundDropdown) {
+                soundDropdown.classList.toggle('hidden');
+                userDropdown?.classList.add('hidden');
+                notificationDropdown?.classList.add('hidden');
+            }
         });
+
+        if (soundSlider) {
+            // Update text on drag
+            soundSlider.addEventListener('input', function(e) {
+                const vol = parseInt(e.target.value, 10);
+                if (soundVolText) soundVolText.textContent = `${vol}%`;
+            });
+            // Apply volume on release
+            soundSlider.addEventListener('change', function(e) {
+                const vol = parseInt(e.target.value, 10);
+                Utils.Sounds.setVolume(vol);
+                updateSoundUI(vol);
+            });
+            
+            // Prevent closing dropdown when clicking inside it
+            soundDropdown.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        }
         
         // 페이지 아무곳이나 클릭 시 BGM 자동재생 시도 (브라우저 정책 우회)
         document.body.addEventListener('click', function playOnce() {
@@ -594,6 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('click', function() {
         userDropdown?.classList.add('hidden');
         notificationDropdown?.classList.add('hidden');
+        soundDropdown?.classList.add('hidden');
     });
 
     // Logout button
