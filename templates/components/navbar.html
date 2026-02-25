@@ -36,14 +36,6 @@
 
         <!-- Right Section -->
         <div class="navbar-right">
-            <!-- Direct Messages (Authenticated) -->
-            <div class="navbar-messages auth-only hidden" id="message-link">
-                <a href="/messages/" class="message-btn" aria-label="1:1 메시지">
-                    <span class="message-icon">&#128172;</span>
-                    <span class="notification-badge hidden" id="message-count">0</span>
-                </a>
-            </div>
-
             <!-- Notification Bell (Authenticated) -->
             <div class="navbar-notifications auth-only hidden" id="notification-bell">
                 <button class="notification-btn" id="notification-toggle" aria-label="알림">
@@ -694,6 +686,41 @@ function showGuestUI() {
 
 // PWA Install Prompt
 let deferredPrompt;
+
+function isIos() {
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    return /iphone|ipad|ipod/.test(userAgent);
+}
+
+function isInStandaloneMode() {
+    return ('standalone' in window.navigator) && (window.navigator.standalone);
+}
+
+function isNativeApp() {
+    // React Native, Capacitor, iOS WKWebView(messageHandlers) 등 앱 래퍼 환경 확인
+    // 또는 UserAgent에 'safari'가 포함되지 않은 iOS 웹뷰 확인
+    const ua = window.navigator.userAgent.toLowerCase();
+    return Boolean(
+        window.ReactNativeWebView || 
+        window.Capacitor || 
+        (window.webkit && window.webkit.messageHandlers) || 
+        (/iphone|ipad|ipod/.test(ua) && !/safari/.test(ua))
+    );
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // iOS 사용자에게 앱 설치 안내 토스트 띄우기 (네이티브 앱이 아닐 때만)
+    if (isIos() && !isInStandaloneMode() && !isNativeApp()) {
+        const hasSeenIosPrompt = Utils.Storage.get('has-seen-ios-prompt', false);
+        if (!hasSeenIosPrompt) {
+            setTimeout(() => {
+                Toast.info('💡 앱으로 즐기시려면 하단 공유 버튼(⍐)을 눌러 [홈 화면에 추가]를 선택해주세요!', 8000);
+                Utils.Storage.set('has-seen-ios-prompt', true);
+            }, 3000); // 페이지 로드 3초 후 안내
+        }
+    }
+});
+
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;

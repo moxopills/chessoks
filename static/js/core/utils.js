@@ -273,6 +273,7 @@ const Utils = (function() {
         function initBGM() {
             if (!bgmAudio) {
                 bgmAudio = new Audio('https://upload.wikimedia.org/wikipedia/commons/e/eb/Lo-Fi_Hip_Hop_Music.ogg');
+                bgmAudio.crossOrigin = "anonymous";
                 bgmAudio.loop = true;
             }
             bgmAudio.volume = bgmVolume / 100;

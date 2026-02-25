@@ -59,7 +59,7 @@ class MessageService:
         queryset = DirectMessage.objects.select_related("sender", "sender__stats").filter(
             thread=thread
         )
-        messages = list(queryset.order_by("created_at")[offset : offset + limit])
+        messages = list(queryset.order_by("-created_at")[offset : offset + limit])
         if no_count:
             return len(messages), messages
         total = queryset.count()

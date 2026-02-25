@@ -44,6 +44,20 @@
         }
     });
 
+    // Custom Event Listener to open chat from outside
+    window.addEventListener('global-dm:open-room', (event) => {
+        if (!currentUser) {
+            Toast.error('로그인 시 가능합니다.');
+            return;
+        }
+        const { userId, nickname } = event.detail || {};
+        if (userId) {
+            panel.classList.remove('hidden');
+            fabBtn.classList.add('is-active');
+            showRoomView(userId, nickname || '상대');
+        }
+    });
+
     bindEvents();
 
     function bindEvents() {
@@ -218,18 +232,19 @@
             if (!items.length) {
                 messagesEl.innerHTML = '<div class="global-dm-empty">아직 메시지가 없습니다.</div>';
             } else {
+                const reversedItems = items.slice().reverse();
                 // To avoid flickering, check if we need a full re-render or just append. 
                 // A simple approach is just re-render but manage scroll smartly.
                 const shouldScroll = forceScroll || (messagesEl.scrollTop + messagesEl.clientHeight >= messagesEl.scrollHeight - 50);
                 
-                messagesEl.innerHTML = items.map(item => renderMessageItem(item)).join('');
+                messagesEl.innerHTML = reversedItems.map(item => renderMessageItem(item)).join('');
                 
                 if (shouldScroll) {
                     messagesEl.scrollTop = messagesEl.scrollHeight;
                 }
 
-                if (data.count > lastMessageCount && items.length) {
-                    const lastItem = items[items.length - 1];
+                if (data.count > lastMessageCount && reversedItems.length) {
+                    const lastItem = reversedItems[reversedItems.length - 1];
                     if (lastItem.sender?.id !== currentUser.id) {
                         Utils?.Sounds?.chat?.();
                     }
@@ -242,6 +257,7 @@
                 markDirectMessageNotificationsRead(currentRoomUserId);
             }
         } catch (e) {
+            console.error('Failed to load messages:', e);
             messagesEl.innerHTML = '<div class="global-dm-empty">메시지를 불러오지 못했습니다.</div>';
         }
     }
