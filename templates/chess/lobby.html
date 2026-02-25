@@ -139,11 +139,6 @@
     </div>
 </div>
 
-<button class="chat-fab hidden" id="chat-fab" aria-label="로비 채팅 열기">
-    💬
-    <span class="chat-fab-badge hidden" id="chat-fab-badge">0</span>
-</button>
-
 <div class="modal-overlay hidden" id="ai-match-modal">
     <div class="modal ai-modal">
         <div class="modal-header">
@@ -623,28 +618,6 @@
 @media (max-width: 768px) {
     .lobby-chat-section.is-hidden {
         display: none !important;
-    }
-
-    .lobby-chat-section.is-floating {
-        position: fixed;
-        right: 12px;
-        bottom: calc(74px + env(safe-area-inset-bottom, 0px));
-        width: min(420px, calc(100vw - 24px));
-        left: auto;
-        z-index: 1200;
-        box-shadow: var(--shadow-lg);
-        background: var(--color-bg-card);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-lg);
-        display: flex !important;
-        flex-direction: column;
-        max-height: min(520px, 62vh);
-    }
-
-    .chat-fab {
-        display: flex !important;
-        right: 12px;
-        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     }
 
     .lobby-chat-section {
