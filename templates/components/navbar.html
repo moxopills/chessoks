@@ -92,6 +92,7 @@
                         <span id="sound-vol-text">30%</span>
                     </div>
                     <input type="range" id="sound-slider" min="0" max="100" step="10" value="30" style="width: 100%; cursor: pointer;">
+                    <button class="btn btn-secondary btn-xs" id="sound-mute-toggle" type="button">음소거</button>
                 </div>
             </div>
 
@@ -520,12 +521,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const soundDropdown = document.getElementById('sound-dropdown');
     const soundSlider = document.getElementById('sound-slider');
     const soundVolText = document.getElementById('sound-vol-text');
+    const soundMuteToggle = document.getElementById('sound-mute-toggle');
     
     function updateSoundUI(vol) {
         if (soundIcon) soundIcon.textContent = vol === 0 ? '🔇' : '🔊';
         if (soundToggle) soundToggle.setAttribute('aria-label', vol === 0 ? '소리 켜기' : '소리 끄기');
         if (soundSlider) soundSlider.value = vol;
         if (soundVolText) soundVolText.textContent = `${vol}%`;
+        if (soundMuteToggle) soundMuteToggle.textContent = vol === 0 ? '소리 켜기' : '음소거';
     }
     
     if (soundToggle && window.Utils && Utils.Sounds) {
@@ -536,17 +539,14 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('keydown', unlockAudio, { once: true });
         
         soundToggle.addEventListener('click', function(e) {
-            e.stopPropagation();
-            Utils.Sounds.unlock?.();
-            const muted = Utils.Sounds.toggleMute();
-            updateSoundUI(muted ? 0 : Utils.Sounds.getVolume());
-        });
-
-        soundToggle.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            Utils.Sounds.unlock?.();
             if (soundDropdown) {
                 soundDropdown.classList.toggle('hidden');
+                if (!soundDropdown.classList.contains('hidden')) {
+                    Utils.Sounds.playBGM();
+                }
                 userDropdown?.classList.add('hidden');
                 notificationDropdown?.classList.add('hidden');
             }
@@ -559,6 +559,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (soundVolText) soundVolText.textContent = `${vol}%`;
                 Utils.Sounds.unlock?.();
                 Utils.Sounds.setVolume(vol);
+                Utils.Sounds.playBGM();
                 updateSoundUI(vol);
             });
             // Apply volume on release
@@ -566,14 +567,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 const vol = parseInt(e.target.value, 10);
                 Utils.Sounds.unlock?.();
                 Utils.Sounds.setVolume(vol);
+                Utils.Sounds.playBGM();
                 updateSoundUI(vol);
             });
-            
-            // Prevent closing dropdown when clicking inside it
-            soundDropdown.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
         }
+        soundMuteToggle?.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            Utils.Sounds.unlock?.();
+            const muted = Utils.Sounds.toggleMute();
+            updateSoundUI(muted ? 0 : Utils.Sounds.getVolume());
+        });
+        soundDropdown?.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
         
         // 페이지 아무곳이나 클릭 시 BGM 자동재생 시도 (브라우저 정책 우회)
         document.body.addEventListener('click', function playOnce() {
