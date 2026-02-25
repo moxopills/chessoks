@@ -1,0 +1,36 @@
+<!-- Global Floating DM Panel -->
+<button class="chat-fab auth-only hidden" id="global-dm-fab" aria-label="1:1 메시지">
+    👤
+    <span class="chat-fab-badge hidden" id="global-dm-badge">0</span>
+</button>
+
+<div class="global-dm-panel hidden" id="global-dm-panel">
+    <!-- Thread List View -->
+    <div class="global-dm-view" id="global-dm-threads-view">
+        <div class="global-dm-header">
+            <h3 class="global-dm-title">대화 목록</h3>
+            <button class="global-dm-close" id="global-dm-close" aria-label="닫기">&times;</button>
+        </div>
+        <div class="global-dm-body" id="global-dm-threads-list">
+            <div class="loading-placeholder"><span class="spinner"></span></div>
+        </div>
+    </div>
+
+    <!-- Chat Room View -->
+    <div class="global-dm-view hidden" id="global-dm-room-view">
+        <div class="global-dm-header">
+            <button class="global-dm-back" id="global-dm-back" aria-label="뒤로 가기">&#8592;</button>
+            <div class="global-dm-title-wrap">
+                <h3 class="global-dm-title" id="global-dm-room-title">...</h3>
+                <span class="global-dm-subtitle" id="global-dm-room-subtitle"></span>
+            </div>
+            <button class="global-dm-close" id="global-dm-room-close" aria-label="닫기">&times;</button>
+        </div>
+        <div class="global-dm-messages" id="global-dm-messages">
+        </div>
+        <form class="global-dm-form" id="global-dm-form">
+            <input type="text" class="global-dm-input" id="global-dm-input" placeholder="메시지 입력..." autocomplete="off" maxlength="500">
+            <button type="submit" class="btn btn-primary btn-sm">전송</button>
+        </form>
+    </div>
+</div>

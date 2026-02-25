@@ -511,8 +511,36 @@
                 square.setAttribute('role', 'button');
                 square.setAttribute('aria-label', squareName);
 
-                square.addEventListener('click', () => handleSquareClick(squareName));
+                square.addEventListener('click', () => {
+                    clearDrawings();
+                    handleSquareClick(squareName);
+                });
                 square.addEventListener('keydown', (e) => handleSquareKeydown(e, squareName));
+
+                // 우클릭 이벤트 (시각적 보조)
+                square.addEventListener('contextmenu', (e) => e.preventDefault());
+                square.addEventListener('mousedown', (e) => {
+                    if (e.button === 2) { // 우클릭
+                        rightClickStartSq = squareName;
+                    } else if (e.button === 0) { // 좌클릭 시 지우기
+                        clearDrawings();
+                    }
+                });
+                square.addEventListener('mouseup', (e) => {
+                    if (e.button === 2 && rightClickStartSq) {
+                        const endSq = squareName;
+                        if (rightClickStartSq === endSq) {
+                            toggleCircle(rightClickStartSq);
+                        } else {
+                            toggleArrow(rightClickStartSq, endSq);
+                        }
+                        rightClickStartSq = null;
+                        renderDrawings();
+                    }
+                });
+                square.addEventListener('mouseleave', (e) => {
+                    // 드래그 중 밖으로 나갈 때의 처리는 복잡하므로, 일단 mouseup 기반으로 구현
+                });
 
                 // 터치 드래그 지원
                 square.addEventListener('touchstart', (e) => handleTouchStart(e, squareName), { passive: false });
@@ -1156,6 +1184,66 @@
                 el.classList.add(hasPiece ? 'valid-capture' : 'valid-move');
             }
         });
+    }
+
+    /**
+     * 시각적 수 읽기 보조 (우클릭 화살표/하이라이트)
+     */
+    function clearDrawings() {
+        drawings = { arrows: [], circles: [] };
+        renderDrawings();
+    }
+
+    function toggleCircle(sq) {
+        const idx = drawings.circles.indexOf(sq);
+        if (idx === -1) drawings.circles.push(sq);
+        else drawings.circles.splice(idx, 1);
+    }
+
+    function toggleArrow(fromSq, toSq) {
+        const idx = drawings.arrows.findIndex(a => a.from === fromSq && a.to === toSq);
+        if (idx === -1) drawings.arrows.push({ from: fromSq, to: toSq });
+        else drawings.arrows.splice(idx, 1);
+    }
+
+    function getSquareCoords(sq) {
+        if (!sq || sq.length < 2) return { x: 0, y: 0 };
+        let fileIdx = FILES.indexOf(sq[0]);
+        let rankIdx = RANKS.indexOf(sq[1]);
+        if (myColor === 'black') {
+            fileIdx = 7 - fileIdx;
+            rankIdx = 7 - rankIdx;
+        }
+        return {
+            x: (fileIdx + 0.5) * 12.5,
+            y: (rankIdx + 0.5) * 12.5
+        };
+    }
+
+    function renderDrawings() {
+        if (!arrowLayer) return;
+        
+        let html = `
+            <defs>
+                <marker id="arrowhead" markerWidth="4" markerHeight="4" refX="2.5" refY="2" orient="auto">
+                    <polygon points="0 0, 4 2, 0 4" fill="rgba(235, 97, 80, 0.85)" />
+                </marker>
+            </defs>
+        `;
+
+        drawings.circles.forEach(sq => {
+            const { x, y } = getSquareCoords(sq);
+            html += `<circle cx="${x}%" cy="${y}%" r="5.5%" fill="none" stroke="rgba(235, 97, 80, 0.85)" stroke-width="1%" />`;
+        });
+
+        drawings.arrows.forEach(arrow => {
+            const from = getSquareCoords(arrow.from);
+            const to = getSquareCoords(arrow.to);
+            // 화살표가 렌더링될 때 중심에서 중심까지 선을 그림
+            html += `<line x1="${from.x}%" y1="${from.y}%" x2="${to.x}%" y2="${to.y}%" stroke="rgba(235, 97, 80, 0.85)" stroke-width="1.8%" marker-end="url(#arrowhead)" opacity="0.9" stroke-linecap="round" />`;
+        });
+
+        arrowLayer.innerHTML = html;
     }
 
     /**
