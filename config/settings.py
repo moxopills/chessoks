@@ -93,6 +93,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.notifications.context_processors.web_push_settings",
             ],
         },
     },
@@ -246,6 +247,11 @@ SECURE_REFERRER_POLICY = os.getenv("SECURE_REFERRER_POLICY", "same-origin")
 # - 요청이 발생할 때마다 만료 시각 갱신(슬라이딩 만료)
 SESSION_COOKIE_AGE = int(os.getenv("SESSION_COOKIE_AGE", "900"))
 SESSION_SAVE_EVERY_REQUEST = _env_bool("SESSION_SAVE_EVERY_REQUEST", True)
+
+# Web Push (PWA)
+WEB_PUSH_PUBLIC_KEY = os.getenv("WEB_PUSH_PUBLIC_KEY", "")
+WEB_PUSH_PRIVATE_KEY = os.getenv("WEB_PUSH_PRIVATE_KEY", "")
+WEB_PUSH_SUBJECT = os.getenv("WEB_PUSH_SUBJECT", "mailto:moxopills@gmail.com")
 
 # 인증 설정
 AUTH_USER_MODEL = "accounts.User"

@@ -1,12 +1,14 @@
+import json
 import logging
 
+from django.conf import settings
 from django.db import transaction
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from rest_framework.exceptions import ValidationError
 
-from apps.notifications.models import Notification
+from apps.notifications.models import Notification, WebPushSubscription
 
 
 class NotificationService:
@@ -63,8 +65,6 @@ class NotificationService:
     @staticmethod
     def _push(notification: Notification) -> None:
         channel_layer = get_channel_layer()
-        if channel_layer is None:
-            return
         payload = {
             "id": notification.id,
             "type": notification.type,
@@ -74,10 +74,109 @@ class NotificationService:
             "is_read": notification.is_read,
             "created_at": notification.created_at.isoformat(),
         }
+        if channel_layer is not None:
+            try:
+                async_to_sync(channel_layer.group_send)(
+                    f"notifications_user_{notification.user_id}",
+                    {"type": "notification", "payload": payload},
+                )
+            except Exception as exc:  # pragma: no cover - best-effort push
+                NotificationService.logger.warning("Notification socket push failed: %s", exc)
+        WebPushService.send(notification)
+
+
+class WebPushService:
+    """웹 푸시 구독/발송 서비스"""
+
+    logger = logging.getLogger(__name__)
+
+    @staticmethod
+    def subscribe(user, *, endpoint: str, p256dh: str, auth: str, user_agent: str = "") -> None:
+        WebPushSubscription.objects.update_or_create(
+            endpoint=endpoint,
+            defaults={
+                "user": user,
+                "p256dh": p256dh,
+                "auth": auth,
+                "user_agent": user_agent,
+                "is_active": True,
+            },
+        )
+
+    @staticmethod
+    def unsubscribe(user, *, endpoint: str | None = None) -> int:
+        queryset = WebPushSubscription.objects.filter(user=user, is_active=True)
+        if endpoint:
+            queryset = queryset.filter(endpoint=endpoint)
+        return queryset.update(is_active=False)
+
+    @staticmethod
+    def send(notification: Notification) -> None:
+        public_key = getattr(settings, "WEB_PUSH_PUBLIC_KEY", "")
+        private_key = getattr(settings, "WEB_PUSH_PRIVATE_KEY", "")
+        subject = getattr(settings, "WEB_PUSH_SUBJECT", "")
+        if not public_key or not private_key or not subject:
+            return
+
         try:
-            async_to_sync(channel_layer.group_send)(
-                f"notifications_user_{notification.user_id}",
-                {"type": "notification", "payload": payload},
+            from pywebpush import WebPushException, webpush
+        except Exception:
+            # Optional dependency. If missing, websocket/in-app notifications still work.
+            return
+
+        url = WebPushService._target_url(notification)
+        payload = json.dumps(
+            {
+                "title": notification.title or "ChessOK",
+                "body": notification.message or "",
+                "url": url,
+            },
+            ensure_ascii=False,
+        )
+
+        subscriptions = list(
+            WebPushSubscription.objects.filter(user=notification.user, is_active=True).only(
+                "id", "endpoint", "p256dh", "auth"
             )
-        except Exception as exc:  # pragma: no cover - best-effort push
-            NotificationService.logger.warning("Notification push failed: %s", exc)
+        )
+        for sub in subscriptions:
+            try:
+                webpush(
+                    subscription_info={
+                        "endpoint": sub.endpoint,
+                        "keys": {
+                            "p256dh": sub.p256dh,
+                            "auth": sub.auth,
+                        },
+                    },
+                    data=payload,
+                    vapid_private_key=private_key,
+                    vapid_claims={"sub": subject},
+                )
+            except WebPushException as exc:
+                status_code = getattr(getattr(exc, "response", None), "status_code", None)
+                if status_code in (404, 410):
+                    WebPushSubscription.objects.filter(id=sub.id).update(is_active=False)
+                    continue
+                WebPushService.logger.warning(
+                    "Web push send failed (subscription=%s): %s", sub.id, exc
+                )
+            except Exception as exc:
+                WebPushService.logger.warning(
+                    "Web push send unexpected failure (subscription=%s): %s", sub.id, exc
+                )
+
+    @staticmethod
+    def _target_url(notification: Notification) -> str:
+        payload = notification.payload or {}
+        if payload.get("url"):
+            return str(payload["url"])
+        room_id = payload.get("room_id")
+        if room_id:
+            if notification.type in {"match_found", "rematch"}:
+                return f"/games/{room_id}/"
+            return f"/rooms/{room_id}/"
+        sender_id = payload.get("sender_id")
+        if notification.type == "direct_message" and sender_id:
+            return f"/messages/{sender_id}/"
+        return "/"

@@ -22,3 +22,14 @@ class NotificationReadSerializer(serializers.Serializer):
 
 class NotificationUnreadSerializer(serializers.Serializer):
     count = serializers.IntegerField(read_only=True)
+
+
+class WebPushSubscribeSerializer(serializers.Serializer):
+    endpoint = serializers.CharField(max_length=4096)
+    p256dh = serializers.CharField(max_length=1024)
+    auth = serializers.CharField(max_length=1024)
+    user_agent = serializers.CharField(required=False, allow_blank=True, max_length=1024)
+
+
+class WebPushUnsubscribeSerializer(serializers.Serializer):
+    endpoint = serializers.CharField(required=False, allow_blank=True, max_length=4096)
