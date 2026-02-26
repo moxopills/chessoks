@@ -22,15 +22,29 @@ self.addEventListener('message', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const targetUrl = event.notification.data?.url || '/';
+  const targetAbs = new URL(targetUrl, self.location.origin).href;
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (clients) => {
+      // 1) 이미 같은 URL 창이 있으면 즉시 포커스
       for (const client of clients) {
-        if (client.url.includes(self.location.origin)) {
-          client.navigate(targetUrl);
+        if (client.url === targetAbs && 'focus' in client) {
           return client.focus();
         }
       }
-      return self.clients.openWindow(targetUrl);
+
+      // 2) 같은 오리진 창이 하나라도 있으면 그 창을 재사용해 이동 후 포커스
+      const reusable = clients.find((client) => client.url.startsWith(self.location.origin));
+      if (reusable) {
+        if ('navigate' in reusable) {
+          await reusable.navigate(targetAbs);
+        }
+        if ('focus' in reusable) {
+          return reusable.focus();
+        }
+      }
+
+      // 3) 창이 없으면 새 창(PWA) 열기
+      return self.clients.openWindow(targetAbs);
     })
   );
 });
