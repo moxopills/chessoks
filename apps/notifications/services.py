@@ -82,13 +82,23 @@ class NotificationService:
                 )
             except Exception as exc:  # pragma: no cover - best-effort push
                 NotificationService.logger.warning("Notification socket push failed: %s", exc)
-        WebPushService.send(notification)
+        WebPushService.send_async(notification.id)
 
 
 class WebPushService:
     """웹 푸시 구독/발송 서비스"""
 
     logger = logging.getLogger(__name__)
+
+    @staticmethod
+    def send_async(notification_id: int) -> None:
+        """요청 지연을 줄이기 위해 웹푸시는 Celery로 비동기 처리한다."""
+        try:
+            from apps.notifications.tasks import send_web_push_for_notification
+
+            send_web_push_for_notification.delay(notification_id)
+        except Exception as exc:
+            WebPushService.logger.warning("Web push async dispatch failed: %s", exc)
 
     @staticmethod
     def subscribe(user, *, endpoint: str, p256dh: str, auth: str, user_agent: str = "") -> None:
@@ -169,6 +179,11 @@ class WebPushService:
     @staticmethod
     def _target_url(notification: Notification) -> str:
         payload = notification.payload or {}
+        if notification.type == "game_invite":
+            invite_id = payload.get("invite_id")
+            if invite_id:
+                return f"/?invite_id={invite_id}"
+            return "/"
         if payload.get("url"):
             return str(payload["url"])
         room_id = payload.get("room_id")
