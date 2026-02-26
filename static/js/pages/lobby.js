@@ -33,6 +33,10 @@
     const tierPanel = document.getElementById('tier-panel');
     const modeToggle = document.getElementById('mode-toggle');
     const modePanel = document.getElementById('mode-panel');
+    const installToggle = document.getElementById('install-toggle');
+    const installPanel = document.getElementById('install-panel');
+    const pointsToggle = document.getElementById('points-toggle');
+    const pointsPanel = document.getElementById('points-panel');
     const aiMatchModal = document.getElementById('ai-match-modal');
     const aiMatchCancel = document.getElementById('ai-match-cancel');
     const quickMatchModal = document.getElementById('quick-match-modal');
@@ -1255,17 +1259,30 @@
     }
 
     function setupTierToggle() {
-        if (!tierToggle || !tierPanel) return;
-        tierToggle.addEventListener('click', () => {
-            const willOpen = tierPanel.classList.contains('hidden');
-            tierPanel.classList.toggle('hidden', !willOpen);
-            tierToggle.setAttribute('aria-expanded', String(willOpen));
+        const guidePairs = [
+            [tierToggle, tierPanel],
+            [modeToggle, modePanel],
+            [installToggle, installPanel],
+            [pointsToggle, pointsPanel],
+        ].filter(([toggle, panel]) => Boolean(toggle && panel));
+
+        if (!guidePairs.length) return;
+
+        guidePairs.forEach(([toggle, panel]) => {
+            panel.classList.remove('hidden');
+            panel.classList.remove('is-open');
+            toggle.setAttribute('aria-expanded', 'false');
         });
-        if (!modeToggle || !modePanel) return;
-        modeToggle.addEventListener('click', () => {
-            const willOpen = modePanel.classList.contains('hidden');
-            modePanel.classList.toggle('hidden', !willOpen);
-            modeToggle.setAttribute('aria-expanded', String(willOpen));
+
+        guidePairs.forEach(([toggle, panel]) => {
+            toggle.addEventListener('click', () => {
+                const willOpen = !panel.classList.contains('is-open');
+                guidePairs.forEach(([otherToggle, otherPanel]) => {
+                    const isCurrent = otherToggle === toggle;
+                    otherPanel.classList.toggle('is-open', isCurrent && willOpen);
+                    otherToggle.setAttribute('aria-expanded', String(isCurrent && willOpen));
+                });
+            });
         });
     }
 

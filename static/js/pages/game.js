@@ -535,17 +535,30 @@
     function setupChatToggle() {
         if (!chatFab || !chatSection) return;
         chatSection.classList.add('is-collapsed');
+        syncGameChatFabVisibility();
         chatFab.addEventListener('click', () => {
             Utils?.Sounds?.unlock?.();
             const willOpen = chatSection.classList.contains('is-collapsed');
             chatSection.classList.toggle('is-collapsed');
             chatSection.classList.toggle('is-floating', willOpen);
             chatFab.classList.toggle('is-active', willOpen);
+            syncGameChatFabVisibility();
             // 채팅 열 때 배지 리셋
             if (willOpen) {
                 resetChatBadge();
             }
         });
+    }
+
+    function syncGameChatFabVisibility() {
+        if (!chatFab || !chatSection) return;
+        const isMobile = window.innerWidth <= 768;
+        if (!isMobile) {
+            chatFab.classList.remove('hidden');
+            return;
+        }
+        const chatVisible = !chatSection.classList.contains('is-collapsed') && !chatSection.classList.contains('is-hidden');
+        chatFab.classList.toggle('hidden', chatVisible);
     }
 
     /**
@@ -1909,11 +1922,13 @@
                     if (chatSection) chatSection.classList.add('is-hidden');
                     if (moveSection) moveSection.classList.remove('is-hidden');
                 }
+                syncGameChatFabVisibility();
             });
         });
         isChatOpen = false;
         if (chatSection) chatSection.classList.add('is-hidden');
         if (moveSection) moveSection.classList.remove('is-hidden');
+        syncGameChatFabVisibility();
     }
 
     function handleChatBadge(data) {
@@ -2852,11 +2867,13 @@
     window.addEventListener('orientationchange', () => {
         setTimeout(() => {
             renderBoard();
+            syncGameChatFabVisibility();
         }, 100);
     });
 
     window.addEventListener('resize', Utils.debounce(() => {
         renderBoard();
+        syncGameChatFabVisibility();
     }, 200));
 
     function sendAiResign() {

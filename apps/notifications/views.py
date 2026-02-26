@@ -9,8 +9,10 @@ from apps.notifications.serializers import (
     NotificationReadSerializer,
     NotificationSerializer,
     NotificationUnreadSerializer,
+    WebPushSubscribeSerializer,
+    WebPushUnsubscribeSerializer,
 )
-from apps.notifications.services import NotificationService
+from apps.notifications.services import NotificationService, WebPushService
 
 
 class NotificationListView(APIView):
@@ -57,3 +59,46 @@ class NotificationUnreadView(APIView):
     def get(self, request):
         count = NotificationService.count_unread(request.user)
         return Response({"count": count})
+
+
+class WebPushSubscribeView(APIView):
+    """웹 푸시 구독 등록/갱신"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=WebPushSubscribeSerializer,
+        responses={200: {"type": "object", "properties": {"ok": {"type": "boolean"}}}},
+        tags=["알림"],
+    )
+    def post(self, request):
+        serializer = WebPushSubscribeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        WebPushService.subscribe(
+            request.user,
+            endpoint=serializer.validated_data["endpoint"],
+            p256dh=serializer.validated_data["p256dh"],
+            auth=serializer.validated_data["auth"],
+            user_agent=serializer.validated_data.get("user_agent", ""),
+        )
+        return Response({"ok": True})
+
+
+class WebPushUnsubscribeView(APIView):
+    """웹 푸시 구독 해제"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        request=WebPushUnsubscribeSerializer,
+        responses={200: {"type": "object", "properties": {"updated": {"type": "integer"}}}},
+        tags=["알림"],
+    )
+    def post(self, request):
+        serializer = WebPushUnsubscribeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        updated = WebPushService.unsubscribe(
+            request.user,
+            endpoint=serializer.validated_data.get("endpoint") or None,
+        )
+        return Response({"updated": updated})
