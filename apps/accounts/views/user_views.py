@@ -66,9 +66,12 @@ class LoginView(APIView):
         tags=["인증"],
     )
     def post(self, request):
-        email = request.data.get("email", "").strip()
-        password = request.data.get("password", "")
-        result = AccountSessionService.login(request, email, password)
+        serializer = LoginRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data["email"].strip()
+        password = serializer.validated_data["password"]
+        remember_me = serializer.validated_data.get("remember_me", False)
+        result = AccountSessionService.login(request, email, password, remember_me=remember_me)
         return Response(result.data, status=result.status)
 
 

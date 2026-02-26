@@ -3,6 +3,7 @@
 import math
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.core.cache import cache
 from django.utils import timezone
@@ -86,7 +87,7 @@ class AuthService:
         return remaining, f"로그인 실패. (남은 시도: {remaining}회)"
 
     @staticmethod
-    def handle_successful_login(request, user: User) -> User:
+    def handle_successful_login(request, user: User, remember_me: bool = False) -> User:
         """로그인 성공 처리 - 세션 생성 및 last_login 업데이트
 
         Returns:
@@ -95,6 +96,11 @@ class AuthService:
         email = user.email
         cache.delete(f"login_fail:{email}")
         login(request, user)
+        if remember_me:
+            request.session.set_expiry(settings.REMEMBER_ME_SESSION_AGE)
+        else:
+            # 브라우저 종료 시 만료되는 기본 세션
+            request.session.set_expiry(0)
 
         # last_login 업데이트 및 stats 로드를 한 번의 쿼리로 처리
         User.objects.filter(pk=user.pk).update(last_login=timezone.now())
@@ -204,7 +210,7 @@ class AccountSessionService:
     """로그인/세션/탈퇴 흐름 서비스"""
 
     @staticmethod
-    def login(request, email: str, password: str) -> ServiceResult:
+    def login(request, email: str, password: str, remember_me: bool = False) -> ServiceResult:
         if not email or not password:
             raise ValidationError({"non_field_errors": ["이메일과 비밀번호를 입력해주세요."]})
 
@@ -257,7 +263,9 @@ class AccountSessionService:
                 detail="이메일 인증이 필요합니다. 가입 시 받은 이메일의 인증 링크를 확인해주세요."
             )
 
-        user_with_stats = AuthService.handle_successful_login(request, user)
+        user_with_stats = AuthService.handle_successful_login(
+            request, user, remember_me=remember_me
+        )
         from apps.accounts.serializers import UserSerializer
 
         return _ok(
