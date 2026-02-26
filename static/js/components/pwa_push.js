@@ -25,7 +25,10 @@
     }
 
     async function init() {
-        if (!hasPushSupport()) return;
+        if (!hasPushSupport()) {
+            bindPermissionHint();
+            return;
+        }
 
         try {
             swRegistration = await navigator.serviceWorker.register('/static/sw.js');
@@ -35,12 +38,15 @@
         }
 
         const bell = document.getElementById('notification-bell');
-        bell?.addEventListener('click', async () => {
+        const bellToggle = document.getElementById('notification-toggle');
+        const requestFromBell = async () => {
             const granted = await ensurePermission();
             if (granted) {
                 await ensureSubscription();
             }
-        });
+        };
+        bell?.addEventListener('click', requestFromBell);
+        bellToggle?.addEventListener('click', requestFromBell);
 
         const preferred = localStorage.getItem(STORAGE_KEY) === '1';
         if (preferred && Notification.permission === 'default') {
@@ -58,11 +64,19 @@
     async function ensurePermission() {
         if (!('Notification' in window)) return false;
         if (Notification.permission === 'granted') return true;
-        if (Notification.permission === 'denied') return false;
+        if (Notification.permission === 'denied') {
+            if (window.Toast?.info) {
+                Toast.info('브라우저 설정에서 알림 권한을 허용해주세요.');
+            }
+            return false;
+        }
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
             localStorage.setItem(STORAGE_KEY, '1');
             return true;
+        }
+        if (window.Toast?.info) {
+            Toast.info('알림 권한이 거부되어 푸시 알림을 받을 수 없습니다.');
         }
         return false;
     }
@@ -134,6 +148,18 @@
             body,
             icon: '/static/images/icons/favicon.svg',
         });
+    }
+
+    function bindPermissionHint() {
+        const bell = document.getElementById('notification-bell');
+        const bellToggle = document.getElementById('notification-toggle');
+        const handler = () => {
+            if (window.Toast?.info) {
+                Toast.info('이 브라우저/환경에서는 웹 푸시 알림이 지원되지 않습니다.');
+            }
+        };
+        bell?.addEventListener('click', handler);
+        bellToggle?.addEventListener('click', handler);
     }
 
     window.ChessokPush = { ensurePermission, ensureSubscription, unsubscribe, show };
