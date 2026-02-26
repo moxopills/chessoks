@@ -2,7 +2,16 @@ from .ai_setting import AiDifficultySetting
 from .game import Game
 from .invite import GameInvite
 from .lobby_message import LobbyMessage
+from .lobby_message_reaction import LobbyMessageReaction
 from .move import Move
 from .room import Room
 
-__all__ = ["Room", "Game", "Move", "LobbyMessage", "AiDifficultySetting", "GameInvite"]
+__all__ = [
+    "Room",
+    "Game",
+    "Move",
+    "LobbyMessage",
+    "LobbyMessageReaction",
+    "AiDifficultySetting",
+    "GameInvite",
+]

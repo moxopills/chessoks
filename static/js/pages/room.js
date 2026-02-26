@@ -20,6 +20,7 @@
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
+    const chatEmojiButtons = document.querySelectorAll('.chat-emoji-btn');
     const mobileTabbar = document.getElementById('mobile-tabbar');
     const chatBadge = document.getElementById('chat-badge');
     const chatSection = document.querySelector('.room-chat-section');
@@ -88,12 +89,16 @@
         }
 
         inviteFriendBtn.addEventListener('click', async () => {
+            if (room?.guest && room.guest.id !== currentUser.id) {
+                Toast.error('방이 가득 차 초대할 수 없습니다.');
+                return;
+            }
             const targetId = parseInt(inviteFriendSelect.value, 10);
             if (!targetId) {
                 Toast.error('초대할 친구를 선택해주세요.');
                 return;
             }
-            const ok = await Notifications?.sendGameInvite?.(targetId, room?.time_limit || 10);
+            const ok = await Notifications?.sendGameInvite?.(targetId, room?.time_limit || 10, room?.id);
             if (ok) Toast.success('게임 초대를 보냈습니다.');
         });
     }
@@ -146,6 +151,7 @@
 
         // Action Buttons
         renderActionButtons();
+        updateInviteState();
 
         // 1:1 전적 로드
         loadVsRecord();
@@ -155,6 +161,14 @@
             Toast.success('게임이 시작됩니다!');
             window.location.href = `/games/${room.id}/`;
         }
+    }
+
+    function updateInviteState() {
+        if (!inviteFriendBtn) return;
+        const canInvite = !!currentUser?.id && !!room && room.status !== 'playing'
+            && (!room.guest || room.guest.id === currentUser.id);
+        inviteFriendBtn.disabled = !canInvite;
+        inviteFriendBtn.textContent = canInvite ? '초대' : '초대 불가';
     }
 
     function applyRoomUpdate(newRoom) {
@@ -276,7 +290,7 @@
             if (myReady) {
                 html = `<button class="btn btn-secondary btn-lg" id="unready-btn">준비 취소</button>`;
             } else {
-                html = `<button class="btn btn-success btn-arcade btn-lg" id="ready-btn">준비</button>`;
+                html = `<button class="btn btn-primary btn-arcade btn-lg" id="ready-btn">준비</button>`;
             }
         } else {
             // 시작 확인 단계
@@ -375,6 +389,13 @@
             e.preventDefault();
             sendChatMessage();
         });
+        chatEmojiButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                if (!chatInput) return;
+                chatInput.value = `${chatInput.value || ''}${btn.dataset.emoji || ''}`;
+                chatInput.focus();
+            });
+        });
     }
 
     function showStatusModal(message) {
@@ -453,6 +474,15 @@
                 addChatMessage(data);
                 handleChatBadge(data);
                 break;
+            case 'reaction_update':
+                applyReactionUpdate(data.message_id, data.reactions || {});
+                break;
+            case 'recent_messages':
+                (data.messages || []).forEach((msg) => {
+                    addChatMessage(msg);
+                    handleChatBadge(msg);
+                });
+                break;
             case 'room_update':
                 // 방 상태 업데이트
                 applyRoomUpdate(data.room);
@@ -497,6 +527,11 @@
      * 채팅 메시지 추가
      */
     function addChatMessage(data) {
+        if (!chatMessages) return;
+        if (data.message_id) {
+            const exists = chatMessages.querySelector(`.chat-message[data-message-id="${String(data.message_id)}"]`);
+            if (exists) return;
+        }
         const isMine = data.user_id === currentUser.id;
         const avatar = !isMine
             ? (data.avatar_url
@@ -505,16 +540,54 @@
             : '';
         const messageEl = document.createElement('div');
         messageEl.className = `chat-message ${isMine ? 'mine' : 'others'}`;
+        if (data.message_id) {
+            messageEl.dataset.messageId = String(data.message_id);
+        }
+        const reactions = data.reactions || {};
         messageEl.innerHTML = `
             ${!isMine ? `<div class="chat-avatar">${avatar}</div>` : ''}
             <div class="chat-content">
                 <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
                 <div class="chat-bubble">${Utils.escapeHtml(data.message)}</div>
+                <div class="chat-reactions">
+                    <button type="button" class="reaction-btn" data-reaction="👍">👍 <span>${Number(reactions['👍'] || 0)}</span></button>
+                    <button type="button" class="reaction-btn" data-reaction="👏">👏 <span>${Number(reactions['👏'] || 0)}</span></button>
+                </div>
             </div>
         `;
         chatMessages.appendChild(messageEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
         if (!isMine) Utils?.Sounds?.chat?.();
+        bindReactionButtons(messageEl);
+    }
+
+    function bindReactionButtons(messageEl) {
+        messageEl.querySelectorAll('.reaction-btn').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const key = messageEl.dataset.messageId;
+                const reaction = btn.dataset.reaction;
+                if (!key || !reaction || !socket || socket.readyState !== WebSocket.OPEN) return;
+                socket.send(
+                    JSON.stringify({
+                        action: 'reaction',
+                        message_id: key,
+                        reaction,
+                    })
+                );
+            });
+        });
+    }
+
+    function applyReactionUpdate(messageId, reactions) {
+        if (!chatMessages || !messageId) return;
+        const messageEl = chatMessages.querySelector(`.chat-message[data-message-id="${String(messageId)}"]`);
+        if (!messageEl) return;
+        messageEl.querySelectorAll('.reaction-btn').forEach((btn) => {
+            const emoji = btn.dataset.reaction;
+            const countEl = btn.querySelector('span');
+            if (!emoji || !countEl) return;
+            countEl.textContent = String(Number(reactions?.[emoji] || 0));
+        });
     }
 
     /**

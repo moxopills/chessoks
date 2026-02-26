@@ -295,6 +295,8 @@
         const newDeclineBtn = declineBtn.cloneNode(true);
         acceptBtn.parentNode.replaceChild(newAcceptBtn, acceptBtn);
         declineBtn.parentNode.replaceChild(newDeclineBtn, declineBtn);
+        newAcceptBtn.disabled = false;
+        newDeclineBtn.disabled = false;
 
         newAcceptBtn.addEventListener('click', async () => {
             newAcceptBtn.disabled = true;
@@ -307,7 +309,7 @@
                     window.location.href = `/rooms/${result.room_id}/`;
                 }
             } catch (error) {
-                Toast.error(error.data?.detail || '초대 수락에 실패했습니다.');
+                Toast.error(extractErrorMessage(error, '초대 수락에 실패했습니다.'));
                 newAcceptBtn.disabled = false;
                 newDeclineBtn.disabled = false;
             }
@@ -321,7 +323,7 @@
                 modal.classList.add('hidden');
                 Toast.info('초대를 거절했습니다.');
             } catch (error) {
-                Toast.error(error.data?.detail || '초대 거절에 실패했습니다.');
+                Toast.error(extractErrorMessage(error, '초대 거절에 실패했습니다.'));
                 newAcceptBtn.disabled = false;
                 newDeclineBtn.disabled = false;
             }
@@ -330,9 +332,11 @@
         modal.classList.remove('hidden');
     }
 
-    async function sendGameInvite(userId, timeLimit = 10) {
+    async function sendGameInvite(userId, timeLimit = 10, roomId = null) {
         try {
-            await API.post('/chess/invite/', { user_id: userId, time_limit: timeLimit });
+            const payload = { user_id: userId, time_limit: timeLimit };
+            if (roomId) payload.room_id = roomId;
+            await API.post('/chess/invite/', payload);
             Toast.success('초대를 보냈습니다.');
             return true;
         } catch (error) {

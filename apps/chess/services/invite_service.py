@@ -10,6 +10,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import User
 from apps.chess.models import GameInvite, Room
+from apps.chess.utils import broadcast_room_state, broadcast_room_update
 from apps.notifications.services import NotificationService
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,9 @@ class InviteService:
     INVITE_EXPIRE_MINUTES = 2  # 초대 만료 시간
 
     @staticmethod
-    def send_invite(from_user, to_user_id: int, time_limit: int = 10) -> GameInvite:
+    def send_invite(
+        from_user, to_user_id: int, time_limit: int = 10, room_id: int | None = None
+    ) -> GameInvite:
         """게임 초대 전송"""
         if from_user.id == to_user_id:
             raise ValidationError("자기 자신에게 초대를 보낼 수 없습니다.")
@@ -30,13 +33,30 @@ class InviteService:
         if not to_user:
             raise ValidationError("존재하지 않는 사용자입니다.")
 
+        invite_room = None
+        if room_id:
+            invite_room = Room.objects.filter(id=room_id).first()
+            if not invite_room:
+                raise ValidationError("초대할 방을 찾을 수 없습니다.")
+            if invite_room.host_id != from_user.id and invite_room.guest_id != from_user.id:
+                raise ValidationError("해당 방의 참가자만 초대할 수 있습니다.")
+            if invite_room.status not in {"waiting", "ready"}:
+                raise ValidationError("대기 중인 방에서만 초대할 수 있습니다.")
+            if invite_room.guest_id and invite_room.guest_id != to_user.id:
+                raise ValidationError("방이 가득 차 초대할 수 없습니다.")
+            if invite_room.host_id == to_user.id:
+                raise ValidationError("이미 같은 방의 참가자입니다.")
+
         # 이미 대기 중인 초대가 있는지 확인
-        pending = GameInvite.objects.filter(
+        pending_qs = GameInvite.objects.filter(
             from_user=from_user,
             to_user=to_user,
             status="pending",
             created_at__gte=timezone.now() - timedelta(minutes=InviteService.INVITE_EXPIRE_MINUTES),
-        ).first()
+        )
+        if invite_room:
+            pending_qs = pending_qs.filter(room=invite_room)
+        pending = pending_qs.first()
         if pending:
             raise ValidationError("이미 초대를 보냈습니다. 잠시 후 다시 시도해주세요.")
 
@@ -46,6 +66,7 @@ class InviteService:
             to_user=to_user,
             time_limit=time_limit,
             status="pending",
+            room=invite_room,
         )
 
         # 상대에게 알림 전송
@@ -61,6 +82,7 @@ class InviteService:
                 "from_user_avatar": from_user.avatar_url or "",
                 "from_user_rating": from_user.stats.rating if hasattr(from_user, "stats") else 1500,
                 "time_limit": time_limit,
+                "room_id": invite_room.id if invite_room else None,
             },
             push=True,
         )
@@ -89,16 +111,46 @@ class InviteService:
                 invite.save(update_fields=["status"])
                 raise ValidationError("만료된 초대입니다.")
 
-            # 방 생성 (초대자가 호스트)
-            room = Room.objects.create(
-                room_type="custom",
-                title=f"{invite.from_user.nickname}의 초대 게임",
-                host=invite.from_user,
-                guest=invite.to_user,
-                time_limit=invite.time_limit,
-                increment_seconds=5,
-                status="waiting",
-            )
+            if invite.room_id:
+                room = Room.objects.select_for_update().filter(id=invite.room_id).first()
+                if not room:
+                    raise ValidationError("초대된 방을 찾을 수 없습니다.")
+                if room.host_id == user.id:
+                    raise ValidationError("이미 같은 방의 참가자입니다.")
+                if room.guest_id and room.guest_id != user.id:
+                    raise ValidationError("방이 가득 찼습니다.")
+                if room.status not in {"waiting", "ready"}:
+                    raise ValidationError("이미 시작된 방에는 입장할 수 없습니다.")
+                if room.guest_id is None:
+                    room.guest = user
+                    room.host_ready = False
+                    room.guest_ready = False
+                    room.host_start_confirmed = False
+                    room.guest_start_confirmed = False
+                    room.status = "waiting"
+                    room.save(
+                        update_fields=[
+                            "guest",
+                            "host_ready",
+                            "guest_ready",
+                            "host_start_confirmed",
+                            "guest_start_confirmed",
+                            "status",
+                        ]
+                    )
+                    broadcast_room_update(room)
+                    broadcast_room_state(room)
+            else:
+                # 방 생성 (초대자가 호스트)
+                room = Room.objects.create(
+                    room_type="custom",
+                    title=f"{invite.from_user.nickname}의 초대 게임",
+                    host=invite.from_user,
+                    guest=invite.to_user,
+                    time_limit=invite.time_limit,
+                    increment_seconds=5,
+                    status="waiting",
+                )
 
             invite.status = "accepted"
             invite.room = room

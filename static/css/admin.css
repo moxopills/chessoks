@@ -165,6 +165,13 @@
     }
 }
 
+/* 모바일/터치 환경에서는 항상 세로 스택 */
+@media (pointer: coarse) {
+    .admin-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
 @media (max-width: 768px) {
     .admin-tabbar {
         display: flex;
@@ -190,5 +197,9 @@
     .admin-actions .form-row input,
     .admin-actions .form-row select {
         width: 100%;
+    }
+
+    .admin-grid {
+        grid-template-columns: 1fr !important;
     }
 }
