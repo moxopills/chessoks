@@ -93,29 +93,11 @@
     let randomMatchStartTime = null;
     let quickMatchPollInterval = null;
     let randomMatchPollInterval = null;
-    const localReactionState = new Map();
-    const REACTION_STORAGE_KEY = 'lobby-chat-reactions-v1';
 
     // 초기화
     init();
 
-    function loadReactionState() {
-        const saved = Utils.Storage.get(REACTION_STORAGE_KEY, {});
-        Object.entries(saved || {}).forEach(([key, value]) => {
-            if (value === true) localReactionState.set(key, true);
-        });
-    }
-
-    function persistReactionState() {
-        const obj = {};
-        localReactionState.forEach((value, key) => {
-            if (value === true) obj[key] = true;
-        });
-        Utils.Storage.set(REACTION_STORAGE_KEY, obj);
-    }
-
     async function init() {
-        loadReactionState();
         const isMobile = window.innerWidth <= 768;
         const globalDmFab = document.getElementById('global-dm-fab');
         globalDmFab?.classList.remove('hidden');
@@ -1060,6 +1042,8 @@
         if (data.type === 'chat') {
             addChatMessage(data);
             handleChatBadge(data);
+        } else if (data.type === 'reaction_update') {
+            applyReactionUpdate(data.message_id, data.reactions || {});
         } else if (data.type === 'recent_messages') {
             // 최근 메시지 로드
             chatMessages.innerHTML = '';
@@ -1162,6 +1146,7 @@
      */
     function addChatMessage(data) {
         const isMine = data.user_id === currentUserId;
+        const emojiOnlyClass = isEmojiOnlyMessage(data.message) ? ' emoji-only' : '';
         const avatar = !isMine
             ? (data.avatar_url
                 ? `<img src="${Utils.escapeHtml(data.avatar_url)}" alt="${Utils.escapeHtml(data.nickname || '')}">`
@@ -1169,14 +1154,17 @@
             : '';
         const messageEl = document.createElement('div');
         messageEl.className = `chat-message ${isMine ? 'mine' : 'others'}`;
+        if (data.message_id) {
+            messageEl.dataset.messageId = String(data.message_id);
+        }
         messageEl.innerHTML = `
             ${!isMine ? `<div class="chat-avatar">${avatar}</div>` : ''}
             <div class="chat-content">
                 <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
-                <div class="chat-bubble">${Utils.escapeHtml(data.message)}</div>
-                <div class="chat-reactions" data-reaction-key="${data.id || `${data.user_id}:${data.sent_at || Date.now()}`}">
-                    <button type="button" class="reaction-btn" data-reaction="👍">👍 <span>0</span></button>
-                    <button type="button" class="reaction-btn" data-reaction="👏">👏 <span>0</span></button>
+                <div class="chat-bubble${emojiOnlyClass}">${Utils.escapeHtml(data.message)}</div>
+                <div class="chat-reactions">
+                    <button type="button" class="reaction-btn" data-reaction="👍">👍 <span>${data.reactions?.["👍"] ?? 0}</span></button>
+                    <button type="button" class="reaction-btn" data-reaction="👏">👏 <span>${data.reactions?.["👏"] ?? 0}</span></button>
                 </div>
             </div>
             <span class="chat-time">${formatChatTime(data.sent_at)}</span>
@@ -1186,45 +1174,43 @@
         bindReactionButtons(messageEl);
     }
 
+    function isEmojiOnlyMessage(text) {
+        const value = (text || '').trim();
+        if (!value) return false;
+        const stripped = value.replace(
+            /[\p{Emoji}\p{Extended_Pictographic}\uFE0F\u200D\s]/gu,
+            ''
+        );
+        return stripped.length === 0;
+    }
+
     function bindReactionButtons(messageEl) {
         messageEl.querySelectorAll('.reaction-btn').forEach((btn) => {
             btn.addEventListener('click', () => {
-                const wrap = btn.closest('.chat-reactions');
-                const key = wrap?.dataset.reactionKey;
+                const key = messageEl.dataset.messageId;
                 const reaction = btn.dataset.reaction;
                 if (!key || !reaction) return;
-                const stateKey = `${key}:${reaction}`;
-                const countEl = btn.querySelector('span');
-                if (!countEl) return;
-
-                const current = parseInt(countEl.textContent || '0', 10);
-                const selected = localReactionState.get(stateKey) === true;
-                if (selected) {
-                    countEl.textContent = String(Math.max(0, current - 1));
-                    btn.classList.remove('active');
-                    localReactionState.set(stateKey, false);
-                } else {
-                    countEl.textContent = String(current + 1);
-                    btn.classList.add('active');
-                    localReactionState.set(stateKey, true);
+                if (lobbySocket?.readyState === WebSocket.OPEN) {
+                    lobbySocket.send(
+                        JSON.stringify({
+                            action: 'reaction',
+                            message_id: Number(key),
+                            reaction,
+                        })
+                    );
                 }
-                persistReactionState();
             });
+        });
+    }
 
-            // restore persisted state
-            const wrap = btn.closest('.chat-reactions');
-            const key = wrap?.dataset.reactionKey;
-            const reaction = btn.dataset.reaction;
-            if (!key || !reaction) return;
-            const stateKey = `${key}:${reaction}`;
-            if (localReactionState.get(stateKey) === true) {
-                const countEl = btn.querySelector('span');
-                if (countEl) {
-                    const current = parseInt(countEl.textContent || '0', 10);
-                    countEl.textContent = String(Math.max(1, current));
-                }
-                btn.classList.add('active');
-            }
+    function applyReactionUpdate(messageId, reactions) {
+        const target = chatMessages.querySelector(`.chat-message[data-message-id="${messageId}"]`);
+        if (!target) return;
+        target.querySelectorAll('.reaction-btn').forEach((btn) => {
+            const emoji = btn.dataset.reaction;
+            const countEl = btn.querySelector('span');
+            if (!emoji || !countEl) return;
+            countEl.textContent = String(reactions[emoji] ?? 0);
         });
     }
 

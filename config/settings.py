@@ -241,6 +241,12 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", not
 SECURE_HSTS_PRELOAD = _env_bool("SECURE_HSTS_PRELOAD", not DEBUG)
 SECURE_REFERRER_POLICY = os.getenv("SECURE_REFERRER_POLICY", "same-origin")
 
+# 세션 정책
+# - 기본 15분 만료
+# - 요청이 발생할 때마다 만료 시각 갱신(슬라이딩 만료)
+SESSION_COOKIE_AGE = int(os.getenv("SESSION_COOKIE_AGE", "900"))
+SESSION_SAVE_EVERY_REQUEST = _env_bool("SESSION_SAVE_EVERY_REQUEST", True)
+
 # 인증 설정
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "/accounts/login/"

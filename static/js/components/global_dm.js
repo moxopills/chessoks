@@ -200,6 +200,7 @@
         }
         panel.classList.remove('hidden');
         fabBtn.classList.add('is-active');
+        fabBtn.classList.add('is-panel-open');
         syncLobbyTabsVisibility();
         if (currentRoomUserId) {
             showRoomView(currentRoomUserId);
@@ -214,6 +215,7 @@
         restoreLobbyChatContainer();
         panel.classList.add('hidden');
         fabBtn.classList.remove('is-active');
+        fabBtn.classList.remove('is-panel-open');
     }
 
     function showThreadsView() {

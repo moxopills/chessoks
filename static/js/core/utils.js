@@ -306,9 +306,10 @@ const Utils = (function() {
             return context.resume().then(() => context).catch(() => context);
         }
 
-        const BGM_URL = 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=arcade-music-loop-106978.mp3';
+        const BGM_URL = null;
 
         function initBGM() {
+            if (!BGM_URL) return;
             if (!bgmAudio) {
                 bgmAudio = new Audio(BGM_URL);
                 bgmAudio.crossOrigin = "anonymous";
@@ -329,14 +330,17 @@ const Utils = (function() {
 
         function startSynthBGM() {
             if (bgmTimer) return;
-            // 업템포 아케이드 패턴 (외부 BGM 실패/지연 시 백업)
-            const seq = [392, 494, 523, 659, 784, 659, 523, 494];
+            // 업템포 칩튠 아케이드 패턴
+            const seq = [523, 659, 784, 988, 784, 659, 523, 392];
             bgmTimer = setInterval(() => {
                 if (isMuted || bgmVolume === 0) return;
                 const freq = seq[bgmStep % seq.length];
                 bgmStep += 1;
-                playTone(freq, 0.18, Math.max(0.015, (bgmVolume / 100) * 0.07));
-            }, 320);
+                playTone(freq, 0.16, Math.max(0.02, (bgmVolume / 100) * 0.09), 'square');
+                if (bgmStep % 2 === 0) {
+                    playTone(freq / 2, 0.12, Math.max(0.01, (bgmVolume / 100) * 0.045), 'triangle');
+                }
+            }, 260);
         }
 
         function stopSynthBGM() {
@@ -355,14 +359,14 @@ const Utils = (function() {
             } catch (e) {}
         }
 
-        function playTone(freq, duration = 0.12, volume = 0.12) {
+        function playTone(freq, duration = 0.12, volume = 0.12, wave = 'sine') {
             if (isMuted || bgmVolume === 0) return;
             try {
                 ensureContextRunning().then((context) => {
                     if (!context || isMuted || bgmVolume === 0) return;
                     const osc = context.createOscillator();
                     const gain = context.createGain();
-                    osc.type = 'sine';
+                    osc.type = wave;
                     osc.frequency.value = freq;
                     gain.gain.value = 0.0001;
                     osc.connect(gain);

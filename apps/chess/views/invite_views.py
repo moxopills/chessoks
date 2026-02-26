@@ -20,6 +20,7 @@ class GameInviteView(APIView):
     def post(self, request):
         target_user_id = request.data.get("user_id")
         time_limit = request.data.get("time_limit", 10)
+        room_id = request.data.get("room_id")
 
         if not target_user_id:
             return Response({"detail": "user_id는 필수입니다."}, status=status.HTTP_400_BAD_REQUEST)
@@ -29,6 +30,7 @@ class GameInviteView(APIView):
                 from_user=request.user,
                 to_user_id=target_user_id,
                 time_limit=time_limit,
+                room_id=room_id,
             )
             return Response(
                 {

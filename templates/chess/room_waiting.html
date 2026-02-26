@@ -88,6 +88,13 @@
             </div>
             <div class="chat-container">
                 <div class="chat-messages" id="chat-messages"></div>
+                <div class="chat-emoji-bar">
+                    <button type="button" class="chat-emoji-btn" data-emoji="😀">😀</button>
+                    <button type="button" class="chat-emoji-btn" data-emoji="😂">😂</button>
+                    <button type="button" class="chat-emoji-btn" data-emoji="👍">👍</button>
+                    <button type="button" class="chat-emoji-btn" data-emoji="🔥">🔥</button>
+                    <button type="button" class="chat-emoji-btn" data-emoji="👏">👏</button>
+                </div>
                 <form class="chat-form" id="chat-form">
                     <input type="text" class="chat-input" id="chat-input" placeholder="메시지 입력..." maxlength="500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
                     <button type="submit" class="btn btn-primary btn-sm">전송</button>
@@ -583,6 +590,37 @@
 
 .chat-form .btn {
     flex-shrink: 0;
+}
+
+.chat-emoji-bar {
+    display: flex;
+    gap: var(--space-xs);
+    padding: var(--space-xs) 0;
+    overflow-x: auto;
+}
+
+.chat-emoji-btn {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-card);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.875rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.chat-reactions {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.chat-reactions .reaction-btn {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    color: var(--color-text-secondary);
 }
 
 .chat-input {

@@ -1,7 +1,9 @@
 import logging
+from uuid import uuid4
 
+from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
-from django.db import DatabaseError
+from django.db import DatabaseError, models
 from django.utils import timezone
 
 from channels.db import database_sync_to_async
@@ -9,11 +11,12 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 from apps.accounts.models import User
 from apps.accounts.services import OnlineStatusService
-from apps.chess.models import LobbyMessage, Room
+from apps.chess.models import LobbyMessage, LobbyMessageReaction, Room
 from apps.chess.services import GameService
 from apps.chess.utils import check_profanity, get_profanity_warning
 
 logger = logging.getLogger(__name__)
+REACTION_EMOJIS = {"👍", "👏"}
 
 
 class OnlineStatusMixin:
@@ -59,6 +62,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_add(group, self.channel_name)
         await self.accept()
         await self._set_user_online()
+        await self._send_recent_game_messages()
         if self.is_player:
             await self._clear_disconnect_marker()
         else:
@@ -89,6 +93,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 "decline_rematch": self._handle_decline_rematch,
                 "chat": self._handle_chat,
                 "spectator_chat": self._handle_spectator_chat,
+                "reaction": self._handle_reaction,
                 "heartbeat": self._handle_heartbeat,
             }.get(action)
 
@@ -255,16 +260,20 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         valid, message = await self._validate_chat_message(content)
         if not valid:
             return
+        message_id = self._new_chat_message_id()
         payload = {
             "type": "chat",
             "scope": "player",
+            "message_id": message_id,
             "room_id": int(self.room_id),
             "user_id": self.scope["user"].id,
             "nickname": self.scope["user"].nickname,
             "avatar_url": self.scope["user"].avatar_url,
             "message": message,
             "sent_at": timezone.now().isoformat(),
+            "reactions": {"👍": 0, "👏": 0},
         }
+        await self._append_game_chat_history("player", payload)
         await self._broadcast_to_group(self.player_group, payload)
 
     async def _handle_spectator_chat(self, content):
@@ -276,17 +285,37 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         valid, message = await self._validate_chat_message(content)
         if not valid:
             return
+        message_id = self._new_chat_message_id()
         payload = {
             "type": "chat",
             "scope": "spectator",
+            "message_id": message_id,
             "room_id": int(self.room_id),
             "user_id": self.scope["user"].id,
             "nickname": self.scope["user"].nickname,
             "avatar_url": self.scope["user"].avatar_url,
             "message": message,
             "sent_at": timezone.now().isoformat(),
+            "reactions": {"👍": 0, "👏": 0},
         }
+        await self._append_game_chat_history("spectator", payload)
         await self._broadcast_to_group(self.spectator_group, payload)
+
+    async def _handle_reaction(self, content):
+        message_id = (content.get("message_id") or "").strip()
+        emoji = (content.get("reaction") or "").strip()
+        if not message_id or emoji not in REACTION_EMOJIS:
+            return
+        scope = "player" if self.is_player else "spectator"
+        reactions = await self._toggle_game_reaction(scope, message_id, emoji)
+        payload = {
+            "type": "reaction_update",
+            "scope": scope,
+            "message_id": message_id,
+            "reactions": reactions,
+        }
+        target_group = self.player_group if self.is_player else self.spectator_group
+        await self._broadcast_to_group(target_group, payload)
 
     async def _broadcast(self, payload):
         await self._broadcast_to_group(self.player_group, payload)
@@ -300,6 +329,69 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             await self.send_json(event["payload"])
         except Exception:
             pass  # 연결 끊긴 클라이언트 무시
+
+    @staticmethod
+    def _new_chat_message_id() -> str:
+        return uuid4().hex[:16]
+
+    @staticmethod
+    def _history_key(room_id: int, scope: str) -> str:
+        return f"chess:chat:history:{room_id}:{scope}"
+
+    @staticmethod
+    def _reaction_key(room_id: int, message_id: str, scope: str) -> str:
+        return f"chess:chat:react:{room_id}:{scope}:{message_id}"
+
+    async def _send_recent_game_messages(self) -> None:
+        scope = "player" if self.is_player else "spectator"
+        messages = await self._get_game_chat_history(scope)
+        if messages:
+            await self.send_json({"type": "recent_messages", "messages": messages})
+
+    @database_sync_to_async
+    def _append_game_chat_history(self, scope: str, payload: dict) -> None:
+        key = self._history_key(int(self.room_id), scope)
+        history = cache.get(key, [])
+        history.append(payload)
+        if len(history) > 120:
+            history = history[-120:]
+        cache.set(key, history, timeout=60 * 60 * 6)
+
+    @database_sync_to_async
+    def _get_game_chat_history(self, scope: str) -> list[dict]:
+        key = self._history_key(int(self.room_id), scope)
+        history = cache.get(key, [])
+        hydrated: list[dict] = []
+        for item in history:
+            message = dict(item)
+            message_id = message.get("message_id")
+            if message_id:
+                react_key = self._reaction_key(int(self.room_id), str(message_id), scope)
+                state = cache.get(react_key, {"👍": [], "👏": []})
+                message["reactions"] = {
+                    "👍": len(state.get("👍", [])),
+                    "👏": len(state.get("👏", [])),
+                }
+            else:
+                message["reactions"] = message.get("reactions", {"👍": 0, "👏": 0})
+            hydrated.append(message)
+        return hydrated
+
+    @database_sync_to_async
+    def _toggle_game_reaction(self, scope: str, message_id: str, emoji: str) -> dict:
+        key = self._reaction_key(int(self.room_id), message_id, scope)
+        state = cache.get(key, {"👍": [], "👏": []})
+        for e in REACTION_EMOJIS:
+            state.setdefault(e, [])
+        user_id = self.scope["user"].id
+        users = set(state.get(emoji, []))
+        if user_id in users:
+            users.remove(user_id)
+        else:
+            users.add(user_id)
+        state[emoji] = sorted(users)
+        cache.set(key, state, timeout=60 * 60 * 6)
+        return {e: len(state.get(e, [])) for e in REACTION_EMOJIS}
 
     @database_sync_to_async
     def _check_room_access(self, user) -> bool | None:
@@ -481,6 +573,9 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             if action == "heartbeat":
                 await self._handle_heartbeat(content)
                 return
+            if action == "reaction":
+                await self._handle_lobby_reaction(content)
+                return
             if action != "chat":
                 await self.send_json({"type": "error", "message": "지원하지 않는 액션입니다."})
                 return
@@ -510,15 +605,17 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 await self.send_json({"type": "error", "message": get_profanity_warning()})
                 return
 
-            await self._save_lobby_message(message)
+            saved = await self._save_lobby_message(message)
             payload = {
                 "type": "chat",
                 "scope": "lobby",
+                "message_id": saved["id"],
                 "user_id": self.scope["user"].id,
                 "nickname": self.scope["user"].nickname,
                 "avatar_url": self.scope["user"].avatar_url,
                 "message": message,
-                "sent_at": timezone.now().isoformat(),
+                "sent_at": saved["created_at"],
+                "reactions": {"👍": 0, "👏": 0},
             }
             await self.channel_layer.group_send(
                 self.group_name, {"type": "broadcast", "payload": payload}
@@ -536,8 +633,29 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             pass
 
     @database_sync_to_async
-    def _save_lobby_message(self, message: str) -> None:
-        LobbyMessage.objects.create(user=self.scope["user"], message=message)
+    def _save_lobby_message(self, message: str) -> dict:
+        msg = LobbyMessage.objects.create(user=self.scope["user"], message=message)
+        return {"id": msg.id, "created_at": msg.created_at.isoformat()}
+
+    async def _handle_lobby_reaction(self, content):
+        if getattr(self, "is_guest", False):
+            return
+        message_id = content.get("message_id")
+        emoji = (content.get("reaction") or "").strip()
+        if not message_id or emoji not in REACTION_EMOJIS:
+            return
+        reactions = await self._toggle_lobby_reaction(int(message_id), emoji)
+        if reactions is None:
+            return
+        payload = {
+            "type": "reaction_update",
+            "scope": "lobby",
+            "message_id": int(message_id),
+            "reactions": reactions,
+        }
+        await self.channel_layer.group_send(
+            self.group_name, {"type": "broadcast", "payload": payload}
+        )
 
     async def _send_recent_messages(self):
         """연결 시 최근 메시지 전송"""
@@ -549,18 +667,56 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
     def _get_recent_messages(self, limit: int = 100) -> list:
         """최근 로비 메시지 조회"""
         messages = LobbyMessage.objects.select_related("user").order_by("-created_at")[:limit]
+        message_ids = [msg.id for msg in messages]
+        reaction_rows = (
+            LobbyMessageReaction.objects.filter(message_id__in=message_ids)
+            .values("message_id", "emoji")
+            .annotate(count=models.Count("id"))
+        )
+        reaction_map = {msg_id: {"👍": 0, "👏": 0} for msg_id in message_ids}
+        for row in reaction_rows:
+            if row["emoji"] in REACTION_EMOJIS:
+                reaction_map.setdefault(row["message_id"], {"👍": 0, "👏": 0})[row["emoji"]] = row[
+                    "count"
+                ]
         return [
             {
                 "type": "chat",
                 "scope": "lobby",
+                "message_id": msg.id,
                 "user_id": msg.user_id,
                 "nickname": msg.user.nickname,
                 "avatar_url": msg.user.avatar_url,
                 "message": msg.message,
                 "sent_at": msg.created_at.isoformat(),
+                "reactions": reaction_map.get(msg.id, {"👍": 0, "👏": 0}),
             }
             for msg in reversed(messages)
         ]
+
+    @database_sync_to_async
+    def _toggle_lobby_reaction(self, message_id: int, emoji: str) -> dict | None:
+        message = LobbyMessage.objects.filter(id=message_id).first()
+        if not message:
+            return None
+        user = self.scope["user"]
+        existing = LobbyMessageReaction.objects.filter(
+            message_id=message_id, user_id=user.id, emoji=emoji
+        ).first()
+        if existing:
+            existing.delete()
+        else:
+            LobbyMessageReaction.objects.create(message=message, user=user, emoji=emoji)
+        rows = (
+            LobbyMessageReaction.objects.filter(message_id=message_id)
+            .values("emoji")
+            .annotate(count=models.Count("id"))
+        )
+        reactions = {"👍": 0, "👏": 0}
+        for row in rows:
+            if row["emoji"] in REACTION_EMOJIS:
+                reactions[row["emoji"]] = row["count"]
+        return reactions
 
     @database_sync_to_async
     def _add_to_lobby(self):
