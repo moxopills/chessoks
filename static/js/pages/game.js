@@ -159,29 +159,10 @@
     const WS_BASE_RECONNECT_DELAY = 1000;
     let ratingPollAttempts = 0;
     const RATING_POLL_MAX_ATTEMPTS = 30;
-    const localReactionState = new Map();
-    const REACTION_STORAGE_KEY = 'game-chat-reactions-v1';
-
     // Init
     init();
 
-    function loadReactionState() {
-        const saved = Utils.Storage.get(REACTION_STORAGE_KEY, {});
-        Object.entries(saved || {}).forEach(([key, value]) => {
-            if (value === true) localReactionState.set(key, true);
-        });
-    }
-
-    function persistReactionState() {
-        const obj = {};
-        localReactionState.forEach((value, key) => {
-            if (value === true) obj[key] = true;
-        });
-        Utils.Storage.set(REACTION_STORAGE_KEY, obj);
-    }
-
     async function init() {
-        loadReactionState();
         if (!roomId) {
             Toast.error('잘못된 접근입니다.');
             window.location.href = '/';
@@ -1652,6 +1633,14 @@
                 addChatMessage(data);
                 break;
 
+            case 'reaction_update':
+                applyReactionUpdate(data.message_id, data.reactions || {});
+                break;
+
+            case 'recent_messages':
+                (data.messages || []).forEach((msg) => addChatMessage(msg));
+                break;
+
             case 'spectator_event': {
                 const nickname = data.user?.nickname || '관전자';
                 const isSelf = currentUser && data.user?.id === currentUser.id;
@@ -1840,14 +1829,20 @@
             : '';
         const messageEl = document.createElement('div');
         messageEl.className = `chat-message ${isMine ? 'mine' : 'others'}`;
+        if (data.message_id) {
+            messageEl.dataset.messageId = String(data.message_id);
+        }
+        const reactions = data.reactions || {};
+        const thumbCount = Number(reactions['👍'] || 0);
+        const clapCount = Number(reactions['👏'] || 0);
         messageEl.innerHTML = `
             ${!isMine ? `<div class="chat-avatar">${avatar}</div>` : ''}
             <div class="chat-content">
                 <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
                 <div class="chat-bubble">${Utils.escapeHtml(data.message)}</div>
-                <div class="chat-reactions" data-reaction-key="${data.id || `${data.user_id}:${data.created_at || Date.now()}`}">
-                    <button type="button" class="reaction-btn" data-reaction="👍">👍 <span>0</span></button>
-                    <button type="button" class="reaction-btn" data-reaction="👏">👏 <span>0</span></button>
+                <div class="chat-reactions">
+                    <button type="button" class="reaction-btn" data-reaction="👍">👍 <span>${thumbCount}</span></button>
+                    <button type="button" class="reaction-btn" data-reaction="👏">👏 <span>${clapCount}</span></button>
                 </div>
             </div>
         `;
@@ -2619,57 +2614,49 @@
     function bindReactionButtons(messageEl) {
         messageEl.querySelectorAll('.reaction-btn').forEach((btn) => {
             btn.addEventListener('click', () => {
-                const wrap = btn.closest('.chat-reactions');
-                const key = wrap?.dataset.reactionKey;
+                if (!socket || socket.readyState !== WebSocket.OPEN) return;
+                const root = btn.closest('.chat-message');
+                const key = root?.dataset.messageId;
                 const reaction = btn.dataset.reaction;
                 if (!key || !reaction) return;
-                const stateKey = `${key}:${reaction}`;
-                const countEl = btn.querySelector('span');
-                if (!countEl) return;
-                const current = parseInt(countEl.textContent || '0', 10);
-                const selected = localReactionState.get(stateKey) === true;
-                if (selected) {
-                    countEl.textContent = String(Math.max(0, current - 1));
-                    btn.classList.remove('active');
-                    localReactionState.set(stateKey, false);
-                } else {
-                    countEl.textContent = String(current + 1);
-                    btn.classList.add('active');
-                    localReactionState.set(stateKey, true);
-                }
-                persistReactionState();
+                socket.send(
+                    JSON.stringify({
+                        action: 'reaction',
+                        message_id: key,
+                        reaction,
+                    })
+                );
             });
-
-            const wrap = btn.closest('.chat-reactions');
-            const key = wrap?.dataset.reactionKey;
-            const reaction = btn.dataset.reaction;
-            if (!key || !reaction) return;
-            const stateKey = `${key}:${reaction}`;
-            if (localReactionState.get(stateKey) === true) {
-                const countEl = btn.querySelector('span');
-                if (countEl) {
-                    const current = parseInt(countEl.textContent || '0', 10);
-                    countEl.textContent = String(Math.max(1, current));
-                }
-                btn.classList.add('active');
-            }
         });
     }
 
     function ensureReactionUIForExistingMessages() {
         if (!chatMessages) return;
         const messageEls = chatMessages.querySelectorAll('.chat-message .chat-content');
-        messageEls.forEach((contentEl, idx) => {
+        messageEls.forEach((contentEl) => {
             if (contentEl.querySelector('.chat-reactions')) return;
             const reactions = document.createElement('div');
             reactions.className = 'chat-reactions';
-            reactions.dataset.reactionKey = `legacy:${idx}:${Date.now()}`;
             reactions.innerHTML = `
                 <button type="button" class="reaction-btn" data-reaction="👍">👍 <span>0</span></button>
                 <button type="button" class="reaction-btn" data-reaction="👏">👏 <span>0</span></button>
             `;
             contentEl.appendChild(reactions);
             bindReactionButtons(contentEl.closest('.chat-message'));
+        });
+    }
+
+    function applyReactionUpdate(messageId, reactions) {
+        if (!chatMessages || !messageId) return;
+        const target = chatMessages.querySelector(`.chat-message[data-message-id="${String(messageId)}"]`);
+        if (!target) return;
+        target.querySelectorAll('.reaction-btn').forEach((btn) => {
+            const emoji = btn.dataset.reaction;
+            if (!emoji) return;
+            const countEl = btn.querySelector('span');
+            if (!countEl) return;
+            const next = Number(reactions?.[emoji] || 0);
+            countEl.textContent = String(next);
         });
     }
 

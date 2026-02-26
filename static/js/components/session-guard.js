@@ -9,7 +9,7 @@ const SessionGuard = (function() {
     'use strict';
 
     const WARNING_TIMEOUT_SECONDS = 5 * 60; // 경고 후 5분 내 연장 안 하면 로그아웃
-    const SESSION_TIMEOUT_SECONDS = 25 * 60; // 25분 비활동 시 경고
+    const SESSION_TIMEOUT_SECONDS = 15 * 60; // 15분 비활동 시 연장 경고
     const CHECK_INTERVAL_SECONDS = 60; // 1분마다 체크
 
     let lastActivity = Date.now();
@@ -144,7 +144,7 @@ const SessionGuard = (function() {
         } catch {
             // 이미 로그아웃 상태일 수 있음
         }
-        window.location.href = '/login/';
+        window.location.href = '/accounts/login/';
     }
 
     async function forceLogout() {
@@ -158,7 +158,7 @@ const SessionGuard = (function() {
         } catch {
             // 이미 로그아웃 상태
         }
-        window.location.href = '/login/';
+        window.location.href = '/accounts/login/';
     }
 
     return {

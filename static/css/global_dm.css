@@ -6,6 +6,11 @@
     display: flex;
 }
 
+#global-dm-fab.is-panel-open {
+    opacity: 0;
+    pointer-events: none;
+}
+
 @media (max-width: 768px) {
     #global-dm-fab {
         right: 12px;
@@ -386,11 +391,11 @@ body:not(.is-guest) .chat-fab.auth-only {
 
 @media (max-width: 768px) {
     .global-dm-panel {
-        right: 12px;
-        bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+        right: 10px;
+        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
         width: min(360px, calc(100vw - 24px));
-        height: min(520px, 60vh);
-        max-height: min(520px, 60vh);
+        height: min(560px, 64vh);
+        max-height: min(560px, 64vh);
         border-radius: var(--radius-lg);
         z-index: 9999;
     }
