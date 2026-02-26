@@ -41,3 +41,29 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.user_id} - {self.type}"
+
+
+class WebPushSubscription(models.Model):
+    """웹 푸시 구독 정보"""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="web_push_subscriptions",
+    )
+    endpoint = models.TextField(unique=True)
+    p256dh = models.TextField()
+    auth = models.TextField()
+    user_agent = models.TextField(blank=True, default="")
+    is_active = models.BooleanField(default=True)
+    last_seen_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "web_push_subscriptions"
+        indexes = [
+            models.Index(fields=["user", "is_active"], name="push_user_active_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} - {self.endpoint[:40]}"

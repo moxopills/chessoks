@@ -16,6 +16,12 @@
             <button class="hero-tier-toggle" id="mode-toggle" type="button" aria-expanded="false">
                 게임 시작 안내
             </button>
+            <button class="hero-tier-toggle" id="install-toggle" type="button" aria-expanded="false">
+                웹앱 설치 안내
+            </button>
+            <button class="hero-tier-toggle" id="points-toggle" type="button" aria-expanded="false">
+                포인트 안내
+            </button>
             <button class="hero-tier-toggle hidden" id="lobby-customize-open" type="button" aria-expanded="false">
                 커스터마이징
             </button>
@@ -36,8 +42,17 @@
             <div class="tier-row">• 관전: 관전 허용 방만 입장 가능하며 비허용 방은 차단됩니다.</div>
             <div class="tier-row">• 로비로 나가기: 로비로 나가서 로비 채팅으로 상대방을 찾을수 있고 전적 등 살펴볼 수 있습니다.</div>
             <div class="tier-row">• AI 대전: AI 난이도를 설정하여 AI와 체스 게임을 할 수 있습니다.</div>
-            <div class="tier-row">• 웹앱 설치(iPhone): Safari 공유 버튼 → 홈 화면에 추가</div>
-            <div class="tier-row">• 웹앱 설치(Android): 브라우저 메뉴 → 홈 화면에 추가/앱 설치</div>
+        </div>
+        <div class="hero-tier-panel hidden" id="install-panel">
+            <div class="tier-row">• iPhone: Safari 공유 → 홈 화면에 추가</div>
+            <div class="tier-row">• Android: 메뉴 → 홈 화면에 추가/앱 설치</div>
+            <div class="tier-row">• 설치 후 앱처럼 실행되고 알림 수신이 가능합니다.</div>
+        </div>
+        <div class="hero-tier-panel hidden" id="points-panel">
+            <div class="tier-row">• 대국/활동으로 포인트를 획득합니다.</div>
+            <div class="tier-row">• 포인트로 닉네임 색상, 프로필 테두리를 구매합니다.</div>
+            <div class="tier-row">• 저장 시 구매 항목 포인트가 자동 차감됩니다.</div>
+            <div class="tier-row">• 보유 포인트는 커스터마이징 창에서 확인합니다.</div>
         </div>
 
         <div class="hero-actions">
@@ -1085,7 +1100,7 @@
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    padding: var(--space-sm) var(--space-md);
+    padding: 0 var(--space-md);
     font-size: 0.75rem;
     color: var(--color-text-secondary);
     display: grid;
@@ -1093,7 +1108,30 @@
     max-width: 360px;
     margin-left: auto;
     margin-right: auto;
+    margin-bottom: 0;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transform: translateY(-4px);
+    pointer-events: none;
+    border-color: transparent;
+    transition:
+        max-height 0.24s ease,
+        opacity 0.2s ease,
+        transform 0.2s ease,
+        margin-bottom 0.2s ease,
+        padding 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.hero-tier-panel.is-open {
+    padding: var(--space-sm) var(--space-md);
+    max-height: 320px;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
     margin-bottom: var(--space-md);
+    border-color: var(--color-border);
 }
 
 .hero-tier-panel .tier-row {
