@@ -12,6 +12,7 @@
     let currentUser = null;
     let pollTimer = null;
     let lastCount = 0;
+    let lastLatestId = 0;
 
     init();
 
@@ -45,11 +46,11 @@
             const message = inputEl.value.trim();
             if (!message) return;
             try {
-                await API.post(`/accounts/messages/${targetUserId}/`, { message });
+                const created = await API.post(`/accounts/messages/${targetUserId}/`, { message });
                 inputEl.value = '';
-                await loadMessages(true);
+                appendMessage(created, true);
             } catch (error) {
-            Toast.error(error.data?.detail || error.data?.message || '전송에 실패했습니다.');
+                Toast.error(error.data?.detail || error.data?.message || '전송에 실패했습니다.');
             }
         });
     }
@@ -80,18 +81,44 @@
             const data = await API.get(`/accounts/messages/${targetUserId}/`, { limit: 200, offset: 0, no_count: 1 });
             const items = data.results || [];
             const reversedItems = items.slice().reverse();
+            const latestId = reversedItems.length ? (reversedItems[reversedItems.length - 1]?.id || 0) : 0;
+            const newCount = data.count || 0;
+            const changed = latestId !== lastLatestId || newCount !== lastCount;
+
+            if (!changed && !forceScroll) {
+                return;
+            }
+
             renderMessages(reversedItems);
             messagesEl.scrollTop = messagesEl.scrollHeight;
-            if (data.count > lastCount && reversedItems.length) {
+            if (newCount > lastCount && reversedItems.length) {
                 const lastItem = reversedItems[reversedItems.length - 1];
                 if (lastItem.sender?.id !== currentUser.id) {
                     Utils?.Sounds?.chat?.();
                 }
             }
-            lastCount = data.count || 0;
+            lastCount = newCount;
+            lastLatestId = latestId;
         } catch (error) {
             messagesEl.innerHTML = '<div class="history-empty">메시지를 불러오지 못했습니다.</div>';
         }
+    }
+
+    function appendMessage(item, forceScroll = false) {
+        if (!item || !item.id) {
+            return;
+        }
+        const currentCount = messagesEl.querySelectorAll('.dm-message').length;
+        if (!currentCount || messagesEl.querySelector('.history-empty')) {
+            renderMessages([item]);
+        } else {
+            messagesEl.insertAdjacentHTML('beforeend', renderSingleMessage(item));
+        }
+        if (forceScroll) {
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+        lastCount += 1;
+        lastLatestId = item.id;
     }
 
     function renderMessages(items) {
@@ -99,24 +126,26 @@
             messagesEl.innerHTML = '<div class="history-empty">아직 메시지가 없습니다.</div>';
             return;
         }
-        messagesEl.innerHTML = items.map((item) => {
-            const isMe = item.sender?.id === currentUser.id;
-            const time = formatTime(item.created_at);
-            const avatar = !isMe
-                ? (item.sender?.avatar_url
-                    ? `<img src="${Utils.escapeHtml(item.sender.avatar_url)}" alt="${Utils.escapeHtml(item.sender?.nickname || '')}">`
-                    : '<span class="avatar-placeholder">?</span>')
-                : '';
-            return `
-                <div class="dm-message ${isMe ? 'me' : 'other'}">
-                    ${!isMe ? `<div class="dm-avatar">${avatar}</div>` : ''}
-                    <div class="dm-content">
-                        <div class="dm-message-text">${Utils.escapeHtml(item.message)}</div>
-                        <div class="dm-message-time">${time}</div>
-                    </div>
+        messagesEl.innerHTML = items.map((item) => renderSingleMessage(item)).join('');
+    }
+
+    function renderSingleMessage(item) {
+        const isMe = item.sender?.id === currentUser.id;
+        const time = formatTime(item.created_at);
+        const avatar = !isMe
+            ? (item.sender?.avatar_url
+                ? `<img src="${Utils.escapeHtml(item.sender.avatar_url)}" alt="${Utils.escapeHtml(item.sender?.nickname || '')}">`
+                : '<span class="avatar-placeholder">?</span>')
+            : '';
+        return `
+            <div class="dm-message ${isMe ? 'me' : 'other'}">
+                ${!isMe ? `<div class="dm-avatar">${avatar}</div>` : ''}
+                <div class="dm-content">
+                    <div class="dm-message-text">${Utils.escapeHtml(item.message)}</div>
+                    <div class="dm-message-time">${time}</div>
                 </div>
-            `;
-        }).join('');
+            </div>
+        `;
     }
 
     function startPolling() {

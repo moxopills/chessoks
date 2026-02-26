@@ -61,9 +61,45 @@
             state.unreadCount = unreadData.count || 0;
             renderList(listEl, countEl);
             updateMessageBadge(messageBadge);
+            await openInviteFromQueryIfPresent();
         } catch (error) {
             // Silent fail: bell just stays empty for unauthenticated users.
         }
+    }
+
+    async function openInviteFromQueryIfPresent() {
+        const params = new URLSearchParams(window.location.search);
+        const inviteId = parseInt(params.get('invite_id'), 10);
+        if (!inviteId) return;
+
+        const inviteNotification = state.items.find(
+            (item) =>
+                item.type === 'game_invite' &&
+                Number(item.payload?.invite_id) === inviteId
+        );
+        if (!inviteNotification) return;
+
+        try {
+            if (!inviteNotification.is_read) {
+                await API.post('/notifications/read/', { ids: [inviteNotification.id] });
+                inviteNotification.is_read = true;
+                const countEl = document.getElementById('notification-count');
+                renderList(document.getElementById('notification-list'), countEl);
+            }
+        } catch {
+            // ignore mark-read failure
+        }
+
+        openGameInviteModal({
+            payload: inviteNotification.payload || {},
+            title: inviteNotification.title,
+            message: inviteNotification.message,
+        });
+
+        params.delete('invite_id');
+        const query = params.toString();
+        const newUrl = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash || ''}`;
+        window.history.replaceState({}, '', newUrl);
     }
 
     function renderList(listEl, countEl) {
