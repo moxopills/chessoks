@@ -798,9 +798,42 @@
 
 .chat-emoji-bar {
     display: flex;
-    gap: 6px;
-    padding: 6px 0;
+    align-items: center;
+    gap: 12px;
+    padding: 0;
+    border: 0;
+    background: transparent;
     overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: thin;
+}
+
+.chat-emoji-bar .emoji-btn {
+    border: none;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+    min-width: auto;
+    width: auto;
+    height: auto;
+    line-height: 1;
+    font-size: 1.8rem;
+    cursor: pointer;
+    transition: transform 0.12s ease;
+}
+
+.chat-emoji-bar .emoji-btn:hover {
+    transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+    .chat-emoji-bar {
+        gap: 10px;
+    }
+
+    .chat-emoji-bar .emoji-btn {
+        font-size: 1.7rem;
+    }
 }
 
 .reaction-btn {
