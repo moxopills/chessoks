@@ -67,6 +67,18 @@
                     <button class="btn btn-secondary" id="leave-btn">나가기</button>
                 </div>
             </div>
+            <div class="invite-area">
+                <div class="section-header">
+                    <h2 class="section-title">친구 초대</h2>
+                </div>
+                <div class="invite-controls">
+                    <select class="form-input" id="invite-friend-select">
+                        <option value="">친구 선택</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" id="invite-friend-btn" type="button">초대</button>
+                </div>
+                <div class="helper-text">초대 수락 시 현재 대기실로 바로 입장합니다.</div>
+            </div>
         </div>
 
         <!-- Room Chat -->
@@ -282,6 +294,21 @@
     align-items: center;
     gap: var(--space-md);
     width: 100%;
+}
+
+.invite-area {
+    margin-top: var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.invite-controls {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--space-xs);
+    align-items: center;
 }
 
 .action-buttons {

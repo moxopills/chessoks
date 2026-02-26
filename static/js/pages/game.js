@@ -65,6 +65,7 @@
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
     const chatSection = document.getElementById('game-chat-section');
+    const sidePanel = document.querySelector('.game-side-panel');
     const mobileTabbar = document.getElementById('mobile-tabbar');
     const chatBadge = document.getElementById('chat-badge');
     const chatFabBadge = document.getElementById('chat-fab-badge');
@@ -159,11 +160,28 @@
     let ratingPollAttempts = 0;
     const RATING_POLL_MAX_ATTEMPTS = 30;
     const localReactionState = new Map();
+    const REACTION_STORAGE_KEY = 'game-chat-reactions-v1';
 
     // Init
     init();
 
+    function loadReactionState() {
+        const saved = Utils.Storage.get(REACTION_STORAGE_KEY, {});
+        Object.entries(saved || {}).forEach(([key, value]) => {
+            if (value === true) localReactionState.set(key, true);
+        });
+    }
+
+    function persistReactionState() {
+        const obj = {};
+        localReactionState.forEach((value, key) => {
+            if (value === true) obj[key] = true;
+        });
+        Utils.Storage.set(REACTION_STORAGE_KEY, obj);
+    }
+
     async function init() {
+        loadReactionState();
         if (!roomId) {
             Toast.error('잘못된 접근입니다.');
             window.location.href = '/';
@@ -180,6 +198,7 @@
 
         guideEnabled = Utils.Storage.get('guide_enabled', true);
         setupGuideToggle();
+        mountReplayDock();
 
         moveConfirmEnabled = Utils.Storage.get('move_confirm_enabled', false);
         const confirmToggle = document.getElementById('move-confirm-toggle');
@@ -225,6 +244,13 @@
         if (!replayOnly) {
             connectWebSocket();
         }
+    }
+
+    function mountReplayDock() {
+        if (!replayDock || !sidePanel || !capturedWhite) return;
+        if (replayDock.parentElement === sidePanel) return;
+        const anchor = spectatorSection || chatSection || null;
+        sidePanel.insertBefore(replayDock, anchor);
     }
 
     /**
@@ -1712,6 +1738,7 @@
             chatSection?.classList.add('is-hidden');
             return;
         }
+        injectChatEmojiBar();
         chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const message = chatInput.value.trim();
@@ -1722,6 +1749,24 @@
             socket.send(JSON.stringify({ action, message }));
             chatInput.value = '';
         });
+    }
+
+    function injectChatEmojiBar() {
+        if (!chatForm || !chatInput) return;
+        if (chatForm.previousElementSibling?.classList?.contains('chat-emoji-bar')) return;
+        const bar = document.createElement('div');
+        bar.className = 'chat-emoji-bar';
+        const emojis = ['😊', '😂', '👍', '🔥', '👏', '🙏'];
+        bar.innerHTML = emojis
+            .map((emoji) => `<button type="button" class="emoji-btn" data-emoji="${emoji}">${emoji}</button>`)
+            .join('');
+        bar.addEventListener('click', (e) => {
+            const btn = e.target.closest('.emoji-btn');
+            if (!btn) return;
+            chatInput.value += btn.dataset.emoji || '';
+            chatInput.focus();
+        });
+        chatForm.parentNode.insertBefore(bar, chatForm);
     }
 
     function connectNotificationSocket() {
@@ -2302,7 +2347,7 @@
             if (replayClose) replayClose.textContent = '닫기';
             if (replayCloseDock) replayCloseDock.textContent = '닫기';
         }
-        replayMode = window.innerWidth <= 768 && replayDock ? 'dock' : 'modal';
+        replayMode = replayDock ? 'dock' : 'modal';
         if (replayMode === 'dock') {
             replayDock?.classList.remove('hidden');
             replayModal?.classList.add('hidden');
@@ -2579,13 +2624,35 @@
                 const reaction = btn.dataset.reaction;
                 if (!key || !reaction) return;
                 const stateKey = `${key}:${reaction}`;
-                const current = localReactionState.get(stateKey) || 0;
-                const next = current + 1;
-                localReactionState.set(stateKey, next);
                 const countEl = btn.querySelector('span');
-                if (countEl) countEl.textContent = String(next);
-                btn.classList.add('active');
+                if (!countEl) return;
+                const current = parseInt(countEl.textContent || '0', 10);
+                const selected = localReactionState.get(stateKey) === true;
+                if (selected) {
+                    countEl.textContent = String(Math.max(0, current - 1));
+                    btn.classList.remove('active');
+                    localReactionState.set(stateKey, false);
+                } else {
+                    countEl.textContent = String(current + 1);
+                    btn.classList.add('active');
+                    localReactionState.set(stateKey, true);
+                }
+                persistReactionState();
             });
+
+            const wrap = btn.closest('.chat-reactions');
+            const key = wrap?.dataset.reactionKey;
+            const reaction = btn.dataset.reaction;
+            if (!key || !reaction) return;
+            const stateKey = `${key}:${reaction}`;
+            if (localReactionState.get(stateKey) === true) {
+                const countEl = btn.querySelector('span');
+                if (countEl) {
+                    const current = parseInt(countEl.textContent || '0', 10);
+                    countEl.textContent = String(Math.max(1, current));
+                }
+                btn.classList.add('active');
+            }
         });
     }
 

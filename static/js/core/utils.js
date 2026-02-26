@@ -306,9 +306,11 @@ const Utils = (function() {
             return context.resume().then(() => context).catch(() => context);
         }
 
+        const BGM_URL = 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=arcade-music-loop-106978.mp3';
+
         function initBGM() {
             if (!bgmAudio) {
-                bgmAudio = new Audio('https://cdn.pixabay.com/audio/2022/03/10/audio_c8c8a73456.mp3');
+                bgmAudio = new Audio(BGM_URL);
                 bgmAudio.crossOrigin = "anonymous";
                 bgmAudio.loop = true;
                 bgmAudio.preload = 'auto';
@@ -327,13 +329,14 @@ const Utils = (function() {
 
         function startSynthBGM() {
             if (bgmTimer) return;
-            const seq = [220, 247, 277, 330];
+            // 업템포 아케이드 패턴 (외부 BGM 실패/지연 시 백업)
+            const seq = [392, 494, 523, 659, 784, 659, 523, 494];
             bgmTimer = setInterval(() => {
                 if (isMuted || bgmVolume === 0) return;
                 const freq = seq[bgmStep % seq.length];
                 bgmStep += 1;
-                playTone(freq, 0.55, Math.max(0.015, (bgmVolume / 100) * 0.08));
-            }, 1200);
+                playTone(freq, 0.18, Math.max(0.015, (bgmVolume / 100) * 0.07));
+            }, 320);
         }
 
         function stopSynthBGM() {
