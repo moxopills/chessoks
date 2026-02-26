@@ -311,6 +311,14 @@
     max-width: 100%;
 }
 
+.global-dm-message-text.emoji-only {
+    font-size: 1.35rem;
+    line-height: 1.1;
+    padding: 6px 10px;
+    min-width: 44px;
+    text-align: center;
+}
+
 .global-dm-message.me .global-dm-message-text {
     background: var(--color-accent-primary);
     color: #fff;
@@ -379,10 +387,10 @@ body:not(.is-guest) .chat-fab.auth-only {
 @media (max-width: 768px) {
     .global-dm-panel {
         right: 12px;
-        bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(8px + env(safe-area-inset-bottom, 0px));
         width: min(360px, calc(100vw - 24px));
-        height: min(520px, 65vh);
-        max-height: min(520px, 65vh);
+        height: min(520px, 60vh);
+        max-height: min(520px, 60vh);
         border-radius: var(--radius-lg);
         z-index: 9999;
     }

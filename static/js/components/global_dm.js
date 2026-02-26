@@ -423,6 +423,8 @@
     function renderMessageItem(item) {
         const isMe = currentUser && item.sender?.id === currentUser.id;
         const time = formatTimeOnly(item.created_at);
+        const messageText = Utils.escapeHtml(item.message || '');
+        const emojiOnlyClass = isEmojiOnly(item.message || '') ? ' emoji-only' : '';
         const avatar = !isMe
             ? (item.sender?.avatar_url
                 ? `<img src="${Utils.escapeHtml(item.sender.avatar_url)}" alt="">`
@@ -432,11 +434,21 @@
             <div class="global-dm-message ${isMe ? 'me' : 'other'}">
                 ${!isMe ? `<div class="global-dm-message-avatar">${avatar}</div>` : ''}
                 <div class="global-dm-message-content">
-                    <div class="global-dm-message-text">${Utils.escapeHtml(item.message)}</div>
+                    <div class="global-dm-message-text${emojiOnlyClass}">${messageText}</div>
                     <div class="global-dm-message-time">${time}</div>
                 </div>
             </div>
         `;
+    }
+
+    function isEmojiOnly(text) {
+        if (!text || typeof text !== 'string') return false;
+        try {
+            const compact = text.replace(/\s+/g, '');
+            return compact.length > 0 && /^[\p{Extended_Pictographic}\uFE0F\u200D]+$/u.test(compact);
+        } catch {
+            return false;
+        }
     }
 
     async function markDirectMessageNotificationsRead(userId) {

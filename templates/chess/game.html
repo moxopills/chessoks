@@ -36,7 +36,7 @@
         <!-- Move Confirmation Overlay -->
         <div id="move-confirm-overlay" class="move-confirm-overlay hidden">
             <button id="move-confirm-yes" class="btn btn-primary btn-sm move-confirm-btn" aria-label="착수 확인">✓</button>
-            <button id="move-confirm-no" class="btn btn-secondary btn-sm move-confirm-btn" aria-label="착수 취소">✕</button>
+            <button id="move-confirm-no" class="btn btn-secondary btn-sm move-confirm-btn move-confirm-btn--cancel" aria-label="착수 취소">✕</button>
         </div>
     </div>
     <!-- Right: Side Panel -->
@@ -622,6 +622,13 @@
     font-size: 1.1rem;
 }
 
+.move-confirm-btn--cancel {
+    color: #fff !important;
+    border-color: rgba(255, 255, 255, 0.85) !important;
+    text-shadow: 0 0 4px rgba(0, 0, 0, 0.65);
+    font-weight: 700;
+}
+
 .game-end-analysis {
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border);
@@ -1064,6 +1071,14 @@
     flex-shrink: 0;
 }
 
+.game-chat .chat-emoji-bar {
+    display: flex;
+    gap: 6px;
+    padding: 6px var(--space-sm);
+    border-top: 1px solid var(--color-border);
+    overflow-x: auto;
+}
+
 body.ai-room #game-chat-section,
 body.ai-room #game-report-section,
 body.ai-room .mobile-tab[data-tab="chat"] {
@@ -1406,7 +1421,7 @@ body.competitive-room #rematch-modal {
     justify-content: flex-end;
     align-items: flex-start;
     padding: calc(var(--navbar-height) + var(--space-lg)) var(--space-lg) var(--space-lg);
-    background-color: rgba(0, 0, 0, 0.45);
+    background-color: transparent;
 }
 
 #replay-modal .modal {
@@ -1426,17 +1441,18 @@ body.competitive-room #rematch-modal {
 }
 
 .replay-dock {
-    position: fixed;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: calc(var(--footer-height) + 72px);
-    width: min(92vw, 360px);
+    position: static;
+    left: auto;
+    transform: none;
+    bottom: auto;
+    width: 100%;
     background-color: var(--color-bg-card);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
-    z-index: 900;
+    z-index: auto;
     padding: var(--space-sm) var(--space-md);
+    margin-top: var(--space-md);
 }
 
 .replay-dock.hidden {
@@ -1455,10 +1471,8 @@ body.competitive-room #rematch-modal {
     }
 
     .replay-dock {
-        bottom: 80px;
-        width: calc(100% - 24px);
-        left: 12px;
-        transform: none;
+        width: 100%;
+        margin-top: var(--space-sm);
     }
 
     .replay-dock .btn {

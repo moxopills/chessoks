@@ -94,11 +94,28 @@
     let quickMatchPollInterval = null;
     let randomMatchPollInterval = null;
     const localReactionState = new Map();
+    const REACTION_STORAGE_KEY = 'lobby-chat-reactions-v1';
 
     // 초기화
     init();
 
+    function loadReactionState() {
+        const saved = Utils.Storage.get(REACTION_STORAGE_KEY, {});
+        Object.entries(saved || {}).forEach(([key, value]) => {
+            if (value === true) localReactionState.set(key, true);
+        });
+    }
+
+    function persistReactionState() {
+        const obj = {};
+        localReactionState.forEach((value, key) => {
+            if (value === true) obj[key] = true;
+        });
+        Utils.Storage.set(REACTION_STORAGE_KEY, obj);
+    }
+
     async function init() {
+        loadReactionState();
         const isMobile = window.innerWidth <= 768;
         const globalDmFab = document.getElementById('global-dm-fab');
         globalDmFab?.classList.remove('hidden');
@@ -932,6 +949,7 @@
         chatInput.disabled = false;
         chatForm.querySelector('button').disabled = false;
         chatMessages.innerHTML = '';
+        injectChatEmojiBar();
         const switchToDmBtn = document.getElementById('switch-to-dm-btn');
         switchToDmBtn?.classList.remove('hidden');
 
@@ -943,6 +961,24 @@
             e.preventDefault();
             sendChatMessage();
         });
+    }
+
+    function injectChatEmojiBar() {
+        if (!chatForm || !chatInput) return;
+        if (chatForm.previousElementSibling?.classList?.contains('chat-emoji-bar')) return;
+        const bar = document.createElement('div');
+        bar.className = 'chat-emoji-bar';
+        const emojis = ['😊', '😂', '👍', '🔥', '👏', '🙏'];
+        bar.innerHTML = emojis
+            .map((emoji) => `<button type="button" class="emoji-btn" data-emoji="${emoji}">${emoji}</button>`)
+            .join('');
+        bar.addEventListener('click', (e) => {
+            const btn = e.target.closest('.emoji-btn');
+            if (!btn) return;
+            chatInput.value += btn.dataset.emoji || '';
+            chatInput.focus();
+        });
+        chatForm.parentNode.insertBefore(bar, chatForm);
     }
 
     if (matchToast) {
@@ -1172,7 +1208,23 @@
                     btn.classList.add('active');
                     localReactionState.set(stateKey, true);
                 }
+                persistReactionState();
             });
+
+            // restore persisted state
+            const wrap = btn.closest('.chat-reactions');
+            const key = wrap?.dataset.reactionKey;
+            const reaction = btn.dataset.reaction;
+            if (!key || !reaction) return;
+            const stateKey = `${key}:${reaction}`;
+            if (localReactionState.get(stateKey) === true) {
+                const countEl = btn.querySelector('span');
+                if (countEl) {
+                    const current = parseInt(countEl.textContent || '0', 10);
+                    countEl.textContent = String(Math.max(1, current));
+                }
+                btn.classList.add('active');
+            }
         });
     }
 

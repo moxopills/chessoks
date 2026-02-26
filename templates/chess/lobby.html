@@ -36,6 +36,8 @@
             <div class="tier-row">• 관전: 관전 허용 방만 입장 가능하며 비허용 방은 차단됩니다.</div>
             <div class="tier-row">• 로비로 나가기: 로비로 나가서 로비 채팅으로 상대방을 찾을수 있고 전적 등 살펴볼 수 있습니다.</div>
             <div class="tier-row">• AI 대전: AI 난이도를 설정하여 AI와 체스 게임을 할 수 있습니다.</div>
+            <div class="tier-row">• 웹앱 설치(iPhone): Safari 공유 버튼 → 홈 화면에 추가</div>
+            <div class="tier-row">• 웹앱 설치(Android): 브라우저 메뉴 → 홈 화면에 추가/앱 설치</div>
         </div>
 
         <div class="hero-actions">
@@ -786,6 +788,13 @@
     margin-top: 4px;
 }
 
+.chat-emoji-bar {
+    display: flex;
+    gap: 6px;
+    padding: 6px 0;
+    overflow-x: auto;
+}
+
 .reaction-btn {
     border: 1px solid var(--color-border);
     background: var(--color-bg-tertiary);
@@ -877,6 +886,26 @@
     flex: 1;
     overflow-y: auto;
     max-height: 350px;
+}
+
+@media (min-width: 769px) {
+    .room-list {
+        min-height: 300px;
+    }
+
+    .chat-container {
+        min-height: 420px;
+    }
+
+    .chat-messages {
+        min-height: 320px;
+        max-height: 420px;
+    }
+
+    .users-list {
+        min-height: 420px;
+        max-height: 500px;
+    }
 }
 
 .users-search {
@@ -1192,6 +1221,12 @@
     font-size: 0.75rem;
     min-height: 1.2em;
     margin-bottom: var(--space-sm);
+}
+
+#guest-login-modal {
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Guest Button */
