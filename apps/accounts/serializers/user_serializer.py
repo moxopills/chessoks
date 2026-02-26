@@ -189,6 +189,11 @@ class LoginRequestSerializer(serializers.Serializer):
 
     email = serializers.EmailField(help_text="이메일 주소")
     password = serializers.CharField(write_only=True, help_text="비밀번호")
+    remember_me = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="자동 로그인 여부",
+    )
 
 
 class LoginResponseSerializer(serializers.Serializer):

@@ -247,6 +247,8 @@ SECURE_REFERRER_POLICY = os.getenv("SECURE_REFERRER_POLICY", "same-origin")
 # - 요청이 발생할 때마다 만료 시각 갱신(슬라이딩 만료)
 SESSION_COOKIE_AGE = int(os.getenv("SESSION_COOKIE_AGE", "900"))
 SESSION_SAVE_EVERY_REQUEST = _env_bool("SESSION_SAVE_EVERY_REQUEST", True)
+# 자동 로그인 체크 시 유지 시간 (기본 30일)
+REMEMBER_ME_SESSION_AGE = int(os.getenv("REMEMBER_ME_SESSION_AGE", "2592000"))
 
 # Web Push (PWA)
 WEB_PUSH_PUBLIC_KEY = os.getenv("WEB_PUSH_PUBLIC_KEY", "")

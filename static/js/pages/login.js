@@ -8,6 +8,7 @@
     const form = document.getElementById('login-form');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
+    const rememberMeInput = document.getElementById('remember-me');
     const submitBtn = document.getElementById('login-btn');
     const formError = document.getElementById('form-error');
 
@@ -18,6 +19,7 @@
 
         const email = emailInput.value.trim();
         const password = passwordInput.value;
+        const rememberMe = Boolean(rememberMeInput && rememberMeInput.checked);
 
         // 클라이언트 유효성 검사
         if (!validateForm(email, password)) {
@@ -28,7 +30,7 @@
         setLoading(true);
 
         try {
-            await API.post('/accounts/login/', { email, password });
+            await API.post('/accounts/login/', { email, password, remember_me: rememberMe });
 
             // 성공 시 메인 페이지로 이동
             window.location.href = '/';

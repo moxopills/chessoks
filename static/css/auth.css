@@ -82,6 +82,21 @@
     gap: var(--space-sm);
 }
 
+.checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-accent-primary);
+}
+
 .form-hint {
     font-size: 0.75rem;
     color: var(--color-text-muted);
