@@ -65,6 +65,7 @@
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
     const chatSection = document.getElementById('game-chat-section');
+    const chatCloseBtn = document.getElementById('chat-close-btn');
     const sidePanel = document.querySelector('.game-side-panel');
     const mobileTabbar = document.getElementById('mobile-tabbar');
     const chatBadge = document.getElementById('chat-badge');
@@ -547,6 +548,12 @@
             if (willOpen) {
                 resetChatBadge();
             }
+        });
+        chatCloseBtn?.addEventListener('click', () => {
+            chatSection.classList.add('is-collapsed');
+            chatSection.classList.remove('is-floating');
+            chatFab.classList.remove('is-active');
+            syncGameChatFabVisibility();
         });
     }
 

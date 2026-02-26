@@ -121,6 +121,7 @@
         <div class="panel-section game-chat-section" id="game-chat-section">
             <div class="panel-header">
                 <h3 class="panel-title">채팅</h3>
+                <button class="chat-close-btn hidden" id="chat-close-btn" type="button" aria-label="채팅 닫기">✕</button>
             </div>
             <div class="game-chat">
                 <div class="chat-messages" id="chat-messages"></div>
@@ -972,6 +973,20 @@
     display: none;
 }
 
+.chat-close-btn {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
 @media (max-width: 768px) {
     .chat-fab {
         bottom: 80px;
@@ -988,6 +1003,10 @@
 
     .game-chat-section.is-floating {
         display: block;
+    }
+
+    .chat-close-btn {
+        display: inline-flex !important;
     }
 }
 
