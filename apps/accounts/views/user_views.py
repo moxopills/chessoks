@@ -68,7 +68,12 @@ class LoginView(APIView):
     def post(self, request):
         email = request.data.get("email", "").strip()
         password = request.data.get("password", "")
-        result = AccountSessionService.login(request, email, password)
+        remember_raw = request.data.get("remember_me", False)
+        if isinstance(remember_raw, bool):
+            remember_me = remember_raw
+        else:
+            remember_me = str(remember_raw).lower() in {"1", "true", "on", "yes"}
+        result = AccountSessionService.login(request, email, password, remember_me=remember_me)
         return Response(result.data, status=result.status)
 
 

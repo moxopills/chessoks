@@ -7,7 +7,10 @@
         unreadCount: 0,
         socket: null,
         noticeSoundReadyAt: 0,
+        seenKeys: new Map(),
     };
+
+    const SEEN_TTL_MS = 5 * 60 * 1000;
 
     function init() {
         if (state.initialized) return;
@@ -190,6 +193,9 @@
         state.socket.addEventListener('message', (event) => {
             try {
                 const payload = JSON.parse(event.data);
+                if (isDuplicateNotification(payload)) {
+                    return;
+                }
                 if (payload?.type === 'account_suspended') {
                     const message = payload.message || '정지된 계정입니다.';
                     Toast.error(message);
@@ -204,6 +210,7 @@
                     if (document.hidden) {
                         ChessokPush?.show?.(payload.title || '공지', payload.message || '', '/');
                     }
+                    return;
                 }
                 if (payload?.type === 'game_invite') {
                     openGameInviteModal(payload);
@@ -231,6 +238,36 @@
                 // ignore invalid payloads
             }
         });
+    }
+
+    function isDuplicateNotification(payload) {
+        if (!payload) return true;
+
+        const key = payload.id
+            ? `id:${payload.id}`
+            : [
+                payload.type || '',
+                payload.title || '',
+                payload.message || '',
+                JSON.stringify(payload.payload || {}),
+            ].join('|');
+
+        const now = Date.now();
+        pruneSeen(now);
+
+        if (state.seenKeys.has(key)) {
+            return true;
+        }
+        state.seenKeys.set(key, now);
+        return false;
+    }
+
+    function pruneSeen(now) {
+        for (const [key, ts] of state.seenKeys.entries()) {
+            if (now - ts > SEEN_TTL_MS) {
+                state.seenKeys.delete(key);
+            }
+        }
     }
 
     function updateMessageBadge(messageBadge) {
