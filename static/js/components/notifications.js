@@ -107,6 +107,14 @@
                         window.location.href = '/friends/?tab=requests';
                         return;
                     }
+                    if (item.type === 'game_invite') {
+                        openGameInviteModal({
+                            payload: item.payload || {},
+                            title: item.title,
+                            message: item.message,
+                        });
+                        return;
+                    }
                     if (item.type === 'rematch' && item.payload?.game_id) {
                         try {
                             const data = await API.post(`/chess/games/${item.payload.game_id}/rematch/`);
@@ -328,9 +336,23 @@
             Toast.success('초대를 보냈습니다.');
             return true;
         } catch (error) {
-            Toast.error(error.data?.detail || '초대 전송에 실패했습니다.');
+            Toast.error(extractErrorMessage(error, '초대 전송에 실패했습니다.'));
             return false;
         }
+    }
+
+    function extractErrorMessage(error, fallback) {
+        let msg = error?.data?.error?.message || error?.data?.detail || error?.data?.message;
+        if (Array.isArray(msg)) msg = msg[0];
+        if (msg && typeof msg === 'object') {
+            msg = msg.string || msg.message || Object.values(msg)[0];
+            if (Array.isArray(msg)) msg = msg[0];
+        }
+        if (typeof msg === 'string') {
+            const m = msg.match(/^\[?ErrorDetail\(string='(.+?)',\s*code='[^']+'\)\]?$/);
+            if (m?.[1]) msg = m[1];
+        }
+        return typeof msg === 'string' && msg.trim() ? msg.trim() : fallback;
     }
 
     window.Notifications = { init, markDirectMessageRead, sendGameInvite };

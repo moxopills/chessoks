@@ -24,6 +24,8 @@
     const chatBadge = document.getElementById('chat-badge');
     const chatSection = document.querySelector('.room-chat-section');
     const lobbyWaitBtn = document.getElementById('lobby-wait-btn');
+    const inviteFriendSelect = document.getElementById('invite-friend-select');
+    const inviteFriendBtn = document.getElementById('invite-friend-btn');
 
     // State
     const roomId = Utils.getPathParam(/\/rooms\/(\d+)/);
@@ -61,11 +63,39 @@
         await loadRoom();
         setupLeaveButton();
         setupLobbyWait();
+        setupInvitePanel();
         setupChat();
         setupExitGuard();
         startRoomPolling();
         setupMobileTabs();
         connectWebSocket();
+    }
+
+    async function setupInvitePanel() {
+        if (!inviteFriendSelect || !inviteFriendBtn) return;
+        if (!currentUser?.id) return;
+        try {
+            const data = await API.get('/accounts/friends/');
+            const list = data?.results || [];
+            const options = list
+                .map((item) => item?.friend)
+                .filter(Boolean)
+                .map((user) => `<option value="${user.id}">${Utils.escapeHtml(user.nickname)} (${user.rating ?? 1200})</option>`)
+                .join('');
+            inviteFriendSelect.innerHTML = `<option value="">친구 선택</option>${options}`;
+        } catch {
+            inviteFriendSelect.innerHTML = '<option value="">친구 목록 불러오기 실패</option>';
+        }
+
+        inviteFriendBtn.addEventListener('click', async () => {
+            const targetId = parseInt(inviteFriendSelect.value, 10);
+            if (!targetId) {
+                Toast.error('초대할 친구를 선택해주세요.');
+                return;
+            }
+            const ok = await Notifications?.sendGameInvite?.(targetId, room?.time_limit || 10);
+            if (ok) Toast.success('게임 초대를 보냈습니다.');
+        });
     }
 
     /**

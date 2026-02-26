@@ -34,3 +34,20 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: 'ChessOK', body: event.data?.text?.() || '' };
+  }
+  const title = data.title || 'ChessOK';
+  const options = {
+    body: data.body || '',
+    icon: '/static/images/icons/favicon.svg',
+    badge: '/static/images/icons/favicon.svg',
+    data: data.url ? { url: data.url } : {},
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});

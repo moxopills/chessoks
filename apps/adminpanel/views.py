@@ -251,7 +251,7 @@ class AdminNoticeCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         title = serializer.validated_data["title"]
         message = serializer.validated_data["message"]
-        users = User.objects.filter(is_active=True).only("id")
+        users = User.objects.filter(is_active=True).exclude(id=request.user.id).only("id")
         for user in users.iterator(chunk_size=1000):
             NotificationService.create_notification(
                 user=user,

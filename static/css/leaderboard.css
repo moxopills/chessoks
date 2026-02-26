@@ -8,24 +8,27 @@
 }
 .leaderboard-page {
     gap: var(--space-lg);
-    --leaderboard-max-width: min(1120px, 100%);
+    --leaderboard-max-width: min(1240px, 100%);
 }
 
 .page-header.leaderboard-header {
     position: relative;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
     justify-content: center;
     align-items: center;
+    gap: var(--space-lg);
     max-width: var(--leaderboard-max-width);
     width: 100%;
     margin: 0 auto;
-    text-align: center;
+    text-align: left;
     min-height: 120px;
 }
 
 .page-title-block {
     text-align: center;
     width: 100%;
+    justify-self: center;
 }
 
 .page-title {
@@ -43,6 +46,10 @@
 .page-summary {
     min-width: 220px;
     padding: var(--space-md);
+}
+
+.leaderboard-summary {
+    justify-self: end;
 }
 
 .summary-title {
@@ -95,6 +102,10 @@
 .card-title--center {
     text-align: center;
     font-size: clamp(0.95rem, 1.6vw, 1.1rem);
+}
+
+.leaderboard-card .card-header--stack {
+    margin-bottom: var(--space-sm);
 }
 
 .card-divider {
@@ -230,6 +241,18 @@
     position: sticky;
     top: calc(var(--navbar-height) + var(--space-lg));
     padding: var(--space-lg);
+}
+
+@media (max-width: 980px) {
+    .page-header.leaderboard-header {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    .leaderboard-summary {
+        justify-self: center;
+        width: min(100%, 360px);
+    }
 }
 
 .profile-drawer-header {
