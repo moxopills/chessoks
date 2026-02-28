@@ -11,6 +11,8 @@
     'use strict';
 
     // Constants
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
     const PIECE_SPRITE = {
         K: '♔',
         Q: '♕',
