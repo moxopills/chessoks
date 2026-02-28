@@ -14,7 +14,7 @@ const Modal = (function() {
         modalContainer = document.createElement('div');
         modalContainer.id = 'modal-container';
         modalContainer.innerHTML = `
-            <div class="modal-overlay hidden" id="custom-modal">
+            <div class="modal-overlay modal-overlay--dialog hidden" id="custom-modal">
                 <div class="modal-dialog">
                     <div class="modal-header">
                         <h3 class="modal-title" id="modal-title"></h3>

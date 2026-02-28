@@ -182,7 +182,13 @@
         setupGuideToggle();
         mountReplayDock();
 
-        moveConfirmEnabled = Utils.Storage.get('move_confirm_enabled', false);
+        const savedMoveConfirm = localStorage.getItem('move_confirm_enabled');
+        if (savedMoveConfirm === null) {
+            moveConfirmEnabled = isTouchDevice;
+            Utils.Storage.set('move_confirm_enabled', moveConfirmEnabled);
+        } else {
+            moveConfirmEnabled = Utils.Storage.get('move_confirm_enabled', false);
+        }
         const confirmToggle = document.getElementById('move-confirm-toggle');
         if (confirmToggle) {
             confirmToggle.checked = moveConfirmEnabled;
@@ -1747,6 +1753,10 @@
             chatSection?.classList.add('is-hidden');
             return;
         }
+        const titleEl = chatSection?.querySelector('.panel-title');
+        if (titleEl) {
+            titleEl.textContent = myColor ? '채팅' : '관전자 채팅';
+        }
         injectChatEmojiBar();
         chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -1758,6 +1768,9 @@
             socket.send(JSON.stringify({ action, message }));
             chatInput.value = '';
         });
+        if (!myColor) {
+            addChatNotice('관전자는 관전자끼리만 채팅할 수 있습니다.');
+        }
     }
 
     function injectChatEmojiBar() {

@@ -14,7 +14,7 @@
 .page-header.leaderboard-header {
     position: relative;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr) minmax(220px, 320px);
     justify-content: center;
     align-items: center;
     gap: var(--space-lg);
@@ -25,10 +25,16 @@
     min-height: 120px;
 }
 
+.leaderboard-header-spacer {
+    width: 100%;
+    min-height: 1px;
+}
+
 .page-title-block {
     text-align: center;
     width: 100%;
     justify-self: center;
+    grid-column: 2;
 }
 
 .page-title {
@@ -50,6 +56,7 @@
 
 .leaderboard-summary {
     justify-self: end;
+    grid-column: 3;
 }
 
 .summary-title {
@@ -247,6 +254,15 @@
     .page-header.leaderboard-header {
         grid-template-columns: 1fr;
         text-align: center;
+    }
+
+    .leaderboard-header-spacer {
+        display: none;
+    }
+
+    .page-title-block,
+    .leaderboard-summary {
+        grid-column: auto;
     }
 
     .leaderboard-summary {
