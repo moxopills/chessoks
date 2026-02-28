@@ -44,12 +44,7 @@
      */
     async function loadRooms() {
         try {
-            roomsList.innerHTML = `
-                <div class="loading-placeholder">
-                    <span class="spinner"></span>
-                    <span>로딩 중...</span>
-                </div>
-            `;
+            renderRoomsSkeleton();
 
             const params = {
                 limit: pageSize,
@@ -75,6 +70,47 @@
             roomsList.innerHTML = '<div class="rooms-empty">방 목록을 불러올 수 없습니다.</div>';
             console.error('Failed to load rooms:', error);
         }
+    }
+
+    function renderRoomsSkeleton() {
+        roomsList.innerHTML = `
+            <div class="room-card skeleton-card">
+                <div class="room-host">
+                    <div class="skeleton skeleton-avatar"></div>
+                    <div class="skeleton" style="width:72px;height:12px;"></div>
+                    <div class="skeleton" style="width:40px;height:12px;"></div>
+                </div>
+                <div class="room-info">
+                    <div class="skeleton" style="width:130px;height:14px;margin-bottom:8px;"></div>
+                    <div class="skeleton" style="width:180px;height:12px;"></div>
+                </div>
+                <span class="skeleton skeleton-pill"></span>
+            </div>
+            <div class="room-card skeleton-card">
+                <div class="room-host">
+                    <div class="skeleton skeleton-avatar"></div>
+                    <div class="skeleton" style="width:84px;height:12px;"></div>
+                    <div class="skeleton" style="width:38px;height:12px;"></div>
+                </div>
+                <div class="room-info">
+                    <div class="skeleton" style="width:140px;height:14px;margin-bottom:8px;"></div>
+                    <div class="skeleton" style="width:200px;height:12px;"></div>
+                </div>
+                <span class="skeleton skeleton-pill"></span>
+            </div>
+            <div class="room-card skeleton-card">
+                <div class="room-host">
+                    <div class="skeleton skeleton-avatar"></div>
+                    <div class="skeleton" style="width:66px;height:12px;"></div>
+                    <div class="skeleton" style="width:44px;height:12px;"></div>
+                </div>
+                <div class="room-info">
+                    <div class="skeleton" style="width:118px;height:14px;margin-bottom:8px;"></div>
+                    <div class="skeleton" style="width:168px;height:12px;"></div>
+                </div>
+                <span class="skeleton skeleton-pill"></span>
+            </div>
+        `;
     }
 
     /**
