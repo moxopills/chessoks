@@ -179,7 +179,43 @@
             outgoingListEl.innerHTML = '<div class="table-empty">로그인 후 사용할 수 있습니다.</div>';
             return;
         }
+        renderFriendsSkeleton();
+        renderRequestsSkeleton(incomingListEl);
+        renderRequestsSkeleton(outgoingListEl);
         await Promise.all([loadFriends(), loadRequests('incoming'), loadRequests('outgoing')]);
+    }
+
+    function renderFriendsSkeleton() {
+        friendListEl.innerHTML = Array.from({ length: 4 }).map(() => `
+            <div class="friend-item">
+                <div class="friend-meta">
+                    <div class="skeleton skeleton-avatar"></div>
+                    <div class="friend-name">
+                        <div class="skeleton" style="width:120px;height:12px;"></div>
+                        <div class="skeleton" style="width:90px;height:10px;"></div>
+                    </div>
+                </div>
+                <div class="skeleton" style="width:10px;height:10px;border-radius:50%;"></div>
+            </div>
+        `).join('');
+    }
+
+    function renderRequestsSkeleton(container) {
+        if (!container) return;
+        container.innerHTML = Array.from({ length: 2 }).map(() => `
+            <div class="request-item">
+                <div class="friend-meta">
+                    <div class="skeleton skeleton-avatar"></div>
+                    <div class="friend-name">
+                        <div class="skeleton" style="width:110px;height:12px;"></div>
+                        <div class="skeleton" style="width:88px;height:10px;"></div>
+                    </div>
+                </div>
+                <div class="request-actions">
+                    <span class="skeleton" style="width:56px;height:28px;border-radius:8px;"></span>
+                </div>
+            </div>
+        `).join('');
     }
 
     async function loadFriends() {
@@ -236,12 +272,14 @@
         friendListEl.innerHTML = friends.map((item) => {
             const friend = item.friend;
             const online = statusMap[friend.id];
+            const nicknameColor = Utils.getNicknameColorValue(friend.nickname_color || friend.stats?.nickname_color || '');
+            const profileRing = Utils.getProfileBorderValue(friend.profile_border || friend.stats?.profile_border || '');
             return `
                 <div class="friend-item" data-user-id="${friend.id}">
                     <div class="friend-meta">
-                        <div class="avatar avatar-sm">${friend.avatar_url ? `<img src="${friend.avatar_url}" alt="${Utils.escapeHtml(friend.nickname)}">` : '<span class="avatar-placeholder">?</span>'}</div>
+                        <div class="avatar avatar-sm" style="box-shadow:${profileRing}">${friend.avatar_url ? `<img src="${friend.avatar_url}" alt="${Utils.escapeHtml(friend.nickname)}">` : '<span class="avatar-placeholder">?</span>'}</div>
                         <div class="friend-name">
-                            <strong>${Utils.escapeHtml(friend.nickname)}</strong>
+                            <strong style="color:${nicknameColor}">${Utils.escapeHtml(friend.nickname)}</strong>
                             <small>레이팅 ${friend.rating} · ${Utils.escapeHtml(friend.rank_tier)}</small>
                         </div>
                     </div>
@@ -295,6 +333,8 @@
         }
         container.innerHTML = requests.map((req) => {
             const user = direction === 'incoming' ? req.from_user : req.to_user;
+            const nicknameColor = Utils.getNicknameColorValue(user.nickname_color || user.stats?.nickname_color || '');
+            const profileRing = Utils.getProfileBorderValue(user.profile_border || user.stats?.profile_border || '');
             const actions = direction === 'incoming'
                 ? `
                     <div class="request-actions">
@@ -310,9 +350,9 @@
             return `
                 <div class="request-item">
                     <div class="friend-meta" data-user-id="${user.id}">
-                        <div class="avatar avatar-sm">${user.avatar_url ? `<img src="${user.avatar_url}" alt="${Utils.escapeHtml(user.nickname)}">` : '<span class="avatar-placeholder">?</span>'}</div>
+                        <div class="avatar avatar-sm" style="box-shadow:${profileRing}">${user.avatar_url ? `<img src="${user.avatar_url}" alt="${Utils.escapeHtml(user.nickname)}">` : '<span class="avatar-placeholder">?</span>'}</div>
                         <div class="friend-name">
-                            <strong>${Utils.escapeHtml(user.nickname)}</strong>
+                            <strong style="color:${nicknameColor}">${Utils.escapeHtml(user.nickname)}</strong>
                             <small>레이팅 ${user.rating} · ${Utils.escapeHtml(user.rank_tier)}</small>
                         </div>
                     </div>
@@ -438,6 +478,8 @@
             const isFriend = friendIds.has(user.id);
             const isPending = outgoingRequestUserIds.has(user.id);
             const online = statusMap[user.id] === true;
+            const nicknameColor = Utils.getNicknameColorValue(user.nickname_color || user.stats?.nickname_color || '');
+            const profileRing = Utils.getProfileBorderValue(user.profile_border || user.stats?.profile_border || '');
             let buttonLabel = '친구 요청';
             let disabled = false;
             if (isSelf) {
@@ -453,9 +495,9 @@
             return `
                 <div class="search-item" data-user-id="${user.id}">
                     <div class="friend-meta">
-                        <div class="avatar avatar-sm">${user.avatar_url ? `<img src="${user.avatar_url}" alt="${Utils.escapeHtml(user.nickname)}">` : '<span class="avatar-placeholder">?</span>'}</div>
+                        <div class="avatar avatar-sm" style="box-shadow:${profileRing}">${user.avatar_url ? `<img src="${user.avatar_url}" alt="${Utils.escapeHtml(user.nickname)}">` : '<span class="avatar-placeholder">?</span>'}</div>
                         <div class="friend-name">
-                            <strong>${Utils.escapeHtml(user.nickname)}</strong>
+                            <strong style="color:${nicknameColor}">${Utils.escapeHtml(user.nickname)}</strong>
                             <small>레이팅 ${user.stats?.rating ?? '-'} · ${Utils.escapeHtml(user.stats?.rank_tier ?? '-')} · <span class="friend-status ${online ? 'online' : 'offline'}">${online ? '온라인' : '오프라인'}</span></small>
                         </div>
                     </div>
@@ -601,6 +643,8 @@
         nameEl.textContent = user.nickname;
         ratingEl.textContent = `레이팅 ${user.stats?.rating ?? '-'}`;
         tierEl.textContent = user.stats?.rank_tier ?? '-';
+        nameEl.style.color = Utils.getNicknameColorValue(user.stats?.nickname_color || user.nickname_color || '');
+        avatarEl.style.boxShadow = Utils.getProfileBorderValue(user.stats?.profile_border || user.profile_border || '');
         if (user.avatar_url) {
             avatarEl.innerHTML = `<img src="${user.avatar_url}" alt="${Utils.escapeHtml(user.nickname)}">`;
         } else {
