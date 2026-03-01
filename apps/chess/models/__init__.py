@@ -4,6 +4,7 @@ from .invite import GameInvite
 from .lobby_message import LobbyMessage
 from .lobby_message_reaction import LobbyMessageReaction
 from .move import Move
+from .puzzle import DailyPuzzle, Puzzle, UserPuzzleAttempt
 from .room import Room
 
 __all__ = [
@@ -14,4 +15,7 @@ __all__ = [
     "LobbyMessageReaction",
     "AiDifficultySetting",
     "GameInvite",
+    "Puzzle",
+    "DailyPuzzle",
+    "UserPuzzleAttempt",
 ]

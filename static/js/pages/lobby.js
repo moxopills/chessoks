@@ -67,7 +67,6 @@
     let isRandomMatching = false;
     let isAiMatching = false;
     let lobbySocket = null;
-    let notificationSocket = null;
     let currentUserId = null;
     let currentMe = null;
     let isGuestUser = false;
@@ -82,6 +81,12 @@
     let isChatOpen = true;
     let longPressTimer = null;
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const NOTIFICATION_TYPES = Object.freeze({
+        CHAT_MUTE: 'chat_mute',
+        CHAT_UNMUTE: 'chat_unmute',
+        ACCOUNT_SUSPENDED: 'account_suspended',
+        ACCOUNT_UNSUSPENDED: 'account_unsuspended',
+    });
     let isUserSearchMode = false;
     let lastRoomsSignature = null;
     let lastWaitingSignature = '';
@@ -97,6 +102,8 @@
     let randomMatchStartTime = null;
     let quickMatchPollInterval = null;
     let randomMatchPollInterval = null;
+    let notificationEventBound = false;
+    let notificationEventHandler = null;
 
     // 초기화
     init();
@@ -392,7 +399,7 @@
             if (user.is_suspended) {
                 setSuspendedState(true, user.suspension_reason || '');
             }
-            connectNotificationSocket();
+            setupNotificationEvents();
             // 로그인 유저는 게스트 버튼 숨김
             guestPlayBtn?.classList.add('hidden');
             guestStatusBar?.classList.add('hidden');
@@ -1082,42 +1089,42 @@
         }
     }
 
-    function connectNotificationSocket() {
-        if (notificationSocket || !currentUserId) return;
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/notifications/`;
-        notificationSocket = new WebSocket(wsUrl);
-
-        notificationSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            if (data.type === 'chat_mute') {
-                setChatMutedState(true, data.payload?.reason || '');
-                Toast.error(data.message || '채팅이 제한되었습니다.');
-            } else if (data.type === 'account_suspended') {
-                setSuspendedState(true, data.payload?.reason || '');
-                Toast.error(data.message || '계정이 정지되었습니다.');
-            } else if (data.type === 'chat_unmute') {
-                setChatMutedState(false);
-                Toast.success(data.message || '채팅 제한이 해제되었습니다.');
-            } else if (data.type === 'account_unsuspended') {
-                setSuspendedState(false);
-                Toast.success(data.message || '계정 정지가 해제되었습니다.');
-            }
+    function setupNotificationEvents() {
+        if (!currentUserId || notificationEventBound) return;
+        notificationEventHandler = (event) => {
+            const data = event.detail || {};
+            const reason = data.payload?.reason || '';
+            const handlers = {
+                [NOTIFICATION_TYPES.CHAT_MUTE]: () => {
+                    setChatMutedState(true, reason);
+                    Toast.error(data.message || '채팅이 제한되었습니다.');
+                },
+                [NOTIFICATION_TYPES.ACCOUNT_SUSPENDED]: () => {
+                    setSuspendedState(true, reason);
+                    Toast.error(data.message || '계정이 정지되었습니다.');
+                },
+                [NOTIFICATION_TYPES.CHAT_UNMUTE]: () => {
+                    setChatMutedState(false);
+                    Toast.success(data.message || '채팅 제한이 해제되었습니다.');
+                },
+                [NOTIFICATION_TYPES.ACCOUNT_UNSUSPENDED]: () => {
+                    setSuspendedState(false);
+                    Toast.success(data.message || '계정 정지가 해제되었습니다.');
+                },
+            };
+            handlers[data.type]?.();
         };
-
-        notificationSocket.onclose = function() {
-            notificationSocket = null;
-        };
-
-        notificationSocket.onerror = function() {
-            notificationSocket = null;
-        };
+        window.addEventListener('chessok:notification', notificationEventHandler);
+        notificationEventBound = true;
     }
 
     function setChatMutedState(muted, reason = '') {
+        if (!chatInput || !chatForm) return;
+        const submitBtn = chatForm.querySelector('button');
+        if (!submitBtn) return;
         if (muted) {
             chatInput.disabled = true;
-            chatForm.querySelector('button').disabled = true;
+            submitBtn.disabled = true;
             if (reason) {
                 addChatNotice(`채팅 제한됨: ${reason}`);
             } else {
@@ -1125,7 +1132,7 @@
             }
         } else {
             chatInput.disabled = false;
-            chatForm.querySelector('button').disabled = false;
+            submitBtn.disabled = false;
         }
     }
 

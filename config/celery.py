@@ -3,6 +3,7 @@
 import os
 
 from celery import Celery
+from celery.schedules import crontab
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
@@ -51,5 +52,10 @@ app.conf.beat_schedule = {
     "cleanup-expired-guest-sessions": {
         "task": "apps.accounts.tasks.cleanup_expired_guest_sessions",
         "schedule": 3600.0,  # 1시간마다
+    },
+    # === 퍼즐 관련 ===
+    "select-daily-puzzle": {
+        "task": "apps.chess.tasks.select_daily_puzzle",
+        "schedule": crontab(hour=0, minute=0),  # 매일 자정
     },
 }

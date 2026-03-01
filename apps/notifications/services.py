@@ -15,6 +15,7 @@ class NotificationService:
     """알림 서비스"""
 
     logger = logging.getLogger(__name__)
+    SOCKET_GROUP_PREFIX = "notifications_user_"
 
     @staticmethod
     def list_notifications(
@@ -65,7 +66,20 @@ class NotificationService:
     @staticmethod
     def _push(notification: Notification) -> None:
         channel_layer = get_channel_layer()
-        payload = {
+        payload = NotificationService._serialize(notification)
+        if channel_layer is not None:
+            try:
+                async_to_sync(channel_layer.group_send)(
+                    f"{NotificationService.SOCKET_GROUP_PREFIX}{notification.user_id}",
+                    {"type": "notification", "payload": payload},
+                )
+            except Exception as exc:  # pragma: no cover - best-effort push
+                NotificationService.logger.warning("Notification socket push failed: %s", exc)
+        WebPushService.send_async(notification.id)
+
+    @staticmethod
+    def _serialize(notification: Notification) -> dict:
+        return {
             "id": notification.id,
             "type": notification.type,
             "title": notification.title,
@@ -74,21 +88,13 @@ class NotificationService:
             "is_read": notification.is_read,
             "created_at": notification.created_at.isoformat(),
         }
-        if channel_layer is not None:
-            try:
-                async_to_sync(channel_layer.group_send)(
-                    f"notifications_user_{notification.user_id}",
-                    {"type": "notification", "payload": payload},
-                )
-            except Exception as exc:  # pragma: no cover - best-effort push
-                NotificationService.logger.warning("Notification socket push failed: %s", exc)
-        WebPushService.send_async(notification.id)
 
 
 class WebPushService:
     """웹 푸시 구독/발송 서비스"""
 
     logger = logging.getLogger(__name__)
+    DEFAULT_TITLE = "ChessOK"
 
     @staticmethod
     def send_async(notification_id: int) -> None:
@@ -102,6 +108,14 @@ class WebPushService:
 
     @staticmethod
     def subscribe(user, *, endpoint: str, p256dh: str, auth: str, user_agent: str = "") -> None:
+        # 같은 사용자/브라우저(user_agent)에서 새 endpoint로 재구독 시
+        # 기존 endpoint는 비활성화해 중복 푸시를 줄인다.
+        if user_agent:
+            WebPushSubscription.objects.filter(
+                user=user,
+                user_agent=user_agent,
+                is_active=True,
+            ).exclude(endpoint=endpoint).update(is_active=False)
         WebPushSubscription.objects.update_or_create(
             endpoint=endpoint,
             defaults={
@@ -134,15 +148,7 @@ class WebPushService:
             # Optional dependency. If missing, websocket/in-app notifications still work.
             return
 
-        url = WebPushService._target_url(notification)
-        payload = json.dumps(
-            {
-                "title": notification.title or "ChessOK",
-                "body": notification.message or "",
-                "url": url,
-            },
-            ensure_ascii=False,
-        )
+        payload = WebPushService._build_payload(notification)
 
         subscriptions = list(
             WebPushSubscription.objects.filter(user=notification.user, is_active=True).only(
@@ -164,8 +170,7 @@ class WebPushService:
                     vapid_claims={"sub": subject},
                 )
             except WebPushException as exc:
-                status_code = getattr(getattr(exc, "response", None), "status_code", None)
-                if status_code in (404, 410):
+                if WebPushService._should_deactivate_subscription(exc):
                     WebPushSubscription.objects.filter(id=sub.id).update(is_active=False)
                     continue
                 WebPushService.logger.warning(
@@ -195,3 +200,21 @@ class WebPushService:
         if notification.type == "direct_message" and sender_id:
             return f"/messages/{sender_id}/"
         return "/"
+
+    @staticmethod
+    def _build_payload(notification: Notification) -> str:
+        return json.dumps(
+            {
+                "id": notification.id,
+                "type": notification.type,
+                "title": notification.title or WebPushService.DEFAULT_TITLE,
+                "body": notification.message or "",
+                "url": WebPushService._target_url(notification),
+            },
+            ensure_ascii=False,
+        )
+
+    @staticmethod
+    def _should_deactivate_subscription(exc: Exception) -> bool:
+        status_code = getattr(getattr(exc, "response", None), "status_code", None)
+        return status_code in (404, 410)

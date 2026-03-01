@@ -44,6 +44,12 @@
 
     const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     const RANKS = ['8', '7', '6', '5', '4', '3', '2', '1'];
+    const NOTIFICATION_TYPES = Object.freeze({
+        CHAT_MUTE: 'chat_mute',
+        CHAT_UNMUTE: 'chat_unmute',
+        ACCOUNT_SUSPENDED: 'account_suspended',
+        ACCOUNT_UNSUSPENDED: 'account_unsuspended',
+    });
 
     // DOM Elements
     const chessBoard = document.getElementById('chess-board');
@@ -116,7 +122,6 @@
     let game = null;
     let currentUser = null;
     let socket = null;
-    let notificationSocket = null;
     let isSuspended = false;
     let myColor = null; // 'white' or 'black'
     let isMyTurn = false;
@@ -162,6 +167,8 @@
     const WS_BASE_RECONNECT_DELAY = 1000;
     let ratingPollAttempts = 0;
     const RATING_POLL_MAX_ATTEMPTS = 30;
+    let notificationEventBound = false;
+    let notificationEventHandler = null;
     // Init
     init();
 
@@ -209,7 +216,7 @@
             if (currentUser?.is_suspended) {
                 setSuspendedState(true, currentUser.suspension_reason || '');
             }
-            connectNotificationSocket();
+            setupNotificationEvents();
         } catch {
             // 관전자로 처리
             currentUser = null;
@@ -1793,27 +1800,33 @@
         chatForm.parentNode.insertBefore(bar, chatForm);
     }
 
-    function connectNotificationSocket() {
-        if (notificationSocket || !currentUser) return;
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/notifications/`;
-        notificationSocket = new WebSocket(wsUrl);
-        notificationSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            if (data.type === 'chat_mute') {
-                setChatMutedState(true, data.payload?.reason || '');
-                Toast.error(data.message || '채팅이 제한되었습니다.');
-            } else if (data.type === 'account_suspended') {
-                setSuspendedState(true, data.payload?.reason || '');
-                Toast.error(data.message || '계정이 정지되었습니다.');
-            } else if (data.type === 'chat_unmute') {
-                setChatMutedState(false);
-                Toast.success(data.message || '채팅 제한이 해제되었습니다.');
-            } else if (data.type === 'account_unsuspended') {
-                setSuspendedState(false);
-                Toast.success(data.message || '계정 정지가 해제되었습니다.');
-            }
+    function setupNotificationEvents() {
+        if (!currentUser || notificationEventBound) return;
+        notificationEventHandler = (event) => {
+            const data = event.detail || {};
+            const reason = data.payload?.reason || '';
+            const handlers = {
+                [NOTIFICATION_TYPES.CHAT_MUTE]: () => {
+                    setChatMutedState(true, reason);
+                    Toast.error(data.message || '채팅이 제한되었습니다.');
+                },
+                [NOTIFICATION_TYPES.ACCOUNT_SUSPENDED]: () => {
+                    setSuspendedState(true, reason);
+                    Toast.error(data.message || '계정이 정지되었습니다.');
+                },
+                [NOTIFICATION_TYPES.CHAT_UNMUTE]: () => {
+                    setChatMutedState(false);
+                    Toast.success(data.message || '채팅 제한이 해제되었습니다.');
+                },
+                [NOTIFICATION_TYPES.ACCOUNT_UNSUSPENDED]: () => {
+                    setSuspendedState(false);
+                    Toast.success(data.message || '계정 정지가 해제되었습니다.');
+                },
+            };
+            handlers[data.type]?.();
         };
+        window.addEventListener('chessok:notification', notificationEventHandler);
+        notificationEventBound = true;
     }
 
     function setChatMutedState(muted, reason = '') {
@@ -1834,22 +1847,22 @@
 
     function setSuspendedState(suspended, reason = '') {
         isSuspended = suspended;
+        setGameActionButtonsDisabled(Boolean(suspended));
         if (suspended) {
-            drawBtn && (drawBtn.disabled = true);
-            resignBtn && (resignBtn.disabled = true);
-            leaveBtn && (leaveBtn.disabled = true);
-            rematchBtn && (rematchBtn.disabled = true);
             if (reason) {
                 addChatNotice(`계정 정지됨: ${reason}`);
             } else {
                 addChatNotice('계정이 정지되었습니다.');
             }
-        } else {
-            drawBtn && (drawBtn.disabled = false);
-            resignBtn && (resignBtn.disabled = false);
-            leaveBtn && (leaveBtn.disabled = false);
-            rematchBtn && (rematchBtn.disabled = false);
         }
+    }
+
+    function setGameActionButtonsDisabled(disabled) {
+        [drawBtn, resignBtn, leaveBtn, rematchBtn].forEach((btn) => {
+            if (btn) {
+                btn.disabled = disabled;
+            }
+        });
     }
 
     /**
