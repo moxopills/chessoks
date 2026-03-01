@@ -11,6 +11,15 @@ from apps.chess.serializers.match_serializers import (
     CancelMatchResponseSerializer,
     QuickMatchResponseSerializer,
 )
+from apps.chess.serializers.puzzle_serializers import (
+    PuzzleDailyResponseSerializer,
+    PuzzleHintResponseSerializer,
+    PuzzleMoveRequestSerializer,
+    PuzzleMoveResponseSerializer,
+    PuzzleSolutionResponseSerializer,
+    PuzzleStatsResponseSerializer,
+    PuzzleStreakResponseSerializer,
+)
 from apps.chess.serializers.room_action_serializers import (
     RoomJoinRequestSerializer,
     RoomReadyRequestSerializer,
@@ -42,4 +51,11 @@ __all__ = [
     "RoomStartConfirmResponseSerializer",
     "RoomJoinRequestSerializer",
     "SpectatorListSerializer",
+    "PuzzleMoveRequestSerializer",
+    "PuzzleDailyResponseSerializer",
+    "PuzzleMoveResponseSerializer",
+    "PuzzleHintResponseSerializer",
+    "PuzzleSolutionResponseSerializer",
+    "PuzzleStatsResponseSerializer",
+    "PuzzleStreakResponseSerializer",
 ]

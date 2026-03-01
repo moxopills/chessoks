@@ -18,6 +18,14 @@ from apps.chess.views.match_views import (
     QuickMatchView,
     RandomMatchView,
 )
+from apps.chess.views.puzzle_views import (
+    DailyPuzzleHintView,
+    DailyPuzzleMoveView,
+    DailyPuzzleSolutionView,
+    DailyPuzzleView,
+    PuzzleStatsView,
+    PuzzleStreakView,
+)
 from apps.chess.views.room_views import (
     RoomActiveView,
     RoomDetailView,
@@ -60,4 +68,10 @@ __all__ = [
     "SpectatorListView",
     "SpectatorJoinView",
     "SpectatorLeaveView",
+    "DailyPuzzleView",
+    "DailyPuzzleMoveView",
+    "DailyPuzzleHintView",
+    "DailyPuzzleSolutionView",
+    "PuzzleStatsView",
+    "PuzzleStreakView",
 ]

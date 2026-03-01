@@ -71,6 +71,7 @@ urlpatterns = [
         TemplateView.as_view(template_name="chess/spectate.html"),
         name="game-spectate",
     ),
+    path("puzzle/", TemplateView.as_view(template_name="chess/puzzle.html"), name="puzzle"),
     path(
         "leaderboard/",
         TemplateView.as_view(template_name="social/leaderboard.html"),

@@ -11,7 +11,7 @@ from celery import shared_task
 from channels.layers import get_channel_layer
 
 from apps.chess.models import Game, LobbyMessage, Room
-from apps.chess.services import AiService, GameService
+from apps.chess.services import AiService, GameService, PuzzleService
 
 logger = logging.getLogger(__name__)
 MATCH_ROOM_TYPES = ["quick", "random"]
@@ -259,3 +259,13 @@ def handle_ai_move(game_id: int) -> bool:
     except Exception as exc:
         logger.error("AI move broadcast failed game=%s: %s", game_id, exc)
     return True
+
+
+@shared_task
+def select_daily_puzzle() -> str:
+    """일일 퍼즐 자동 선정"""
+    selected = []
+    for level in PuzzleService.ALL_LEVELS:
+        daily = PuzzleService.select_daily_puzzle(level=level)
+        selected.append(f"{daily.level}:{daily.puzzle_id}")
+    return f"selected:{timezone.localdate()}:{','.join(selected)}"
