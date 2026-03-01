@@ -25,6 +25,7 @@ dependencies = [
     "whitenoise>=6.11.0",
     "celery[redis]>=5.4.0",
     "pywebpush",
+    "pandas>=2.3.0",
 ]
 
 [project.optional-dependencies]
