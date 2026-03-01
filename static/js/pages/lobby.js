@@ -67,7 +67,6 @@
     let isRandomMatching = false;
     let isAiMatching = false;
     let lobbySocket = null;
-    let notificationSocket = null;
     let currentUserId = null;
     let currentMe = null;
     let isGuestUser = false;
@@ -392,7 +391,7 @@
             if (user.is_suspended) {
                 setSuspendedState(true, user.suspension_reason || '');
             }
-            connectNotificationSocket();
+            setupNotificationEvents();
             // 로그인 유저는 게스트 버튼 숨김
             guestPlayBtn?.classList.add('hidden');
             guestStatusBar?.classList.add('hidden');
@@ -1082,14 +1081,10 @@
         }
     }
 
-    function connectNotificationSocket() {
-        if (notificationSocket || !currentUserId) return;
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/notifications/`;
-        notificationSocket = new WebSocket(wsUrl);
-
-        notificationSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
+    function setupNotificationEvents() {
+        if (!currentUserId) return;
+        window.addEventListener('chessok:notification', (event) => {
+            const data = event.detail || {};
             if (data.type === 'chat_mute') {
                 setChatMutedState(true, data.payload?.reason || '');
                 Toast.error(data.message || '채팅이 제한되었습니다.');
@@ -1103,15 +1098,7 @@
                 setSuspendedState(false);
                 Toast.success(data.message || '계정 정지가 해제되었습니다.');
             }
-        };
-
-        notificationSocket.onclose = function() {
-            notificationSocket = null;
-        };
-
-        notificationSocket.onerror = function() {
-            notificationSocket = null;
-        };
+        });
     }
 
     function setChatMutedState(muted, reason = '') {
