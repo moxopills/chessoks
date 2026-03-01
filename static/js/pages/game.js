@@ -116,7 +116,6 @@
     let game = null;
     let currentUser = null;
     let socket = null;
-    let notificationSocket = null;
     let isSuspended = false;
     let myColor = null; // 'white' or 'black'
     let isMyTurn = false;
@@ -209,7 +208,7 @@
             if (currentUser?.is_suspended) {
                 setSuspendedState(true, currentUser.suspension_reason || '');
             }
-            connectNotificationSocket();
+            setupNotificationEvents();
         } catch {
             // 관전자로 처리
             currentUser = null;
@@ -1793,13 +1792,10 @@
         chatForm.parentNode.insertBefore(bar, chatForm);
     }
 
-    function connectNotificationSocket() {
-        if (notificationSocket || !currentUser) return;
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${window.location.host}/ws/notifications/`;
-        notificationSocket = new WebSocket(wsUrl);
-        notificationSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
+    function setupNotificationEvents() {
+        if (!currentUser) return;
+        window.addEventListener('chessok:notification', (event) => {
+            const data = event.detail || {};
             if (data.type === 'chat_mute') {
                 setChatMutedState(true, data.payload?.reason || '');
                 Toast.error(data.message || '채팅이 제한되었습니다.');
@@ -1813,7 +1809,7 @@
                 setSuspendedState(false);
                 Toast.success(data.message || '계정 정지가 해제되었습니다.');
             }
-        };
+        });
     }
 
     function setChatMutedState(muted, reason = '') {

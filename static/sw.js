@@ -10,10 +10,13 @@ self.addEventListener('message', (event) => {
   const data = event.data || {};
   if (data.type !== 'SHOW_NOTIFICATION') return;
   const title = data.title || 'ChessOK';
+  const tag = data.tag || `${title}:${data.body || ''}:${data.url || ''}`;
   const options = {
     body: data.body || '',
     icon: '/static/images/icons/favicon.svg',
     badge: '/static/images/icons/favicon.svg',
+    tag,
+    renotify: false,
     data: data.url ? { url: data.url } : {},
   };
   event.waitUntil(self.registration.showNotification(title, options));
@@ -57,10 +60,15 @@ self.addEventListener('push', (event) => {
     data = { title: 'ChessOK', body: event.data?.text?.() || '' };
   }
   const title = data.title || 'ChessOK';
+  const tag = data.id
+    ? `notif:${data.id}`
+    : `${title}:${data.body || ''}:${data.url || ''}`;
   const options = {
     body: data.body || '',
     icon: '/static/images/icons/favicon.svg',
     badge: '/static/images/icons/favicon.svg',
+    tag,
+    renotify: false,
     data: data.url ? { url: data.url } : {},
   };
   event.waitUntil(self.registration.showNotification(title, options));

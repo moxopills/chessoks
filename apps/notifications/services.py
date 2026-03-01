@@ -102,6 +102,14 @@ class WebPushService:
 
     @staticmethod
     def subscribe(user, *, endpoint: str, p256dh: str, auth: str, user_agent: str = "") -> None:
+        # 같은 사용자/브라우저(user_agent)에서 새 endpoint로 재구독 시
+        # 기존 endpoint는 비활성화해 중복 푸시를 줄인다.
+        if user_agent:
+            WebPushSubscription.objects.filter(
+                user=user,
+                user_agent=user_agent,
+                is_active=True,
+            ).exclude(endpoint=endpoint).update(is_active=False)
         WebPushSubscription.objects.update_or_create(
             endpoint=endpoint,
             defaults={
@@ -137,6 +145,8 @@ class WebPushService:
         url = WebPushService._target_url(notification)
         payload = json.dumps(
             {
+                "id": notification.id,
+                "type": notification.type,
                 "title": notification.title or "ChessOK",
                 "body": notification.message or "",
                 "url": url,
