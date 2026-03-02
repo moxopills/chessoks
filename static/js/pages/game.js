@@ -1669,7 +1669,7 @@
                 break;
 
             case 'reaction_update':
-                applyReactionUpdate(data.message_id, data.reactions || {});
+                applyReactionUpdate(data.message_id, data.reactions || {}, data.my_reactions);
                 break;
 
             case 'recent_messages':
@@ -1881,6 +1881,7 @@
             messageEl.dataset.messageId = String(data.message_id);
         }
         const reactions = data.reactions || {};
+        const myReactions = data.my_reactions || [];
         const thumbCount = Number(reactions['👍'] || 0);
         const clapCount = Number(reactions['👏'] || 0);
         messageEl.innerHTML = `
@@ -1889,8 +1890,8 @@
                 <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
                 <div class="chat-bubble">${Utils.escapeHtml(data.message)}</div>
                 <div class="chat-reactions">
-                    <button type="button" class="reaction-btn" data-reaction="👍">👍 <span>${thumbCount}</span></button>
-                    <button type="button" class="reaction-btn" data-reaction="👏">👏 <span>${clapCount}</span></button>
+                    <button type="button" class="reaction-btn ${myReactions.includes('👍') ? 'active' : ''}" data-reaction="👍">👍 <span>${thumbCount}</span></button>
+                    <button type="button" class="reaction-btn ${myReactions.includes('👏') ? 'active' : ''}" data-reaction="👏">👏 <span>${clapCount}</span></button>
                 </div>
             </div>
         `;
@@ -2669,6 +2670,7 @@
                 const key = root?.dataset.messageId;
                 const reaction = btn.dataset.reaction;
                 if (!key || !reaction) return;
+                btn.classList.toggle('active');
                 socket.send(
                     JSON.stringify({
                         action: 'reaction',
@@ -2696,7 +2698,7 @@
         });
     }
 
-    function applyReactionUpdate(messageId, reactions) {
+    function applyReactionUpdate(messageId, reactions, myReactions) {
         if (!chatMessages || !messageId) return;
         const target = chatMessages.querySelector(`.chat-message[data-message-id="${String(messageId)}"]`);
         if (!target) return;
@@ -2707,6 +2709,9 @@
             if (!countEl) return;
             const next = Number(reactions?.[emoji] || 0);
             countEl.textContent = String(next);
+            if (Array.isArray(myReactions)) {
+                btn.classList.toggle('active', myReactions.includes(emoji));
+            }
         });
     }
 
