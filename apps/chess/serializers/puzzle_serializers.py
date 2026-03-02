@@ -47,6 +47,8 @@ class PuzzleHintResponseSerializer(serializers.Serializer):
 
 class PuzzleSolutionResponseSerializer(serializers.Serializer):
     moves = serializers.ListField(child=serializers.CharField())
+    replay_moves = serializers.ListField(child=serializers.CharField(), required=False)
+    steps = serializers.ListField(child=serializers.DictField(), required=False)
     solved = serializers.BooleanField()
     message = serializers.CharField(required=False, allow_blank=True)
 

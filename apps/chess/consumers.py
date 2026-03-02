@@ -272,6 +272,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             "message": message,
             "sent_at": timezone.now().isoformat(),
             "reactions": {"👍": 0, "👏": 0},
+            "my_reactions": [],
         }
         await self._append_game_chat_history("player", payload)
         await self._broadcast_to_group(self.player_group, payload)
@@ -297,6 +298,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             "message": message,
             "sent_at": timezone.now().isoformat(),
             "reactions": {"👍": 0, "👏": 0},
+            "my_reactions": [],
         }
         await self._append_game_chat_history("spectator", payload)
         await self._broadcast_to_group(self.spectator_group, payload)
@@ -307,12 +309,12 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         if not message_id or emoji not in REACTION_EMOJIS:
             return
         scope = "player" if self.is_player else "spectator"
-        reactions = await self._toggle_game_reaction(scope, message_id, emoji)
+        reaction_data = await self._toggle_game_reaction(scope, message_id, emoji)
         payload = {
             "type": "reaction_update",
             "scope": scope,
             "message_id": message_id,
-            "reactions": reactions,
+            "reactions": reaction_data.get("reactions", {}),
         }
         target_group = self.player_group if self.is_player else self.spectator_group
         await self._broadcast_to_group(target_group, payload)
@@ -372,8 +374,15 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                     "👍": len(state.get("👍", [])),
                     "👏": len(state.get("👏", [])),
                 }
+                current_user_id = self.scope["user"].id
+                message["my_reactions"] = [
+                    emoji
+                    for emoji in REACTION_EMOJIS
+                    if current_user_id in set(state.get(emoji, []))
+                ]
             else:
                 message["reactions"] = message.get("reactions", {"👍": 0, "👏": 0})
+                message["my_reactions"] = message.get("my_reactions", [])
             hydrated.append(message)
         return hydrated
 
@@ -391,7 +400,10 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             users.add(user_id)
         state[emoji] = sorted(users)
         cache.set(key, state, timeout=60 * 60 * 6)
-        return {e: len(state.get(e, [])) for e in REACTION_EMOJIS}
+        return {
+            "reactions": {e: len(state.get(e, [])) for e in REACTION_EMOJIS},
+            "my_reactions": [e for e in REACTION_EMOJIS if user_id in set(state.get(e, []))],
+        }
 
     @database_sync_to_async
     def _check_room_access(self, user) -> bool | None:
@@ -616,6 +628,7 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 "message": message,
                 "sent_at": saved["created_at"],
                 "reactions": {"👍": 0, "👏": 0},
+                "my_reactions": [],
             }
             await self.channel_layer.group_send(
                 self.group_name, {"type": "broadcast", "payload": payload}
@@ -644,14 +657,14 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         emoji = (content.get("reaction") or "").strip()
         if not message_id or emoji not in REACTION_EMOJIS:
             return
-        reactions = await self._toggle_lobby_reaction(int(message_id), emoji)
-        if reactions is None:
+        reaction_data = await self._toggle_lobby_reaction(int(message_id), emoji)
+        if reaction_data is None:
             return
         payload = {
             "type": "reaction_update",
             "scope": "lobby",
             "message_id": int(message_id),
-            "reactions": reactions,
+            "reactions": reaction_data.get("reactions", {}),
         }
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}
@@ -673,12 +686,21 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             .values("message_id", "emoji")
             .annotate(count=models.Count("id"))
         )
+        current_user_id = self.scope["user"].id
+        my_rows = LobbyMessageReaction.objects.filter(
+            message_id__in=message_ids, user_id=current_user_id
+        ).values("message_id", "emoji")
         reaction_map = {msg_id: {"👍": 0, "👏": 0} for msg_id in message_ids}
+        my_reaction_map = {msg_id: [] for msg_id in message_ids}
         for row in reaction_rows:
             if row["emoji"] in REACTION_EMOJIS:
                 reaction_map.setdefault(row["message_id"], {"👍": 0, "👏": 0})[row["emoji"]] = row[
                     "count"
                 ]
+        for row in my_rows:
+            emoji = row.get("emoji")
+            if emoji in REACTION_EMOJIS:
+                my_reaction_map.setdefault(row["message_id"], []).append(emoji)
         return [
             {
                 "type": "chat",
@@ -690,6 +712,7 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 "message": msg.message,
                 "sent_at": msg.created_at.isoformat(),
                 "reactions": reaction_map.get(msg.id, {"👍": 0, "👏": 0}),
+                "my_reactions": my_reaction_map.get(msg.id, []),
             }
             for msg in reversed(messages)
         ]
@@ -716,7 +739,12 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         for row in rows:
             if row["emoji"] in REACTION_EMOJIS:
                 reactions[row["emoji"]] = row["count"]
-        return reactions
+        my_reactions = list(
+            LobbyMessageReaction.objects.filter(message_id=message_id, user_id=user.id).values_list(
+                "emoji", flat=True
+            )
+        )
+        return {"reactions": reactions, "my_reactions": my_reactions}
 
     @database_sync_to_async
     def _add_to_lobby(self):

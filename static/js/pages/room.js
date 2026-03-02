@@ -475,7 +475,7 @@
                 handleChatBadge(data);
                 break;
             case 'reaction_update':
-                applyReactionUpdate(data.message_id, data.reactions || {});
+                applyReactionUpdate(data.message_id, data.reactions || {}, data.my_reactions);
                 break;
             case 'recent_messages':
                 (data.messages || []).forEach((msg) => {
@@ -544,14 +544,15 @@
             messageEl.dataset.messageId = String(data.message_id);
         }
         const reactions = data.reactions || {};
+        const myReactions = data.my_reactions || [];
         messageEl.innerHTML = `
             ${!isMine ? `<div class="chat-avatar">${avatar}</div>` : ''}
             <div class="chat-content">
                 <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
                 <div class="chat-bubble">${Utils.escapeHtml(data.message)}</div>
                 <div class="chat-reactions">
-                    <button type="button" class="reaction-btn" data-reaction="👍">👍 <span>${Number(reactions['👍'] || 0)}</span></button>
-                    <button type="button" class="reaction-btn" data-reaction="👏">👏 <span>${Number(reactions['👏'] || 0)}</span></button>
+                    <button type="button" class="reaction-btn ${myReactions.includes('👍') ? 'active' : ''}" data-reaction="👍">👍 <span>${Number(reactions['👍'] || 0)}</span></button>
+                    <button type="button" class="reaction-btn ${myReactions.includes('👏') ? 'active' : ''}" data-reaction="👏">👏 <span>${Number(reactions['👏'] || 0)}</span></button>
                 </div>
             </div>
         `;
@@ -567,6 +568,7 @@
                 const key = messageEl.dataset.messageId;
                 const reaction = btn.dataset.reaction;
                 if (!key || !reaction || !socket || socket.readyState !== WebSocket.OPEN) return;
+                btn.classList.toggle('active');
                 socket.send(
                     JSON.stringify({
                         action: 'reaction',
@@ -578,7 +580,7 @@
         });
     }
 
-    function applyReactionUpdate(messageId, reactions) {
+    function applyReactionUpdate(messageId, reactions, myReactions) {
         if (!chatMessages || !messageId) return;
         const messageEl = chatMessages.querySelector(`.chat-message[data-message-id="${String(messageId)}"]`);
         if (!messageEl) return;
@@ -587,6 +589,9 @@
             const countEl = btn.querySelector('span');
             if (!emoji || !countEl) return;
             countEl.textContent = String(Number(reactions?.[emoji] || 0));
+            if (Array.isArray(myReactions)) {
+                btn.classList.toggle('active', myReactions.includes(emoji));
+            }
         });
     }
 
