@@ -34,6 +34,8 @@
     const solutionBtn = document.getElementById("puzzle-solution-btn");
     const exitBtn = document.getElementById("puzzle-exit-btn");
     const hintMetaEl = document.getElementById("puzzle-hint-meta");
+    const goalTextEl = document.getElementById("puzzle-goal-text");
+    const solutionStepsEl = document.getElementById("puzzle-solution-steps");
     const levelButtons = document.querySelectorAll("#puzzle-levels [data-level]");
 
     function setStatus(message) {
@@ -46,6 +48,40 @@
         if (!hintMetaEl) return;
         const remaining = Math.max(0, hintLimit - hintsUsed);
         hintMetaEl.textContent = `힌트 ${hintsUsed}/${hintLimit} (남은 횟수 ${remaining})`;
+    }
+
+    function setGoal(text) {
+        if (!goalTextEl) return;
+        goalTextEl.textContent = text;
+    }
+
+    function renderSolutionSteps(steps) {
+        if (!solutionStepsEl) return;
+        solutionStepsEl.innerHTML = "";
+        if (!Array.isArray(steps) || !steps.length) {
+            const li = document.createElement("li");
+            li.textContent = "해설 데이터가 없습니다.";
+            solutionStepsEl.appendChild(li);
+            return;
+        }
+        steps.forEach((step) => {
+            const li = document.createElement("li");
+            const move = step?.san ? `${step.san}` : step?.uci || "-";
+            li.textContent = `${step?.step || "?"}. ${move} - ${step?.description || "핵심 수입니다."}`;
+            solutionStepsEl.appendChild(li);
+        });
+    }
+
+    function getGoalText(data) {
+        const objectiveMessage = data?.puzzle?.objective?.message;
+        if (objectiveMessage) {
+            return objectiveMessage;
+        }
+        const levelLabel = data?.level_label || "중간";
+        const rating = data?.puzzle?.rating ? `퍼즐 레이팅 ${data.puzzle.rating}` : "퍼즐";
+        const themes = Array.isArray(data?.puzzle?.themes) ? data.puzzle.themes : [];
+        const themeText = themes.length ? ` · 테마: ${themes.slice(0, 2).join(", ")}` : "";
+        return `${levelLabel} 난이도 ${rating}입니다. 최선 수순으로 이점을 확보하세요.${themeText}`;
     }
 
     function fileToIndex(fileChar) {
@@ -90,6 +126,10 @@
         }
         board[to.row][to.col] = placed;
         lastMoveSquares = [uci.slice(0, 2), uci.slice(2, 4)];
+    }
+
+    function delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
     function renderBoard() {
@@ -215,8 +255,18 @@
                 applyUciMove(firstMove);
             }
             renderBoard();
-            setStatus("말을 클릭한 뒤 이동할 칸을 선택하세요.");
-            startTimer();
+            setGoal(getGoalText(data));
+            renderSolutionSteps([]);
+            const solved = Boolean(data?.attempt?.solved);
+            finished = solved;
+            if (solved) {
+                setStatus("클리어한 퍼즐입니다. 정답 해설로 복기해보세요.");
+                stopTimer();
+                renderTimer();
+            } else {
+                setStatus("말을 클릭한 뒤 이동할 칸을 선택하세요.");
+                startTimer();
+            }
         } catch (error) {
             const msg = error?.message || "퍼즐을 불러오지 못했습니다.";
             setStatus(msg);
@@ -253,14 +303,29 @@
     });
 
     solutionBtn?.addEventListener("click", async () => {
-        if (!confirm("정답 수순을 보시겠습니까?")) return;
+        if (!confirm("정답 수순을 실제 이동으로 보시겠습니까?")) return;
         try {
             const data = await API.get(`/chess/puzzle/daily/solution/?level=${encodeURIComponent(currentLevel)}`);
-            const moves = Array.isArray(data.moves) ? data.moves.join(" ") : "-";
-            setStatus(`정답 수순: ${moves}`);
-            Toast.info(data.message || "정답 수순을 확인했습니다.");
+            const replayMoves = Array.isArray(data.replay_moves) ? data.replay_moves : [];
+            const steps = Array.isArray(data.steps) ? data.steps : [];
+            renderSolutionSteps(steps);
+
+            // 현재 퍼즐 기준 보드 상태를 다시 만들고 정답 수순을 순차 재생
+            const daily = await API.get(`/chess/puzzle/daily/?level=${encodeURIComponent(currentLevel)}`);
+            board = parseFenBoard(daily?.puzzle?.fen || "");
+            if (daily?.puzzle?.first_move) applyUciMove(daily.puzzle.first_move);
+            renderBoard();
+
+            for (const move of replayMoves) {
+                await delay(550);
+                applyUciMove(move);
+                renderBoard();
+            }
+
+            setStatus("정답 수순 재생이 완료되었습니다.");
+            Toast.info(data.message || "정답 해설을 확인했습니다.");
         } catch (error) {
-            Toast.error(error?.message || "정답 수순을 불러오지 못했습니다.");
+            Toast.error(error?.message || "정답 해설을 불러오지 못했습니다.");
         }
     });
 

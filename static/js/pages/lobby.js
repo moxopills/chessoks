@@ -1054,7 +1054,7 @@
             addChatMessage(data);
             handleChatBadge(data);
         } else if (data.type === 'reaction_update') {
-            applyReactionUpdate(data.message_id, data.reactions || {});
+            applyReactionUpdate(data.message_id, data.reactions || {}, data.my_reactions);
         } else if (data.type === 'recent_messages') {
             // 최근 메시지 로드
             chatMessages.innerHTML = '';
@@ -1174,8 +1174,8 @@
                 <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
                 <div class="chat-bubble${emojiOnlyClass}">${Utils.escapeHtml(data.message)}</div>
                 <div class="chat-reactions">
-                    <button type="button" class="reaction-btn" data-reaction="👍">👍 <span>${data.reactions?.["👍"] ?? 0}</span></button>
-                    <button type="button" class="reaction-btn" data-reaction="👏">👏 <span>${data.reactions?.["👏"] ?? 0}</span></button>
+                    <button type="button" class="reaction-btn ${(data.my_reactions || []).includes('👍') ? 'active' : ''}" data-reaction="👍">👍 <span>${data.reactions?.["👍"] ?? 0}</span></button>
+                    <button type="button" class="reaction-btn ${(data.my_reactions || []).includes('👏') ? 'active' : ''}" data-reaction="👏">👏 <span>${data.reactions?.["👏"] ?? 0}</span></button>
                 </div>
             </div>
             <span class="chat-time">${formatChatTime(data.sent_at)}</span>
@@ -1201,6 +1201,7 @@
                 const key = messageEl.dataset.messageId;
                 const reaction = btn.dataset.reaction;
                 if (!key || !reaction) return;
+                btn.classList.toggle('active');
                 if (lobbySocket?.readyState === WebSocket.OPEN) {
                     lobbySocket.send(
                         JSON.stringify({
@@ -1214,7 +1215,7 @@
         });
     }
 
-    function applyReactionUpdate(messageId, reactions) {
+    function applyReactionUpdate(messageId, reactions, myReactions) {
         const target = chatMessages.querySelector(`.chat-message[data-message-id="${messageId}"]`);
         if (!target) return;
         target.querySelectorAll('.reaction-btn').forEach((btn) => {
@@ -1222,6 +1223,9 @@
             const countEl = btn.querySelector('span');
             if (!emoji || !countEl) return;
             countEl.textContent = String(reactions[emoji] ?? 0);
+            if (Array.isArray(myReactions)) {
+                btn.classList.toggle('active', myReactions.includes(emoji));
+            }
         });
     }
 

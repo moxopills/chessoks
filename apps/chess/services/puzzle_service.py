@@ -41,6 +41,14 @@ class PuzzleService:
     MSG_ILLEGAL_MOVE = "둘 수 없는 수입니다. 말의 이동 규칙을 다시 확인해주세요."
     MSG_HINT_LIMIT_REACHED = "힌트는 하루 최대 3번까지 사용할 수 있습니다."
     MSG_INVALID_LEVEL = "난이도는 쉬움(easy), 중간(medium), 어려움(hard) 중에서 선택해주세요."
+    PIECE_KR = {
+        chess.PAWN: "폰",
+        chess.KNIGHT: "나이트",
+        chess.BISHOP: "비숍",
+        chess.ROOK: "룩",
+        chess.QUEEN: "퀸",
+        chess.KING: "킹",
+    }
 
     @staticmethod
     def normalize_level(level: str | None) -> str:
@@ -176,8 +184,11 @@ class PuzzleService:
             if not attempt.solved:
                 attempt.attempts += 1
                 attempt.save(update_fields=["attempts"])
+        replay_moves, steps = PuzzleService._build_solution_steps(puzzle)
         return {
             "moves": puzzle.moves,
+            "replay_moves": replay_moves,
+            "steps": steps,
             "solved": bool(state.get("solved", False)),
             "message": "정답 수순을 확인했습니다.",
         }
@@ -487,21 +498,15 @@ class PuzzleService:
         *, daily: DailyPuzzle, attempt: UserPuzzleAttempt | None, user
     ) -> dict:
         puzzle = daily.puzzle
-        hints_used = 0
-        if attempt:
-            hints_used = int(attempt.hints_used or 0)
-        elif getattr(user, "is_authenticated", False) and getattr(user, "is_guest", False):
-            guest_state = PuzzleService._get_guest_state(user=user, daily=daily)
-            hints_used = int(guest_state.get("hints_used", 0))
+        progress = PuzzleService._get_progress_state(user=user, daily=daily, puzzle=puzzle)
+        hints_used = int(progress.get("hints_used", 0))
 
-        attempt_payload = None
-        if attempt:
-            attempt_payload = {
-                "solved": attempt.solved,
-                "attempts": attempt.attempts,
-                "hints_used": attempt.hints_used,
-                "moves_made": attempt.moves_made,
-            }
+        attempt_payload = {
+            "solved": bool(progress.get("solved", False)),
+            "attempts": int(progress.get("attempts", 0)),
+            "hints_used": hints_used,
+            "moves_made": progress.get("moves_made", []),
+        }
         return {
             "date": daily.date.isoformat(),
             "level": daily.level,
@@ -512,9 +517,90 @@ class PuzzleService:
                 "first_move": puzzle.moves[0] if puzzle.moves else None,
                 "rating": puzzle.rating,
                 "themes": puzzle.themes,
+                "objective": PuzzleService._build_objective(puzzle),
             },
             "attempt": attempt_payload,
             "hint_limit": PuzzleService.HINT_LIMIT,
             "hints_used": hints_used,
             "remaining_hints": max(0, PuzzleService.HINT_LIMIT - hints_used),
+        }
+
+    @staticmethod
+    def _build_solution_steps(puzzle: Puzzle) -> tuple[list[str], list[dict]]:
+        if not puzzle.moves:
+            return [], []
+
+        board = PuzzleService._build_board_to_index(puzzle=puzzle, index=0)
+        replay_moves = []
+        steps = []
+
+        for idx, uci in enumerate(puzzle.moves):
+            try:
+                move = chess.Move.from_uci(uci)
+            except ValueError:
+                continue
+
+            if move not in board.legal_moves:
+                continue
+
+            is_capture = board.is_capture(move)
+            moving_piece = board.piece_at(move.from_square)
+            san = board.san(move)
+            board.push(move)
+
+            # 첫 수는 문제 시작 직전 상태를 맞추는 수라 리플레이 대상에서 제외
+            if idx == 0:
+                continue
+
+            replay_moves.append(uci)
+            turn = "백" if idx % 2 == 1 else "흑"
+            piece_name = PuzzleService.PIECE_KR.get(
+                moving_piece.piece_type if moving_piece else None,
+                "기물",
+            )
+            to_square = chess.square_name(move.to_square).upper()
+
+            if board.is_checkmate():
+                description = f"{turn} {piece_name}으로 체크메이트를 완성합니다."
+            elif board.is_check():
+                description = f"{turn} {piece_name}으로 체크를 걸어 압박합니다."
+            elif move.promotion:
+                description = f"{turn} 폰 승격으로 전력을 강화합니다."
+            elif is_capture:
+                description = f"{turn} {piece_name}으로 상대 기물을 잡습니다."
+            else:
+                description = f"{turn} {piece_name}을 {to_square}로 전개합니다."
+
+            steps.append(
+                {
+                    "step": len(steps) + 1,
+                    "uci": uci,
+                    "san": san,
+                    "description": description,
+                }
+            )
+
+        return replay_moves, steps
+
+    @staticmethod
+    def _build_objective(puzzle: Puzzle) -> dict:
+        if len(puzzle.moves) < 2:
+            return {"message": "최선 수를 찾아 퍼즐을 완료하세요."}
+
+        first_user_uci = puzzle.moves[1]
+        try:
+            board = PuzzleService._build_board_to_index(puzzle=puzzle, index=1)
+            move = chess.Move.from_uci(first_user_uci)
+            piece = board.piece_at(move.from_square)
+        except (ValidationError, ValueError):
+            return {"message": "최선 수를 찾아 퍼즐을 완료하세요."}
+
+        piece_name = PuzzleService.PIECE_KR.get(piece.piece_type if piece else None, "기물")
+        from_square = first_user_uci[:2].upper()
+        to_square = first_user_uci[2:4].upper()
+        return {
+            "from_square": from_square,
+            "to_square": to_square,
+            "piece": piece_name,
+            "message": f"첫 수는 {from_square}의 {piece_name}을 움직여 정답 수순을 시작하세요.",
         }
