@@ -9,8 +9,9 @@ from django.utils import timezone
 from asgiref.sync import async_to_sync
 from celery import shared_task
 from channels.layers import get_channel_layer
+from rest_framework.exceptions import ValidationError
 
-from apps.chess.models import Game, LobbyMessage, Room
+from apps.chess.models import Game, LobbyMessage, Puzzle, Room
 from apps.chess.services import AiService, GameService, PuzzleService
 
 logger = logging.getLogger(__name__)
@@ -263,9 +264,64 @@ def handle_ai_move(game_id: int) -> bool:
 
 @shared_task
 def select_daily_puzzle() -> str:
-    """일일 퍼즐 자동 선정"""
+    """일일 퍼즐 자동 선정(자정 배치)"""
     selected = []
+    errors = []
     for level in PuzzleService.ALL_LEVELS:
-        daily = PuzzleService.select_daily_puzzle(level=level)
-        selected.append(f"{daily.level}:{daily.puzzle_id}")
-    return f"selected:{timezone.localdate()}:{','.join(selected)}"
+        try:
+            daily = PuzzleService.select_daily_puzzle(level=level)
+            selected.append(f"{daily.level}:{daily.puzzle_id}")
+        except ValidationError as exc:
+            msg = f"{level}:validation:{exc.detail}"
+            logger.warning("select_daily_puzzle validation error: %s", msg)
+            errors.append(msg)
+        except Exception as exc:
+            msg = f"{level}:error:{exc}"
+            logger.exception("select_daily_puzzle failed: %s", msg)
+            errors.append(msg)
+    base = f"selected:{timezone.localdate()}:{','.join(selected)}"
+    if errors:
+        return f"{base}|errors:{' | '.join(errors)}"
+    return base
+
+
+@shared_task
+def warmup_daily_puzzles() -> str:
+    """주기적 퍼즐 보정(누락 레벨 자동 생성)"""
+    selected = []
+    errors = []
+    for level in PuzzleService.ALL_LEVELS:
+        try:
+            daily = PuzzleService.get_or_create_daily_puzzle(level=level)
+            selected.append(f"{daily.level}:{daily.puzzle_id}")
+        except ValidationError as exc:
+            msg = f"{level}:validation:{exc.detail}"
+            logger.warning("warmup_daily_puzzles validation error: %s", msg)
+            errors.append(msg)
+        except Exception as exc:
+            msg = f"{level}:error:{exc}"
+            logger.exception("warmup_daily_puzzles failed: %s", msg)
+            errors.append(msg)
+    base = f"warmup:{timezone.localdate()}:{','.join(selected)}"
+    if errors:
+        return f"{base}|errors:{' | '.join(errors)}"
+    return base
+
+
+@shared_task
+def monitor_puzzle_inventory() -> str:
+    """퍼즐 재고 상태 점검(운영 로그용)"""
+    total = Puzzle.objects.count()
+    bands = {
+        PuzzleService.LEVEL_EASY: Puzzle.objects.filter(rating__gte=800, rating__lte=1199).count(),
+        PuzzleService.LEVEL_MEDIUM: Puzzle.objects.filter(
+            rating__gte=1200, rating__lte=1799
+        ).count(),
+        PuzzleService.LEVEL_HARD: Puzzle.objects.filter(rating__gte=1800, rating__lte=2600).count(),
+    }
+    message = f"puzzle_inventory total={total} easy={bands['easy']} medium={bands['medium']} hard={bands['hard']}"
+    if total <= 0 or any(count <= 0 for count in bands.values()):
+        logger.warning(message)
+    else:
+        logger.info(message)
+    return message
