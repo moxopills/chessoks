@@ -58,4 +58,12 @@ app.conf.beat_schedule = {
         "task": "apps.chess.tasks.select_daily_puzzle",
         "schedule": crontab(hour=0, minute=0),  # 매일 자정
     },
+    "warmup-daily-puzzles": {
+        "task": "apps.chess.tasks.warmup_daily_puzzles",
+        "schedule": 600.0,  # 10분마다 누락 보정
+    },
+    "monitor-puzzle-inventory": {
+        "task": "apps.chess.tasks.monitor_puzzle_inventory",
+        "schedule": 3600.0,  # 1시간마다 재고 점검
+    },
 }
