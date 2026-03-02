@@ -78,6 +78,13 @@ class PuzzleApiTestCase(TestCase):
         response = self.client.get("/api/chess/puzzle/daily/?level=invalid")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_get_daily_puzzle_hard_fallback(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/chess/puzzle/daily/?level=hard")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["level"], "hard")
+        self.assertIsNotNone(response.data["puzzle"]["id"])
+
     def test_submit_move_correct_then_complete(self):
         self.client.force_authenticate(user=self.user)
 

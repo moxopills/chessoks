@@ -75,22 +75,11 @@ class PuzzleService:
                 level=level,
             ).values_list("puzzle_id", flat=True)
 
-            candidates = (
-                Puzzle.objects.filter(
-                    rating__gte=min_rating,
-                    rating__lte=max_rating,
-                )
-                .exclude(id__in=recent_ids)
-                .values_list("id", flat=True)[: PuzzleService.DAILY_SAMPLE_SIZE]
+            candidate_ids = PuzzleService._pick_candidate_ids(
+                min_rating=min_rating,
+                max_rating=max_rating,
+                recent_ids=recent_ids,
             )
-            candidate_ids = list(candidates)
-            if not candidate_ids:
-                candidate_ids = list(
-                    Puzzle.objects.filter(
-                        rating__gte=min_rating,
-                        rating__lte=max_rating,
-                    ).values_list("id", flat=True)[: PuzzleService.DAILY_SAMPLE_SIZE]
-                )
             if not candidate_ids:
                 raise ValidationError(PuzzleService.MSG_NO_PUZZLE_DATA)
 
@@ -107,6 +96,39 @@ class PuzzleService:
                 if not daily:
                     raise
                 return daily
+
+    @staticmethod
+    def _pick_candidate_ids(*, min_rating: int, max_rating: int, recent_ids) -> list[int]:
+        """난이도 구간 후보가 없을 때 전체 풀로 폴백한다."""
+        # 1) 난이도 구간 + 최근 제외
+        ids = list(
+            Puzzle.objects.filter(rating__gte=min_rating, rating__lte=max_rating)
+            .exclude(id__in=recent_ids)
+            .values_list("id", flat=True)[: PuzzleService.DAILY_SAMPLE_SIZE]
+        )
+        if ids:
+            return ids
+
+        # 2) 난이도 구간 전체
+        ids = list(
+            Puzzle.objects.filter(rating__gte=min_rating, rating__lte=max_rating).values_list(
+                "id", flat=True
+            )[: PuzzleService.DAILY_SAMPLE_SIZE]
+        )
+        if ids:
+            return ids
+
+        # 3) 전체 풀 + 최근 제외
+        ids = list(
+            Puzzle.objects.exclude(id__in=recent_ids).values_list("id", flat=True)[
+                : PuzzleService.DAILY_SAMPLE_SIZE
+            ]
+        )
+        if ids:
+            return ids
+
+        # 4) 전체 풀
+        return list(Puzzle.objects.values_list("id", flat=True)[: PuzzleService.DAILY_SAMPLE_SIZE])
 
     @staticmethod
     def get_daily_with_attempt(user, *, level: str | None = None):
