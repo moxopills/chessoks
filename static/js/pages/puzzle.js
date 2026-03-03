@@ -55,6 +55,20 @@
         goalTextEl.textContent = text;
     }
 
+    function formatObjectiveText(objective, fallback) {
+        if (!objective || typeof objective !== "object") {
+            return fallback;
+        }
+        const lines = [];
+        if (objective.primary_goal) lines.push(objective.primary_goal);
+        if (objective.action_intent) lines.push(objective.action_intent);
+        if (objective.move_guide) lines.push(objective.move_guide);
+        if (objective.followup_plan) lines.push(objective.followup_plan);
+        if (objective.win_condition) lines.push(objective.win_condition);
+        if (!lines.length && objective.message) return objective.message;
+        return lines.join("\n");
+    }
+
     function renderSolutionSteps(steps) {
         if (!solutionStepsEl) return;
         solutionStepsEl.innerHTML = "";
@@ -73,9 +87,10 @@
     }
 
     function getGoalText(data) {
-        const objectiveMessage = data?.puzzle?.objective?.message;
-        if (objectiveMessage) {
-            return objectiveMessage;
+        const objective = data?.puzzle?.objective || {};
+        const formatted = formatObjectiveText(objective, "");
+        if (formatted) {
+            return formatted;
         }
         const levelLabel = data?.level_label || "중간";
         const rating = data?.puzzle?.rating ? `퍼즐 레이팅 ${data.puzzle.rating}` : "퍼즐";

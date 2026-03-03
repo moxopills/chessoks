@@ -585,22 +585,162 @@ class PuzzleService:
     @staticmethod
     def _build_objective(puzzle: Puzzle) -> dict:
         if len(puzzle.moves) < 2:
-            return {"message": "최선 수를 찾아 퍼즐을 완료하세요."}
+            return {
+                "title": "퍼즐 목표",
+                "primary_goal": "최선 수를 찾아 퍼즐을 완료하세요.",
+                "move_guide": "",
+                "win_condition": "",
+                "message": "최선 수를 찾아 퍼즐을 완료하세요.",
+            }
 
         first_user_uci = puzzle.moves[1]
         try:
             board = PuzzleService._build_board_to_index(puzzle=puzzle, index=1)
             move = chess.Move.from_uci(first_user_uci)
             piece = board.piece_at(move.from_square)
+            result_board = PuzzleService._build_board_to_index(
+                puzzle=puzzle, index=len(puzzle.moves)
+            )
         except (ValidationError, ValueError):
-            return {"message": "최선 수를 찾아 퍼즐을 완료하세요."}
+            return {
+                "title": "퍼즐 목표",
+                "primary_goal": "최선 수를 찾아 퍼즐을 완료하세요.",
+                "move_guide": "",
+                "win_condition": "",
+                "message": "최선 수를 찾아 퍼즐을 완료하세요.",
+            }
 
         piece_name = PuzzleService.PIECE_KR.get(piece.piece_type if piece else None, "기물")
         from_square = first_user_uci[:2].upper()
         to_square = first_user_uci[2:4].upper()
+        themes = puzzle.themes if isinstance(puzzle.themes, list) else []
+
+        primary_goal = PuzzleService._infer_primary_goal(themes, result_board)
+        move_guide = f"첫 수는 {from_square}의 {piece_name}을 {to_square}로 두며 수순을 시작하세요."
+        action_intent = PuzzleService._infer_action_intent(board, move)
+        followup_plan = PuzzleService._infer_followup_plan(puzzle)
+        win_condition = PuzzleService._infer_win_condition(themes, result_board)
+        combined = "\n".join(
+            x for x in [primary_goal, action_intent, move_guide, followup_plan, win_condition] if x
+        ).strip()
+
         return {
+            "title": "퍼즐 목표",
+            "primary_goal": primary_goal,
+            "action_intent": action_intent,
+            "move_guide": move_guide,
+            "followup_plan": followup_plan,
+            "win_condition": win_condition,
             "from_square": from_square,
             "to_square": to_square,
             "piece": piece_name,
-            "message": f"첫 수는 {from_square}의 {piece_name}을 움직여 정답 수순을 시작하세요.",
+            "message": combined or "최선 수를 찾아 퍼즐을 완료하세요.",
         }
+
+    @staticmethod
+    def _infer_primary_goal(themes: list, board: chess.Board) -> str:
+        for theme in themes:
+            if not isinstance(theme, str):
+                continue
+            low = theme.lower()
+            if low.startswith("matein"):
+                turns = low.replace("matein", "")
+                if turns.isdigit():
+                    return f"목표: {turns}수 내 체크메이트를 완성하세요."
+                return "목표: 체크메이트 수순을 완성하세요."
+        if board.is_checkmate():
+            return "목표: 강제 체크메이트 수순을 완성하세요."
+        if board.is_check():
+            return "목표: 체크를 유지하며 결정적인 우위를 확보하세요."
+        return "목표: 최선 수순으로 기물 우위 또는 킹 안전 우위를 확보하세요."
+
+    @staticmethod
+    def _infer_win_condition(themes: list, board: chess.Board) -> str:
+        keyword_map = {
+            "fork": "전술 포크(양면 공격)를 활용하세요.",
+            "pin": "핀 전술로 상대 기물의 움직임을 묶으세요.",
+            "skewer": "스큐어 전술로 고가치 기물을 노리세요.",
+            "discoveredattack": "발견 공격 전술이 핵심입니다.",
+            "sacrifice": "기물 희생으로 강제 수순을 여는 퍼즐입니다.",
+            "endgame": "엔드게임 원칙(왕 활성화/폰 진격)을 활용하세요.",
+        }
+        for theme in themes:
+            if not isinstance(theme, str):
+                continue
+            low = theme.lower()
+            if low in keyword_map:
+                return f"해설 힌트: {keyword_map[low]}"
+        if board.is_checkmate():
+            return "성공 조건: 마지막 수에서 상대 킹의 합법 수를 모두 차단해야 합니다."
+        return "성공 조건: 정답 수순을 끝까지 정확히 재현하면 클리어됩니다."
+
+    @staticmethod
+    def _infer_action_intent(board: chess.Board, move: chess.Move) -> str:
+        """첫 수의 전술적 의미를 사람이 이해하기 쉬운 문장으로 변환한다."""
+        if move not in board.legal_moves:
+            return ""
+
+        moving_piece = board.piece_at(move.from_square)
+        piece_name = PuzzleService.PIECE_KR.get(
+            moving_piece.piece_type if moving_piece else None, "기물"
+        )
+        to_square = chess.square_name(move.to_square).upper()
+        is_capture = board.is_capture(move)
+        board.push(move)
+        gives_check = board.is_check()
+        board.pop()
+
+        if gives_check and is_capture:
+            return f"핵심 의도: {piece_name}으로 {to_square}에서 기물을 잡으며 동시에 체크를 걸어 강제 수를 만듭니다."
+        if gives_check:
+            return f"핵심 의도: {piece_name}을 {to_square}로 이동해 체크를 걸고 상대 응수를 강제합니다."
+        if is_capture:
+            return f"핵심 의도: {piece_name}으로 {to_square}의 기물을 획득해 전력 우위를 만듭니다."
+        if move.promotion:
+            return "핵심 의도: 폰 승격으로 즉시 전력을 강화하고 수순 우위를 만듭니다."
+        return f"핵심 의도: {piece_name} 전개로 다음 강제 수(체크/포크/핀)의 발판을 만듭니다."
+
+    @staticmethod
+    def _infer_followup_plan(puzzle: Puzzle) -> str:
+        """
+        퍼즐의 앞부분 수순을 간단 계획으로 보여준다.
+        - 플레이어 첫 수(필수)
+        - 상대 예상 응수(있으면)
+        - 플레이어 마무리 수(있으면)
+        """
+        if len(puzzle.moves) < 2:
+            return ""
+        try:
+            board = PuzzleService._build_board_to_index(puzzle=puzzle, index=1)
+        except ValidationError:
+            return ""
+
+        parts = []
+        try:
+            first = chess.Move.from_uci(puzzle.moves[1])
+            if first in board.legal_moves:
+                parts.append(f"1) 내 첫 수: {board.san(first)}")
+                board.push(first)
+        except ValueError:
+            return ""
+
+        if len(puzzle.moves) >= 3:
+            try:
+                opp = chess.Move.from_uci(puzzle.moves[2])
+                if opp in board.legal_moves:
+                    parts.append(f"2) 상대 응수 예상: {board.san(opp)}")
+                    board.push(opp)
+            except ValueError:
+                pass
+
+        if len(puzzle.moves) >= 4:
+            try:
+                finish = chess.Move.from_uci(puzzle.moves[3])
+                if finish in board.legal_moves:
+                    parts.append(f"3) 내 마무리 수: {board.san(finish)}")
+            except ValueError:
+                pass
+
+        if not parts:
+            return ""
+        return "진행 방법: " + " → ".join(parts)
