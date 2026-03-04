@@ -36,6 +36,24 @@
         </div>
     </div>
 
+    <div class="puzzle-start-card" id="puzzle-start-card">
+        <div class="puzzle-start-title">시작 안내</div>
+        <div class="puzzle-start-summary" id="puzzle-start-summary">
+            목표를 확인한 뒤 시작 버튼을 눌러 도전하세요.
+        </div>
+        <button class="btn btn-primary" id="puzzle-start-btn" type="button">시작</button>
+    </div>
+
+    <div class="puzzle-progress" id="puzzle-progress">
+        <div class="puzzle-progress-top">
+            <span>수순 진행도</span>
+            <span id="puzzle-progress-label">0/0</span>
+        </div>
+        <div class="puzzle-progress-track">
+            <div class="puzzle-progress-fill" id="puzzle-progress-fill"></div>
+        </div>
+    </div>
+
     <div class="puzzle-goal" id="puzzle-goal">
         <div class="puzzle-goal-title">오늘의 목표</div>
         <div class="puzzle-goal-text" id="puzzle-goal-text">퍼즐 목표를 불러오는 중...</div>
@@ -55,6 +73,11 @@
         <button class="btn btn-secondary" id="puzzle-hint-btn" type="button">힌트</button>
         <button class="btn btn-secondary" id="puzzle-solution-btn" type="button">정답 보기</button>
         <button class="btn btn-primary" id="puzzle-exit-btn" type="button">나가기</button>
+    </div>
+
+    <div class="puzzle-result-actions" id="puzzle-result-actions">
+        <button class="btn btn-secondary" id="puzzle-retry-btn" type="button">같은 난이도 다시</button>
+        <button class="btn btn-primary" id="puzzle-switch-level-btn" type="button">다른 난이도 도전</button>
     </div>
 </div>
 {% endblock %}
@@ -145,6 +168,24 @@
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
 }
+.puzzle-board.is-loading .puzzle-square {
+    color: transparent;
+    cursor: default;
+}
+.puzzle-square.skeleton.light {
+    background: linear-gradient(120deg, #ece6db 30%, #f5f1e8 40%, #ece6db 55%);
+    background-size: 220% 100%;
+    animation: puzzleShimmer 1.2s infinite linear;
+}
+.puzzle-square.skeleton.dark {
+    background: linear-gradient(120deg, #baa486 30%, #cfbc9f 40%, #baa486 55%);
+    background-size: 220% 100%;
+    animation: puzzleShimmer 1.2s infinite linear;
+}
+@keyframes puzzleShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -20% 0; }
+}
 
 .puzzle-square {
     display: flex;
@@ -181,6 +222,63 @@
     justify-content: center;
     gap: var(--space-sm);
     flex-wrap: wrap;
+}
+.puzzle-start-card,
+.puzzle-progress,
+.puzzle-result-actions {
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-md);
+    padding: 12px;
+}
+.puzzle-start-card {
+    display: none;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+.puzzle-start-card.is-visible {
+    display: flex;
+}
+.puzzle-start-title {
+    font-family: var(--font-display);
+    font-size: 0.86rem;
+}
+.puzzle-start-summary {
+    color: var(--color-text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.45;
+    white-space: pre-line;
+}
+.puzzle-progress-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.78rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 6px;
+}
+.puzzle-progress-track {
+    width: 100%;
+    height: 8px;
+    background: var(--color-bg-surface);
+    border-radius: 999px;
+    overflow: hidden;
+}
+.puzzle-progress-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #3fc1c9, #27ae60);
+    transition: width 220ms ease;
+}
+.puzzle-result-actions {
+    display: none;
+    gap: var(--space-sm);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.puzzle-result-actions.is-visible {
+    display: flex;
 }
 
 .puzzle-goal,
@@ -245,6 +343,18 @@
     .board-labels-files { bottom: -20px; }
     .board-labels-ranks { left: -16px; }
     .puzzle-status { margin-top: 10px; }
+    .puzzle-square {
+        font-size: clamp(1.3rem, 7vw, 1.9rem);
+        touch-action: manipulation;
+    }
+    .puzzle-actions {
+        gap: 8px;
+    }
+    .puzzle-actions .btn,
+    .puzzle-result-actions .btn {
+        min-height: 44px;
+        padding: 10px 14px;
+    }
 }
 </style>
 {% endblock %}
