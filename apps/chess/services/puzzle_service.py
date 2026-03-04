@@ -313,7 +313,7 @@ class PuzzleService:
             raise ValidationError({"move": PuzzleService.MSG_INVALID_MOVE_FORMAT}) from None
 
         if move_obj not in board.legal_moves:
-            raise ValidationError({"move": PuzzleService.MSG_ILLEGAL_MOVE})
+            raise ValidationError({"move": PuzzleService._describe_illegal_move(board, move_obj)})
 
         if move_uci != expected:
             return {
@@ -339,6 +339,23 @@ class PuzzleService:
         else:
             payload["message"] = "축하합니다! 오늘의 퍼즐을 해결했습니다."
         return payload
+
+    @staticmethod
+    def _describe_illegal_move(board: chess.Board, move: chess.Move) -> str:
+        from_piece = board.piece_at(move.from_square)
+        if from_piece is None:
+            return "출발 칸에 내 기물이 없습니다. 다른 칸의 기물을 선택해주세요."
+
+        if from_piece.color != board.turn:
+            return "지금은 내 차례 기물만 움직일 수 있습니다."
+
+        piece_name = PuzzleService.PIECE_KR.get(from_piece.piece_type, "기물")
+        from_sq = chess.square_name(move.from_square).upper()
+        to_sq = chess.square_name(move.to_square).upper()
+        return (
+            f"{piece_name}({from_sq}→{to_sq})는 현재 규칙상 불가능한 이동입니다. "
+            "이동 경로와 킹 안전(체크 상태)을 확인해주세요."
+        )
 
     @staticmethod
     def _build_board_to_index(*, puzzle: Puzzle, index: int) -> chess.Board:
@@ -450,13 +467,13 @@ class PuzzleService:
             UserPuzzleAttempt.objects.filter(id=attempt.id).update(hints_used=F("hints_used") + 1)
             attempt.refresh_from_db(fields=["hints_used"])
             used_after = int(attempt.hints_used or 0)
-            return {
-                "hint_type": "piece",
-                "square": from_square,
-                "hints_used": used_after,
-                "remaining_hints": max(0, PuzzleService.HINT_LIMIT - used_after),
-                "message": f"힌트 {used_after}/{PuzzleService.HINT_LIMIT} 사용",
-            }
+            return PuzzleService._build_hint_payload(
+                puzzle=puzzle,
+                expected=expected,
+                next_idx=next_idx,
+                used_after=used_after,
+                from_square=from_square,
+            )
 
     @staticmethod
     def _request_hint_for_guest(*, user, daily: DailyPuzzle, puzzle: Puzzle) -> dict:
@@ -485,13 +502,61 @@ class PuzzleService:
 
         from_square = expected[:2]
         used_after = PuzzleService._increment_guest_hint(user=user, daily=daily, state=state)
-        return {
-            "hint_type": "piece",
-            "square": from_square,
+        return PuzzleService._build_hint_payload(
+            puzzle=puzzle,
+            expected=expected,
+            next_idx=next_idx,
+            used_after=used_after,
+            from_square=from_square,
+        )
+
+    @staticmethod
+    def _build_hint_payload(
+        *, puzzle: Puzzle, expected: str, next_idx: int, used_after: int, from_square: str
+    ) -> dict:
+        to_square = expected[2:4] if len(expected) >= 4 else ""
+        remaining = max(0, PuzzleService.HINT_LIMIT - used_after)
+        base = {
             "hints_used": used_after,
-            "remaining_hints": max(0, PuzzleService.HINT_LIMIT - used_after),
-            "message": f"힌트 {used_after}/{PuzzleService.HINT_LIMIT} 사용",
+            "remaining_hints": remaining,
+            "square": from_square,
+            "target_square": to_square,
         }
+        if used_after == 1:
+            return {
+                **base,
+                "hint_type": "piece",
+                "message": f"1단계 힌트: {from_square.upper()} 칸의 말을 먼저 확인하세요.",
+            }
+        if used_after == 2:
+            return {
+                **base,
+                "hint_type": "target",
+                "message": (
+                    f"2단계 힌트: {from_square.upper()}의 말을 "
+                    f"{to_square.upper()}로 두는 수를 우선 검토해보세요."
+                ),
+            }
+
+        detail = PuzzleService._build_hint_detail(puzzle=puzzle, next_idx=next_idx)
+        return {
+            **base,
+            "hint_type": "intent",
+            "detail": detail,
+            "message": f"3단계 힌트: {detail}",
+        }
+
+    @staticmethod
+    def _build_hint_detail(*, puzzle: Puzzle, next_idx: int) -> str:
+        try:
+            board = PuzzleService._build_board_to_index(puzzle=puzzle, index=next_idx)
+            move = chess.Move.from_uci(puzzle.moves[next_idx])
+            return (
+                PuzzleService._infer_action_intent(board, move)
+                or "강제 수순을 만드는 핵심 수입니다."
+            )
+        except (ValidationError, ValueError, IndexError):
+            return "강제 수순을 만드는 핵심 수입니다."
 
     @staticmethod
     def serialize_daily_payload(
@@ -500,6 +565,7 @@ class PuzzleService:
         puzzle = daily.puzzle
         progress = PuzzleService._get_progress_state(user=user, daily=daily, puzzle=puzzle)
         hints_used = int(progress.get("hints_used", 0))
+        user_steps_total = max(1, (max(0, len(puzzle.moves) - 1) + 1) // 2)
 
         attempt_payload = {
             "solved": bool(progress.get("solved", False)),
@@ -518,6 +584,7 @@ class PuzzleService:
                 "rating": puzzle.rating,
                 "themes": puzzle.themes,
                 "objective": PuzzleService._build_objective(puzzle),
+                "user_steps_total": user_steps_total,
             },
             "attempt": attempt_payload,
             "hint_limit": PuzzleService.HINT_LIMIT,

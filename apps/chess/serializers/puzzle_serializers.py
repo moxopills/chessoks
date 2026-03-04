@@ -40,6 +40,8 @@ class PuzzleMoveResponseSerializer(serializers.Serializer):
 class PuzzleHintResponseSerializer(serializers.Serializer):
     hint_type = serializers.CharField()
     square = serializers.CharField(required=False)
+    target_square = serializers.CharField(required=False)
+    detail = serializers.CharField(required=False)
     hints_used = serializers.IntegerField(required=False)
     remaining_hints = serializers.IntegerField(required=False)
     message = serializers.CharField(required=False)
