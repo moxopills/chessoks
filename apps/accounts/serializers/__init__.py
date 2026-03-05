@@ -13,6 +13,11 @@ from .message_serializers import (
     GuestbookEntrySerializer,
 )
 from .online_serializers import OnlineStatusListSerializer, OnlineStatusSerializer
+from .season_serializers import (
+    SeasonLeaderboardEntrySerializer,
+    SeasonRewardSerializer,
+    SeasonSerializer,
+)
 from .social_serializer import SocialAccountUnlinkSerializer, SocialUserSerializer
 from .user_serializer import (
     AccountDeleteSerializer,
@@ -57,6 +62,9 @@ __all__ = [
     "SignupEmailRequestSerializer",
     "DashboardSerializer",
     "SocialUserSerializer",
+    "SeasonSerializer",
+    "SeasonLeaderboardEntrySerializer",
+    "SeasonRewardSerializer",
     "SocialAccountUnlinkSerializer",
     "AccountDeleteSerializer",
     "PasswordChangeSerializer",

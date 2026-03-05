@@ -16,6 +16,8 @@ class Notification(models.Model):
         ("game_result", "게임 결과"),
         ("rating_change", "레이팅 변동"),
         ("tier_promotion", "티어 승격"),
+        ("season_end", "시즌 종료"),
+        ("season_reward", "시즌 보상"),
         ("direct_message", "1:1 메시지"),
         ("admin_notice", "공지"),
     ]

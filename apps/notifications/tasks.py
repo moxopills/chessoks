@@ -10,3 +10,12 @@ def send_web_push_for_notification(notification_id: int) -> None:
     if not notification:
         return
     WebPushService.send(notification)
+
+
+@shared_task
+def send_web_push_for_notifications(notification_ids: list[int]) -> None:
+    if not notification_ids:
+        return
+    notifications = Notification.objects.filter(id__in=notification_ids)
+    for notification in notifications:
+        WebPushService.send(notification)

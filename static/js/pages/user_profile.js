@@ -9,6 +9,7 @@
     const statWins = document.getElementById('stat-wins');
     const statLosses = document.getElementById('stat-losses');
     const statDraws = document.getElementById('stat-draws');
+    const seasonSummaryContent = document.getElementById('profile-season-summary-content');
     const vsBox = document.getElementById('profile-vs');
     const vsWins = document.getElementById('vs-wins');
     const vsLosses = document.getElementById('vs-losses');
@@ -27,6 +28,7 @@
     init();
 
     async function init() {
+        setProfileLoading(true);
         await loadCurrentUser();
         await loadProfile();
         bindActions();
@@ -48,6 +50,7 @@
             const user = data.user;
             renderUser(user);
             renderStats(user.stats);
+            renderPreviousSeason(data.previous_season);
             renderRecent(data.recent_games || []);
             await loadGuestbook();
             updateFriendButtonState(data.friend_status);
@@ -60,7 +63,21 @@
                 vsBox.classList.add('hidden');
             }
         } catch (error) {
+            recentList.innerHTML = '<button class="btn btn-secondary btn-sm" id="profile-retry-btn">프로필 다시 불러오기</button>';
+            document.getElementById('profile-retry-btn')?.addEventListener('click', loadProfile, { once: true });
             Toast.error('프로필을 불러올 수 없습니다.');
+        } finally {
+            setProfileLoading(false);
+        }
+    }
+
+    function setProfileLoading(isLoading) {
+        [friendBtn, directMessageBtn, reportBtn, guestbookSubmit].forEach((el) => {
+            if (el) el.disabled = isLoading;
+        });
+        if (isLoading) {
+            recentList.innerHTML = '<div class="text-muted">최근 전적 불러오는 중...</div>';
+            guestbookList.innerHTML = '<div class="text-muted">방명록 불러오는 중...</div>';
         }
     }
 
@@ -86,6 +103,21 @@
         statWins.textContent = stats?.games_won ?? 0;
         statLosses.textContent = stats?.games_lost ?? 0;
         statDraws.textContent = stats?.games_draw ?? 0;
+    }
+
+    function renderPreviousSeason(season) {
+        if (!seasonSummaryContent) return;
+        if (!season) {
+            seasonSummaryContent.textContent = '지난 시즌 기록이 없습니다.';
+            return;
+        }
+        const rankText = season.final_rank ? `#${season.final_rank}` : '-';
+        seasonSummaryContent.innerHTML = `
+            <div class="season-summary-item"><span>시즌명</span><strong>${Utils.escapeHtml(season.season_name)}</strong></div>
+            <div class="season-summary-item"><span>최종 순위</span><strong>${rankText}</strong></div>
+            <div class="season-summary-item"><span>전적</span><strong>${season.wins}승 ${season.losses}패 ${season.draws}무</strong></div>
+            <div class="season-summary-item"><span>승률/판수</span><strong>${season.win_rate}% · ${season.games_played}판</strong></div>
+        `;
     }
 
     function renderRecent(games) {

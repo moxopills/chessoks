@@ -25,7 +25,9 @@
         <section class="card leaderboard-card">
             <div class="card-header card-header--stack card-header--no-divider">
                 <h2 class="card-title card-title--center">랭킹 목록</h2>
-                <button class="btn btn-secondary btn-sm btn-icon" id="leaderboard-refresh" aria-label="새로고침" title="새로고침">⟳</button>
+                <button class="btn btn-secondary btn-sm btn-icon" id="leaderboard-refresh" aria-label="새로고침" title="새로고침">
+                    <span class="btn-icon-glyph">⟳</span>
+                </button>
             </div>
             <div class="table-wrap">
                 <table class="leaderboard-table">
@@ -101,6 +103,13 @@
                 <div class="stat-item">
                     <span>무</span>
                     <strong id="stat-draws">-</strong>
+                </div>
+            </div>
+
+            <div class="profile-season-summary" id="profile-season-summary">
+                <h3>지난 시즌</h3>
+                <div class="season-summary-content text-muted" id="profile-season-summary-content">
+                    지난 시즌 기록이 없습니다.
                 </div>
             </div>
 

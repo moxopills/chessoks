@@ -163,12 +163,26 @@ class OpponentSummarySerializer(serializers.Serializer):
     draws = serializers.IntegerField()
 
 
+class PreviousSeasonSummarySerializer(serializers.Serializer):
+    season_id = serializers.IntegerField()
+    season_name = serializers.CharField()
+    final_rank = serializers.IntegerField(allow_null=True)
+    games_played = serializers.IntegerField()
+    wins = serializers.IntegerField()
+    losses = serializers.IntegerField()
+    draws = serializers.IntegerField()
+    win_rate = serializers.FloatField()
+    rating = serializers.IntegerField()
+    peak_rating = serializers.IntegerField()
+
+
 class OpponentProfileSerializer(serializers.Serializer):
     """상대 프로필 + 최근 전적"""
 
     user = PublicUserSerializer()
     recent_games = GameHistorySerializer(many=True)
     vs_summary = OpponentSummarySerializer(allow_null=True)
+    previous_season = PreviousSeasonSummarySerializer(allow_null=True)
     friend_status = serializers.DictField(required=False)
 
 

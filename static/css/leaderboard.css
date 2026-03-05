@@ -138,6 +138,16 @@
     font-size: clamp(0.9rem, 1.4vw, 1rem);
 }
 
+.btn-icon.is-loading {
+    opacity: 0.75;
+    cursor: wait;
+}
+
+.btn-icon.is-loading .btn-icon-glyph {
+    display: inline-block;
+    animation: spin 0.9s linear infinite;
+}
+
 .table-wrap {
     width: 100%;
     overflow-x: auto;
@@ -229,11 +239,32 @@
     color: var(--color-text-muted);
 }
 
+.table-empty-actions {
+    margin-top: var(--space-sm);
+    display: flex;
+    justify-content: center;
+}
+
+.drawer-loading .profile-meta .profile-name,
+.drawer-loading .profile-meta .profile-rating,
+.drawer-loading .profile-meta .profile-tier {
+    color: var(--color-text-muted);
+}
+
 .pagination {
     display: flex;
     justify-content: center;
     gap: var(--space-sm);
     margin-top: var(--space-lg);
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .pagination-info {
@@ -333,6 +364,35 @@
 .profile-vs {
     margin-top: var(--space-lg);
     font-family: var(--font-body);
+}
+
+.profile-season-summary {
+    margin-top: var(--space-lg);
+    font-family: var(--font-body);
+}
+
+.profile-season-summary h3 {
+    font-size: 0.75rem;
+    margin-bottom: var(--space-sm);
+    color: var(--color-text-secondary);
+}
+
+.season-summary-content {
+    display: grid;
+    gap: 6px;
+    font-size: 0.75rem;
+}
+
+.season-summary-item {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    border-bottom: 1px dashed var(--color-border);
+    padding-bottom: 4px;
+}
+
+.season-summary-item:last-child {
+    border-bottom: 0;
 }
 
 .profile-vs h3,
@@ -503,6 +563,10 @@
         position: relative;
         width: 100%;
         transform: none;
+    }
+
+    body.profile-drawer-open {
+        overflow: hidden;
     }
 
     .user-menu-btn {

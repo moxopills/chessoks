@@ -3,6 +3,7 @@ from .direct_message import DirectMessage, DirectMessageThread
 from .friend import Friend, FriendRequest
 from .guest import GuestSession
 from .guestbook import GuestbookEntry
+from .season import Season, SeasonReward, SeasonStat, UserSeasonReward
 from .signup_email_token import SignupEmailToken
 from .social_user import SocialUser
 from .user import User
@@ -12,6 +13,10 @@ __all__ = [
     "User",
     "UserStats",
     "SocialUser",
+    "Season",
+    "SeasonStat",
+    "SeasonReward",
+    "UserSeasonReward",
     "AuthToken",
     "SignupEmailToken",
     "Friend",
