@@ -93,6 +93,16 @@
     font-size: clamp(0.9rem, 1.4vw, 1rem);
 }
 
+.btn-icon.is-loading {
+    opacity: 0.75;
+    cursor: wait;
+}
+
+.btn-icon.is-loading .btn-icon-glyph {
+    display: inline-block;
+    animation: spin 0.9s linear infinite;
+}
+
 .tab-btn {
     border: 1px solid var(--color-border);
     background: var(--color-bg-secondary);
@@ -171,6 +181,18 @@
 .table-empty {
     text-align: center;
     padding: var(--space-lg);
+    color: var(--color-text-muted);
+}
+
+.table-empty-actions {
+    margin-top: var(--space-sm);
+    display: flex;
+    justify-content: center;
+}
+
+.drawer-loading .profile-meta .profile-name,
+.drawer-loading .profile-meta .profile-rating,
+.drawer-loading .profile-meta .profile-tier {
     color: var(--color-text-muted);
 }
 
@@ -338,6 +360,15 @@
     text-overflow: ellipsis;
 }
 
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 @media (max-width: 1024px) {
     .friends-grid {
         grid-template-columns: 1fr;
@@ -396,6 +427,10 @@
         position: relative;
         width: 100%;
         transform: none;
+    }
+
+    body.profile-drawer-open {
+        overflow: hidden;
     }
 }
 

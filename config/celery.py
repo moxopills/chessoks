@@ -53,6 +53,10 @@ app.conf.beat_schedule = {
         "task": "apps.accounts.tasks.cleanup_expired_guest_sessions",
         "schedule": 3600.0,  # 1시간마다
     },
+    "check-season-transition": {
+        "task": "apps.accounts.tasks.check_season_transition",
+        "schedule": crontab(hour=0, minute=0),  # 매일 자정 점검
+    },
     # === 퍼즐 관련 ===
     "select-daily-puzzle": {
         "task": "apps.chess.tasks.select_daily_puzzle",

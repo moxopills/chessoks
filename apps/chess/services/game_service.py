@@ -532,6 +532,16 @@ class GameService:
         GameService._apply_style_points(white_stats, black_stats, game.result)
         white_stats.save()
         black_stats.save()
+        try:
+            from apps.accounts.services import SeasonService
+
+            SeasonService.update_after_competitive_game(
+                white_user_id=game.white_player_id,
+                black_user_id=game.black_player_id,
+                game_result=game.result,
+            )
+        except Exception as exc:
+            GameService.logger.exception("Season update failed for game %s: %s", game.id, exc)
         RankingService.invalidate_leaderboard_cache()
         return {
             "white": {

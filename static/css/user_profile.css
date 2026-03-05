@@ -28,6 +28,7 @@
 
 .profile-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: var(--space-sm);
 }
 
@@ -52,6 +53,35 @@
 .profile-vs {
     margin-top: var(--space-lg);
     font-family: var(--font-body);
+}
+
+.profile-season-summary {
+    margin-top: var(--space-lg);
+    font-family: var(--font-body);
+}
+
+.profile-season-summary h3 {
+    font-size: clamp(0.7rem, 1.1vw, 0.85rem);
+    margin-bottom: var(--space-sm);
+    color: var(--color-text-secondary);
+}
+
+.season-summary-content {
+    display: grid;
+    gap: 6px;
+    font-size: clamp(0.7rem, 1.1vw, 0.85rem);
+}
+
+.season-summary-item {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    border-bottom: 1px dashed var(--color-border);
+    padding-bottom: 4px;
+}
+
+.season-summary-item:last-child {
+    border-bottom: 0;
 }
 
 .profile-vs h3,
@@ -155,6 +185,8 @@
 
     .profile-actions {
         width: 100%;
+        display: grid;
+        grid-template-columns: 1fr;
     }
 
     .profile-stats {

@@ -19,6 +19,7 @@
     const statWins = document.getElementById('stat-wins');
     const statLosses = document.getElementById('stat-losses');
     const statDraws = document.getElementById('stat-draws');
+    const seasonSummaryContent = document.getElementById('profile-season-summary-content');
     const vsBox = document.getElementById('profile-vs');
     const vsWins = document.getElementById('vs-wins');
     const vsLosses = document.getElementById('vs-losses');
@@ -36,6 +37,7 @@
     let currentUserId = null;
     let selectedUserId = null;
     let friendIds = new Set();
+    let isLoadingLeaderboard = false;
 
     init();
 
@@ -88,6 +90,13 @@
                 }
             });
         }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && drawer && !drawer.classList.contains('hidden')) {
+                drawer.classList.add('hidden');
+                syncDrawerState();
+            }
+        });
     }
 
     async function loadCurrentUser() {
@@ -116,7 +125,10 @@
     }
 
     async function loadLeaderboard(page = currentPage) {
+        if (isLoadingLeaderboard) return;
+        isLoadingLeaderboard = true;
         currentPage = page;
+        setRefreshLoading(true);
         try {
             renderLeaderboardSkeleton();
             const data = await API.get('/accounts/leaderboard/', { page, page_size: 9 });
@@ -124,10 +136,33 @@
             renderRows(data.results || [], data.my_rank);
             renderPagination();
             renderMyRank(data.my_rank);
-        } catch (error) {
-            leaderboardBody.innerHTML = '<tr><td colspan="5" class="table-empty"><span class="empty-state"><span class="empty-state-icon">⚠️</span><span class="empty-state-text">불러오기 실패</span></span></td></tr>';
+        } catch {
+            leaderboardBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="table-empty">
+                        <span class="empty-state">
+                            <span class="empty-state-icon">⚠️</span>
+                            <span class="empty-state-text">불러오기 실패</span>
+                        </span>
+                        <div class="table-empty-actions">
+                            <button class="btn btn-secondary btn-sm" id="leaderboard-retry-btn">다시 시도</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            document.getElementById('leaderboard-retry-btn')?.addEventListener('click', () => loadLeaderboard(currentPage));
             if (myRankBody) myRankBody.textContent = '로그인 시 가능합니다.';
+        } finally {
+            isLoadingLeaderboard = false;
+            setRefreshLoading(false);
         }
+    }
+
+    function setRefreshLoading(isLoading) {
+        if (!refreshBtn) return;
+        refreshBtn.disabled = isLoading;
+        refreshBtn.classList.toggle('is-loading', isLoading);
+        refreshBtn.setAttribute('aria-busy', String(isLoading));
     }
 
     function renderLeaderboardSkeleton() {
@@ -248,6 +283,7 @@
         selectedUserId = userId;
         drawer.classList.remove('hidden');
         syncDrawerState();
+        renderDrawerLoading();
         updateFriendButtonState(userId);
 
         try {
@@ -255,6 +291,7 @@
             const user = data.user;
             renderDrawerUser(user);
             renderDrawerStats(user.stats);
+            renderPreviousSeason(data.previous_season);
             renderRecentGames(data.recent_games || []);
             await Guestbook.load(userId);
             updateFriendButtonState(userId, data.friend_status);
@@ -266,7 +303,7 @@
             } else {
                 vsBox.classList.add('hidden');
             }
-        } catch (error) {
+        } catch {
             Toast.error('프로필 정보를 불러올 수 없습니다.');
         }
     }
@@ -275,6 +312,22 @@
         if (!leaderboardGrid) return;
         const isHidden = drawer.classList.contains('hidden');
         leaderboardGrid.classList.toggle('drawer-collapsed', isHidden);
+        document.body.classList.toggle('profile-drawer-open', isTouchDevice && !isHidden);
+    }
+
+    function renderDrawerLoading() {
+        if (!nameEl) return;
+        drawer.classList.add('drawer-loading');
+        nameEl.textContent = '불러오는 중...';
+        ratingEl.textContent = '-';
+        tierEl.textContent = '-';
+        statGames.textContent = '-';
+        statWins.textContent = '-';
+        statLosses.textContent = '-';
+        statDraws.textContent = '-';
+        seasonSummaryContent.textContent = '지난 시즌 기록을 불러오는 중...';
+        recentList.innerHTML = '<div class="text-muted">최근 전적 불러오는 중...</div>';
+        guestbookList.innerHTML = '<div class="text-muted">방명록 불러오는 중...</div>';
     }
 
     function openContextMenu(event, userId) {
@@ -337,6 +390,7 @@
     }
 
     function renderDrawerUser(user) {
+        drawer.classList.remove('drawer-loading');
         nameEl.textContent = user.nickname;
         ratingEl.textContent = `레이팅 ${user.stats?.rating ?? '-'}`;
         tierEl.textContent = user.stats?.rank_tier ?? '-';
@@ -352,6 +406,21 @@
         statWins.textContent = stats?.games_won ?? 0;
         statLosses.textContent = stats?.games_lost ?? 0;
         statDraws.textContent = stats?.games_draw ?? 0;
+    }
+
+    function renderPreviousSeason(season) {
+        if (!seasonSummaryContent) return;
+        if (!season) {
+            seasonSummaryContent.textContent = '지난 시즌 기록이 없습니다.';
+            return;
+        }
+        const rankText = season.final_rank ? `#${season.final_rank}` : '-';
+        seasonSummaryContent.innerHTML = `
+            <div class="season-summary-item"><span>시즌명</span><strong>${Utils.escapeHtml(season.season_name)}</strong></div>
+            <div class="season-summary-item"><span>최종 순위</span><strong>${rankText}</strong></div>
+            <div class="season-summary-item"><span>전적</span><strong>${season.wins}승 ${season.losses}패 ${season.draws}무</strong></div>
+            <div class="season-summary-item"><span>승률/판수</span><strong>${season.win_rate}% · ${season.games_played}판</strong></div>
+        `;
     }
 
     function renderRecentGames(games) {

@@ -43,6 +43,7 @@
     let friendIds = new Set();
     let outgoingRequestUserIds = new Set();
     let selectedUserId = null;
+    let isRefreshing = false;
 
     init();
 
@@ -85,6 +86,13 @@
                 }
             });
         }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && drawer && !drawer.classList.contains('hidden')) {
+                drawer.classList.add('hidden');
+                syncDrawerState();
+            }
+        });
 
         reportToggle?.addEventListener('click', () => {
             if (!selectedUserId) return;
@@ -173,16 +181,31 @@
     }
 
     async function refreshAll() {
-        if (!currentUserId) {
-            friendListEl.innerHTML = '<div class="table-empty">로그인 후 사용할 수 있습니다.</div>';
-            incomingListEl.innerHTML = '<div class="table-empty">로그인 후 사용할 수 있습니다.</div>';
-            outgoingListEl.innerHTML = '<div class="table-empty">로그인 후 사용할 수 있습니다.</div>';
-            return;
+        if (isRefreshing) return;
+        isRefreshing = true;
+        setRefreshLoading(true);
+        try {
+            if (!currentUserId) {
+                friendListEl.innerHTML = '<div class="table-empty">로그인 후 사용할 수 있습니다.</div>';
+                incomingListEl.innerHTML = '<div class="table-empty">로그인 후 사용할 수 있습니다.</div>';
+                outgoingListEl.innerHTML = '<div class="table-empty">로그인 후 사용할 수 있습니다.</div>';
+                return;
+            }
+            renderFriendsSkeleton();
+            renderRequestsSkeleton(incomingListEl);
+            renderRequestsSkeleton(outgoingListEl);
+            await Promise.all([loadFriends(), loadRequests('incoming'), loadRequests('outgoing')]);
+        } finally {
+            isRefreshing = false;
+            setRefreshLoading(false);
         }
-        renderFriendsSkeleton();
-        renderRequestsSkeleton(incomingListEl);
-        renderRequestsSkeleton(outgoingListEl);
-        await Promise.all([loadFriends(), loadRequests('incoming'), loadRequests('outgoing')]);
+    }
+
+    function setRefreshLoading(isLoading) {
+        if (!refreshBtn) return;
+        refreshBtn.disabled = isLoading;
+        refreshBtn.classList.toggle('is-loading', isLoading);
+        refreshBtn.setAttribute('aria-busy', String(isLoading));
     }
 
     function renderFriendsSkeleton() {
@@ -226,7 +249,15 @@
             await applyOnlineStatus(friends.map((item) => item.friend.id));
             renderFriends(friends);
         } catch {
-            friendListEl.innerHTML = '<div class="table-empty">불러오기 실패</div>';
+            friendListEl.innerHTML = `
+                <div class="table-empty">
+                    불러오기 실패
+                    <div class="table-empty-actions">
+                        <button class="btn btn-secondary btn-sm" id="friends-retry-btn">다시 시도</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('friends-retry-btn')?.addEventListener('click', refreshAll);
         }
     }
 
@@ -320,7 +351,15 @@
             }
             renderRequests(targetEl, data.results || [], direction);
         } catch {
-            targetEl.innerHTML = '<div class="table-empty">불러오기 실패</div>';
+            targetEl.innerHTML = `
+                <div class="table-empty">
+                    불러오기 실패
+                    <div class="table-empty-actions">
+                        <button class="btn btn-secondary btn-sm request-retry-btn">다시 시도</button>
+                    </div>
+                </div>
+            `;
+            targetEl.querySelector('.request-retry-btn')?.addEventListener('click', () => loadRequests(direction));
         }
     }
 
@@ -558,6 +597,7 @@
         selectedUserId = userId;
         drawer.classList.remove('hidden');
         syncDrawerState();
+        renderDrawerLoading();
         updateFriendButtonState(userId);
 
         try {
@@ -584,6 +624,21 @@
         if (!friendsGrid) return;
         const isHidden = drawer.classList.contains('hidden');
         friendsGrid.classList.toggle('drawer-collapsed', isHidden);
+        document.body.classList.toggle('profile-drawer-open', isTouchDevice && !isHidden);
+    }
+
+    function renderDrawerLoading() {
+        if (!nameEl) return;
+        drawer.classList.add('drawer-loading');
+        nameEl.textContent = '불러오는 중...';
+        ratingEl.textContent = '-';
+        tierEl.textContent = '-';
+        statGames.textContent = '-';
+        statWins.textContent = '-';
+        statLosses.textContent = '-';
+        statDraws.textContent = '-';
+        recentList.innerHTML = '<div class="text-muted">최근 전적 불러오는 중...</div>';
+        guestbookList.innerHTML = '<div class="text-muted">방명록 불러오는 중...</div>';
     }
 
     function openContextMenu(event, userId, { isFriend = false, isPending = false } = {}) {
@@ -640,6 +695,7 @@
     }
 
     function renderDrawerUser(user) {
+        drawer.classList.remove('drawer-loading');
         nameEl.textContent = user.nickname;
         ratingEl.textContent = `레이팅 ${user.stats?.rating ?? '-'}`;
         tierEl.textContent = user.stats?.rank_tier ?? '-';
