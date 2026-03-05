@@ -64,6 +64,29 @@ class NotificationService:
         return notification
 
     @staticmethod
+    def bulk_create_notifications(
+        rows: list[dict],
+        *,
+        push: bool = False,
+    ) -> list[Notification]:
+        if not rows:
+            return []
+        notifications = [
+            Notification(
+                user=row["user"],
+                type=row["type"],
+                title=row["title"],
+                message=row["message"],
+                payload=row.get("payload") or {},
+            )
+            for row in rows
+        ]
+        created = Notification.objects.bulk_create(notifications)
+        if push:
+            NotificationService._push_bulk(created)
+        return created
+
+    @staticmethod
     def _push(notification: Notification) -> None:
         channel_layer = get_channel_layer()
         payload = NotificationService._serialize(notification)
@@ -76,6 +99,36 @@ class NotificationService:
             except Exception as exc:  # pragma: no cover - best-effort push
                 NotificationService.logger.warning("Notification socket push failed: %s", exc)
         WebPushService.send_async(notification.id)
+
+    @staticmethod
+    def _push_bulk(notifications: list[Notification]) -> None:
+        if not notifications:
+            return
+        channel_layer = get_channel_layer()
+        if channel_layer is not None:
+            grouped: dict[int, list[Notification]] = {}
+            for item in notifications:
+                grouped.setdefault(item.user_id, []).append(item)
+            for user_id, user_notifications in grouped.items():
+                for item in user_notifications:
+                    payload = NotificationService._serialize(item)
+                    try:
+                        async_to_sync(channel_layer.group_send)(
+                            f"{NotificationService.SOCKET_GROUP_PREFIX}{user_id}",
+                            {"type": "notification", "payload": payload},
+                        )
+                    except Exception as exc:  # pragma: no cover - best-effort push
+                        NotificationService.logger.warning(
+                            "Notification bulk socket push failed: %s", exc
+                        )
+        ids = [item.id for item in notifications if item.id]
+        if ids:
+            try:
+                from apps.notifications.tasks import send_web_push_for_notifications
+
+                send_web_push_for_notifications.delay(ids)
+            except Exception as exc:
+                NotificationService.logger.warning("Web push bulk dispatch failed: %s", exc)
 
     @staticmethod
     def _serialize(notification: Notification) -> dict:

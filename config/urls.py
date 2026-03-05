@@ -31,6 +31,7 @@ urlpatterns = [
     # API endpoints
     path("api/accounts/", include("apps.accounts.urls")),
     path("api/chess/", include("apps.chess.urls")),
+    path("api/seasons/", include("apps.accounts.urls.season_urls")),
     path("api/notifications/", include("apps.notifications.urls")),
     path("api/admin/", include("apps.adminpanel.urls")),
     path("api/reports/", include("apps.adminpanel.public_urls")),
@@ -76,6 +77,11 @@ urlpatterns = [
         "leaderboard/",
         TemplateView.as_view(template_name="social/leaderboard.html"),
         name="leaderboard",
+    ),
+    path(
+        "seasons/",
+        TemplateView.as_view(template_name="social/season_ladder.html"),
+        name="season-ladder",
     ),
     path("friends/", TemplateView.as_view(template_name="social/friends.html"), name="friends"),
     path(

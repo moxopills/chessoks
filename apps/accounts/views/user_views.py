@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
-from apps.accounts.models import Friend, FriendRequest, User
+from apps.accounts.models import Friend, FriendRequest, SeasonStat, User
 from apps.accounts.permissions import IsAuthenticatedOrGuest
 from apps.accounts.serializers import (
     AccountDeleteSerializer,
@@ -553,6 +553,12 @@ class UserProfileView(APIView):
             cache.set(cache_key, cached_data, self.CACHE_TTL)
 
         recent_games = GameQueryService.list_recent_for_user(user, limit=20)
+        previous_season = (
+            SeasonStat.objects.select_related("season")
+            .filter(user_id=user_id, season__is_finalized=True)
+            .order_by("-season__start_date")
+            .first()
+        )
 
         vs_summary = None
         friend_status = None
@@ -576,6 +582,22 @@ class UserProfileView(APIView):
                 "user": cached_data["user"],
                 "recent_games": GameHistorySerializer(recent_games, many=True).data,
                 "vs_summary": vs_summary,
+                "previous_season": (
+                    {
+                        "season_id": previous_season.season_id,
+                        "season_name": previous_season.season.name,
+                        "final_rank": previous_season.final_rank,
+                        "games_played": previous_season.games_played,
+                        "wins": previous_season.wins,
+                        "losses": previous_season.losses,
+                        "draws": previous_season.draws,
+                        "win_rate": previous_season.win_rate,
+                        "rating": previous_season.rating,
+                        "peak_rating": previous_season.peak_rating,
+                    }
+                    if previous_season
+                    else None
+                ),
                 "friend_status": friend_status,
             }
         )

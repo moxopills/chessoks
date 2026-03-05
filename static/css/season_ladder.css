@@ -1,0 +1,132 @@
+.season-page {
+    width: min(1200px, 100%);
+    margin: 0 auto;
+    display: grid;
+    gap: 16px;
+}
+
+.season-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.season-title {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.season-subtitle {
+    margin: 6px 0 0;
+    color: var(--color-text-secondary);
+}
+
+.season-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.season-chip {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    background: var(--color-bg-secondary);
+    font-size: 0.875rem;
+}
+
+.season-grid {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.season-card h2 {
+    margin: 0 0 12px;
+    font-size: 1.05rem;
+}
+
+.season-actions {
+    margin-top: 12px;
+}
+
+.season-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.season-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.season-table th,
+.season-table td {
+    text-align: left;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.season-table tbody tr.is-me {
+    background: color-mix(in srgb, var(--color-accent-primary) 10%, transparent);
+}
+
+.season-table .avatar {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    margin-right: 8px;
+    overflow: hidden;
+    vertical-align: middle;
+    background: var(--color-bg-tertiary);
+}
+
+.season-table .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.season-table .avatar-placeholder {
+    margin: auto;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
+.season-user {
+    display: inline-flex;
+    align-items: center;
+}
+
+.season-history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.season-history-item:last-child {
+    border-bottom: 0;
+}
+
+.text-muted {
+    color: var(--color-text-secondary);
+}
+
+@media (max-width: 900px) {
+    .season-hero {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .season-grid {
+        grid-template-columns: 1fr;
+    }
+}

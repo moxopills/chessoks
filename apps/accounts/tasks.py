@@ -130,3 +130,13 @@ def cleanup_expired_guest_sessions() -> int:
     deleted_count = GuestSession.cleanup_expired()
     logger.info(f"만료된 게스트 세션 {deleted_count}개 삭제 완료")
     return deleted_count
+
+
+@shared_task
+def check_season_transition() -> dict:
+    """시즌 종료/생성 전환 체크."""
+    from apps.accounts.services import SeasonService
+
+    result = SeasonService.check_transition()
+    logger.info("시즌 전환 점검 완료: %s", result)
+    return result
