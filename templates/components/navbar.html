@@ -11,15 +11,15 @@
         <!-- Navigation Links (Desktop) -->
         <div class="navbar-menu" id="navbar-menu">
             <a href="/" class="navbar-link">
-                <span class="navbar-link-icon">&#9751;</span>
+                <span class="navbar-link-icon">🏠</span>
                 <span>로비</span>
             </a>
             <a href="/rooms/" class="navbar-link">
-                <span class="navbar-link-icon">&#9823;</span>
+                <span class="navbar-link-icon">🧭</span>
                 <span>방 목록</span>
             </a>
             <a href="/leaderboard/" class="navbar-link">
-                <span class="navbar-link-icon">&#9733;</span>
+                <span class="navbar-link-icon">📊</span>
                 <span>랭킹</span>
             </a>
             <a href="/seasons/" class="navbar-link">
@@ -27,12 +27,12 @@
                 <span>시즌</span>
             </a>
             <a href="/friends/" class="navbar-link">
-                <span class="navbar-link-icon">&#9829;</span>
+                <span class="navbar-link-icon">🤝</span>
                 <span>친구</span>
             </a>
             {% if request.user.is_authenticated and request.user.is_staff %}
             <a href="/admin-panel/" class="navbar-link">
-                <span class="navbar-link-icon">&#9881;</span>
+                <span class="navbar-link-icon">🛠️</span>
                 <span>관리</span>
             </a>
             {% endif %}
