@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}커스터마이징 - ChessOK{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/customize.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="customize-page">
+    <div class="customize-header">
+        <div>
+            <h1 class="customize-title">커스터마이징</h1>
+            <p class="customize-subtitle">프로필/보드/기물을 미리 보고 구매 후 적용하세요.</p>
+        </div>
+        <div class="customize-actions-top">
+            <a class="btn btn-secondary" href="/">로비로</a>
+        </div>
+    </div>
+
+    <div class="customize-layout">
+        <section class="customize-card">
+            <div class="form-group">
+                <label class="form-label" for="customize-board-skin">보드 스킨</label>
+                <select class="form-input" id="customize-board-skin"></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="customize-piece-skin">기물 스킨</label>
+                <select class="form-input" id="customize-piece-skin"></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="customize-nickname-color">닉네임 색상</label>
+                <select class="form-input" id="customize-nickname-color"></select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="customize-profile-border">프로필 테두리</label>
+                <select class="form-input" id="customize-profile-border"></select>
+            </div>
+            <div class="customize-points" id="customize-style-points-text">보유 포인트: 0P</div>
+            <div class="customize-actions">
+                <button class="btn btn-secondary" id="customize-purchase" type="button">구매하기</button>
+                <button class="btn btn-primary" id="customize-save" type="button">적용하기</button>
+            </div>
+        </section>
+
+        <section class="customize-card">
+            <div class="customize-preview" id="customize-preview">
+                <div class="customize-avatar" id="customize-preview-avatar">👤</div>
+                <div class="customize-nickname" id="customize-preview-nickname">내 닉네임</div>
+            </div>
+
+            <div class="customize-skin-preview-panel">
+                <div class="customize-skin-preview-title">스킨 미리보기</div>
+                <div class="customize-skin-preview-board skin-board-classic skin-piece-classic" id="customize-skin-preview-board">
+                    <div class="mini-square light"><span class="mini-piece white">♔</span></div>
+                    <div class="mini-square dark"><span class="mini-piece black">♛</span></div>
+                    <div class="mini-square dark"></div>
+                    <div class="mini-square light"></div>
+                    <div class="mini-square light"></div>
+                    <div class="mini-square dark"></div>
+                    <div class="mini-square dark"><span class="mini-piece white">♘</span></div>
+                    <div class="mini-square light"><span class="mini-piece black">♜</span></div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/pages/customize.js' %}"></script>
+{% endblock %}
+

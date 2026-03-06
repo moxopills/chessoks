@@ -49,18 +49,6 @@
     const aiLevelButtons = Array.from(document.querySelectorAll('.ai-level-card'));
     const aiLevelLoading = document.getElementById('ai-level-loading');
     const lobbyCustomizeOpen = document.getElementById('lobby-customize-open');
-    const lobbyCustomizeModal = document.getElementById('lobby-customize-modal');
-    const lobbyCustomizeCancel = document.getElementById('lobby-customize-cancel');
-    const lobbyCustomizePurchase = document.getElementById('lobby-customize-purchase');
-    const lobbyCustomizeSave = document.getElementById('lobby-customize-save');
-    const lobbyBoardSkin = document.getElementById('lobby-board-skin');
-    const lobbyPieceSkin = document.getElementById('lobby-piece-skin');
-    const lobbyNicknameColor = document.getElementById('lobby-nickname-color');
-    const lobbyProfileBorder = document.getElementById('lobby-profile-border');
-    const lobbyStylePointsText = document.getElementById('lobby-style-points-text');
-    const lobbyCustomizePreviewAvatar = document.getElementById('lobby-customize-preview-avatar');
-    const lobbyCustomizePreviewNickname = document.getElementById('lobby-customize-preview-nickname');
-    const lobbySkinPreviewBoard = document.getElementById('lobby-skin-preview-board');
     const guestPlayBtn = document.getElementById('guest-play-btn');
     const guestStatusBar = document.getElementById('guest-status-bar');
     const guestStatusName = document.getElementById('guest-status-name');
@@ -108,7 +96,6 @@
     let randomMatchPollInterval = null;
     let notificationEventBound = false;
     let notificationEventHandler = null;
-    let skinCatalog = null;
 
     // 초기화
     init();
@@ -392,7 +379,6 @@
 
             isGuestUser = false;
             lobbyCustomizeOpen?.classList.remove('hidden');
-            populateLobbyCustomization(user.stats || {});
             await loadFriendIds();
             setupChat();
             setupQuickMatch();
@@ -611,202 +597,15 @@
     }
 
     function setupLobbyCustomization() {
-        if (!lobbyCustomizeOpen || !lobbyCustomizeModal) return;
+        if (!lobbyCustomizeOpen) return;
 
         lobbyCustomizeOpen.addEventListener('click', () => {
             if (!currentUserId || isGuestUser) {
                 Toast.error('로그인 시 가능합니다.');
                 return;
             }
-            loadSkinCatalog();
-            lobbyCustomizeModal.classList.remove('hidden');
+            window.location.href = '/customize/';
         });
-
-        lobbyCustomizeCancel?.addEventListener('click', () => {
-            lobbyCustomizeModal.classList.add('hidden');
-        });
-
-        lobbyCustomizeModal.addEventListener('click', (event) => {
-            if (event.target === lobbyCustomizeModal) {
-                lobbyCustomizeModal.classList.add('hidden');
-            }
-        });
-
-        lobbyCustomizeSave?.addEventListener('click', async () => {
-            if (!currentUserId || isGuestUser) {
-                Toast.error('로그인 시 가능합니다.');
-                return;
-            }
-            try {
-                const boardSkinId = parseInt(lobbyBoardSkin?.value || '0', 10);
-                const pieceSkinId = parseInt(lobbyPieceSkin?.value || '0', 10);
-                await ensureSkinSelected(boardSkinId);
-                await ensureSkinSelected(pieceSkinId);
-
-                const payload = {
-                    nickname_color: lobbyNicknameColor?.value || '',
-                    profile_border: lobbyProfileBorder?.value || '',
-                };
-                const updated = await API.patch('/accounts/profile/', payload);
-                currentMe = { ...(currentMe || {}), ...updated };
-                await loadSkinCatalog();
-                populateLobbyCustomization(updated.stats || currentMe.stats || {}, skinCatalog);
-
-                if (lobbyUsers[currentUserId]) {
-                    lobbyUsers[currentUserId].nickname_color = updated.stats?.nickname_color || payload.nickname_color;
-                    lobbyUsers[currentUserId].profile_border = updated.stats?.profile_border || payload.profile_border;
-                }
-
-                renderUsers();
-                loadRooms();
-                loadWaitingRoom();
-                loadActiveGame();
-                window.dispatchEvent(new CustomEvent('user:updated', { detail: { user: updated } }));
-                Toast.success('커스터마이징이 저장되었습니다.');
-                lobbyCustomizeModal.classList.add('hidden');
-            } catch (error) {
-                Toast.error(
-                    error.data?.message || error.message || '커스터마이징 저장에 실패했습니다. 다시 시도해주세요.'
-                );
-            }
-        });
-
-        lobbyCustomizePurchase?.addEventListener('click', async () => {
-            if (!currentUserId || isGuestUser) {
-                Toast.error('로그인 시 가능합니다.');
-                return;
-            }
-            try {
-                const boardSkinId = parseInt(lobbyBoardSkin?.value || '0', 10);
-                const pieceSkinId = parseInt(lobbyPieceSkin?.value || '0', 10);
-                let purchased = 0;
-                purchased += await purchaseSkinIfNeeded(boardSkinId);
-                purchased += await purchaseSkinIfNeeded(pieceSkinId);
-                await loadSkinCatalog();
-                renderLobbyCustomizationPreview();
-                if (purchased > 0) {
-                    Toast.success(`선택한 스킨 ${purchased}개를 구매했습니다. 이제 적용하기를 눌러주세요.`);
-                } else {
-                    Toast.info('이미 보유 중인 스킨입니다.');
-                }
-            } catch (error) {
-                Toast.error(error.data?.message || '스킨 구매에 실패했습니다.');
-            }
-        });
-
-        lobbyBoardSkin?.addEventListener('change', renderLobbyCustomizationPreview);
-        lobbyPieceSkin?.addEventListener('change', renderLobbyCustomizationPreview);
-        lobbyNicknameColor?.addEventListener('change', renderLobbyCustomizationPreview);
-        lobbyProfileBorder?.addEventListener('change', renderLobbyCustomizationPreview);
-    }
-
-    async function loadSkinCatalog() {
-        if (!currentUserId || isGuestUser) return;
-        try {
-            const preferredBoard = parseInt(lobbyBoardSkin?.value || '0', 10);
-            const preferredPiece = parseInt(lobbyPieceSkin?.value || '0', 10);
-            const data = await API.get('/accounts/skins/me/');
-            skinCatalog = data;
-            if (lobbyStylePointsText) {
-                lobbyStylePointsText.textContent = `보유 포인트: ${data?.points ?? 0}P`;
-            }
-            fillSkinSelect(lobbyBoardSkin, data?.board || [], preferredBoard);
-            fillSkinSelect(lobbyPieceSkin, data?.pieces || [], preferredPiece);
-        } catch (error) {
-            Toast.error(error.data?.message || '스킨 정보를 불러오지 못했습니다.');
-        }
-    }
-
-    async function ensureSkinSelected(skinId) {
-        if (!skinId || !skinCatalog) return;
-        const allSkins = [...(skinCatalog.board || []), ...(skinCatalog.pieces || [])];
-        const target = allSkins.find((skin) => skin.id === skinId);
-        if (!target) return;
-
-        if (!target.owned && !target.is_default) {
-            throw new Error('선택한 스킨이 미구매 상태입니다. 먼저 구매하기를 눌러주세요.');
-        }
-        await API.post(`/accounts/skins/${skinId}/select/`, {});
-    }
-
-    async function purchaseSkinIfNeeded(skinId) {
-        if (!skinId || !skinCatalog) return 0;
-        const allSkins = [...(skinCatalog.board || []), ...(skinCatalog.pieces || [])];
-        const target = allSkins.find((skin) => skin.id === skinId);
-        if (!target || target.owned || target.is_default) return 0;
-        try {
-            await API.post(`/accounts/skins/${skinId}/purchase/`);
-            return 1;
-        } catch (error) {
-            const msg = error?.data?.message || '';
-            if (msg.includes('이미 보유한 스킨')) return 0;
-            throw error;
-        }
-    }
-
-    function fillSkinSelect(selectEl, skins, preferredId = 0) {
-        if (!selectEl) return;
-        const options = skins.map((skin) => {
-            const state = skin.selected ? '착용중' : (skin.owned || skin.is_default ? '보유' : `${skin.price}P`);
-            const lock = skin.owned || skin.is_default ? '' : ' [구매]';
-            return `<option value="${skin.id}" ${skin.selected ? 'selected' : ''}>${Utils.escapeHtml(skin.name)} · ${state}${lock}</option>`;
-        });
-        selectEl.innerHTML = options.join('');
-        if (preferredId && skins.some((skin) => skin.id === preferredId)) {
-            selectEl.value = String(preferredId);
-        }
-    }
-
-    function populateLobbyCustomization(stats) {
-        fillSelect(
-            lobbyNicknameColor,
-            stats.unlocked_nickname_colors || [{ key: '', label: '기본', cost: 0 }],
-            stats.nickname_color || ''
-        );
-        fillSelect(
-            lobbyProfileBorder,
-            stats.unlocked_profile_borders || [{ key: '', label: '기본', cost: 0 }],
-            stats.profile_border || ''
-        );
-        if (lobbyStylePointsText) {
-            lobbyStylePointsText.textContent = `보유 포인트: ${stats.style_points ?? 0}P`;
-        }
-        renderLobbyCustomizationPreview();
-    }
-
-    function fillSelect(selectEl, options, selectedKey) {
-        if (!selectEl) return;
-        selectEl.innerHTML = options
-            .map((item) => `<option value="${item.key}">${item.label}${item.cost ? ` (${item.cost}P)` : ''}</option>`)
-            .join('');
-        selectEl.value = selectedKey || '';
-    }
-
-    function renderLobbyCustomizationPreview() {
-        if (!lobbyCustomizePreviewNickname || !lobbyCustomizePreviewAvatar) return;
-        const nickname = currentMe?.nickname || '내 닉네임';
-        const avatarUrl = currentMe?.avatar_url || '';
-        const color = Utils.getNicknameColorValue(lobbyNicknameColor?.value || '');
-        const ring = Utils.getProfileBorderValue(lobbyProfileBorder?.value || '');
-
-        lobbyCustomizePreviewNickname.textContent = nickname;
-        lobbyCustomizePreviewNickname.style.color = color;
-        lobbyCustomizePreviewAvatar.style.boxShadow = ring;
-        lobbyCustomizePreviewAvatar.innerHTML = avatarUrl
-            ? `<img src="${Utils.escapeHtml(avatarUrl)}" alt="${Utils.escapeHtml(nickname)}">`
-            : '👤';
-
-        if (!lobbySkinPreviewBoard || !skinCatalog) return;
-        const boardSkinId = parseInt(lobbyBoardSkin?.value || '0', 10);
-        const pieceSkinId = parseInt(lobbyPieceSkin?.value || '0', 10);
-        const boardClass = getSkinCssClassById(skinCatalog.board || [], boardSkinId, 'skin-board-classic');
-        const pieceClass = getSkinCssClassById(skinCatalog.pieces || [], pieceSkinId, 'skin-piece-classic');
-        lobbySkinPreviewBoard.className = `lobby-skin-preview-board ${boardClass} ${pieceClass}`;
-    }
-
-    function getSkinCssClassById(list, skinId, fallback) {
-        const selected = (list || []).find((item) => item.id === skinId);
-        return selected?.css_class || fallback;
     }
 
     /**
