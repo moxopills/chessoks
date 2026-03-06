@@ -395,8 +395,12 @@ class UserProfileService:
                     catalog = {item["key"]: item for item in stats.nickname_color_catalog()}
                     selected = catalog.get(nickname_color)
                     if not selected:
-                        raise ValidationError({"nickname_color": ["존재하지 않는 닉네임 색상입니다."]})
-                    if selected["cost"] > 0 and nickname_color not in (stats.owned_nickname_colors or []):
+                        raise ValidationError(
+                            {"nickname_color": ["존재하지 않는 닉네임 색상입니다."]}
+                        )
+                    if selected["cost"] > 0 and nickname_color not in (
+                        stats.owned_nickname_colors or []
+                    ):
                         if stats.style_points < selected["cost"]:
                             need = selected["cost"] - stats.style_points
                             raise ValidationError(
@@ -423,8 +427,12 @@ class UserProfileService:
                     catalog = {item["key"]: item for item in stats.profile_border_catalog()}
                     selected = catalog.get(profile_border)
                     if not selected:
-                        raise ValidationError({"profile_border": ["존재하지 않는 프로필 테두리입니다."]})
-                    if selected["cost"] > 0 and profile_border not in (stats.owned_profile_borders or []):
+                        raise ValidationError(
+                            {"profile_border": ["존재하지 않는 프로필 테두리입니다."]}
+                        )
+                    if selected["cost"] > 0 and profile_border not in (
+                        stats.owned_profile_borders or []
+                    ):
                         if stats.style_points < selected["cost"]:
                             need = selected["cost"] - stats.style_points
                             raise ValidationError(
