@@ -20,6 +20,8 @@ class UserStatsSerializer(serializers.Serializer):
     profile_border = serializers.CharField(read_only=True)
     unlocked_nickname_colors = serializers.ListField(read_only=True)
     unlocked_profile_borders = serializers.ListField(read_only=True)
+    selected_board_skin_class = serializers.CharField(read_only=True)
+    selected_piece_skin_class = serializers.CharField(read_only=True)
 
 
 def _avatar_with_cache_bust(user) -> str | None:

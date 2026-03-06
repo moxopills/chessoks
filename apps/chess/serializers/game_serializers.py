@@ -23,6 +23,8 @@ class BaseUserSerializer(serializers.Serializer):
     avatar_url = serializers.SerializerMethodField()
     nickname_color = serializers.SerializerMethodField()
     profile_border = serializers.SerializerMethodField()
+    selected_board_skin_class = serializers.SerializerMethodField()
+    selected_piece_skin_class = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
         return _avatar_with_cache_bust(obj)
@@ -32,6 +34,16 @@ class BaseUserSerializer(serializers.Serializer):
 
     def get_profile_border(self, obj):
         return getattr(getattr(obj, "stats", None), "profile_border", "")
+
+    def get_selected_board_skin_class(self, obj):
+        return getattr(
+            getattr(obj, "stats", None), "selected_board_skin_class", "skin-board-classic"
+        )
+
+    def get_selected_piece_skin_class(self, obj):
+        return getattr(
+            getattr(obj, "stats", None), "selected_piece_skin_class", "skin-piece-classic"
+        )
 
 
 class PlayerSerializer(BaseUserSerializer):

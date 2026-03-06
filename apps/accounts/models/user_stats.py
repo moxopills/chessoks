@@ -33,6 +33,24 @@ class UserStats(models.Model):
     profile_border = models.CharField(
         max_length=20, blank=True, default="", help_text="프로필 테두리 키"
     )
+    selected_board_skin = models.ForeignKey(
+        "accounts.Skin",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        limit_choices_to={"skin_type": "board"},
+        help_text="선택된 보드 스킨",
+    )
+    selected_piece_skin = models.ForeignKey(
+        "accounts.Skin",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        limit_choices_to={"skin_type": "pieces"},
+        help_text="선택된 기물 스킨",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -151,3 +169,11 @@ class UserStats(models.Model):
         if self.style_points >= 500:
             unlocks.append({"key": "champion_ring", "label": "챔피언 링", "cost": 500})
         return unlocks
+
+    @property
+    def selected_board_skin_class(self):
+        return getattr(self.selected_board_skin, "css_class", "skin-board-classic")
+
+    @property
+    def selected_piece_skin_class(self):
+        return getattr(self.selected_piece_skin, "css_class", "skin-piece-classic")
