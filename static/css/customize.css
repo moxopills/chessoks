@@ -1,0 +1,177 @@
+.customize-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px 32px;
+}
+
+.customize-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.customize-title {
+    margin: 0;
+    font-size: 28px;
+}
+
+.customize-subtitle {
+    margin: 6px 0 0;
+    opacity: 0.75;
+}
+
+.customize-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.customize-card {
+    border: 1px solid var(--line-color, #d8d0c2);
+    border-radius: 16px;
+    background: var(--card-bg, rgba(255, 255, 255, 0.78));
+    padding: 18px;
+}
+
+.customize-points {
+    margin-top: 8px;
+    font-weight: 600;
+}
+
+.customize-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.customize-preview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--line-color, #d8d0c2);
+    border-radius: 14px;
+    padding: 12px;
+}
+
+.customize-avatar {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    background: #1b2c61;
+    color: #fff;
+}
+
+.customize-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.customize-nickname {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.customize-skin-preview-panel {
+    margin-top: 12px;
+}
+
+.customize-skin-preview-title {
+    font-size: 14px;
+    margin-bottom: 8px;
+    opacity: 0.85;
+}
+
+.customize-skin-preview-board {
+    width: 220px;
+    height: 220px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--line-color, #d8d0c2);
+}
+
+.customize-skin-preview-board .mini-square {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+
+.customize-skin-preview-board .mini-piece.white {
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.customize-skin-preview-board .mini-piece.black {
+    color: #111;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.35);
+}
+
+.customize-skin-preview-board.skin-board-classic .mini-square.light { background-color: #f0d9b5; }
+.customize-skin-preview-board.skin-board-classic .mini-square.dark { background-color: #b58863; }
+.customize-skin-preview-board.skin-board-wood .mini-square.light {
+    background-color: #edd7b0;
+    background-image:
+        linear-gradient(140deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.06)),
+        repeating-linear-gradient(
+            18deg,
+            rgba(255, 255, 255, 0.05) 0 6px,
+            rgba(0, 0, 0, 0.06) 6px 12px
+        );
+}
+.customize-skin-preview-board.skin-board-wood .mini-square.dark {
+    background-color: #9d6f46;
+    background-image:
+        linear-gradient(155deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.15)),
+        repeating-linear-gradient(
+            22deg,
+            rgba(255, 255, 255, 0.05) 0 5px,
+            rgba(0, 0, 0, 0.12) 5px 11px
+        );
+}
+.customize-skin-preview-board.skin-board-dark .mini-square.light { background-color: #c3c8d0; }
+.customize-skin-preview-board.skin-board-dark .mini-square.dark { background-color: #4c566a; }
+.customize-skin-preview-board.skin-board-neon .mini-square.light { background-color: #0f172a; }
+.customize-skin-preview-board.skin-board-neon .mini-square.dark { background-color: #1e293b; }
+.customize-skin-preview-board.skin-board-marble .mini-square.light { background-color: #eceff4; }
+.customize-skin-preview-board.skin-board-marble .mini-square.dark { background-color: #b8c0cc; }
+
+.customize-skin-preview-board.skin-piece-pixel .mini-piece { font-family: "Press Start 2P", monospace; font-size: 18px; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece {
+    font-family: "Noto Sans Symbols 2", "Noto Sans KR", sans-serif;
+    font-size: 30px;
+    text-shadow: none;
+}
+.customize-skin-preview-board.skin-piece-modern .mini-piece.white {
+    color: #fff;
+    text-shadow: 0 1px 0 rgba(7, 23, 46, 0.65), 0 0 5px rgba(120, 180, 255, 0.28);
+}
+.customize-skin-preview-board.skin-piece-modern .mini-piece.black {
+    color: #1e2c43;
+    text-shadow:
+        -1px -1px 0 rgba(233, 241, 255, 0.8),
+        1px -1px 0 rgba(233, 241, 255, 0.8),
+        -1px 1px 0 rgba(233, 241, 255, 0.8),
+        1px 1px 0 rgba(233, 241, 255, 0.8);
+}
+.customize-skin-preview-board.skin-piece-3d .mini-piece { text-shadow: 0 2px 4px rgba(0, 0, 0, 0.45); }
+
+@media (max-width: 900px) {
+    .customize-layout {
+        grid-template-columns: 1fr;
+    }
+    .customize-skin-preview-board {
+        width: 100%;
+        max-width: 260px;
+        height: 260px;
+    }
+}

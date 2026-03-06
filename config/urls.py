@@ -54,6 +54,11 @@ urlpatterns = [
         name="profile-edit",
     ),
     path(
+        "customize/",
+        TemplateView.as_view(template_name="accounts/customize.html"),
+        name="customize",
+    ),
+    path(
         "password-change/",
         TemplateView.as_view(template_name="accounts/password_change.html"),
         name="password-change",
