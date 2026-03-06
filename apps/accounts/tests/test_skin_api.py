@@ -120,3 +120,49 @@ class SkinApiTestCase(BaseAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.stats.refresh_from_db()
         self.assertEqual(self.user.stats.selected_piece_skin_id, self.paid_piece.id)
+
+    def test_profile_customization_purchase_persists_after_points_drop(self):
+        stats = self.user.stats
+        stats.style_points = 150
+        stats.save(update_fields=["style_points"])
+
+        response = self.client.patch(
+            "/api/accounts/profile/",
+            {"nickname_color": "mint"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        stats.refresh_from_db()
+        self.assertEqual(stats.style_points, 50)
+        self.assertIn("mint", stats.owned_nickname_colors)
+        self.assertEqual(stats.nickname_color, "mint")
+
+        response = self.client.patch(
+            "/api/accounts/profile/",
+            {"nickname_color": ""},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.patch(
+            "/api/accounts/profile/",
+            {"nickname_color": "mint"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        stats.refresh_from_db()
+        self.assertEqual(stats.style_points, 50)
+
+    def test_profile_customization_rejects_when_not_enough_points(self):
+        stats = self.user.stats
+        stats.style_points = 119
+        stats.save(update_fields=["style_points"])
+
+        response = self.client.patch(
+            "/api/accounts/profile/",
+            {"profile_border": "mint_ring"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("포인트가 부족합니다", str(response.data))

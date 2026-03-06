@@ -33,6 +33,16 @@ class UserStats(models.Model):
     profile_border = models.CharField(
         max_length=20, blank=True, default="", help_text="프로필 테두리 키"
     )
+    owned_nickname_colors = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="구매해 보유 중인 닉네임 색상 키 목록",
+    )
+    owned_profile_borders = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="구매해 보유 중인 프로필 테두리 키 목록",
+    )
     selected_board_skin = models.ForeignKey(
         "accounts.Skin",
         null=True,
@@ -150,25 +160,53 @@ class UserStats(models.Model):
 
     @property
     def unlocked_nickname_colors(self):
-        unlocks = [{"key": "", "label": "기본", "cost": 0}]
-        if self.style_points >= 100:
-            unlocks.append({"key": "mint", "label": "민트", "cost": 100})
-        if self.style_points >= 250:
-            unlocks.append({"key": "sunset", "label": "선셋", "cost": 250})
-        if self.style_points >= 450:
-            unlocks.append({"key": "gold", "label": "골드", "cost": 450})
-        return unlocks
+        return self.nickname_color_options()
 
     @property
     def unlocked_profile_borders(self):
-        unlocks = [{"key": "", "label": "기본", "cost": 0}]
-        if self.style_points >= 120:
-            unlocks.append({"key": "mint_ring", "label": "민트 링", "cost": 120})
-        if self.style_points >= 300:
-            unlocks.append({"key": "royal_ring", "label": "로열 링", "cost": 300})
-        if self.style_points >= 500:
-            unlocks.append({"key": "champion_ring", "label": "챔피언 링", "cost": 500})
-        return unlocks
+        return self.profile_border_options()
+
+    @staticmethod
+    def nickname_color_catalog() -> list[dict]:
+        return [
+            {"key": "", "label": "기본", "cost": 0},
+            {"key": "mint", "label": "민트", "cost": 100},
+            {"key": "sunset", "label": "선셋", "cost": 250},
+            {"key": "gold", "label": "골드", "cost": 450},
+        ]
+
+    @staticmethod
+    def profile_border_catalog() -> list[dict]:
+        return [
+            {"key": "", "label": "기본", "cost": 0},
+            {"key": "mint_ring", "label": "민트 링", "cost": 120},
+            {"key": "royal_ring", "label": "로열 링", "cost": 300},
+            {"key": "champion_ring", "label": "챔피언 링", "cost": 500},
+        ]
+
+    def nickname_color_options(self) -> list[dict]:
+        owned = set(self.owned_nickname_colors or [])
+        options = []
+        for item in self.nickname_color_catalog():
+            options.append(
+                {
+                    **item,
+                    "owned": item["cost"] == 0 or item["key"] in owned,
+                }
+            )
+        return options
+
+    def profile_border_options(self) -> list[dict]:
+        owned = set(self.owned_profile_borders or [])
+        options = []
+        for item in self.profile_border_catalog():
+            options.append(
+                {
+                    **item,
+                    "owned": item["cost"] == 0 or item["key"] in owned,
+                }
+            )
+        return options
 
     @property
     def selected_board_skin_class(self):
