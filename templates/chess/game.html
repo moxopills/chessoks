@@ -619,11 +619,31 @@
     --move-highlight-fill: rgba(55, 166, 238, 0.26);
 }
 
-.chess-board.skin-board-wood .square.light { background-color: #edd7b0; }
-.chess-board.skin-board-wood .square.dark { background-color: #9d6f46; }
+.chess-board.skin-board-wood .square.light {
+    background-color: #edd7b0;
+    background-image:
+        linear-gradient(140deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.06)),
+        repeating-linear-gradient(
+            18deg,
+            rgba(255, 255, 255, 0.05) 0 6px,
+            rgba(0, 0, 0, 0.06) 6px 12px
+        );
+}
+.chess-board.skin-board-wood .square.dark {
+    background-color: #9d6f46;
+    background-image:
+        linear-gradient(155deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.15)),
+        repeating-linear-gradient(
+            22deg,
+            rgba(255, 255, 255, 0.05) 0 5px,
+            rgba(0, 0, 0, 0.12) 5px 11px
+        );
+}
 .chess-board.skin-board-wood {
     --move-highlight-color: rgba(63, 171, 255, 0.95);
     --move-highlight-fill: rgba(63, 171, 255, 0.25);
+    border-color: rgba(88, 58, 31, 0.5);
+    box-shadow: 0 10px 20px rgba(56, 33, 15, 0.22);
 }
 
 .chess-board.skin-board-dark .square.light { background-color: #c3c8d0; }
@@ -703,8 +723,26 @@ html[data-theme="dark"] .piece.white {
 .chess-board-wrapper.skin-piece-modern .captured-piece,
 .chess-board-wrapper.skin-piece-modern .promotion-piece,
 .chess-board-wrapper.skin-piece-modern .drag-piece {
-    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+    font-family: "Noto Sans Symbols 2", "Noto Sans KR", sans-serif;
+    font-size: clamp(32px, 4.2vw, 46px);
+    filter: drop-shadow(0 2px 2px rgba(20, 34, 60, 0.22));
     text-shadow: none;
+}
+
+.chess-board-wrapper.skin-piece-modern .piece.white {
+    color: #ffffff;
+    text-shadow:
+        0 1px 0 rgba(7, 23, 46, 0.65),
+        0 0 6px rgba(120, 180, 255, 0.28);
+}
+
+.chess-board-wrapper.skin-piece-modern .piece.black {
+    color: #1e2c43;
+    text-shadow:
+        -1px -1px 0 rgba(233, 241, 255, 0.8),
+        1px -1px 0 rgba(233, 241, 255, 0.8),
+        -1px 1px 0 rgba(233, 241, 255, 0.8),
+        1px 1px 0 rgba(233, 241, 255, 0.8);
 }
 
 .chess-board-wrapper.skin-piece-3d .piece,
