@@ -6,6 +6,7 @@ from .profile_service import UserProfileService
 from .ranking_service import RankingService
 from .season_service import SeasonService
 from .session_service import AccountService, AccountSessionService, AuthService, PasswordService
+from .skin_service import SkinService
 from .social_service import SocialAuthService
 
 __all__ = [
@@ -18,6 +19,7 @@ __all__ = [
     "UserProfileService",
     "RankingService",
     "SeasonService",
+    "SkinService",
     "OnlineStatusService",
     "FriendService",
     "MessageService",

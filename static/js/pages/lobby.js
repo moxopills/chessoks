@@ -52,6 +52,8 @@
     const lobbyCustomizeModal = document.getElementById('lobby-customize-modal');
     const lobbyCustomizeCancel = document.getElementById('lobby-customize-cancel');
     const lobbyCustomizeSave = document.getElementById('lobby-customize-save');
+    const lobbyBoardSkin = document.getElementById('lobby-board-skin');
+    const lobbyPieceSkin = document.getElementById('lobby-piece-skin');
     const lobbyNicknameColor = document.getElementById('lobby-nickname-color');
     const lobbyProfileBorder = document.getElementById('lobby-profile-border');
     const lobbyStylePointsText = document.getElementById('lobby-style-points-text');
@@ -104,6 +106,7 @@
     let randomMatchPollInterval = null;
     let notificationEventBound = false;
     let notificationEventHandler = null;
+    let skinCatalog = null;
 
     // 초기화
     init();
@@ -613,6 +616,7 @@
                 Toast.error('로그인 시 가능합니다.');
                 return;
             }
+            loadSkinCatalog();
             lobbyCustomizeModal.classList.remove('hidden');
         });
 
@@ -631,15 +635,20 @@
                 Toast.error('로그인 시 가능합니다.');
                 return;
             }
-            const payload = {
-                nickname_color: lobbyNicknameColor?.value || '',
-                profile_border: lobbyProfileBorder?.value || '',
-            };
-
             try {
+                const boardSkinId = parseInt(lobbyBoardSkin?.value || '0', 10);
+                const pieceSkinId = parseInt(lobbyPieceSkin?.value || '0', 10);
+                await ensureSkinPurchasedAndSelected(boardSkinId);
+                await ensureSkinPurchasedAndSelected(pieceSkinId);
+
+                const payload = {
+                    nickname_color: lobbyNicknameColor?.value || '',
+                    profile_border: lobbyProfileBorder?.value || '',
+                };
                 const updated = await API.patch('/accounts/profile/', payload);
                 currentMe = { ...(currentMe || {}), ...updated };
-                populateLobbyCustomization(updated.stats || currentMe.stats || {});
+                await loadSkinCatalog();
+                populateLobbyCustomization(updated.stats || currentMe.stats || {}, skinCatalog);
 
                 if (lobbyUsers[currentUserId]) {
                     lobbyUsers[currentUserId].nickname_color = updated.stats?.nickname_color || payload.nickname_color;
@@ -654,12 +663,51 @@
                 Toast.success('커스터마이징이 저장되었습니다.');
                 lobbyCustomizeModal.classList.add('hidden');
             } catch (error) {
-                Toast.error(error.data?.message || '커스터마이징 저장에 실패했습니다.');
+                Toast.error(error.data?.message || '커스터마이징 저장에 실패했습니다. 다시 시도해주세요.');
             }
         });
 
+        lobbyBoardSkin?.addEventListener('change', renderLobbyCustomizationPreview);
+        lobbyPieceSkin?.addEventListener('change', renderLobbyCustomizationPreview);
         lobbyNicknameColor?.addEventListener('change', renderLobbyCustomizationPreview);
         lobbyProfileBorder?.addEventListener('change', renderLobbyCustomizationPreview);
+    }
+
+    async function loadSkinCatalog() {
+        if (!currentUserId || isGuestUser) return;
+        try {
+            const data = await API.get('/accounts/skins/me/');
+            skinCatalog = data;
+            if (lobbyStylePointsText) {
+                lobbyStylePointsText.textContent = `보유 포인트: ${data?.points ?? 0}P`;
+            }
+            fillSkinSelect(lobbyBoardSkin, data?.board || []);
+            fillSkinSelect(lobbyPieceSkin, data?.pieces || []);
+        } catch (error) {
+            Toast.error(error.data?.message || '스킨 정보를 불러오지 못했습니다.');
+        }
+    }
+
+    async function ensureSkinPurchasedAndSelected(skinId) {
+        if (!skinId || !skinCatalog) return;
+        const allSkins = [...(skinCatalog.board || []), ...(skinCatalog.pieces || [])];
+        const target = allSkins.find((skin) => skin.id === skinId);
+        if (!target) return;
+
+        if (!target.owned && !target.is_default) {
+            await API.post(`/accounts/skins/${skinId}/purchase/`);
+        }
+        await API.post(`/accounts/skins/${skinId}/select/`, {});
+    }
+
+    function fillSkinSelect(selectEl, skins) {
+        if (!selectEl) return;
+        const options = skins.map((skin) => {
+            const state = skin.selected ? '착용중' : (skin.owned || skin.is_default ? '보유' : `${skin.price}P`);
+            const lock = skin.owned || skin.is_default ? '' : ' [구매]';
+            return `<option value="${skin.id}" ${skin.selected ? 'selected' : ''}>${Utils.escapeHtml(skin.name)} · ${state}${lock}</option>`;
+        });
+        selectEl.innerHTML = options.join('');
     }
 
     function populateLobbyCustomization(stats) {

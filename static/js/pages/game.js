@@ -53,6 +53,7 @@
 
     // DOM Elements
     const chessBoard = document.getElementById('chess-board');
+    const chessBoardWrapper = document.querySelector('.chess-board-wrapper');
     const opponentBar = document.getElementById('opponent-bar');
     const myBar = document.getElementById('my-bar');
     const opponentTimer = document.getElementById('opponent-timer');
@@ -169,6 +170,8 @@
     const RATING_POLL_MAX_ATTEMPTS = 30;
     let notificationEventBound = false;
     let notificationEventHandler = null;
+    let selectedBoardSkinClass = 'skin-board-classic';
+    let selectedPieceSkinClass = 'skin-piece-classic';
     // Init
     init();
 
@@ -210,6 +213,8 @@
 
         try {
             currentUser = await API.get('/accounts/me/');
+            selectedBoardSkinClass = currentUser?.stats?.selected_board_skin_class || 'skin-board-classic';
+            selectedPieceSkinClass = currentUser?.stats?.selected_piece_skin_class || 'skin-piece-classic';
             if (currentUser?.is_muted) {
                 setChatMutedState(true, currentUser.mute_reason || '');
             }
@@ -417,6 +422,13 @@
                 spectatorSection?.classList.add('hidden');
                 document.querySelector('.mobile-tab[data-tab="chat"]')?.classList.add('hidden');
             }
+            if (!currentUser) {
+                const fallbackBoard = game.white_player?.selected_board_skin_class || 'skin-board-classic';
+                const fallbackPieces = game.white_player?.selected_piece_skin_class || 'skin-piece-classic';
+                selectedBoardSkinClass = fallbackBoard;
+                selectedPieceSkinClass = fallbackPieces;
+            }
+            applySkinClasses();
 
             renderPlayerBars();
             renderBoard();
@@ -436,6 +448,30 @@
         } catch (error) {
             console.error('Failed to load game:', error);
             Toast.error('게임 정보를 불러올 수 없습니다.');
+        }
+    }
+
+    function applySkinClasses() {
+        if (!chessBoard) return;
+        const boardClasses = [
+            'skin-board-classic',
+            'skin-board-wood',
+            'skin-board-dark',
+            'skin-board-neon',
+            'skin-board-marble',
+        ];
+        chessBoard.classList.remove(...boardClasses);
+        chessBoard.classList.add(selectedBoardSkinClass || 'skin-board-classic');
+
+        if (chessBoardWrapper) {
+            const pieceClasses = [
+                'skin-piece-classic',
+                'skin-piece-pixel',
+                'skin-piece-modern',
+                'skin-piece-3d',
+            ];
+            chessBoardWrapper.classList.remove(...pieceClasses);
+            chessBoardWrapper.classList.add(selectedPieceSkinClass || 'skin-piece-classic');
         }
     }
 
@@ -970,7 +1006,15 @@
 
         // 모든 칸의 하이라이트 클래스만 제거 (기물 제거 방지)
         for (const sq of getAllSquareElements()) {
-            sq.classList.remove('selected', 'valid-move', 'valid-capture', 'last-move', 'check');
+            sq.classList.remove(
+                'selected',
+                'valid-move',
+                'valid-capture',
+                'last-move',
+                'check',
+                'check-king',
+                'checkmate-king'
+            );
         }
 
         // 기물 배치 및 aria-label 업데이트
@@ -1030,6 +1074,7 @@
         }
 
         applyLastMoveHighlight();
+        applyKingDangerHighlight(position);
     }
 
     /**
@@ -1427,6 +1472,46 @@
         const toEl = getSquare(toSquare);
         fromEl?.classList.add('last-move');
         toEl?.classList.add('last-move');
+    }
+
+    function getDangerTargetColor() {
+        if (!game) return null;
+        if (lastMove?.is_checkmate) return game.current_turn;
+        if (lastMove?.is_check) return game.current_turn;
+        if (typeof game.result === 'string') {
+            if (game.result === 'checkmate_white') return 'black';
+            if (game.result === 'checkmate_black') return 'white';
+        }
+        return null;
+    }
+
+    function applyKingDangerHighlight(position) {
+        const targetColor = getDangerTargetColor();
+        if (!targetColor || !position) return;
+
+        const kingChar = targetColor === 'white' ? 'K' : 'k';
+        let actualKingSquare = null;
+
+        for (let rank = 0; rank < 8 && !actualKingSquare; rank++) {
+            for (let file = 0; file < 8; file++) {
+                if (position[rank]?.[file] === kingChar) {
+                    actualKingSquare = `${FILES[file]}${RANKS[rank]}`;
+                    break;
+                }
+            }
+        }
+
+        if (!actualKingSquare) return;
+
+        const displayKingSquare = toDisplaySquare(actualKingSquare);
+        const kingSquareEl = getSquare(displayKingSquare);
+        if (!kingSquareEl) return;
+
+        if (lastMove?.is_checkmate || game.result === 'checkmate_white' || game.result === 'checkmate_black') {
+            kingSquareEl.classList.add('checkmate-king');
+        } else {
+            kingSquareEl.classList.add('check-king');
+        }
     }
 
     async function loadCapturedPieces() {
