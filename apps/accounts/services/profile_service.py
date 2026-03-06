@@ -6,12 +6,13 @@ import uuid
 from django.contrib.auth import update_session_auth_hash
 from django.core.cache import cache
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
-from apps.accounts.models import AuthToken, User
+from apps.accounts.models import AuthToken, SkinPointLog, User, UserStats
 from apps.accounts.services.base_service import ServiceResult, _ok, _validate_serializer
 from apps.accounts.services.session_service import AccountService, PasswordService
 from apps.accounts.utils import (
@@ -383,27 +384,86 @@ class UserProfileService:
         profile_border = serializer.validated_data.pop("profile_border", None)
         stats = getattr(user, "stats", None)
 
-        if stats and nickname_color is not None:
-            unlocked_colors = {item["key"] for item in stats.unlocked_nickname_colors}
-            if nickname_color not in unlocked_colors:
-                raise ValidationError({"nickname_color": ["해금되지 않은 닉네임 색상입니다."]})
-
-        if stats and profile_border is not None:
-            unlocked_borders = {item["key"] for item in stats.unlocked_profile_borders}
-            if profile_border not in unlocked_borders:
-                raise ValidationError({"profile_border": ["해금되지 않은 프로필 테두리입니다."]})
-
         old_nickname = user.nickname
         with transaction.atomic():
+            if stats and (nickname_color is not None or profile_border is not None):
+                stats = UserStats.objects.select_for_update().get(pk=stats.pk)
+                purchase_updates: dict[str, object] = {}
+                stats_updates: list[str] = []
+
+                if nickname_color is not None:
+                    catalog = {item["key"]: item for item in stats.nickname_color_catalog()}
+                    selected = catalog.get(nickname_color)
+                    if not selected:
+                        raise ValidationError(
+                            {"nickname_color": ["존재하지 않는 닉네임 색상입니다."]}
+                        )
+                    if selected["cost"] > 0 and nickname_color not in (
+                        stats.owned_nickname_colors or []
+                    ):
+                        if stats.style_points < selected["cost"]:
+                            need = selected["cost"] - stats.style_points
+                            raise ValidationError(
+                                {"nickname_color": [f"포인트가 부족합니다. {need}P 더 필요합니다."]}
+                            )
+                        stats.style_points = F("style_points") - selected["cost"]
+                        stats.save(update_fields=["style_points"])
+                        stats.refresh_from_db(fields=["style_points"])
+                        owned = list(stats.owned_nickname_colors or [])
+                        owned.append(nickname_color)
+                        purchase_updates["owned_nickname_colors"] = owned
+                        SkinPointLog.objects.create(
+                            user_id=user.id,
+                            amount=-selected["cost"],
+                            balance=stats.style_points,
+                            reason=SkinPointLog.Reason.ADJUST,
+                            reference_id=f"nickname_color:{nickname_color}",
+                            created_at=timezone.now(),
+                        )
+                    stats.nickname_color = nickname_color
+                    stats_updates.append("nickname_color")
+
+                if profile_border is not None:
+                    catalog = {item["key"]: item for item in stats.profile_border_catalog()}
+                    selected = catalog.get(profile_border)
+                    if not selected:
+                        raise ValidationError(
+                            {"profile_border": ["존재하지 않는 프로필 테두리입니다."]}
+                        )
+                    if selected["cost"] > 0 and profile_border not in (
+                        stats.owned_profile_borders or []
+                    ):
+                        if stats.style_points < selected["cost"]:
+                            need = selected["cost"] - stats.style_points
+                            raise ValidationError(
+                                {"profile_border": [f"포인트가 부족합니다. {need}P 더 필요합니다."]}
+                            )
+                        stats.style_points = F("style_points") - selected["cost"]
+                        stats.save(update_fields=["style_points"])
+                        stats.refresh_from_db(fields=["style_points"])
+                        owned = list(stats.owned_profile_borders or [])
+                        owned.append(profile_border)
+                        purchase_updates["owned_profile_borders"] = owned
+                        SkinPointLog.objects.create(
+                            user_id=user.id,
+                            amount=-selected["cost"],
+                            balance=stats.style_points,
+                            reason=SkinPointLog.Reason.ADJUST,
+                            reference_id=f"profile_border:{profile_border}",
+                            created_at=timezone.now(),
+                        )
+                    stats.profile_border = profile_border
+                    stats_updates.append("profile_border")
+
+                if purchase_updates:
+                    for field, value in purchase_updates.items():
+                        setattr(stats, field, value)
+                    stats.save(update_fields=list(purchase_updates.keys()))
+
+                if stats_updates:
+                    stats.save(update_fields=stats_updates)
+
             serializer.save()
-            if nickname_color is not None:
-                stats.nickname_color = nickname_color
-
-            if profile_border is not None:
-                stats.profile_border = profile_border
-
-            if nickname_color is not None or profile_border is not None:
-                stats.save(update_fields=["nickname_color", "profile_border"])
 
             if new_nickname and new_nickname != old_nickname:
                 user.nickname_changed_at = timezone.now()
