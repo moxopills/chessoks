@@ -15,6 +15,13 @@ from apps.accounts.views.message_views import (
     GuestbookDeleteView,
     GuestbookView,
 )
+from apps.accounts.views.skin_views import (
+    SkinCatalogView,
+    SkinMeView,
+    SkinPointHistoryView,
+    SkinPurchaseView,
+    SkinSelectView,
+)
 from apps.accounts.views.user_views import (
     AccountDeleteView,
     CurrentUserView,
@@ -103,6 +110,11 @@ urlpatterns = [
         name="friend-request-cancel",
     ),
     path("friends/<int:user_id>/remove/", FriendRemoveView.as_view(), name="friend-remove"),
+    path("skins/", SkinCatalogView.as_view(), name="skin-catalog"),
+    path("skins/me/", SkinMeView.as_view(), name="skin-me"),
+    path("skins/<int:skin_id>/purchase/", SkinPurchaseView.as_view(), name="skin-purchase"),
+    path("skins/<int:skin_id>/select/", SkinSelectView.as_view(), name="skin-select"),
+    path("skins/points/history/", SkinPointHistoryView.as_view(), name="skin-point-history"),
     path("social/", include("apps.accounts.urls.social_urls")),
     # 게스트 세션
     path("guest/", GuestSessionView.as_view(), name="guest-create"),

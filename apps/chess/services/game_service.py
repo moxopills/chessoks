@@ -10,6 +10,7 @@ from django.utils import timezone
 
 import chess
 from apps.accounts.models import UserStats
+from apps.accounts.models.skin import SkinPointLog
 from apps.accounts.services import RankingService
 from apps.chess.engine import board as rule_engine
 from apps.chess.models import Game, Move
@@ -510,9 +511,14 @@ class GameService:
         white_stats, _ = UserStats.objects.get_or_create(user=game.white_player)
         black_stats, _ = UserStats.objects.get_or_create(user=game.black_player)
         RatingService.update_stats_only(white_stats, black_stats, game.result)
-        GameService._apply_style_points(white_stats, black_stats, game.result)
+        white_delta, black_delta = GameService._apply_style_points(
+            white_stats, black_stats, game.result
+        )
         white_stats.save()
         black_stats.save()
+        GameService._record_style_point_log(
+            game.id, white_stats, white_delta, black_stats, black_delta
+        )
         RankingService.invalidate_leaderboard_cache()
 
     @staticmethod
@@ -529,9 +535,14 @@ class GameService:
         black_tier_before = black_stats.rank_tier
 
         RatingService.update_ratings_and_stats(white_stats, black_stats, game.result)
-        GameService._apply_style_points(white_stats, black_stats, game.result)
+        white_delta, black_delta = GameService._apply_style_points(
+            white_stats, black_stats, game.result
+        )
         white_stats.save()
         black_stats.save()
+        GameService._record_style_point_log(
+            game.id, white_stats, white_delta, black_stats, black_delta
+        )
         try:
             from apps.accounts.services import SeasonService
 
@@ -761,8 +772,12 @@ class GameService:
             )
 
     @staticmethod
-    def _apply_style_points(white_stats: UserStats, black_stats: UserStats, result: str) -> None:
+    def _apply_style_points(
+        white_stats: UserStats, black_stats: UserStats, result: str
+    ) -> tuple[int, int]:
         # 기본 지급: 완료한 경기당 10점
+        white_delta = 10
+        black_delta = 10
         white_stats.style_points = (white_stats.style_points or 0) + 10
         black_stats.style_points = (black_stats.style_points or 0) + 10
 
@@ -789,11 +804,55 @@ class GameService:
 
         if result in white_win:
             white_stats.style_points += 5
+            white_delta += 5
         elif result in black_win:
             black_stats.style_points += 5
+            black_delta += 5
         elif result in draw_set:
             white_stats.style_points += 2
             black_stats.style_points += 2
+            white_delta += 2
+            black_delta += 2
+        return white_delta, black_delta
+
+    @staticmethod
+    def _record_style_point_log(
+        game_id: int,
+        white_stats: UserStats,
+        white_delta: int,
+        black_stats: UserStats,
+        black_delta: int,
+    ) -> None:
+        white_reason = SkinPointLog.Reason.GAME_DRAW
+        black_reason = SkinPointLog.Reason.GAME_DRAW
+        if white_delta > black_delta:
+            white_reason = SkinPointLog.Reason.GAME_WIN
+            black_reason = SkinPointLog.Reason.GAME_LOSS
+        elif black_delta > white_delta:
+            white_reason = SkinPointLog.Reason.GAME_LOSS
+            black_reason = SkinPointLog.Reason.GAME_WIN
+
+        now = timezone.now()
+        SkinPointLog.objects.bulk_create(
+            [
+                SkinPointLog(
+                    user_id=white_stats.user_id,
+                    amount=white_delta,
+                    balance=white_stats.style_points,
+                    reason=white_reason,
+                    reference_id=str(game_id),
+                    created_at=now,
+                ),
+                SkinPointLog(
+                    user_id=black_stats.user_id,
+                    amount=black_delta,
+                    balance=black_stats.style_points,
+                    reason=black_reason,
+                    reference_id=str(game_id),
+                    created_at=now,
+                ),
+            ]
+        )
 
     @staticmethod
     def _tier_rank(tier: str) -> int:

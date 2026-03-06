@@ -5,6 +5,7 @@ from .guest import GuestSession
 from .guestbook import GuestbookEntry
 from .season import Season, SeasonReward, SeasonStat, UserSeasonReward
 from .signup_email_token import SignupEmailToken
+from .skin import Skin, SkinPointLog, UserSkin
 from .social_user import SocialUser
 from .user import User
 from .user_stats import UserStats
@@ -17,6 +18,9 @@ __all__ = [
     "SeasonStat",
     "SeasonReward",
     "UserSeasonReward",
+    "Skin",
+    "UserSkin",
+    "SkinPointLog",
     "AuthToken",
     "SignupEmailToken",
     "Friend",
