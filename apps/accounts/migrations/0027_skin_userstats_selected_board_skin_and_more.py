@@ -109,6 +109,8 @@ def seed_skin_defaults(apps, schema_editor):
 
 class Migration(migrations.Migration):
 
+    atomic = False
+
     dependencies = [
         ("accounts", "0026_season_season_single_active_true"),
     ]
