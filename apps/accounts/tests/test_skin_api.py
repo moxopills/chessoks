@@ -1,9 +1,21 @@
+from django.test import override_settings
+
 from rest_framework import status
 
 from apps.accounts.models import Skin, SkinPointLog, UserSkin
 from apps.accounts.tests.test_auth import BaseAPITestCase
 
 
+@override_settings(
+    STORAGES={
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+)
 class SkinApiTestCase(BaseAPITestCase):
     def setUp(self):
         super().setUp()
