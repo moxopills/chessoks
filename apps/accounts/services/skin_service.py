@@ -140,11 +140,9 @@ class SkinService:
     @staticmethod
     @transaction.atomic
     def select_skin(user, skin_id: int) -> ServiceResult:
-        stats = (
-            UserStats.objects.select_for_update()
-            .select_related("selected_board_skin", "selected_piece_skin")
-            .get(user=user)
-        )
+        # select_for_update와 nullable FK outer join 조합은 일부 DB에서 NotSupportedError가 난다.
+        # 잠금은 UserStats 행만 필요하므로 select_related는 제외한다.
+        stats = UserStats.objects.select_for_update().get(user=user)
         skin = Skin.objects.filter(id=skin_id, is_active=True).first()
         if not skin:
             raise ValidationError({"message": "장착할 스킨을 찾지 못했습니다."})
