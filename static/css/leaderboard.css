@@ -331,6 +331,11 @@
     color: var(--color-text-secondary);
 }
 
+.profile-season-title {
+    font-size: 0.68rem;
+    color: var(--color-accent-secondary);
+}
+
 .profile-actions {
     position: relative;
     display: flex;

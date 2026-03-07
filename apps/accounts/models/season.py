@@ -102,7 +102,7 @@ class SeasonReward(models.Model):
     TYPE_POINTS = "points"
     TYPE_CHOICES = [
         (TYPE_TITLE, "칭호"),
-        (TYPE_BORDER, "프로필 테두리"),
+        (TYPE_BORDER, "프로필 카드 프레임"),
         (TYPE_POINTS, "포인트"),
     ]
 

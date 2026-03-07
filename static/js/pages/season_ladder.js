@@ -16,6 +16,7 @@
     let currentPage = 1;
     let totalPages = 1;
     let currentUserId = null;
+    let currentUserStats = null;
 
     init();
 
@@ -39,8 +40,10 @@
         try {
             const me = await API.get("/accounts/me/");
             currentUserId = me.id;
+            currentUserStats = me.stats || null;
         } catch (_e) {
             currentUserId = null;
+            currentUserStats = null;
         }
     }
 
@@ -141,6 +144,7 @@
                 <div>순위: <strong>#${m.rank}</strong></div>
                 <div>레이팅: <strong>${m.rating}</strong> (최고 ${m.peak_rating})</div>
                 <div>전적: ${m.wins}승 ${m.losses}패 ${m.draws}무 · 승률 ${m.win_rate}%</div>
+                <div>현재 시즌 칭호: <strong>${Utils.escapeHtml(currentUserStats?.season_title || '없음')}</strong></div>
             `;
         } catch (error) {
             myBoxEl.textContent = error.message || "내 시즌 정보를 불러오지 못했습니다.";
@@ -156,12 +160,25 @@
                 rewardBoxEl.textContent = "보상 정보가 없습니다.";
                 return;
             }
-            rewardBoxEl.innerHTML = rows.map((row) => `
-                <div class="season-history-item">
-                    <span>${row.rank_min}~${row.rank_max}위 · ${row.reward_type_label}</span>
-                    <strong>${Utils.escapeHtml(row.reward_value)}</strong>
-                </div>
-            `).join("");
+            rewardBoxEl.innerHTML = rows.map((row) => {
+                const rankText = row.rank_min === row.rank_max ? `${row.rank_min}위` : `${row.rank_min}~${row.rank_max}위`;
+                const typeClass = row.reward_type === "title"
+                    ? "reward-chip-title"
+                    : (row.reward_type === "border" ? "reward-chip-frame" : "reward-chip-points");
+                const claimedText = row.claimed ? '<span class="reward-state claimed">지급 완료</span>' : '<span class="reward-state pending">예정</span>';
+                return `
+                    <div class="season-reward-item">
+                        <div class="season-reward-head">
+                            <span class="season-reward-rank">${rankText}</span>
+                            ${claimedText}
+                        </div>
+                        <div class="season-reward-body">
+                            <span class="reward-chip ${typeClass}">${Utils.escapeHtml(row.reward_type_label)}</span>
+                            <strong>${Utils.escapeHtml(row.reward_value)}</strong>
+                        </div>
+                    </div>
+                `;
+            }).join("");
         } catch (error) {
             rewardBoxEl.textContent = error.message || "보상 정보를 불러오지 못했습니다.";
         }
@@ -175,7 +192,11 @@
         if (!currentSeasonId) return;
         try {
             const data = await API.post(`/seasons/${currentSeasonId}/rewards/claim/`, {});
-            Toast.success(`보상 ${data.claimed_count}개를 수령했습니다.`);
+            if ((data.claimed_count || 0) === 0) {
+                Toast.info(data.message || "이미 시즌 보상이 자동 지급되었습니다.");
+            } else {
+                Toast.success(`보상 ${data.claimed_count}개를 수령했습니다.`);
+            }
             await loadRewards();
         } catch (error) {
             Toast.error(error.message || "보상 수령에 실패했습니다.");
