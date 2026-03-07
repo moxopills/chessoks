@@ -116,54 +116,167 @@
     text-shadow: 0 1px 2px rgba(255, 255, 255, 0.35);
 }
 
-.customize-skin-preview-board.skin-board-classic .mini-square.light { background-color: #f0d9b5; }
-.customize-skin-preview-board.skin-board-classic .mini-square.dark { background-color: #b58863; }
+.customize-skin-preview-board.skin-board-classic .mini-square.light {
+    background: linear-gradient(160deg, #f3e2c5, #e8d1a8);
+}
+.customize-skin-preview-board.skin-board-classic .mini-square.dark {
+    background: linear-gradient(160deg, #bf9468, #a97b50);
+}
 .customize-skin-preview-board.skin-board-wood .mini-square.light {
-    background-color: #edd7b0;
+    background-color: #ead2ab;
     background-image:
-        linear-gradient(140deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.06)),
+        linear-gradient(150deg, rgba(255, 255, 255, 0.14), rgba(55, 32, 16, 0.1)),
         repeating-linear-gradient(
-            18deg,
-            rgba(255, 255, 255, 0.05) 0 6px,
-            rgba(0, 0, 0, 0.06) 6px 12px
+            20deg,
+            rgba(255, 255, 255, 0.06) 0 5px,
+            rgba(108, 70, 40, 0.08) 5px 11px
         );
 }
 .customize-skin-preview-board.skin-board-wood .mini-square.dark {
-    background-color: #9d6f46;
+    background-color: #8f5f34;
     background-image:
-        linear-gradient(155deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.15)),
+        linear-gradient(155deg, rgba(255, 255, 255, 0.1), rgba(41, 22, 10, 0.24)),
         repeating-linear-gradient(
             22deg,
-            rgba(255, 255, 255, 0.05) 0 5px,
-            rgba(0, 0, 0, 0.12) 5px 11px
+            rgba(255, 255, 255, 0.05) 0 4px,
+            rgba(62, 35, 17, 0.18) 4px 10px
         );
 }
-.customize-skin-preview-board.skin-board-dark .mini-square.light { background-color: #c3c8d0; }
-.customize-skin-preview-board.skin-board-dark .mini-square.dark { background-color: #4c566a; }
-.customize-skin-preview-board.skin-board-neon .mini-square.light { background-color: #0f172a; }
-.customize-skin-preview-board.skin-board-neon .mini-square.dark { background-color: #1e293b; }
-.customize-skin-preview-board.skin-board-marble .mini-square.light { background-color: #eceff4; }
-.customize-skin-preview-board.skin-board-marble .mini-square.dark { background-color: #b8c0cc; }
+.customize-skin-preview-board.skin-board-dark .mini-square.light {
+    background:
+        linear-gradient(170deg, #8895ad, #6f7c96),
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.06) 0 3px, transparent 3px 10px);
+}
+.customize-skin-preview-board.skin-board-dark .mini-square.dark {
+    background:
+        linear-gradient(170deg, #253247, #1a2435),
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.03) 0 3px, transparent 3px 9px);
+}
+.customize-skin-preview-board.skin-board-neon .mini-square.light {
+    background:
+        radial-gradient(circle at 35% 30%, rgba(34, 211, 238, 0.22), transparent 58%),
+        linear-gradient(160deg, #112445, #0b1730);
+}
+.customize-skin-preview-board.skin-board-neon .mini-square.dark {
+    background:
+        radial-gradient(circle at 55% 45%, rgba(244, 114, 182, 0.2), transparent 60%),
+        linear-gradient(160deg, #1a2d52, #111b33);
+}
+.customize-skin-preview-board.skin-board-marble .mini-square.light {
+    background:
+        linear-gradient(145deg, #f7faff, #e4ebf6),
+        repeating-linear-gradient(
+            -22deg,
+            rgba(120, 138, 166, 0.16) 0 2px,
+            transparent 2px 8px
+        );
+}
+.customize-skin-preview-board.skin-board-marble .mini-square.dark {
+    background:
+        linear-gradient(145deg, #c2ccdd, #9fadc4),
+        repeating-linear-gradient(
+            -24deg,
+            rgba(87, 101, 128, 0.18) 0 2px,
+            transparent 2px 7px
+        );
+}
+.customize-skin-preview-board.skin-board-obsidian .mini-square.light {
+    background:
+        linear-gradient(160deg, #3f434f, #313643),
+        repeating-linear-gradient(30deg, rgba(255, 255, 255, 0.05) 0 2px, transparent 2px 8px);
+}
+.customize-skin-preview-board.skin-board-obsidian .mini-square.dark {
+    background:
+        linear-gradient(160deg, #171c28, #0f1420),
+        repeating-linear-gradient(30deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 8px);
+}
+.customize-skin-preview-board.skin-board-sakura .mini-square.light {
+    background:
+        linear-gradient(160deg, #ffe7f1, #f9d7e7),
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3), transparent 45%);
+}
+.customize-skin-preview-board.skin-board-sakura .mini-square.dark {
+    background:
+        linear-gradient(160deg, #f0abc9, #dd8fb2),
+        radial-gradient(circle at 70% 65%, rgba(255, 255, 255, 0.18), transparent 45%);
+}
 
-.customize-skin-preview-board.skin-piece-pixel .mini-piece { font-family: "Press Start 2P", monospace; font-size: 18px; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece {
+    font-family: "Press Start 2P", monospace;
+    font-size: 18px;
+    image-rendering: pixelated;
+}
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.white {
+    color: #f8ff8a;
+    text-shadow: 2px 2px 0 rgba(29, 24, 16, 0.45);
+}
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.black {
+    color: #ff71c9;
+    text-shadow: 2px 2px 0 rgba(17, 12, 20, 0.55);
+}
 .customize-skin-preview-board.skin-piece-modern .mini-piece {
     font-family: "Noto Sans Symbols 2", "Noto Sans KR", sans-serif;
-    font-size: 30px;
+    font-size: 32px;
     text-shadow: none;
 }
 .customize-skin-preview-board.skin-piece-modern .mini-piece.white {
-    color: #fff;
-    text-shadow: 0 1px 0 rgba(7, 23, 46, 0.65), 0 0 5px rgba(120, 180, 255, 0.28);
+    color: #f4fbff;
+    text-shadow: 0 1px 0 rgba(7, 23, 46, 0.72), 0 0 7px rgba(120, 180, 255, 0.36);
 }
 .customize-skin-preview-board.skin-piece-modern .mini-piece.black {
-    color: #1e2c43;
+    color: #1f3657;
     text-shadow:
-        -1px -1px 0 rgba(233, 241, 255, 0.8),
-        1px -1px 0 rgba(233, 241, 255, 0.8),
-        -1px 1px 0 rgba(233, 241, 255, 0.8),
-        1px 1px 0 rgba(233, 241, 255, 0.8);
+        -1px -1px 0 rgba(235, 244, 255, 0.78),
+        1px -1px 0 rgba(235, 244, 255, 0.78),
+        -1px 1px 0 rgba(235, 244, 255, 0.78),
+        1px 1px 0 rgba(235, 244, 255, 0.78);
 }
 .customize-skin-preview-board.skin-piece-3d .mini-piece { text-shadow: 0 2px 4px rgba(0, 0, 0, 0.45); }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.white {
+    color: #fcfeff;
+    text-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.55),
+        0 -1px 0 rgba(63, 77, 104, 0.28),
+        0 4px 8px rgba(0, 0, 0, 0.18);
+}
+.customize-skin-preview-board.skin-piece-3d .mini-piece.black {
+    color: #172238;
+    text-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.24),
+        0 -1px 0 rgba(5, 9, 16, 0.52),
+        0 5px 9px rgba(0, 0, 0, 0.32);
+}
+.customize-skin-preview-board.skin-piece-glass .mini-piece {
+    font-size: 30px;
+}
+.customize-skin-preview-board.skin-piece-glass .mini-piece.white {
+    color: rgba(242, 250, 255, 0.95);
+    text-shadow: 0 1px 0 rgba(23, 47, 84, 0.5), 0 0 8px rgba(130, 220, 255, 0.42);
+}
+.customize-skin-preview-board.skin-piece-glass .mini-piece.black {
+    color: rgba(30, 56, 90, 0.95);
+    text-shadow:
+        -1px -1px 0 rgba(235, 246, 255, 0.72),
+        1px -1px 0 rgba(235, 246, 255, 0.72),
+        -1px 1px 0 rgba(235, 246, 255, 0.72),
+        1px 1px 0 rgba(235, 246, 255, 0.72);
+}
+.customize-skin-preview-board.skin-piece-rune .mini-piece {
+    font-family: 'Cinzel', 'Noto Sans KR', serif;
+    font-size: 30px;
+}
+.customize-skin-preview-board.skin-piece-rune .mini-piece.white {
+    color: #ffe8b7;
+    text-shadow: 0 1px 0 rgba(58, 41, 13, 0.62), 0 0 8px rgba(255, 214, 122, 0.4);
+}
+.customize-skin-preview-board.skin-piece-rune .mini-piece.black {
+    color: #412a16;
+    text-shadow:
+        -1px -1px 0 rgba(255, 232, 185, 0.68),
+        1px -1px 0 rgba(255, 232, 185, 0.68),
+        -1px 1px 0 rgba(255, 232, 185, 0.68),
+        1px 1px 0 rgba(255, 232, 185, 0.68);
+}
 
 @media (max-width: 900px) {
     .customize-layout {
