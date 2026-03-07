@@ -459,6 +459,8 @@
             'skin-board-dark',
             'skin-board-neon',
             'skin-board-marble',
+            'skin-board-obsidian',
+            'skin-board-sakura',
         ];
         chessBoard.classList.remove(...boardClasses);
         chessBoard.classList.add(selectedBoardSkinClass || 'skin-board-classic');
@@ -469,6 +471,8 @@
                 'skin-piece-pixel',
                 'skin-piece-modern',
                 'skin-piece-3d',
+                'skin-piece-glass',
+                'skin-piece-rune',
             ];
             chessBoardWrapper.classList.remove(...pieceClasses);
             chessBoardWrapper.classList.add(selectedPieceSkinClass || 'skin-piece-classic');
