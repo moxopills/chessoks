@@ -51,6 +51,75 @@
     margin-top: 12px;
 }
 
+.season-reward-item {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-secondary);
+    padding: 10px 12px;
+    margin-bottom: 8px;
+}
+
+.season-reward-item:last-child {
+    margin-bottom: 0;
+}
+
+.season-reward-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.season-reward-rank {
+    font-weight: 700;
+}
+
+.season-reward-body {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.reward-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.reward-chip-title {
+    color: #ec4899;
+    background: color-mix(in srgb, #ec4899 16%, transparent);
+}
+
+.reward-chip-frame {
+    color: #a855f7;
+    background: color-mix(in srgb, #a855f7 16%, transparent);
+}
+
+.reward-chip-points {
+    color: #16a34a;
+    background: color-mix(in srgb, #16a34a 16%, transparent);
+}
+
+.reward-state {
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.reward-state.claimed {
+    color: #16a34a;
+}
+
+.reward-state.pending {
+    color: var(--color-text-secondary);
+}
+
 .season-card-header {
     display: flex;
     align-items: center;

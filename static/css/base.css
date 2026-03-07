@@ -523,6 +523,40 @@ html[data-theme="dark"] .form-input:focus {
     margin-bottom: 0;
 }
 
+.season-frame-champion,
+.season-frame-runnerup,
+.season-frame-third,
+.season-frame-top10 {
+    position: relative;
+}
+
+.season-frame-champion::before,
+.season-frame-runnerup::before,
+.season-frame-third::before,
+.season-frame-top10::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.season-frame-champion::before {
+    box-shadow: 0 0 0 2px #f59e0b, 0 0 18px rgba(245, 158, 11, 0.35);
+}
+
+.season-frame-runnerup::before {
+    box-shadow: 0 0 0 2px #94a3b8, 0 0 14px rgba(148, 163, 184, 0.35);
+}
+
+.season-frame-third::before {
+    box-shadow: 0 0 0 2px #b45309, 0 0 12px rgba(180, 83, 9, 0.3);
+}
+
+.season-frame-top10::before {
+    box-shadow: 0 0 0 2px #06b6d4, 0 0 12px rgba(6, 182, 212, 0.26);
+}
+
 @media (max-width: 768px) {
     .card {
         padding: var(--space-md);

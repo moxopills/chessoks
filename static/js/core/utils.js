@@ -234,6 +234,16 @@ const Utils = (function() {
         return borderMap[key] || '';
     }
 
+    function getProfileCardFrameClass(key) {
+        const classMap = {
+            season_champion_frame: 'season-frame-champion',
+            season_runnerup_frame: 'season-frame-runnerup',
+            season_third_frame: 'season-frame-third',
+            season_top10_frame: 'season-frame-top10',
+        };
+        return classMap[key] || '';
+    }
+
     /**
      * 더블 탭 바인딩 (모바일용)
      */
@@ -589,6 +599,7 @@ const Utils = (function() {
         getTierIcon,
         getNicknameColorValue,
         getProfileBorderValue,
+        getProfileCardFrameClass,
         bindDoubleTap,
         ReportModal,
         Sounds,

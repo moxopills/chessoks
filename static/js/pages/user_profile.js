@@ -2,9 +2,11 @@
     'use strict';
 
     const avatarEl = document.getElementById('profile-avatar');
+    const profileCardEl = document.getElementById('profile-card');
     const nameEl = document.getElementById('profile-name');
     const ratingEl = document.getElementById('profile-rating');
     const tierEl = document.getElementById('profile-tier');
+    const seasonTitleEl = document.getElementById('profile-season-title');
     const statGames = document.getElementById('stat-games');
     const statWins = document.getElementById('stat-wins');
     const statLosses = document.getElementById('stat-losses');
@@ -86,6 +88,23 @@
         ratingEl.textContent = `레이팅 ${user.stats?.rating ?? '-'}`;
         const tierName = user.stats?.rank_tier || user.rank_tier || '-';
         tierEl.textContent = tierName;
+        if (seasonTitleEl) {
+            seasonTitleEl.textContent = user.stats?.season_title
+                ? `시즌 칭호: ${user.stats.season_title}`
+                : '시즌 칭호 없음';
+        }
+        if (profileCardEl) {
+            profileCardEl.classList.remove(
+                'season-frame-champion',
+                'season-frame-runnerup',
+                'season-frame-third',
+                'season-frame-top10'
+            );
+            const frameClass = Utils.getProfileCardFrameClass(user.stats?.profile_card_frame || '');
+            if (frameClass) {
+                profileCardEl.classList.add(frameClass);
+            }
+        }
         if (user.avatar_url) {
             avatarEl.innerHTML = `<img src="${user.avatar_url}" alt="${Utils.escapeHtml(user.nickname)}">`;
         } else {
