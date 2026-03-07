@@ -121,6 +121,8 @@ class SeasonRewardListView(APIView):
             )
         payload = SeasonRewardSerializer(rewards, many=True).data
         for row in payload:
+            if isinstance(row.get("reward_value"), str):
+                row["reward_value"] = row["reward_value"].replace("{season}", season.name)
             row["claimed"] = row["id"] in claimed_reward_ids
         return Response({"season": SeasonSerializer(season).data, "results": payload})
 

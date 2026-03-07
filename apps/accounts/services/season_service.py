@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import calendar
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
 
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import F, Q
+from django.db.models import Q
 from django.utils import timezone
 
 from rest_framework.exceptions import ValidationError
@@ -37,17 +38,21 @@ class SeasonService:
     CACHE_VERSION_KEY = "season_leaderboard_version"
 
     DEFAULT_REWARDS = (
-        (1, 1, SeasonReward.TYPE_TITLE, "👑 챔피언"),
-        (1, 1, SeasonReward.TYPE_POINTS, "1000"),
-        (1, 1, SeasonReward.TYPE_BORDER, "gold"),
-        (2, 3, SeasonReward.TYPE_TITLE, "🥈 그랜드마스터"),
-        (2, 3, SeasonReward.TYPE_POINTS, "500"),
-        (2, 3, SeasonReward.TYPE_BORDER, "silver"),
-        (4, 10, SeasonReward.TYPE_TITLE, "🥉 마스터"),
-        (4, 10, SeasonReward.TYPE_POINTS, "300"),
-        (4, 10, SeasonReward.TYPE_BORDER, "bronze"),
-        (11, 50, SeasonReward.TYPE_POINTS, "100"),
-        (51, 100, SeasonReward.TYPE_POINTS, "50"),
+        (1, 1, SeasonReward.TYPE_TITLE, "{season} 1위"),
+        (1, 1, SeasonReward.TYPE_BORDER, "season_champion_frame"),
+        (1, 1, SeasonReward.TYPE_POINTS, "5000"),
+        (2, 2, SeasonReward.TYPE_TITLE, "{season} 2위"),
+        (2, 2, SeasonReward.TYPE_BORDER, "season_runnerup_frame"),
+        (2, 2, SeasonReward.TYPE_POINTS, "3000"),
+        (3, 3, SeasonReward.TYPE_TITLE, "{season} 3위"),
+        (3, 3, SeasonReward.TYPE_BORDER, "season_third_frame"),
+        (3, 3, SeasonReward.TYPE_POINTS, "2000"),
+        (4, 10, SeasonReward.TYPE_TITLE, "{season} TOP 10"),
+        (4, 10, SeasonReward.TYPE_BORDER, "season_top10_frame"),
+        (4, 10, SeasonReward.TYPE_POINTS, "1200"),
+        (11, 30, SeasonReward.TYPE_POINTS, "700"),
+        (31, 60, SeasonReward.TYPE_POINTS, "400"),
+        (61, 100, SeasonReward.TYPE_POINTS, "200"),
     )
 
     @staticmethod
@@ -130,6 +135,54 @@ class SeasonService:
                 for rank_min, rank_max, reward_type, value in cls.DEFAULT_REWARDS
             ]
         )
+
+    @staticmethod
+    def _resolve_reward_value(season: Season, reward: SeasonReward) -> str:
+        value = reward.reward_value or ""
+        if "{season}" in value:
+            return value.replace("{season}", season.name)
+        return value
+
+    @staticmethod
+    def _append_unique(items: list[str], value: str) -> list[str]:
+        if not value:
+            return items
+        if value in items:
+            return items
+        return [*items, value]
+
+    @classmethod
+    def _apply_reward_to_stats(
+        cls,
+        *,
+        season: Season,
+        stats: UserStats,
+        reward: SeasonReward,
+    ) -> str | None:
+        value = cls._resolve_reward_value(season, reward)
+        if reward.reward_type == SeasonReward.TYPE_POINTS:
+            try:
+                points = int(value)
+            except (TypeError, ValueError):
+                return None
+            if points <= 0:
+                return None
+            stats.style_points += points
+            return f"포인트 +{points}"
+
+        if reward.reward_type == SeasonReward.TYPE_TITLE:
+            titles = list(stats.owned_season_titles or [])
+            stats.owned_season_titles = cls._append_unique(titles, value)
+            stats.season_title = value
+            return f"칭호 {value}"
+
+        if reward.reward_type == SeasonReward.TYPE_BORDER:
+            frames = list(stats.owned_profile_card_frames or [])
+            stats.owned_profile_card_frames = cls._append_unique(frames, value)
+            stats.profile_card_frame = value
+            return f"프레임 {value}"
+
+        return None
 
     @classmethod
     def _result_tuple(cls, game_result: str) -> tuple[str, str, float, float]:
@@ -330,29 +383,70 @@ class SeasonService:
             SeasonStat.objects.bulk_update(stats, ["final_rank"])
 
         rewards = list(season.rewards.all())
+        rewards_by_rank: dict[int, list[SeasonReward]] = defaultdict(list)
+        max_rank = len(stats)
+        for reward in rewards:
+            start = max(1, reward.rank_min)
+            end = min(max_rank, reward.rank_max)
+            for rank in range(start, end + 1):
+                rewards_by_rank[rank].append(reward)
+
+        stat_map = UserStats.objects.select_for_update().in_bulk(
+            [item.user_id for item in stats],
+            field_name="user_id",
+        )
+        now = timezone.now()
         claim_rows: list[UserSeasonReward] = []
+        changed_stats: list[UserStats] = []
         notification_rows = []
         for stat in stats:
-            matching = [
-                reward
-                for reward in rewards
-                if reward.rank_min <= (stat.final_rank or 0) <= reward.rank_max
-            ]
+            matching = rewards_by_rank.get(stat.final_rank or 0, [])
+            user_stats = stat_map.get(stat.user_id)
+            reward_lines: list[str] = []
             for reward in matching:
                 claim_rows.append(
-                    UserSeasonReward(user_id=stat.user_id, season=season, reward=reward)
+                    UserSeasonReward(
+                        user_id=stat.user_id,
+                        season=season,
+                        reward=reward,
+                        claimed_at=now,
+                    )
                 )
+                if user_stats is not None:
+                    line = cls._apply_reward_to_stats(
+                        season=season, stats=user_stats, reward=reward
+                    )
+                    if line:
+                        reward_lines.append(line)
+            if user_stats is not None and matching:
+                changed_stats.append(user_stats)
             notification_rows.append(
                 {
                     "user": stat.user,
                     "type": "season_end",
                     "title": f"{season.name} 종료",
-                    "message": f"최종 순위 {stat.final_rank}위가 확정되었습니다.",
+                    "message": (
+                        f"최종 순위 {stat.final_rank}위가 확정되었습니다. "
+                        f"{' / '.join(reward_lines)}"
+                        if reward_lines
+                        else f"최종 순위 {stat.final_rank}위가 확정되었습니다."
+                    ),
                     "payload": {"season_id": season.id, "rank": stat.final_rank},
                 }
             )
         if claim_rows:
             UserSeasonReward.objects.bulk_create(claim_rows, ignore_conflicts=True)
+        if changed_stats:
+            UserStats.objects.bulk_update(
+                changed_stats,
+                [
+                    "style_points",
+                    "season_title",
+                    "profile_card_frame",
+                    "owned_season_titles",
+                    "owned_profile_card_frames",
+                ],
+            )
         if notification_rows:
             NotificationService.bulk_create_notifications(notification_rows, push=True)
 
@@ -402,38 +496,41 @@ class SeasonService:
             .filter(user_id=user_id, season_id=season_id, claimed_at__isnull=True)
         )
         if not claims:
-            raise ValidationError("수령 가능한 보상이 없습니다.")
+            return {
+                "claimed_count": 0,
+                "rewards": [],
+                "message": "이미 시즌 보상이 자동 지급되었습니다.",
+            }
 
         now = timezone.now()
         for row in claims:
             row.claimed_at = now
         UserSeasonReward.objects.bulk_update(claims, ["claimed_at"])
 
-        points_to_add = 0
+        user_stats = UserStats.objects.select_for_update().filter(user_id=user_id).first()
+        if user_stats is None:
+            raise ValidationError("사용자 통계를 찾을 수 없습니다.")
+
         reward_lines: list[str] = []
         for row in claims:
-            reward = row.reward
-            if reward.reward_type == SeasonReward.TYPE_POINTS:
-                try:
-                    points_to_add += int(reward.reward_value)
-                except (TypeError, ValueError):
-                    continue
-            else:
-                reward_lines.append(f"{reward.get_reward_type_display()}: {reward.reward_value}")
+            line = cls._apply_reward_to_stats(season=season, stats=user_stats, reward=row.reward)
+            if line:
+                reward_lines.append(line)
 
-        if points_to_add > 0:
-            UserStats.objects.filter(user_id=user_id).update(
-                style_points=F("style_points") + points_to_add
-            )
-            reward_lines.append(f"포인트: +{points_to_add}")
-
-        user_stats = UserStats.objects.select_related("user").filter(user_id=user_id).first()
-        if user_stats:
-            NotificationService.create_notification(
-                user=user_stats.user,
-                type="season_reward",
-                title="시즌 보상 수령 완료",
-                message=", ".join(reward_lines) if reward_lines else "보상을 수령했습니다.",
-                payload={"season_id": season_id, "claimed_count": len(claims)},
-            )
+        user_stats.save(
+            update_fields=[
+                "style_points",
+                "season_title",
+                "profile_card_frame",
+                "owned_season_titles",
+                "owned_profile_card_frames",
+            ]
+        )
+        NotificationService.create_notification(
+            user=user_stats.user,
+            type="season_reward",
+            title="시즌 보상 수령 완료",
+            message=", ".join(reward_lines) if reward_lines else "보상을 수령했습니다.",
+            payload={"season_id": season_id, "claimed_count": len(claims)},
+        )
         return {"claimed_count": len(claims), "rewards": reward_lines}

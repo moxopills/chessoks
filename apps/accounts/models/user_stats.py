@@ -43,6 +43,28 @@ class UserStats(models.Model):
         blank=True,
         help_text="구매해 보유 중인 프로필 테두리 키 목록",
     )
+    season_title = models.CharField(
+        max_length=80,
+        blank=True,
+        default="",
+        help_text="활성 시즌 칭호",
+    )
+    profile_card_frame = models.CharField(
+        max_length=40,
+        blank=True,
+        default="",
+        help_text="선택된 프로필 카드 프레임 키",
+    )
+    owned_season_titles = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="시즌 보상으로 획득한 칭호 목록",
+    )
+    owned_profile_card_frames = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="시즌 보상으로 획득한 프로필 카드 프레임 목록",
+    )
     selected_board_skin = models.ForeignKey(
         "accounts.Skin",
         null=True,

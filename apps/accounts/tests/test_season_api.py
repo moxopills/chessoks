@@ -101,3 +101,106 @@ class SeasonApiTestCase(BaseAPITestCase):
         self.assertEqual(self.user_a.stats.style_points, before + 300)
         claim = UserSeasonReward.objects.get(user=self.user_a, reward=reward)
         self.assertIsNotNone(claim.claimed_at)
+
+    def test_finalize_season_auto_grants_rewards(self):
+        start = timezone.localdate() - timedelta(days=32)
+        end = timezone.localdate() - timedelta(days=1)
+        season = Season.objects.create(
+            name="2026년 03월 시즌",
+            start_date=start,
+            end_date=end,
+            is_active=True,
+            is_finalized=False,
+        )
+        SeasonService._ensure_default_rewards(season)
+
+        users = [self.user_a, self.user_b, self.user_c]
+        for idx in range(4, 13):
+            users.append(
+                self.create_verified_user(email=f"s{idx}@test.com", nickname=f"시즌유저{idx}")
+            )
+
+        rating = 2100
+        for user in users:
+            SeasonStat.objects.create(
+                season=season,
+                user=user,
+                rating=rating,
+                peak_rating=rating,
+                games_played=20,
+                wins=12,
+                losses=6,
+                draws=2,
+            )
+            rating -= 10
+
+        finalized_count = SeasonService.finalize_season(season)
+        self.assertEqual(finalized_count, len(users))
+
+        season.refresh_from_db()
+        self.assertTrue(season.is_finalized)
+        self.assertFalse(season.is_active)
+
+        # 1위 보상
+        stats_1 = self.user_a.stats
+        stats_1.refresh_from_db()
+        self.assertEqual(stats_1.style_points, 5000)
+        self.assertIn("2026년 03월 시즌 1위", stats_1.owned_season_titles)
+        self.assertEqual(stats_1.season_title, "2026년 03월 시즌 1위")
+        self.assertIn("season_champion_frame", stats_1.owned_profile_card_frames)
+        self.assertEqual(stats_1.profile_card_frame, "season_champion_frame")
+
+        # 2위 보상
+        stats_2 = self.user_b.stats
+        stats_2.refresh_from_db()
+        self.assertEqual(stats_2.style_points, 3000)
+        self.assertIn("2026년 03월 시즌 2위", stats_2.owned_season_titles)
+        self.assertIn("season_runnerup_frame", stats_2.owned_profile_card_frames)
+
+        # 3위 보상
+        stats_3 = self.user_c.stats
+        stats_3.refresh_from_db()
+        self.assertEqual(stats_3.style_points, 2000)
+        self.assertIn("2026년 03월 시즌 3위", stats_3.owned_season_titles)
+        self.assertIn("season_third_frame", stats_3.owned_profile_card_frames)
+
+        # 4~10위 (TOP10 공통)
+        stats_4 = users[3].stats
+        stats_4.refresh_from_db()
+        self.assertEqual(stats_4.style_points, 1200)
+        self.assertIn("2026년 03월 시즌 TOP 10", stats_4.owned_season_titles)
+        self.assertIn("season_top10_frame", stats_4.owned_profile_card_frames)
+
+        # 11~30위 포인트 지급
+        stats_11 = users[10].stats
+        stats_11.refresh_from_db()
+        self.assertEqual(stats_11.style_points, 700)
+
+        claims = UserSeasonReward.objects.filter(season=season)
+        self.assertTrue(claims.exists())
+        self.assertFalse(claims.filter(claimed_at__isnull=True).exists())
+
+    def test_claim_rewards_returns_zero_when_already_auto_claimed(self):
+        start = timezone.localdate() - timedelta(days=32)
+        end = timezone.localdate() - timedelta(days=1)
+        season = Season.objects.create(
+            name="지난 시즌", start_date=start, end_date=end, is_active=False, is_finalized=True
+        )
+        reward = SeasonReward.objects.create(
+            season=season,
+            rank_min=1,
+            rank_max=1,
+            reward_type=SeasonReward.TYPE_POINTS,
+            reward_value="300",
+        )
+        UserSeasonReward.objects.create(
+            user=self.user_a,
+            season=season,
+            reward=reward,
+            claimed_at=timezone.now(),
+        )
+        self.client.force_authenticate(user=self.user_a)
+
+        response = self.client.post(f"/api/seasons/{season.id}/rewards/claim/", {}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["claimed_count"], 0)

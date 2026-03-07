@@ -26,6 +26,12 @@
     color: var(--color-text-secondary);
 }
 
+.profile-season-title {
+    font-size: clamp(0.68rem, 1vw, 0.8rem);
+    color: var(--color-accent-secondary);
+    margin-top: 2px;
+}
+
 .profile-actions {
     display: flex;
     flex-wrap: wrap;
