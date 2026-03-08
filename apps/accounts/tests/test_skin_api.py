@@ -166,3 +166,31 @@ class SkinApiTestCase(BaseAPITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("포인트가 부족합니다", str(response.data))
+
+    def test_profile_customization_owned_alias_keys_are_treated_as_owned(self):
+        stats = self.user.stats
+        stats.style_points = 0
+        stats.nickname_color = "mint_color"
+        stats.profile_border = "royal"
+        stats.owned_nickname_colors = ["mint_color"]
+        stats.owned_profile_borders = ["royal"]
+        stats.save(
+            update_fields=[
+                "style_points",
+                "nickname_color",
+                "profile_border",
+                "owned_nickname_colors",
+                "owned_profile_borders",
+            ]
+        )
+
+        response = self.client.get("/api/accounts/me/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        options_color = {
+            item["key"]: item for item in response.data["stats"]["unlocked_nickname_colors"]
+        }
+        options_border = {
+            item["key"]: item for item in response.data["stats"]["unlocked_profile_borders"]
+        }
+        self.assertTrue(options_color["mint"]["owned"])
+        self.assertTrue(options_border["royal_ring"]["owned"])
