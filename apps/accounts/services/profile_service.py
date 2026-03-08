@@ -392,15 +392,22 @@ class UserProfileService:
                 stats_updates: list[str] = []
 
                 if nickname_color is not None:
+                    nickname_color = UserStats.normalize_nickname_color_key(nickname_color)
                     catalog = {item["key"]: item for item in stats.nickname_color_catalog()}
                     selected = catalog.get(nickname_color)
                     if not selected:
                         raise ValidationError(
                             {"nickname_color": ["존재하지 않는 닉네임 색상입니다."]}
                         )
-                    if selected["cost"] > 0 and nickname_color not in (
-                        stats.owned_nickname_colors or []
-                    ):
+                    owned_nickname_colors = {
+                        UserStats.normalize_nickname_color_key(item)
+                        for item in (stats.owned_nickname_colors or [])
+                    }
+                    if stats.nickname_color:
+                        owned_nickname_colors.add(
+                            UserStats.normalize_nickname_color_key(stats.nickname_color)
+                        )
+                    if selected["cost"] > 0 and nickname_color not in owned_nickname_colors:
                         if stats.style_points < selected["cost"]:
                             need = selected["cost"] - stats.style_points
                             raise ValidationError(
@@ -409,8 +416,12 @@ class UserProfileService:
                         stats.style_points = F("style_points") - selected["cost"]
                         stats.save(update_fields=["style_points"])
                         stats.refresh_from_db(fields=["style_points"])
-                        owned = list(stats.owned_nickname_colors or [])
-                        owned.append(nickname_color)
+                        owned = [
+                            UserStats.normalize_nickname_color_key(item)
+                            for item in (stats.owned_nickname_colors or [])
+                        ]
+                        if nickname_color not in owned:
+                            owned.append(nickname_color)
                         purchase_updates["owned_nickname_colors"] = owned
                         SkinPointLog.objects.create(
                             user_id=user.id,
@@ -424,15 +435,22 @@ class UserProfileService:
                     stats_updates.append("nickname_color")
 
                 if profile_border is not None:
+                    profile_border = UserStats.normalize_profile_border_key(profile_border)
                     catalog = {item["key"]: item for item in stats.profile_border_catalog()}
                     selected = catalog.get(profile_border)
                     if not selected:
                         raise ValidationError(
                             {"profile_border": ["존재하지 않는 프로필 테두리입니다."]}
                         )
-                    if selected["cost"] > 0 and profile_border not in (
-                        stats.owned_profile_borders or []
-                    ):
+                    owned_profile_borders = {
+                        UserStats.normalize_profile_border_key(item)
+                        for item in (stats.owned_profile_borders or [])
+                    }
+                    if stats.profile_border:
+                        owned_profile_borders.add(
+                            UserStats.normalize_profile_border_key(stats.profile_border)
+                        )
+                    if selected["cost"] > 0 and profile_border not in owned_profile_borders:
                         if stats.style_points < selected["cost"]:
                             need = selected["cost"] - stats.style_points
                             raise ValidationError(
@@ -441,8 +459,12 @@ class UserProfileService:
                         stats.style_points = F("style_points") - selected["cost"]
                         stats.save(update_fields=["style_points"])
                         stats.refresh_from_db(fields=["style_points"])
-                        owned = list(stats.owned_profile_borders or [])
-                        owned.append(profile_border)
+                        owned = [
+                            UserStats.normalize_profile_border_key(item)
+                            for item in (stats.owned_profile_borders or [])
+                        ]
+                        if profile_border not in owned:
+                            owned.append(profile_border)
                         purchase_updates["owned_profile_borders"] = owned
                         SkinPointLog.objects.create(
                             user_id=user.id,

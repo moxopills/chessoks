@@ -198,6 +198,20 @@ class UserStats(models.Model):
         ]
 
     @staticmethod
+    def _nickname_color_alias_map() -> dict[str, str]:
+        return {
+            "mint_color": "mint",
+            "mintgreen": "mint",
+            "sunset_color": "sunset",
+            "gold_color": "gold",
+        }
+
+    @classmethod
+    def normalize_nickname_color_key(cls, key: str) -> str:
+        value = (key or "").strip()
+        return cls._nickname_color_alias_map().get(value, value)
+
+    @staticmethod
     def profile_border_catalog() -> list[dict]:
         return [
             {"key": "", "label": "기본", "cost": 0},
@@ -206,8 +220,29 @@ class UserStats(models.Model):
             {"key": "champion_ring", "label": "챔피언 링", "cost": 500},
         ]
 
+    @staticmethod
+    def _profile_border_alias_map() -> dict[str, str]:
+        return {
+            "mint": "mint_ring",
+            "mint_border": "mint_ring",
+            "royal": "royal_ring",
+            "royal_border": "royal_ring",
+            "champion": "champion_ring",
+            "champion_border": "champion_ring",
+        }
+
+    @classmethod
+    def normalize_profile_border_key(cls, key: str) -> str:
+        value = (key or "").strip()
+        return cls._profile_border_alias_map().get(value, value)
+
     def nickname_color_options(self) -> list[dict]:
-        owned = set(self.owned_nickname_colors or [])
+        owned = {
+            self.normalize_nickname_color_key(item) for item in (self.owned_nickname_colors or [])
+        }
+        current = self.normalize_nickname_color_key(self.nickname_color or "")
+        if current:
+            owned.add(current)
         options = []
         for item in self.nickname_color_catalog():
             options.append(
@@ -219,7 +254,12 @@ class UserStats(models.Model):
         return options
 
     def profile_border_options(self) -> list[dict]:
-        owned = set(self.owned_profile_borders or [])
+        owned = {
+            self.normalize_profile_border_key(item) for item in (self.owned_profile_borders or [])
+        }
+        current = self.normalize_profile_border_key(self.profile_border or "")
+        if current:
+            owned.add(current)
         options = []
         for item in self.profile_border_catalog():
             options.append(
