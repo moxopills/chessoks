@@ -15,6 +15,30 @@
     let me = null;
     let skinCatalog = null;
 
+    function normalizeNicknameColorKey(key) {
+        const value = (key || '').trim();
+        const map = {
+            mint_color: 'mint',
+            mintgreen: 'mint',
+            sunset_color: 'sunset',
+            gold_color: 'gold',
+        };
+        return map[value] || value;
+    }
+
+    function normalizeProfileBorderKey(key) {
+        const value = (key || '').trim();
+        const map = {
+            mint: 'mint_ring',
+            mint_border: 'mint_ring',
+            royal: 'royal_ring',
+            royal_border: 'royal_ring',
+            champion: 'champion_ring',
+            champion_border: 'champion_ring',
+        };
+        return map[value] || value;
+    }
+
     init();
 
     async function init() {
@@ -79,15 +103,17 @@
     }
 
     function populateCustomization(stats) {
+        const nicknameColor = normalizeNicknameColorKey(stats.nickname_color || '');
+        const profileBorder = normalizeProfileBorderKey(stats.profile_border || '');
         fillSelect(
             nicknameColorSelect,
             stats.unlocked_nickname_colors || [{ key: '', label: '기본', cost: 0 }],
-            stats.nickname_color || ''
+            nicknameColor
         );
         fillSelect(
             profileBorderSelect,
             stats.unlocked_profile_borders || [{ key: '', label: '기본', cost: 0 }],
-            stats.profile_border || ''
+            profileBorder
         );
         stylePointsText.textContent = `보유 포인트: ${stats.style_points ?? skinCatalog?.points ?? 0}P`;
         renderPreview();
