@@ -195,14 +195,16 @@ class ProfileUpdateView(CurrentUserMixin, UpdateAPIView):
         user = self.get_object()
         serializer = self.get_serializer(user, data=request.data)
         UserProfileService.profile_update(serializer, user)
-        return Response(UserSerializer(user).data)
+        fresh_user = User.objects.select_related("stats").get(pk=user.pk)
+        return Response(UserSerializer(fresh_user).data)
 
     @extend_schema(request=ProfileUpdateSerializer, responses={200: UserSerializer})
     def partial_update(self, request, *args, **kwargs):
         user = self.get_object()
         serializer = self.get_serializer(user, data=request.data, partial=True)
         UserProfileService.profile_update(serializer, user)
-        return Response(UserSerializer(user).data)
+        fresh_user = User.objects.select_related("stats").get(pk=user.pk)
+        return Response(UserSerializer(fresh_user).data)
 
 
 class PasswordResetRequestView(APIView):

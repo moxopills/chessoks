@@ -15,6 +15,23 @@
     let me = null;
     let skinCatalog = null;
 
+    function extractErrorMessage(error, fallback) {
+        if (error?.data?.message) return error.data.message;
+        const data = error?.data;
+        if (data && typeof data === 'object') {
+            const firstField = Object.keys(data)[0];
+            const value = data[firstField];
+            if (Array.isArray(value) && value.length > 0) {
+                return String(value[0]);
+            }
+            if (typeof value === 'string' && value.trim()) {
+                return value;
+            }
+        }
+        if (error?.message) return error.message;
+        return fallback;
+    }
+
     function normalizeNicknameColorKey(key) {
         const value = (key || '').trim();
         const map = {
@@ -185,7 +202,7 @@
                 Toast.info('이미 보유 중인 스킨입니다.');
             }
         } catch (error) {
-            Toast.error(error.data?.message || error.message || '스킨 구매에 실패했습니다.');
+            Toast.error(extractErrorMessage(error, '스킨 구매에 실패했습니다.'));
         }
     }
 
@@ -199,14 +216,15 @@
                 nickname_color: nicknameColorSelect?.value || '',
                 profile_border: profileBorderSelect?.value || '',
             };
-            const updated = await API.patch('/accounts/profile/', payload);
-            me = { ...me, ...updated };
+            await API.patch('/accounts/profile/', payload);
+            // profile/stats 응답 캐시/관계 객체 지연 반영 이슈를 피하기 위해 최신 me를 재조회
+            me = await API.get('/accounts/me/');
             await loadSkinCatalog();
-            populateCustomization(updated.stats || me.stats || {});
-            window.dispatchEvent(new CustomEvent('user:updated', { detail: { user: updated } }));
+            populateCustomization(me.stats || {});
+            window.dispatchEvent(new CustomEvent('user:updated', { detail: { user: me } }));
             Toast.success('커스터마이징이 저장되었습니다.');
         } catch (error) {
-            Toast.error(error.data?.message || error.message || '커스터마이징 저장에 실패했습니다.');
+            Toast.error(extractErrorMessage(error, '커스터마이징 저장에 실패했습니다.'));
         }
     }
 })();
