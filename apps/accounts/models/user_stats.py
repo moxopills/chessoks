@@ -238,8 +238,7 @@ class UserStats(models.Model):
 
     def nickname_color_options(self) -> list[dict]:
         owned = {
-            self.normalize_nickname_color_key(item)
-            for item in (self.owned_nickname_colors or [])
+            self.normalize_nickname_color_key(item) for item in (self.owned_nickname_colors or [])
         }
         current = self.normalize_nickname_color_key(self.nickname_color or "")
         if current:
@@ -256,8 +255,7 @@ class UserStats(models.Model):
 
     def profile_border_options(self) -> list[dict]:
         owned = {
-            self.normalize_profile_border_key(item)
-            for item in (self.owned_profile_borders or [])
+            self.normalize_profile_border_key(item) for item in (self.owned_profile_borders or [])
         }
         current = self.normalize_profile_border_key(self.profile_border or "")
         if current:
