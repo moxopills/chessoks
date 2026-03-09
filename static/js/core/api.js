@@ -74,10 +74,30 @@ const API = (function() {
         if (response.status === 401) {
             errorData = { ...errorData, message: '로그인 시 가능합니다.' };
         }
+        if (response.status === 403 && !errorData?.message) {
+            errorData = { ...errorData, message: '권한이 없습니다.' };
+        }
+
+        const code = errorData?.code || '';
+        const humanMessageByCode = {
+            validation_error: '입력값을 다시 확인해주세요.',
+            permission_denied: '권한이 없습니다.',
+            not_found: '요청한 정보를 찾을 수 없습니다.',
+            auth_required: '로그인 시 가능합니다.',
+            bad_request: '요청을 처리할 수 없습니다.',
+            conflict: '이미 처리된 요청입니다.',
+            rate_limited: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.',
+        };
+        if (code && humanMessageByCode[code]) {
+            errorData.message = errorData.message || humanMessageByCode[code];
+        }
 
         const error = new Error(errorData.message || `HTTP ${response.status}`);
         error.status = response.status;
         error.data = errorData;
+        try {
+            window.dispatchEvent(new CustomEvent('api:error', { detail: { status: response.status, data: errorData } }));
+        } catch {}
         throw error;
     }
 

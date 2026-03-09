@@ -14,6 +14,17 @@
 
     let me = null;
     let skinCatalog = null;
+    let statsSnapshot = null;
+
+    function showStatus(message, type = 'info', duration = 1800) {
+        if (window.StatusBadge) {
+            window.StatusBadge.show(message, { type, duration });
+            return;
+        }
+        if (type === 'success') return Toast.success(message);
+        if (type === 'error') return Toast.error(message);
+        return Toast.info(message);
+    }
 
     function extractErrorMessage(error, fallback) {
         if (error?.data?.message) return error.data.message;
@@ -62,7 +73,7 @@
         try {
             me = await API.get('/accounts/me/');
             if (me?.is_guest) {
-                Toast.error('게스트 계정은 커스터마이징을 사용할 수 없습니다.');
+                showStatus('게스트 계정은 커스터마이징을 사용할 수 없습니다.', 'error');
                 window.location.href = '/';
                 return;
             }
@@ -70,7 +81,7 @@
             populateCustomization(me.stats || {});
             bindEvents();
         } catch (error) {
-            Toast.error('로그인 후 이용 가능합니다.');
+            showStatus('로그인 후 이용 가능합니다.', 'error');
             window.location.href = '/login/';
         }
     }
@@ -97,8 +108,10 @@
     function fillSkinSelect(selectEl, skins, preferredId = 0) {
         if (!selectEl) return;
         const options = skins.map((skin) => {
-            const state = skin.selected ? '착용중' : (skin.owned || skin.is_default ? '보유' : `${skin.price}P`);
-            const lock = skin.owned || skin.is_default ? '' : ' [구매]';
+            const state = skin.selected
+                ? '착용중'
+                : (skin.owned || skin.is_default ? '보유중' : `구매 필요 ${skin.price}P`);
+            const lock = skin.owned || skin.is_default ? '' : ' [구매 필요]';
             return `<option value="${skin.id}" ${skin.selected ? 'selected' : ''}>${Utils.escapeHtml(skin.name)} · ${state}${lock}</option>`;
         });
         selectEl.innerHTML = options.join('');
@@ -109,10 +122,14 @@
 
     function fillSelect(selectEl, options, selectedKey) {
         if (!selectEl) return;
+        const selected = (selectedKey || '').trim();
         selectEl.innerHTML = options
             .map((item) => {
-                const owned = item.owned || item.cost === 0;
-                const state = owned ? '보유중' : `${item.cost}P`;
+                const key = (item.key || '').trim();
+                const owned = item.owned || item.cost === 0 || key === selected;
+                const state = key === selected
+                    ? '착용중'
+                    : (owned ? '보유중' : `구매 필요 ${item.cost}P`);
                 return `<option value="${item.key}">${item.label} · ${state}</option>`;
             })
             .join('');
@@ -120,6 +137,7 @@
     }
 
     function populateCustomization(stats) {
+        statsSnapshot = stats || {};
         const nicknameColor = normalizeNicknameColorKey(stats.nickname_color || '');
         const profileBorder = normalizeProfileBorderKey(stats.profile_border || '');
         fillSelect(
@@ -134,6 +152,7 @@
         );
         stylePointsText.textContent = `보유 포인트: ${stats.style_points ?? skinCatalog?.points ?? 0}P`;
         renderPreview();
+        updateActionState();
     }
 
     function getSkinCssClassById(list, skinId, fallback) {
@@ -159,6 +178,27 @@
         const boardClass = getSkinCssClassById(skinCatalog?.board || [], boardSkinId, 'skin-board-classic');
         const pieceClass = getSkinCssClassById(skinCatalog?.pieces || [], pieceSkinId, 'skin-piece-classic');
         previewBoard.className = `customize-skin-preview-board ${boardClass} ${pieceClass}`;
+        updateActionState();
+    }
+
+    function getSelectedSkin(skinId) {
+        const allSkins = [...(skinCatalog?.board || []), ...(skinCatalog?.pieces || [])];
+        return allSkins.find((skin) => skin.id === skinId) || null;
+    }
+
+    function updateActionState() {
+        const boardSkinId = parseInt(boardSkinSelect?.value || '0', 10);
+        const pieceSkinId = parseInt(pieceSkinSelect?.value || '0', 10);
+        const boardSkin = getSelectedSkin(boardSkinId);
+        const pieceSkin = getSelectedSkin(pieceSkinId);
+        const needPurchase = [boardSkin, pieceSkin].some((skin) => skin && !skin.owned && !skin.is_default);
+        if (purchaseBtn) {
+            purchaseBtn.disabled = !needPurchase;
+            purchaseBtn.textContent = needPurchase ? '구매하기' : '구매 완료';
+        }
+        if (saveBtn) {
+            saveBtn.disabled = false;
+        }
     }
 
     async function purchaseSkinIfNeeded(skinId) {
@@ -195,14 +235,14 @@
             purchased += await purchaseSkinIfNeeded(boardSkinId);
             purchased += await purchaseSkinIfNeeded(pieceSkinId);
             await loadSkinCatalog();
-            renderPreview();
+            populateCustomization(me?.stats || statsSnapshot || {});
             if (purchased > 0) {
-                Toast.success(`선택한 스킨 ${purchased}개를 구매했습니다. 이제 적용하기를 눌러주세요.`);
+                showStatus(`선택한 스킨 ${purchased}개를 구매했습니다. 이제 적용하기를 눌러주세요.`, 'success');
             } else {
-                Toast.info('이미 보유 중인 스킨입니다.');
+                showStatus('이미 보유 중인 스킨입니다.', 'info');
             }
         } catch (error) {
-            Toast.error(extractErrorMessage(error, '스킨 구매에 실패했습니다.'));
+            showStatus(extractErrorMessage(error, '스킨 구매에 실패했습니다.'), 'error');
         }
     }
 
@@ -222,9 +262,9 @@
             await loadSkinCatalog();
             populateCustomization(me.stats || {});
             window.dispatchEvent(new CustomEvent('user:updated', { detail: { user: me } }));
-            Toast.success('커스터마이징이 저장되었습니다.');
+            showStatus('커스터마이징이 저장되었습니다.', 'success');
         } catch (error) {
-            Toast.error(extractErrorMessage(error, '커스터마이징 저장에 실패했습니다.'));
+            showStatus(extractErrorMessage(error, '커스터마이징 저장에 실패했습니다.'), 'error');
         }
     }
 })();
