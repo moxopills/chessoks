@@ -17,7 +17,21 @@
     }
 
     async function fetchThreads() {
-        listEl.innerHTML = '<div class="history-empty">불러오는 중...</div>';
+        listEl.innerHTML = Array.from({ length: 5 }).map(() => `
+            <div class="thread-card">
+                <div class="thread-info">
+                    <div class="thread-avatar"><div class="skeleton skeleton-avatar" style="width:40px;height:40px;"></div></div>
+                    <div class="thread-text">
+                        <div class="skeleton" style="width:120px;height:12px;margin-bottom:8px;"></div>
+                        <div class="skeleton" style="width:180px;height:11px;"></div>
+                    </div>
+                </div>
+                <div class="thread-action">
+                    <div class="skeleton" style="width:70px;height:10px;margin-bottom:8px;"></div>
+                    <div class="skeleton" style="width:62px;height:26px;border-radius:8px;"></div>
+                </div>
+            </div>
+        `).join('');
         try {
             const [data, notifications] = await Promise.all([
                 API.get('/accounts/messages/threads/', { limit: 50, offset: 0, no_count: 1 }),
