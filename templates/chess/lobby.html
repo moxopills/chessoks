@@ -9,22 +9,44 @@
     <section class="lobby-hero">
         <h1 class="hero-title"><span class="hero-logo">♞</span>ChessOK</h1>
         <p class="hero-subtitle">실시간 체스 대전</p>
-        <div class="hero-info-toggles">
-            <button class="hero-tier-toggle" id="tier-toggle" type="button" aria-expanded="false">
-                티어 기준 보기
-            </button>
-            <button class="hero-tier-toggle" id="mode-toggle" type="button" aria-expanded="false">
-                게임 시작 안내
-            </button>
-            <button class="hero-tier-toggle" id="install-toggle" type="button" aria-expanded="false">
-                웹앱 설치 안내
-            </button>
-            <button class="hero-tier-toggle" id="points-toggle" type="button" aria-expanded="false">
-                포인트 안내
-            </button>
-            <button class="hero-tier-toggle hidden" id="lobby-customize-open" type="button">
-                커스터마이징
-            </button>
+        <div class="hero-controls">
+            <div class="hero-control-group hero-control-group-guide" aria-label="가이드">
+                <button class="hero-tier-toggle" id="tier-toggle" type="button" aria-expanded="false">
+                    티어 기준 보기
+                </button>
+                <button class="hero-tier-toggle" id="mode-toggle" type="button" aria-expanded="false">
+                    게임 시작 안내
+                </button>
+                <button class="hero-tier-toggle" id="install-toggle" type="button" aria-expanded="false">
+                    웹앱 설치 안내
+                </button>
+                <button class="hero-tier-toggle" id="points-toggle" type="button" aria-expanded="false">
+                    포인트 안내
+                </button>
+                <button class="hero-tier-toggle hidden" id="lobby-customize-open" type="button">
+                    커스터마이징
+                </button>
+            </div>
+            <div class="hero-control-group hero-control-group-match" aria-label="대전 시작">
+                <button class="btn btn-primary btn-arcade btn-lg" id="quick-match-btn">
+                    <span class="btn-text"><span class="btn-icon">⚔</span> 경쟁전</span>
+                </button>
+                <button class="btn btn-secondary btn-arcade btn-lg" id="random-match-btn">
+                    <span class="btn-text"><span class="btn-icon">🎲</span> 빠른 대전</span>
+                </button>
+                <button class="btn btn-secondary btn-arcade btn-lg btn-ai" id="ai-match-btn">
+                    <span class="btn-text"><span class="btn-icon">🤖</span> AI 대전</span>
+                </button>
+                <a class="btn btn-secondary btn-arcade btn-lg" href="/puzzle/">
+                    <span class="btn-text"><span class="btn-icon">🧩</span> 일일 퍼즐</span>
+                </a>
+                <a class="btn btn-secondary btn-arcade btn-lg" href="/rooms/">
+                    <span class="btn-text"><span class="btn-icon">＋</span> 방 만들기</span>
+                </a>
+                <button class="btn btn-secondary btn-arcade btn-lg btn-guest hidden" id="guest-play-btn">
+                    <span class="btn-text"><span class="btn-icon">👤</span> 게스트 플레이</span>
+                </button>
+            </div>
         </div>
         <div class="hero-tier-panel hidden" id="tier-panel">
             <div class="tier-row"><span class="tier-icon">🥉</span> Beginner: 0-1199</div>
@@ -54,27 +76,6 @@
             <div class="tier-row">• 포인트로 닉네임 색상, 프로필 테두리를 구매합니다.</div>
             <div class="tier-row">• 저장 시 구매 항목 포인트가 자동 차감됩니다.</div>
             <div class="tier-row">• 보유 포인트는 커스터마이징 페이지에서 확인합니다.</div>
-        </div>
-
-        <div class="hero-actions">
-            <button class="btn btn-primary btn-arcade btn-lg" id="quick-match-btn">
-                <span class="btn-text"><span class="btn-icon">⚔</span> 경쟁전</span>
-            </button>
-            <button class="btn btn-secondary btn-arcade btn-lg" id="random-match-btn">
-                <span class="btn-text"><span class="btn-icon">🎲</span> 빠른 대전</span>
-            </button>
-            <button class="btn btn-secondary btn-arcade btn-lg btn-ai" id="ai-match-btn">
-                <span class="btn-text"><span class="btn-icon">🤖</span> AI 대전</span>
-            </button>
-            <a class="btn btn-secondary btn-arcade btn-lg" href="/puzzle/">
-                <span class="btn-text"><span class="btn-icon">🧩</span> 일일 퍼즐</span>
-            </a>
-            <a class="btn btn-secondary btn-arcade btn-lg" href="/rooms/">
-                <span class="btn-text"><span class="btn-icon">＋</span> 방 만들기</span>
-            </a>
-            <button class="btn btn-secondary btn-arcade btn-lg btn-guest hidden" id="guest-play-btn">
-                <span class="btn-text"><span class="btn-icon">👤</span> 게스트 플레이</span>
-            </button>
         </div>
     </section>
 
@@ -351,13 +352,28 @@
     margin-bottom: var(--space-xl);
 }
 
-.hero-actions {
+.hero-controls {
+    display: grid;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.hero-control-group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-sm);
+}
+
+.hero-actions,
+.hero-control-group-match {
     display: flex;
     justify-content: center;
     gap: clamp(0.5rem, 2vw, var(--space-md));
     flex-wrap: wrap;
 }
-.hero-actions .btn-arcade {
+.hero-actions .btn-arcade,
+.hero-control-group-match .btn-arcade {
     min-width: 180px;
     min-height: 56px;
 }
@@ -406,7 +422,7 @@
         grid-column: span 1;
     }
 
-    .hero-actions {
+    .hero-control-group-match {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: var(--space-sm);
@@ -414,7 +430,15 @@
         margin: 0 auto;
     }
 
-    .hero-actions .btn-arcade {
+    .hero-control-group-guide {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-sm);
+        max-width: 520px;
+        margin: 0 auto;
+    }
+
+    .hero-control-group-match .btn-arcade {
         min-width: 0;
         width: 100%;
         min-height: 50px;
@@ -1047,15 +1071,6 @@
     vertical-align: middle;
 }
 
-.hero-info-toggles {
-    margin-top: -4px;
-    display: flex;
-    gap: var(--space-sm);
-    align-items: center;
-    justify-content: center;
-    margin-bottom: var(--space-md);
-}
-
 .hero-tier-toggle {
     border: 1px solid var(--color-border);
     background: var(--color-bg-tertiary);
@@ -1070,6 +1085,12 @@
 .hero-tier-toggle:hover {
     color: var(--color-text-primary);
     border-color: var(--color-accent-secondary);
+}
+
+.hero-tier-toggle[aria-expanded="true"] {
+    border-color: var(--color-accent-primary);
+    color: var(--color-accent-primary);
+    background: color-mix(in srgb, var(--color-accent-primary) 8%, var(--color-bg-tertiary));
 }
 
 .hero-tier-panel {

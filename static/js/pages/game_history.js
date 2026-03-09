@@ -80,7 +80,18 @@
     }
 
     async function fetchHistory() {
-        listEl.innerHTML = '<div class="history-empty">불러오는 중...</div>';
+        listEl.innerHTML = Array.from({ length: 4 }).map(() => `
+            <div class="history-card">
+                <div class="history-actions">
+                    <div class="skeleton" style="width:54px;height:28px;border-radius:999px;"></div>
+                    <div class="skeleton" style="width:96px;height:28px;border-radius:8px;"></div>
+                </div>
+                <div class="history-info">
+                    <div class="skeleton" style="width:190px;height:14px;margin-bottom:8px;"></div>
+                    <div class="skeleton" style="width:230px;height:12px;"></div>
+                </div>
+            </div>
+        `).join('');
         try {
             const offset = (currentPage - 1) * PAGE_SIZE;
             const params = {

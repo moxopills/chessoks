@@ -96,11 +96,13 @@
     let randomMatchPollInterval = null;
     let notificationEventBound = false;
     let notificationEventHandler = null;
+    let hasShownLobbyOnboarding = false;
 
     // 초기화
     init();
 
     async function init() {
+        showStatus('로비를 불러오는 중...', 'pending', 1200);
         const isMobile = window.innerWidth <= 768;
         const globalDmFab = document.getElementById('global-dm-fab');
         globalDmFab?.classList.remove('hidden');
@@ -126,6 +128,49 @@
         setupUserContextMenu();
         setupUserSearch();
         setupGuestMode();
+        showLobbyOnboardingTip();
+        warmupNextViews();
+    }
+
+    function showStatus(message, type = 'info', duration = 1800) {
+        if (window.StatusBadge) {
+            window.StatusBadge.show(message, { type, duration });
+            return;
+        }
+        if (type === 'error') {
+            Toast.error(message);
+            return;
+        }
+        if (type === 'success') {
+            Toast.success(message);
+            return;
+        }
+        Toast.info(message);
+    }
+
+    function showLobbyOnboardingTip() {
+        if (hasShownLobbyOnboarding) return;
+        hasShownLobbyOnboarding = true;
+        const key = 'lobby_onboarding_seen_v2';
+        if (Utils.Storage.get(key, false)) return;
+        showStatus('상단 대전 버튼으로 시작하고, 가이드 버튼에서 설치/포인트 안내를 확인하세요.', 'info', 3800);
+        Utils.Storage.set(key, true);
+    }
+
+    function warmupNextViews() {
+        const warm = () => {
+            ['/rooms/', '/leaderboard/', '/friends/', '/customize/'].forEach((href) => {
+                const link = document.createElement('link');
+                link.rel = 'prefetch';
+                link.href = href;
+                document.head.appendChild(link);
+            });
+        };
+        if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(warm, { timeout: 1200 });
+        } else {
+            setTimeout(warm, 800);
+        }
     }
 
     /**
@@ -154,6 +199,7 @@
             }
         } catch (error) {
             roomList.innerHTML = '<div class="room-empty">방 목록을 불러올 수 없습니다.</div>';
+            showStatus('방 목록을 불러오지 못했습니다.', 'error', 2000);
         }
     }
 
@@ -619,16 +665,16 @@
 
             if (result.status === 'matched') {
                 // 매칭 성공 - 게임 페이지로 이동
-                Toast.success('매칭되었습니다!');
+                showStatus('매칭되었습니다. 게임으로 이동합니다.', 'success', 1800);
                 window.location.href = `/games/${result.room_id}/`;
             } else if (result.status === 'waiting') {
                 // 대기 중 - 폴링 시작
-                Toast.info('상대를 찾는 중...');
+                showStatus('상대를 찾는 중입니다.', 'pending', 1500);
                 pollMatchStatus();
             }
         } catch (error) {
             setMatchingState(false);
-            Toast.error(error.data?.message || '매칭 시작에 실패했습니다.');
+            showStatus(error.data?.message || '매칭 시작에 실패했습니다.', 'error', 2000);
         }
     }
 
@@ -639,15 +685,15 @@
             const result = await API.post('/chess/random-match/');
 
             if (result.status === 'matched') {
-                Toast.success('매칭되었습니다!');
+                showStatus('매칭되었습니다. 게임으로 이동합니다.', 'success', 1800);
                 window.location.href = `/games/${result.room_id}/`;
             } else if (result.status === 'waiting') {
-                Toast.info('상대를 찾는 중...');
+                showStatus('상대를 찾는 중입니다.', 'pending', 1500);
                 pollRandomMatchStatus();
             }
         } catch (error) {
             setRandomMatchingState(false);
-            Toast.error(error.data?.message || '매칭 시작에 실패했습니다.');
+            showStatus(error.data?.message || '매칭 시작에 실패했습니다.', 'error', 2000);
         }
     }
 
@@ -658,9 +704,9 @@
         try {
             await API.post('/chess/quick-match/cancel/');
             setMatchingState(false);
-            Toast.info('매칭이 취소되었습니다.');
+            showStatus('매칭이 취소되었습니다.', 'info', 1600);
         } catch (error) {
-            Toast.error('매칭 취소에 실패했습니다.');
+            showStatus('매칭 취소에 실패했습니다.', 'error', 2000);
         }
     }
 
@@ -668,9 +714,9 @@
         try {
             await API.post('/chess/random-match/cancel/');
             setRandomMatchingState(false);
-            Toast.info('매칭이 취소되었습니다.');
+            showStatus('매칭이 취소되었습니다.', 'info', 1600);
         } catch (error) {
-            Toast.error('매칭 취소에 실패했습니다.');
+            showStatus('매칭 취소에 실패했습니다.', 'error', 2000);
         }
     }
 
@@ -694,14 +740,14 @@
                 if (result.status === 'matched') {
                     clearInterval(quickMatchPollInterval);
                     quickMatchPollInterval = null;
-                    Toast.success('매칭되었습니다!');
+                    showStatus('매칭되었습니다. 게임으로 이동합니다.', 'success', 1800);
                     window.location.href = `/games/${result.room_id}/`;
                 }
             } catch (error) {
                 clearInterval(quickMatchPollInterval);
                 quickMatchPollInterval = null;
                 setMatchingState(false);
-                Toast.error('매칭 중 오류가 발생했습니다. 다시 시도해주세요.');
+                showStatus('매칭 중 오류가 발생했습니다. 다시 시도해주세요.', 'error', 2200);
             }
         }, 2000);
     }
@@ -723,14 +769,14 @@
                 if (result.status === 'matched') {
                     clearInterval(randomMatchPollInterval);
                     randomMatchPollInterval = null;
-                    Toast.success('매칭되었습니다!');
+                    showStatus('매칭되었습니다. 게임으로 이동합니다.', 'success', 1800);
                     window.location.href = `/games/${result.room_id}/`;
                 }
             } catch (error) {
                 clearInterval(randomMatchPollInterval);
                 randomMatchPollInterval = null;
                 setRandomMatchingState(false);
-                Toast.error('매칭 중 오류가 발생했습니다. 다시 시도해주세요.');
+                showStatus('매칭 중 오류가 발생했습니다. 다시 시도해주세요.', 'error', 2200);
             }
         }, 2000);
     }
@@ -748,6 +794,7 @@
             btnText.textContent = '매칭 취소';
             quickMatchModal?.classList.remove('hidden');
             showMatchToast('경쟁전 매칭 중...', 'quick');
+            showStatus('경쟁전 매칭 대기 중...', 'pending', 1400);
             waitingRoomCard?.classList.add('hidden');
             startMatchTimer('quick');
         } else {
@@ -772,6 +819,7 @@
             btnText.textContent = '매칭 취소';
             randomMatchModal?.classList.remove('hidden');
             showMatchToast('빠른 대전 매칭 중...', 'random');
+            showStatus('빠른 대전 매칭 대기 중...', 'pending', 1400);
             waitingRoomCard?.classList.add('hidden');
             startMatchTimer('random');
         } else {
@@ -913,6 +961,7 @@
         lobbySocket.onopen = function() {
             addChatNotice('채팅에 연결되었습니다.');
             lobbyWsReconnectAttempts = 0;
+            showStatus('로비 실시간 연결 완료', 'success', 1200);
         };
 
         lobbySocket.onmessage = function(e) {
@@ -924,10 +973,12 @@
             addChatNotice('채팅 연결이 끊어졌습니다.');
             if (lobbyWsReconnectAttempts >= LOBBY_WS_MAX_RECONNECT) {
                 addChatNotice('재연결 실패. 페이지를 새로고침해 주세요.');
+                showStatus('실시간 연결 복구 실패. 새로고침해주세요.', 'error', 2600);
                 return;
             }
             lobbyWsReconnectAttempts += 1;
             const delay = Math.min(LOBBY_WS_BASE_DELAY * Math.pow(2, lobbyWsReconnectAttempts - 1), 30000);
+            showStatus(`${Math.round(delay / 1000)}초 후 실시간 연결 재시도`, 'pending', 1500);
             setTimeout(connectLobbyChat, delay);
         };
 

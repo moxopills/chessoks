@@ -172,6 +172,22 @@
     let notificationEventHandler = null;
     let selectedBoardSkinClass = 'skin-board-classic';
     let selectedPieceSkinClass = 'skin-piece-classic';
+
+    function showStatus(message, type = 'info', duration = 1800) {
+        if (window.StatusBadge) {
+            window.StatusBadge.show(message, { type, duration });
+            return;
+        }
+        if (type === 'error') {
+            Toast.error(message);
+            return;
+        }
+        if (type === 'success') {
+            Toast.success(message);
+            return;
+        }
+        Toast.info(message);
+    }
     // Init
     init();
 
@@ -239,6 +255,7 @@
         setupShareButton();
         setupReport();
         setupChatToggle();
+        setupSidePanelAccordion();
         setupExitGuard();
         setupKeyboardShortcuts();
         setupGuestExpiryHandler();
@@ -621,6 +638,44 @@
         }
         const chatVisible = !chatSection.classList.contains('is-collapsed') && !chatSection.classList.contains('is-hidden');
         chatFab.classList.toggle('hidden', chatVisible);
+    }
+
+    function setupSidePanelAccordion() {
+        if (!sidePanel) return;
+        const sections = Array.from(sidePanel.querySelectorAll('.panel-section'));
+        if (!sections.length) return;
+
+        const isNarrow = () => window.innerWidth <= 1280;
+
+        const applyLayout = () => {
+            const narrow = isNarrow();
+            sidePanel.classList.toggle('is-accordion', narrow);
+            sections.forEach((section, idx) => {
+                const header = section.querySelector('.panel-header');
+                if (!header) return;
+                header.classList.toggle('is-clickable', narrow);
+                if (!narrow) {
+                    section.classList.remove('is-collapsed');
+                    return;
+                }
+                const shouldOpen = section.id === 'game-actions' || section.id === 'game-chat-section' || idx === 0;
+                section.classList.toggle('is-collapsed', !shouldOpen);
+            });
+        };
+
+        sections.forEach((section) => {
+            const header = section.querySelector('.panel-header');
+            if (!header || header.dataset.accordionBound === '1') return;
+            header.dataset.accordionBound = '1';
+            header.addEventListener('click', () => {
+                if (!isNarrow()) return;
+                if (section.id === 'game-actions') return;
+                section.classList.toggle('is-collapsed');
+            });
+        });
+
+        applyLayout();
+        window.addEventListener('resize', Utils.debounce(applyLayout, 120));
     }
 
     /**
@@ -1647,6 +1702,7 @@
             wsReconnectAttempts = 0;
             startHeartbeat();
             refreshSpectatorList();
+            showStatus('게임 실시간 연결 완료', 'success', 1200);
         };
 
         socket.onmessage = (e) => {
@@ -1659,11 +1715,13 @@
             stopHeartbeat();
             if (wsReconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS) {
                 addChatNotice('재연결 시도 횟수를 초과했습니다. 페이지를 새로고침해 주세요.');
+                showStatus('연결 복구 실패. 새로고침해주세요.', 'error', 2600);
                 return;
             }
             wsReconnectAttempts += 1;
             const delay = Math.min(WS_BASE_RECONNECT_DELAY * Math.pow(2, wsReconnectAttempts - 1), 30000);
             addChatNotice(`${Math.round(delay / 1000)}초 후 재연결 시도 (${wsReconnectAttempts}/${WS_MAX_RECONNECT_ATTEMPTS})...`);
+            showStatus(`${Math.round(delay / 1000)}초 후 게임 연결 재시도`, 'pending', 1500);
             setTimeout(connectWebSocket, delay);
         };
 
