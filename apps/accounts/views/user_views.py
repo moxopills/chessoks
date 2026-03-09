@@ -179,7 +179,10 @@ class CurrentUserView(CurrentUserMixin, RetrieveAPIView):
     @extend_schema(responses={200: UserSerializer})
     def retrieve(self, request, *args, **kwargs):
         response = super().retrieve(request, *args, **kwargs)
-        response["Cache-Control"] = "private, max-age=60"
+        # 실시간 프로필/커스터마이징 반영을 위해 브라우저 캐시를 비활성화한다.
+        response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response["Pragma"] = "no-cache"
+        response["Expires"] = "0"
         return response
 
 
