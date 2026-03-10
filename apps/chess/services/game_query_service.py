@@ -174,6 +174,8 @@ class GameQueryService:
             return True
         if room.allow_spectators:
             return True
+        if not getattr(user, "is_authenticated", False):
+            return False
         return room.spectators.filter(pk=user.pk).exists()
 
     # ========== 전적 조회 ==========
