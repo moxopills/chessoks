@@ -999,36 +999,81 @@
         const bottomNicknameColor = Utils.getNicknameColorValue(bottomPlayer?.nickname_color || '');
         const topProfileRing = Utils.getProfileBorderValue(topPlayer?.profile_border || '');
         const bottomProfileRing = Utils.getProfileBorderValue(bottomPlayer?.profile_border || '');
-        opponentBar.innerHTML = `
-            <div class="player-bar-info">
-                <div class="avatar avatar-sm" style="box-shadow:${topProfileRing}">
-                    ${topPlayer?.avatar_url
-                        ? `<img src="${Utils.escapeHtml(topPlayer.avatar_url)}" alt="${Utils.escapeHtml(topPlayer?.nickname || '상대')}">`
-                        : '<span class="avatar-placeholder">?</span>'}
-                </div>
-                <div class="player-bar-details">
-                    <span class="player-bar-name" style="color:${topNicknameColor}">${Utils.escapeHtml(topPlayer?.nickname || '상대')} <span class="tier-badge" title="${Utils.escapeHtml(topTier)}">${Utils.getTierIcon(topTier)}</span></span>
-                    <span class="player-bar-rating">${topPlayer?.rating || '--'}</span>
-                </div>
-            </div>
-            <div class="player-bar-timer" id="opponent-timer">--:--</div>
-        `;
+        renderPlayerBar({
+            container: opponentBar,
+            player: topPlayer,
+            fallbackName: '상대',
+            nicknameColor: topNicknameColor,
+            profileRing: topProfileRing,
+            tier: topTier,
+            timerId: 'opponent-timer',
+        });
 
-        // 나 (아래)
-        myBar.innerHTML = `
-            <div class="player-bar-info">
-                <div class="avatar avatar-sm" style="box-shadow:${bottomProfileRing}">
-                    ${bottomPlayer?.avatar_url
-                        ? `<img src="${Utils.escapeHtml(bottomPlayer.avatar_url)}" alt="${Utils.escapeHtml(bottomPlayer?.nickname || '나')}">`
-                        : '<span class="avatar-placeholder">?</span>'}
-                </div>
-                <div class="player-bar-details">
-                    <span class="player-bar-name" style="color:${bottomNicknameColor}">${Utils.escapeHtml(bottomPlayer?.nickname || '나')} <span class="tier-badge" title="${Utils.escapeHtml(bottomTier)}">${Utils.getTierIcon(bottomTier)}</span></span>
-                    <span class="player-bar-rating">${bottomPlayer?.rating || '--'}</span>
-                </div>
-            </div>
-            <div class="player-bar-timer" id="my-timer">--:--</div>
-        `;
+        renderPlayerBar({
+            container: myBar,
+            player: bottomPlayer,
+            fallbackName: '나',
+            nicknameColor: bottomNicknameColor,
+            profileRing: bottomProfileRing,
+            tier: bottomTier,
+            timerId: 'my-timer',
+        });
+    }
+
+    function renderPlayerBar({
+        container,
+        player,
+        fallbackName,
+        nicknameColor,
+        profileRing,
+        tier,
+        timerId,
+    }) {
+        if (!container) return;
+        container.textContent = '';
+
+        const info = document.createElement('div');
+        info.className = 'player-bar-info';
+
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar avatar-sm';
+        if (profileRing) avatar.style.boxShadow = profileRing;
+        Utils.setAvatar(avatar, {
+            url: player?.avatar_url,
+            alt: player?.nickname || fallbackName,
+            placeholder: '?',
+            placeholderClass: 'avatar-placeholder',
+        });
+        info.appendChild(avatar);
+
+        const details = document.createElement('div');
+        details.className = 'player-bar-details';
+
+        const name = document.createElement('span');
+        name.className = 'player-bar-name';
+        if (nicknameColor) name.style.color = nicknameColor;
+        name.appendChild(document.createTextNode(player?.nickname || fallbackName));
+        name.appendChild(document.createTextNode(' '));
+        const badge = document.createElement('span');
+        badge.className = 'tier-badge';
+        badge.title = tier || '';
+        badge.textContent = Utils.getTierIcon(tier || '');
+        name.appendChild(badge);
+        details.appendChild(name);
+
+        const rating = document.createElement('span');
+        rating.className = 'player-bar-rating';
+        rating.textContent = String(player?.rating || '--');
+        details.appendChild(rating);
+
+        info.appendChild(details);
+        container.appendChild(info);
+
+        const timer = document.createElement('div');
+        timer.className = 'player-bar-timer';
+        timer.id = timerId;
+        timer.textContent = '--:--';
+        container.appendChild(timer);
     }
 
     /**
@@ -2017,11 +2062,6 @@
      */
     function addChatMessage(data) {
         const isMine = currentUser && data.user_id === currentUser.id;
-        const avatar = !isMine
-            ? (data.avatar_url
-                ? `<img src="${Utils.escapeHtml(data.avatar_url)}" alt="${Utils.escapeHtml(data.nickname || '')}">`
-                : '<span class="avatar-placeholder">?</span>')
-            : '';
         const messageEl = document.createElement('div');
         messageEl.className = `chat-message ${isMine ? 'mine' : 'others'}`;
         if (data.message_id) {
@@ -2031,17 +2071,50 @@
         const myReactions = data.my_reactions || [];
         const thumbCount = Number(reactions['👍'] || 0);
         const clapCount = Number(reactions['👏'] || 0);
-        messageEl.innerHTML = `
-            ${!isMine ? `<div class="chat-avatar">${avatar}</div>` : ''}
-            <div class="chat-content">
-                <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
-                <div class="chat-bubble">${Utils.escapeHtml(data.message)}</div>
-                <div class="chat-reactions">
-                    <button type="button" class="reaction-btn ${myReactions.includes('👍') ? 'active' : ''}" data-reaction="👍">👍 <span>${thumbCount}</span></button>
-                    <button type="button" class="reaction-btn ${myReactions.includes('👏') ? 'active' : ''}" data-reaction="👏">👏 <span>${clapCount}</span></button>
-                </div>
-            </div>
-        `;
+        if (!isMine) {
+            const avatarWrap = document.createElement('div');
+            avatarWrap.className = 'chat-avatar';
+            Utils.setAvatar(avatarWrap, {
+                url: data.avatar_url,
+                alt: data.nickname || '',
+                placeholder: '?',
+                placeholderClass: 'avatar-placeholder',
+            });
+            messageEl.appendChild(avatarWrap);
+        }
+
+        const contentEl = document.createElement('div');
+        contentEl.className = 'chat-content';
+
+        const nicknameEl = document.createElement('span');
+        nicknameEl.className = 'chat-nickname';
+        nicknameEl.textContent = data.nickname || '';
+        contentEl.appendChild(nicknameEl);
+
+        const bubbleEl = document.createElement('div');
+        bubbleEl.className = 'chat-bubble';
+        bubbleEl.textContent = data.message || '';
+        contentEl.appendChild(bubbleEl);
+
+        const reactionsEl = document.createElement('div');
+        reactionsEl.className = 'chat-reactions';
+        [
+            ['👍', thumbCount, myReactions.includes('👍')],
+            ['👏', clapCount, myReactions.includes('👏')],
+        ].forEach(([emoji, count, active]) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `reaction-btn ${active ? 'active' : ''}`.trim();
+            btn.dataset.reaction = emoji;
+            btn.appendChild(document.createTextNode(`${emoji} `));
+            const span = document.createElement('span');
+            span.textContent = String(count);
+            btn.appendChild(span);
+            reactionsEl.appendChild(btn);
+        });
+        contentEl.appendChild(reactionsEl);
+        messageEl.appendChild(contentEl);
+
         chatMessages.appendChild(messageEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
         if (!isMine) Utils?.Sounds?.chat?.();
@@ -2072,18 +2145,31 @@
             spectatorList.innerHTML = '<div class="spectator-empty">관전자가 없습니다.</div>';
             return;
         }
-        spectatorList.innerHTML = users
-            .map((user) => `
-                <div class="spectator-item">
-                    <div class="avatar avatar-xs" style="box-shadow:${Utils.getProfileBorderValue(user.profile_border || '')}">
-                        ${user.avatar_url
-                            ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="${Utils.escapeHtml(user.nickname || '관전자')}">`
-                            : '<span class="avatar-placeholder">?</span>'}
-                    </div>
-                    <span style="color:${Utils.getNicknameColorValue(user.nickname_color || '')}">${Utils.escapeHtml(user.nickname || '관전자')}</span>
-                </div>
-            `)
-            .join('');
+        spectatorList.textContent = '';
+        users.forEach((user) => {
+            const item = document.createElement('div');
+            item.className = 'spectator-item';
+
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar avatar-xs';
+            const ring = Utils.getProfileBorderValue(user.profile_border || '');
+            if (ring) avatar.style.boxShadow = ring;
+            Utils.setAvatar(avatar, {
+                url: user.avatar_url,
+                alt: user.nickname || '관전자',
+                placeholder: '?',
+                placeholderClass: 'avatar-placeholder',
+            });
+
+            const name = document.createElement('span');
+            const color = Utils.getNicknameColorValue(user.nickname_color || '');
+            if (color) name.style.color = color;
+            name.textContent = user.nickname || '관전자';
+
+            item.appendChild(avatar);
+            item.appendChild(name);
+            spectatorList.appendChild(item);
+        });
     }
 
     function setupMobileTabs() {
@@ -2836,10 +2922,17 @@
             if (contentEl.querySelector('.chat-reactions')) return;
             const reactions = document.createElement('div');
             reactions.className = 'chat-reactions';
-            reactions.innerHTML = `
-                <button type="button" class="reaction-btn" data-reaction="👍">👍 <span>0</span></button>
-                <button type="button" class="reaction-btn" data-reaction="👏">👏 <span>0</span></button>
-            `;
+            ['👍', '👏'].forEach((emoji) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'reaction-btn';
+                btn.dataset.reaction = emoji;
+                btn.appendChild(document.createTextNode(`${emoji} `));
+                const span = document.createElement('span');
+                span.textContent = '0';
+                btn.appendChild(span);
+                reactions.appendChild(btn);
+            });
             contentEl.appendChild(reactions);
             bindReactionButtons(contentEl.closest('.chat-message'));
         });
@@ -2901,20 +2994,23 @@
             const maxTime = myTimes.length ? Math.max(...myTimes).toFixed(1) : '--';
             const opAvgTime = opTimes.length ? (opTimes.reduce((a, b) => a + b, 0) / opTimes.length).toFixed(1) : '--';
 
-            gameEndStats.innerHTML = `
-                <div class="stats-row">
-                    <span class="stats-label">평균 착수 시간</span>
-                    <span class="stats-value">${avgTime}초</span>
-                </div>
-                <div class="stats-row">
-                    <span class="stats-label">최장 고민 시간</span>
-                    <span class="stats-value">${maxTime}초</span>
-                </div>
-                <div class="stats-row">
-                    <span class="stats-label">상대 평균 착수</span>
-                    <span class="stats-value">${opAvgTime}초</span>
-                </div>
-            `;
+            [
+                ['평균 착수 시간', `${avgTime}초`],
+                ['최장 고민 시간', `${maxTime}초`],
+                ['상대 평균 착수', `${opAvgTime}초`],
+            ].forEach(([label, value]) => {
+                const row = document.createElement('div');
+                row.className = 'stats-row';
+                const labelEl = document.createElement('span');
+                labelEl.className = 'stats-label';
+                labelEl.textContent = label;
+                const valueEl = document.createElement('span');
+                valueEl.className = 'stats-value';
+                valueEl.textContent = value;
+                row.appendChild(labelEl);
+                row.appendChild(valueEl);
+                gameEndStats.appendChild(row);
+            });
         } catch {
             // 통계 로드 실패 시 무시
         }
@@ -3007,10 +3103,15 @@
             const after = target.payload.after;
             const delta = target.payload.delta ?? (after - before);
             const deltaClass = delta >= 0 ? 'positive' : 'negative';
-            ratingEl.innerHTML = `
-                <span>${before} → ${after}</span>
-                <span class="${deltaClass}">(${delta >= 0 ? '+' : ''}${delta})</span>
-            `;
+            ratingEl.textContent = '';
+            const line = document.createElement('span');
+            line.textContent = `${before} → ${after}`;
+            const deltaEl = document.createElement('span');
+            deltaEl.className = deltaClass;
+            deltaEl.textContent = `(${delta >= 0 ? '+' : ''}${delta})`;
+            ratingEl.appendChild(line);
+            ratingEl.appendChild(document.createTextNode(' '));
+            ratingEl.appendChild(deltaEl);
         } catch {
             // ignore fetch errors
         }

@@ -69,6 +69,7 @@ MIDDLEWARE = [
     "apps.core.middleware.RequestIDMiddleware",
     "apps.core.middleware.RequestTimingMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "apps.core.middleware.SecurityHeadersMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -241,6 +242,15 @@ SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0" if DEBUG else "36
 SECURE_HSTS_INCLUDE_SUBDOMAINS = _env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG)
 SECURE_HSTS_PRELOAD = _env_bool("SECURE_HSTS_PRELOAD", not DEBUG)
 SECURE_REFERRER_POLICY = os.getenv("SECURE_REFERRER_POLICY", "same-origin")
+SECURE_CROSS_ORIGIN_RESOURCE_POLICY = os.getenv(
+    "SECURE_CROSS_ORIGIN_RESOURCE_POLICY",
+    "same-origin",
+)
+SECURE_PERMISSIONS_POLICY = os.getenv(
+    "SECURE_PERMISSIONS_POLICY",
+    "geolocation=(), microphone=(), camera=(), payment=(), usb=()",
+)
+SECURITY_HEADERS_ENABLED = _env_bool("SECURITY_HEADERS_ENABLED", True)
 
 # 세션 정책
 # - 기본 15분 만료
@@ -249,6 +259,11 @@ SESSION_COOKIE_AGE = int(os.getenv("SESSION_COOKIE_AGE", "900"))
 SESSION_SAVE_EVERY_REQUEST = _env_bool("SESSION_SAVE_EVERY_REQUEST", True)
 # 자동 로그인 체크 시 유지 시간 (기본 30일)
 REMEMBER_ME_SESSION_AGE = int(os.getenv("REMEMBER_ME_SESSION_AGE", "2592000"))
+
+# 대용량/비정상 요청 방어(업로드/폼 필드 제한)
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("DATA_UPLOAD_MAX_MEMORY_SIZE", "5242880"))  # 5MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("FILE_UPLOAD_MAX_MEMORY_SIZE", "5242880"))  # 5MB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.getenv("DATA_UPLOAD_MAX_NUMBER_FIELDS", "2000"))
 
 # Web Push (PWA)
 WEB_PUSH_PUBLIC_KEY = os.getenv("WEB_PUSH_PUBLIC_KEY", "")
@@ -276,6 +291,11 @@ REST_FRAMEWORK = {
     "DEFAULT_PARSER_CLASSES": [
         "rest_framework.parsers.JSONParser",
     ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.getenv("THROTTLE_ANON", "120/min"),
+        "user": os.getenv("THROTTLE_USER", "300/min"),
+        "guest": os.getenv("THROTTLE_GUEST", "20/min"),
+    },
     "EXCEPTION_HANDLER": "apps.core.exceptions.custom_exception_handler",
 }
 

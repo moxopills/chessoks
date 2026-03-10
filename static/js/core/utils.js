@@ -97,6 +97,100 @@ const Utils = (function() {
     }
 
     /**
+     * 안전한 URL만 허용 (http/https 또는 현재 origin 상대경로)
+     */
+    function sanitizeUrl(url, fallback = '') {
+        const raw = String(url || '').trim();
+        if (!raw) return fallback;
+        try {
+            const parsed = new URL(raw, window.location.origin);
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                return parsed.href;
+            }
+            return fallback;
+        } catch {
+            return fallback;
+        }
+    }
+
+    /**
+     * 아바타 공통 렌더링
+     */
+    function setAvatar(el, {
+        url = '',
+        alt = 'avatar',
+        placeholder = '?',
+        placeholderClass = 'avatar-placeholder',
+    } = {}) {
+        if (!el) return;
+        el.textContent = '';
+
+        const safeUrl = sanitizeUrl(url, '');
+        if (safeUrl) {
+            const img = document.createElement('img');
+            img.src = safeUrl;
+            img.alt = String(alt || 'avatar');
+            img.loading = 'lazy';
+            img.referrerPolicy = 'no-referrer';
+            el.appendChild(img);
+            return;
+        }
+
+        const span = document.createElement('span');
+        span.className = placeholderClass;
+        span.textContent = String(placeholder || '?');
+        el.appendChild(span);
+    }
+
+    /**
+     * HTML 문자열 최소 안전화 (script/on* 제거, javascript: URL 차단)
+     */
+    function sanitizeHtml(html) {
+        const template = document.createElement('template');
+        template.innerHTML = String(html || '');
+
+        const blockedTags = ['script', 'iframe', 'object', 'embed'];
+        blockedTags.forEach((tag) => {
+            template.content.querySelectorAll(tag).forEach((el) => el.remove());
+        });
+
+        template.content.querySelectorAll('*').forEach((el) => {
+            [...el.attributes].forEach((attr) => {
+                const name = attr.name.toLowerCase();
+                const value = String(attr.value || '').trim();
+                if (name.startsWith('on')) {
+                    el.removeAttribute(attr.name);
+                    return;
+                }
+                if ((name === 'href' || name === 'src' || name === 'xlink:href') && /^javascript:/i.test(value)) {
+                    el.removeAttribute(attr.name);
+                    return;
+                }
+                if (name === 'srcdoc') {
+                    el.removeAttribute(attr.name);
+                    return;
+                }
+            });
+        });
+        return template.innerHTML;
+    }
+
+    /**
+     * sanitize 후 innerHTML 반영
+     */
+    function setSafeHtml(el, html) {
+        if (!el) return;
+        el.innerHTML = sanitizeHtml(html);
+    }
+
+    function appendSafeHtml(el, html) {
+        if (!el) return;
+        const template = document.createElement('template');
+        template.innerHTML = sanitizeHtml(html);
+        el.appendChild(template.content);
+    }
+
+    /**
      * 클래스 토글 헬퍼
      */
     function toggleClass(element, className, condition) {
@@ -587,6 +681,11 @@ const Utils = (function() {
         debounce,
         throttle,
         escapeHtml,
+        sanitizeUrl,
+        setAvatar,
+        sanitizeHtml,
+        setSafeHtml,
+        appendSafeHtml,
         toggleClass,
         Storage,
         getUrlParams,

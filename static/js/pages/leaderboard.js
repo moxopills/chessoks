@@ -410,11 +410,12 @@
                 ? `시즌 칭호: ${user.stats.season_title}`
                 : '시즌 칭호 없음';
         }
-        if (user.avatar_url) {
-            avatarEl.innerHTML = `<img src="${user.avatar_url}" alt="${Utils.escapeHtml(user.nickname)}">`;
-        } else {
-            avatarEl.innerHTML = '<span class="avatar-placeholder">?</span>';
-        }
+        Utils.setAvatar(avatarEl, {
+            url: user.avatar_url,
+            alt: user.nickname,
+            placeholder: '?',
+            placeholderClass: 'avatar-placeholder',
+        });
     }
 
     function renderDrawerStats(stats) {

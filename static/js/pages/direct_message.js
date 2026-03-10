@@ -100,7 +100,7 @@
             lastCount = newCount;
             lastLatestId = latestId;
         } catch (error) {
-            messagesEl.innerHTML = '<div class="history-empty">메시지를 불러오지 못했습니다.</div>';
+            renderEmpty('메시지를 불러오지 못했습니다.');
         }
     }
 
@@ -112,7 +112,7 @@
         if (!currentCount || messagesEl.querySelector('.history-empty')) {
             renderMessages([item]);
         } else {
-            messagesEl.insertAdjacentHTML('beforeend', renderSingleMessage(item));
+            messagesEl.appendChild(renderSingleMessage(item));
         }
         if (forceScroll) {
             messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -123,29 +123,53 @@
 
     function renderMessages(items) {
         if (!items.length) {
-            messagesEl.innerHTML = '<div class="history-empty">아직 메시지가 없습니다.</div>';
+            renderEmpty('아직 메시지가 없습니다.');
             return;
         }
-        messagesEl.innerHTML = items.map((item) => renderSingleMessage(item)).join('');
+        const fragment = document.createDocumentFragment();
+        items.forEach((item) => fragment.appendChild(renderSingleMessage(item)));
+        messagesEl.replaceChildren(fragment);
+    }
+
+    function renderEmpty(message) {
+        const empty = document.createElement('div');
+        empty.className = 'history-empty';
+        empty.textContent = message;
+        messagesEl.replaceChildren(empty);
     }
 
     function renderSingleMessage(item) {
         const isMe = item.sender?.id === currentUser.id;
         const time = formatTime(item.created_at);
-        const avatar = !isMe
-            ? (item.sender?.avatar_url
-                ? `<img src="${Utils.escapeHtml(item.sender.avatar_url)}" alt="${Utils.escapeHtml(item.sender?.nickname || '')}">`
-                : '<span class="avatar-placeholder">?</span>')
-            : '';
-        return `
-            <div class="dm-message ${isMe ? 'me' : 'other'}">
-                ${!isMe ? `<div class="dm-avatar">${avatar}</div>` : ''}
-                <div class="dm-content">
-                    <div class="dm-message-text">${Utils.escapeHtml(item.message)}</div>
-                    <div class="dm-message-time">${time}</div>
-                </div>
-            </div>
-        `;
+        const row = document.createElement('div');
+        row.className = `dm-message ${isMe ? 'me' : 'other'}`;
+
+        if (!isMe) {
+            const avatarWrap = document.createElement('div');
+            avatarWrap.className = 'dm-avatar';
+            Utils.setAvatar(avatarWrap, {
+                url: item.sender?.avatar_url || '',
+                alt: item.sender?.nickname || '',
+                placeholder: '?',
+                placeholderClass: 'avatar-placeholder',
+            });
+            row.appendChild(avatarWrap);
+        }
+
+        const content = document.createElement('div');
+        content.className = 'dm-content';
+
+        const text = document.createElement('div');
+        text.className = 'dm-message-text';
+        text.textContent = item.message || '';
+
+        const timeEl = document.createElement('div');
+        timeEl.className = 'dm-message-time';
+        timeEl.textContent = time;
+
+        content.append(text, timeEl);
+        row.appendChild(content);
+        return row;
     }
 
     function startPolling() {

@@ -52,9 +52,19 @@ const ContextMenu = (function() {
         currentTargetId = targetId;
         currentCallback = callback;
 
-        menuEl.innerHTML = items.map(item => (
-            `<div class="context-menu-item" data-action="${item.action}">${item.label}</div>`
-        )).join('');
+        menuEl.textContent = '';
+        items.forEach((item) => {
+            const action = String(item?.action || '').trim();
+            const label = String(item?.label || '').trim();
+            if (!action || !label) return;
+            if (!/^[a-zA-Z0-9_-]+$/.test(action)) return;
+
+            const row = document.createElement('div');
+            row.className = 'context-menu-item';
+            row.dataset.action = action;
+            row.textContent = label;
+            menuEl.appendChild(row);
+        });
 
         menuEl.classList.remove('hidden');
         position(event);

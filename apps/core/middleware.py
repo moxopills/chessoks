@@ -4,6 +4,8 @@ import logging
 import time
 import uuid
 
+from django.conf import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -48,5 +50,54 @@ class RequestTimingMiddleware:
                 duration_ms,
                 request_id,
             )
+
+        return response
+
+
+class SecurityHeadersMiddleware:
+    """응답 보안 헤더 강화 + 민감 API 캐시 금지."""
+
+    NO_STORE_PREFIXES = (
+        "/api/accounts/login/",
+        "/api/accounts/logout/",
+        "/api/accounts/password/",
+        "/api/accounts/email-change/",
+        "/api/accounts/signup-email/",
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        if not getattr(settings, "SECURITY_HEADERS_ENABLED", True):
+            return response
+
+        # 기본 보안 헤더(없을 때만 주입)
+        response.setdefault("X-Content-Type-Options", "nosniff")
+        response.setdefault("X-Frame-Options", getattr(settings, "X_FRAME_OPTIONS", "DENY"))
+        response.setdefault(
+            "Referrer-Policy", getattr(settings, "SECURE_REFERRER_POLICY", "same-origin")
+        )
+        response.setdefault(
+            "Cross-Origin-Resource-Policy",
+            getattr(settings, "SECURE_CROSS_ORIGIN_RESOURCE_POLICY", "same-origin"),
+        )
+        response.setdefault(
+            "Permissions-Policy",
+            getattr(
+                settings,
+                "SECURE_PERMISSIONS_POLICY",
+                "geolocation=(), microphone=(), camera=(), payment=(), usb=()",
+            ),
+        )
+
+        # 인증/계정 관련 민감 응답은 브라우저 캐시 금지
+        path = request.path or ""
+        if any(path.startswith(prefix) for prefix in self.NO_STORE_PREFIXES):
+            response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response["Pragma"] = "no-cache"
+            response["Expires"] = "0"
 
         return response
