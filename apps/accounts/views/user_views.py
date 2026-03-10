@@ -1,6 +1,7 @@
 """사용자 인증 및 프로필 관련 View"""
 
 from django.core.cache import cache
+from django.db.models import Q
 
 from drf_spectacular.utils import extend_schema
 from rest_framework.generics import RetrieveAPIView, UpdateAPIView
@@ -568,19 +569,21 @@ class UserProfileView(APIView):
         vs_summary = None
         friend_status = None
         if request.user.is_authenticated and request.user.pk != user_id:
-            if user is None:
-                user = User.objects.filter(pk=user_id).first()
-            if user:
-                vs_summary = GameQueryService.head_to_head_summary(request.user, user)
-                friend_status = {
-                    "is_friend": Friend.objects.filter(user=request.user, friend=user).exists(),
-                    "is_request_sent": FriendRequest.objects.filter(
-                        from_user=request.user, to_user=user
-                    ).exists(),
-                    "is_request_received": FriendRequest.objects.filter(
-                        from_user=user, to_user=request.user
-                    ).exists(),
-                }
+            vs_summary = GameQueryService.head_to_head_summary(request.user, user)
+            request_pairs = set(
+                FriendRequest.objects.filter(
+                    (Q(from_user_id=request.user.pk) & Q(to_user_id=user_id))
+                    | (Q(from_user_id=user_id) & Q(to_user_id=request.user.pk))
+                ).values_list("from_user_id", "to_user_id")
+            )
+            friend_status = {
+                "is_friend": Friend.objects.filter(
+                    user_id=request.user.pk,
+                    friend_id=user_id,
+                ).exists(),
+                "is_request_sent": (request.user.pk, user_id) in request_pairs,
+                "is_request_received": (user_id, request.user.pk) in request_pairs,
+            }
 
         return Response(
             {
