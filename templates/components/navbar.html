@@ -701,8 +701,25 @@ function showAuthenticatedUI(user) {
 
     if (userNickname) userNickname.textContent = user.nickname;
     if (userRating && user.stats) userRating.textContent = user.stats.rating;
-    if (userAvatar && user.avatar_url) {
-        userAvatar.innerHTML = `<img src="${user.avatar_url}" alt="${user.nickname}">`;
+    if (userAvatar) {
+        if (window.Utils?.setAvatar) {
+            Utils.setAvatar(userAvatar, {
+                url: user.avatar_url,
+                alt: user.nickname || 'avatar',
+                placeholder: user.nickname?.[0] || '?',
+                placeholderClass: 'avatar-placeholder',
+            });
+        } else {
+            userAvatar.textContent = '';
+            if (user.avatar_url) {
+                const img = document.createElement('img');
+                img.src = user.avatar_url;
+                img.alt = user.nickname || 'avatar';
+                userAvatar.appendChild(img);
+            } else {
+                userAvatar.textContent = user.nickname?.[0] || '?';
+            }
+        }
     }
 
     if (window.Notifications?.init) {

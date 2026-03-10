@@ -302,23 +302,26 @@
             updateGlobalBadge(unreadMap);
 
             if (!threads.length) {
-                threadListEl.innerHTML = '<div class="global-dm-empty">대화가 없습니다. 새로운 대화를 시작해보세요.</div>';
+                setThreadListEmpty('대화가 없습니다. 새로운 대화를 시작해보세요.');
                 return;
             }
 
-            threadListEl.innerHTML = threads.map(t => renderThreadItem(t, unreadMap)).join('');
-            
-            threadListEl.querySelectorAll('.global-dm-thread').forEach(item => {
-                item.addEventListener('click', () => {
-                    const uid = item.dataset.userId;
-                    const name = item.dataset.nickname;
-                    showRoomView(uid, name);
-                });
+            const fragment = document.createDocumentFragment();
+            threads.forEach((thread) => {
+                fragment.appendChild(renderThreadItem(thread, unreadMap));
             });
+            threadListEl.replaceChildren(fragment);
 
         } catch (e) {
-            threadListEl.innerHTML = '<div class="global-dm-empty">목록을 불러오지 못했습니다.</div>';
+            setThreadListEmpty('목록을 불러오지 못했습니다.');
         }
+    }
+
+    function setThreadListEmpty(message) {
+        const empty = document.createElement('div');
+        empty.className = 'global-dm-empty';
+        empty.textContent = message;
+        threadListEl.replaceChildren(empty);
     }
 
     function buildUnreadMap(items) {
@@ -346,26 +349,51 @@
     function renderThreadItem(thread, unreadMap) {
         const user = thread.other_user || {};
         const nickname = user.nickname || '알 수 없음';
-        const avatar = user.avatar_url
-            ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="${Utils.escapeHtml(nickname)}">`
-            : '<span class="avatar-placeholder">?</span>';
         const time = thread.last_message_at ? formatRelativeTimeShort(thread.last_message_at) : '';
         const message = thread.last_message || '대화를 시작해보세요.';
         const unreadCount = unreadMap[user.id] || 0;
+        const row = document.createElement('div');
+        row.className = 'global-dm-thread';
+        row.dataset.userId = String(user.id || '');
+        row.dataset.nickname = nickname;
+        row.addEventListener('click', () => {
+            showRoomView(user.id, nickname);
+        });
 
-        return `
-            <div class="global-dm-thread" data-user-id="${user.id}" data-nickname="${Utils.escapeHtml(nickname)}">
-                <div class="global-dm-thread-avatar">${avatar}</div>
-                <div class="global-dm-thread-info">
-                    <div class="global-dm-thread-name">${Utils.escapeHtml(nickname)}</div>
-                    <div class="global-dm-thread-msg">${Utils.escapeHtml(message)}</div>
-                </div>
-                <div class="global-dm-thread-meta">
-                    <div class="global-dm-thread-time">${time}</div>
-                    ${unreadCount ? `<div class="global-dm-thread-badge">${unreadCount}</div>` : ''}
-                </div>
-            </div>
-        `;
+        const avatarWrap = document.createElement('div');
+        avatarWrap.className = 'global-dm-thread-avatar';
+        Utils.setAvatar(avatarWrap, {
+            url: user.avatar_url || '',
+            alt: nickname,
+            placeholder: '?',
+            placeholderClass: 'avatar-placeholder',
+        });
+
+        const info = document.createElement('div');
+        info.className = 'global-dm-thread-info';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'global-dm-thread-name';
+        nameEl.textContent = nickname;
+        const msgEl = document.createElement('div');
+        msgEl.className = 'global-dm-thread-msg';
+        msgEl.textContent = message;
+        info.append(nameEl, msgEl);
+
+        const meta = document.createElement('div');
+        meta.className = 'global-dm-thread-meta';
+        const timeEl = document.createElement('div');
+        timeEl.className = 'global-dm-thread-time';
+        timeEl.textContent = time;
+        meta.appendChild(timeEl);
+        if (unreadCount) {
+            const badge = document.createElement('div');
+            badge.className = 'global-dm-thread-badge';
+            badge.textContent = String(unreadCount);
+            meta.appendChild(badge);
+        }
+
+        row.append(avatarWrap, info, meta);
+        return row;
     }
 
     // Room Logic
@@ -390,14 +418,18 @@
             const items = data.results || [];
             
             if (!items.length) {
-                messagesEl.innerHTML = '<div class="global-dm-empty">아직 메시지가 없습니다.</div>';
+                setMessagesEmpty('아직 메시지가 없습니다.');
             } else {
                 const reversedItems = items.slice().reverse();
                 // To avoid flickering, check if we need a full re-render or just append. 
                 // A simple approach is just re-render but manage scroll smartly.
                 const shouldScroll = forceScroll || (messagesEl.scrollTop + messagesEl.clientHeight >= messagesEl.scrollHeight - 50);
                 
-                messagesEl.innerHTML = reversedItems.map(item => renderMessageItem(item)).join('');
+                const fragment = document.createDocumentFragment();
+                reversedItems.forEach((item) => {
+                    fragment.appendChild(renderMessageItem(item));
+                });
+                messagesEl.replaceChildren(fragment);
                 
                 if (shouldScroll) {
                     messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -418,29 +450,51 @@
             }
         } catch (e) {
             console.error('Failed to load messages:', e);
-            messagesEl.innerHTML = '<div class="global-dm-empty">메시지를 불러오지 못했습니다.</div>';
+            setMessagesEmpty('메시지를 불러오지 못했습니다.');
         }
+    }
+
+    function setMessagesEmpty(message) {
+        const empty = document.createElement('div');
+        empty.className = 'global-dm-empty';
+        empty.textContent = message;
+        messagesEl.replaceChildren(empty);
     }
 
     function renderMessageItem(item) {
         const isMe = currentUser && item.sender?.id === currentUser.id;
         const time = formatTimeOnly(item.created_at);
-        const messageText = Utils.escapeHtml(item.message || '');
+        const messageText = item.message || '';
         const emojiOnlyClass = isEmojiOnly(item.message || '') ? ' emoji-only' : '';
-        const avatar = !isMe
-            ? (item.sender?.avatar_url
-                ? `<img src="${Utils.escapeHtml(item.sender.avatar_url)}" alt="">`
-                : '<span class="avatar-placeholder">?</span>')
-            : '';
-        return `
-            <div class="global-dm-message ${isMe ? 'me' : 'other'}">
-                ${!isMe ? `<div class="global-dm-message-avatar">${avatar}</div>` : ''}
-                <div class="global-dm-message-content">
-                    <div class="global-dm-message-text${emojiOnlyClass}">${messageText}</div>
-                    <div class="global-dm-message-time">${time}</div>
-                </div>
-            </div>
-        `;
+        const row = document.createElement('div');
+        row.className = `global-dm-message ${isMe ? 'me' : 'other'}`;
+
+        if (!isMe) {
+            const avatarWrap = document.createElement('div');
+            avatarWrap.className = 'global-dm-message-avatar';
+            Utils.setAvatar(avatarWrap, {
+                url: item.sender?.avatar_url || '',
+                alt: item.sender?.nickname || '',
+                placeholder: '?',
+                placeholderClass: 'avatar-placeholder',
+            });
+            row.appendChild(avatarWrap);
+        }
+
+        const content = document.createElement('div');
+        content.className = 'global-dm-message-content';
+
+        const text = document.createElement('div');
+        text.className = `global-dm-message-text${emojiOnlyClass}`;
+        text.textContent = messageText;
+
+        const timeEl = document.createElement('div');
+        timeEl.className = 'global-dm-message-time';
+        timeEl.textContent = time;
+
+        content.append(text, timeEl);
+        row.appendChild(content);
+        return row;
     }
 
     function isEmojiOnly(text) {

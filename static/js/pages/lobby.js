@@ -225,11 +225,16 @@
             waitingRoomCard.classList.remove('hidden');
             const title = room.title || '빠른 대전';
             const timeText = room.time_limit ? `${room.time_limit}분` : '무제한';
-            const hostHtml = styledUserInline(room.host);
-            waitingRoomInfo.innerHTML = `
-                <div style="font-weight:700; margin-bottom:4px;">${Utils.escapeHtml(title)} · ${timeText}</div>
-                <div style="opacity:0.95;">${hostHtml}</div>
-            `;
+            waitingRoomInfo.textContent = '';
+            const titleRow = document.createElement('div');
+            titleRow.style.fontWeight = '700';
+            titleRow.style.marginBottom = '4px';
+            titleRow.textContent = `${title} · ${timeText}`;
+            waitingRoomInfo.appendChild(titleRow);
+            const hostRow = document.createElement('div');
+            hostRow.style.opacity = '0.95';
+            hostRow.appendChild(styledUserInline(room.host));
+            waitingRoomInfo.appendChild(hostRow);
             waitingRoomEnter.onclick = () => {
                 window.location.href = `/rooms/${room.id}/`;
             };
@@ -263,15 +268,19 @@
                 activeRoomId = room.id;
             }
             activeGameCard.classList.remove('hidden');
-            const whiteHtml = styledUserInline(room.host, '화이트');
-            const blackHtml = styledUserInline(room.guest, '블랙');
-            activeGameInfo.innerHTML = `
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <span>${whiteHtml}</span>
-                    <span style="opacity:0.7;">vs</span>
-                    <span>${blackHtml}</span>
-                </div>
-            `;
+            activeGameInfo.textContent = '';
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.alignItems = 'center';
+            row.style.gap = '8px';
+            row.style.flexWrap = 'wrap';
+            row.appendChild(styledUserInline(room.host, '화이트'));
+            const vs = document.createElement('span');
+            vs.style.opacity = '0.7';
+            vs.textContent = 'vs';
+            row.appendChild(vs);
+            row.appendChild(styledUserInline(room.guest, '블랙'));
+            activeGameInfo.appendChild(row);
             activeGameEnter.onclick = () => {
                 window.location.href = `/games/${room.id}/`;
             };
@@ -1115,28 +1124,61 @@
     function addChatMessage(data) {
         const isMine = data.user_id === currentUserId;
         const emojiOnlyClass = isEmojiOnlyMessage(data.message) ? ' emoji-only' : '';
-        const avatar = !isMine
-            ? (data.avatar_url
-                ? `<img src="${Utils.escapeHtml(data.avatar_url)}" alt="${Utils.escapeHtml(data.nickname || '')}">`
-                : '<span class="avatar-placeholder">?</span>')
-            : '';
         const messageEl = document.createElement('div');
         messageEl.className = `chat-message ${isMine ? 'mine' : 'others'}`;
         if (data.message_id) {
             messageEl.dataset.messageId = String(data.message_id);
         }
-        messageEl.innerHTML = `
-            ${!isMine ? `<div class="chat-avatar">${avatar}</div>` : ''}
-            <div class="chat-content">
-                <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
-                <div class="chat-bubble${emojiOnlyClass}">${Utils.escapeHtml(data.message)}</div>
-                <div class="chat-reactions">
-                    <button type="button" class="reaction-btn ${(data.my_reactions || []).includes('👍') ? 'active' : ''}" data-reaction="👍">👍 <span>${data.reactions?.["👍"] ?? 0}</span></button>
-                    <button type="button" class="reaction-btn ${(data.my_reactions || []).includes('👏') ? 'active' : ''}" data-reaction="👏">👏 <span>${data.reactions?.["👏"] ?? 0}</span></button>
-                </div>
-            </div>
-            <span class="chat-time">${formatChatTime(data.sent_at)}</span>
-        `;
+        if (!isMine) {
+            const avatarWrap = document.createElement('div');
+            avatarWrap.className = 'chat-avatar';
+            Utils.setAvatar(avatarWrap, {
+                url: data.avatar_url,
+                alt: data.nickname || '',
+                placeholder: '?',
+                placeholderClass: 'avatar-placeholder',
+            });
+            messageEl.appendChild(avatarWrap);
+        }
+
+        const contentEl = document.createElement('div');
+        contentEl.className = 'chat-content';
+
+        const nicknameEl = document.createElement('span');
+        nicknameEl.className = 'chat-nickname';
+        nicknameEl.textContent = data.nickname || '';
+        contentEl.appendChild(nicknameEl);
+
+        const bubbleEl = document.createElement('div');
+        bubbleEl.className = `chat-bubble${emojiOnlyClass}`;
+        bubbleEl.textContent = data.message || '';
+        contentEl.appendChild(bubbleEl);
+
+        const reactionsEl = document.createElement('div');
+        reactionsEl.className = 'chat-reactions';
+        const myReactions = data.my_reactions || [];
+        const reactions = data.reactions || {};
+        [
+            ['👍', Number(reactions['👍'] ?? 0)],
+            ['👏', Number(reactions['👏'] ?? 0)],
+        ].forEach(([emoji, count]) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = `reaction-btn ${myReactions.includes(emoji) ? 'active' : ''}`.trim();
+            btn.dataset.reaction = emoji;
+            btn.appendChild(document.createTextNode(`${emoji} `));
+            const span = document.createElement('span');
+            span.textContent = String(count);
+            btn.appendChild(span);
+            reactionsEl.appendChild(btn);
+        });
+        contentEl.appendChild(reactionsEl);
+        messageEl.appendChild(contentEl);
+
+        const timeEl = document.createElement('span');
+        timeEl.className = 'chat-time';
+        timeEl.textContent = formatChatTime(data.sent_at);
+        messageEl.appendChild(timeEl);
         chatMessages.appendChild(messageEl);
         chatMessages.scrollTop = chatMessages.scrollHeight;
         bindReactionButtons(messageEl);
@@ -1306,8 +1348,13 @@
             return;
         }
 
-        usersList.innerHTML = users.map(user => userRowHtml(user, true)).join('');
-
+        usersList.textContent = '';
+        const fragment = document.createDocumentFragment();
+        users.forEach((user) => {
+            const row = createUserRowElement(user, true);
+            fragment.appendChild(row);
+        });
+        usersList.appendChild(fragment);
         usersList.querySelectorAll('.user-item').forEach(bindUserItemEvents);
     }
 
@@ -1372,7 +1419,8 @@
             usersList.innerHTML = '';
         }
 
-        usersList.insertAdjacentHTML('beforeend', userRowHtml(user, true));
+        const row = createUserRowElement(user, true);
+        usersList.appendChild(row);
         const newItem = usersList.querySelector(`[data-user-id="${user.id}"]`);
         if (newItem) bindUserItemEvents(newItem);
         userCount.textContent = Object.keys(lobbyUsers).length;
@@ -1421,44 +1469,85 @@
         }
     }
 
-    function userRowHtml(user, online = true) {
+    function createUserRowElement(user, online = true) {
         const statusText = online ? '온라인' : '오프라인';
         const statusClass = online ? 'online' : 'offline';
         const tier = user.rank_tier || user.stats?.rank_tier || 'Junior';
         const tierIcon = Utils.getTierIcon(tier);
         const nicknameColor = Utils.getNicknameColorValue(user.nickname_color || user.stats?.nickname_color || '');
         const profileRing = Utils.getProfileBorderValue(user.profile_border || user.stats?.profile_border || '');
-        return `
-            <div class="user-item" data-user-id="${user.id}">
-                <div class="user-avatar" style="box-shadow:${profileRing}">
-                    ${user.avatar_url
-                        ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="${Utils.escapeHtml(user.nickname || '')}">`
-                        : '👤'}
-                </div>
-                <div class="user-info">
-                    <div class="user-nickname" style="color:${nicknameColor}">
-                        ${Utils.escapeHtml(user.nickname)}
-                        <span class="user-tier-icon" title="${Utils.escapeHtml(tier)}">${tierIcon}</span>
-                    </div>
-                    <div class="user-status ${statusClass}">${statusText}</div>
-                </div>
-            </div>
-        `;
+        const row = document.createElement('div');
+        row.className = 'user-item';
+        row.dataset.userId = String(user.id);
+
+        const avatar = document.createElement('div');
+        avatar.className = 'user-avatar';
+        if (profileRing) avatar.style.boxShadow = profileRing;
+        Utils.setAvatar(avatar, {
+            url: user.avatar_url,
+            alt: user.nickname || '',
+            placeholder: '👤',
+            placeholderClass: 'avatar-placeholder',
+        });
+        row.appendChild(avatar);
+
+        const info = document.createElement('div');
+        info.className = 'user-info';
+
+        const nick = document.createElement('div');
+        nick.className = 'user-nickname';
+        if (nicknameColor) nick.style.color = nicknameColor;
+        nick.appendChild(document.createTextNode(user.nickname || ''));
+        nick.appendChild(document.createTextNode(' '));
+        const badge = document.createElement('span');
+        badge.className = 'user-tier-icon';
+        badge.title = tier;
+        badge.textContent = tierIcon;
+        nick.appendChild(badge);
+        info.appendChild(nick);
+
+        const status = document.createElement('div');
+        status.className = `user-status ${statusClass}`;
+        status.textContent = statusText;
+        info.appendChild(status);
+        row.appendChild(info);
+        return row;
     }
 
     function styledUserInline(user, fallback = '플레이어') {
         const nickname = user?.nickname || fallback;
         const color = Utils.getNicknameColorValue(user?.nickname_color || user?.stats?.nickname_color || '');
         const ring = Utils.getProfileBorderValue(user?.profile_border || user?.stats?.profile_border || '');
-        const avatarUrl = user?.avatar_url ? Utils.escapeHtml(user.avatar_url) : '';
-        return `
-            <span style="display:inline-flex;align-items:center;gap:6px;">
-                <span style="width:20px;height:20px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;background:rgba(255,255,255,.08);box-shadow:${ring};">
-                    ${avatarUrl ? `<img src="${avatarUrl}" alt="${Utils.escapeHtml(nickname)}" style="width:100%;height:100%;object-fit:cover;">` : '👤'}
-                </span>
-                <span style="color:${color};font-weight:600;">${Utils.escapeHtml(nickname)}</span>
-            </span>
-        `;
+        const wrapper = document.createElement('span');
+        wrapper.style.display = 'inline-flex';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.gap = '6px';
+
+        const avatar = document.createElement('span');
+        avatar.style.width = '20px';
+        avatar.style.height = '20px';
+        avatar.style.borderRadius = '50%';
+        avatar.style.display = 'inline-flex';
+        avatar.style.alignItems = 'center';
+        avatar.style.justifyContent = 'center';
+        avatar.style.overflow = 'hidden';
+        avatar.style.background = 'rgba(255,255,255,.08)';
+        if (ring) avatar.style.boxShadow = ring;
+        Utils.setAvatar(avatar, {
+            url: user?.avatar_url,
+            alt: nickname,
+            placeholder: '👤',
+            placeholderClass: 'avatar-placeholder',
+        });
+
+        const name = document.createElement('span');
+        name.style.fontWeight = '600';
+        if (color) name.style.color = color;
+        name.textContent = nickname;
+
+        wrapper.appendChild(avatar);
+        wrapper.appendChild(name);
+        return wrapper;
     }
 
     function setupUserSearch() {
@@ -1486,7 +1575,12 @@
                 return;
             }
             const statusMap = await fetchOnlineStatusMap(results.map(user => user.id));
-            usersList.innerHTML = results.map(user => userRowHtml(user, statusMap[user.id] === true)).join('');
+            usersList.textContent = '';
+            const fragment = document.createDocumentFragment();
+            results.forEach((user) => {
+                fragment.appendChild(createUserRowElement(user, statusMap[user.id] === true));
+            });
+            usersList.appendChild(fragment);
             usersList.querySelectorAll('.user-item').forEach(bindUserItemEvents);
         } catch (error) {
             Toast.error(error.data?.message || '검색에 실패했습니다.');

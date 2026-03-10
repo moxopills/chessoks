@@ -105,11 +105,12 @@
                 profileCardEl.classList.add(frameClass);
             }
         }
-        if (user.avatar_url) {
-            avatarEl.innerHTML = `<img src="${user.avatar_url}" alt="${Utils.escapeHtml(user.nickname)}">`;
-        } else {
-            avatarEl.innerHTML = '<span class="avatar-placeholder">?</span>';
-        }
+        Utils.setAvatar(avatarEl, {
+            url: user.avatar_url,
+            alt: user.nickname,
+            placeholder: '?',
+            placeholderClass: 'avatar-placeholder',
+        });
         const tier = user.stats?.rank_tier || user.rank_tier || 'Junior';
         avatarEl.insertAdjacentHTML(
             'beforeend',

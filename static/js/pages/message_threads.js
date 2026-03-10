@@ -17,21 +17,7 @@
     }
 
     async function fetchThreads() {
-        listEl.innerHTML = Array.from({ length: 5 }).map(() => `
-            <div class="thread-card">
-                <div class="thread-info">
-                    <div class="thread-avatar"><div class="skeleton skeleton-avatar" style="width:40px;height:40px;"></div></div>
-                    <div class="thread-text">
-                        <div class="skeleton" style="width:120px;height:12px;margin-bottom:8px;"></div>
-                        <div class="skeleton" style="width:180px;height:11px;"></div>
-                    </div>
-                </div>
-                <div class="thread-action">
-                    <div class="skeleton" style="width:70px;height:10px;margin-bottom:8px;"></div>
-                    <div class="skeleton" style="width:62px;height:26px;border-radius:8px;"></div>
-                </div>
-            </div>
-        `).join('');
+        renderThreadSkeletons();
         try {
             const [data, notifications] = await Promise.all([
                 API.get('/accounts/messages/threads/', { limit: 50, offset: 0, no_count: 1 }),
@@ -39,49 +25,128 @@
             ]);
             const threads = data.results || [];
             if (!threads.length) {
-                listEl.innerHTML = '<div class="history-empty">대화가 없습니다.</div>';
+                renderEmpty('대화가 없습니다.');
                 return;
             }
             const unreadMap = buildUnreadMap(notifications.results || []);
-            listEl.innerHTML = threads.map((thread) => renderThread(thread, unreadMap)).join('');
-            listEl.querySelectorAll('[data-action="open-thread"]').forEach((btn) => {
-                btn.addEventListener('click', () => {
-                    const targetId = btn.dataset.userId;
-                    if (targetId) window.location.href = `/messages/${targetId}/`;
-                });
+            const fragment = document.createDocumentFragment();
+            threads.forEach((thread) => {
+                fragment.appendChild(renderThread(thread, unreadMap));
             });
+            listEl.replaceChildren(fragment);
         } catch (error) {
-            listEl.innerHTML = '<div class="history-empty">불러오지 못했습니다.</div>';
+            renderEmpty('불러오지 못했습니다.');
         }
+    }
+
+    function renderEmpty(message) {
+        const el = document.createElement('div');
+        el.className = 'history-empty';
+        el.textContent = message;
+        listEl.replaceChildren(el);
+    }
+
+    function renderThreadSkeletons() {
+        const fragment = document.createDocumentFragment();
+        Array.from({ length: 5 }).forEach(() => {
+            const card = document.createElement('div');
+            card.className = 'thread-card';
+            const info = document.createElement('div');
+            info.className = 'thread-info';
+            const avatar = document.createElement('div');
+            avatar.className = 'thread-avatar';
+            const avatarSkel = document.createElement('div');
+            avatarSkel.className = 'skeleton skeleton-avatar';
+            avatarSkel.style.width = '40px';
+            avatarSkel.style.height = '40px';
+            avatar.appendChild(avatarSkel);
+            const text = document.createElement('div');
+            text.className = 'thread-text';
+            const line1 = document.createElement('div');
+            line1.className = 'skeleton';
+            line1.style.width = '120px';
+            line1.style.height = '12px';
+            line1.style.marginBottom = '8px';
+            const line2 = document.createElement('div');
+            line2.className = 'skeleton';
+            line2.style.width = '180px';
+            line2.style.height = '11px';
+            text.append(line1, line2);
+            info.append(avatar, text);
+
+            const action = document.createElement('div');
+            action.className = 'thread-action';
+            const actionLine = document.createElement('div');
+            actionLine.className = 'skeleton';
+            actionLine.style.width = '70px';
+            actionLine.style.height = '10px';
+            actionLine.style.marginBottom = '8px';
+            const actionBtn = document.createElement('div');
+            actionBtn.className = 'skeleton';
+            actionBtn.style.width = '62px';
+            actionBtn.style.height = '26px';
+            actionBtn.style.borderRadius = '8px';
+            action.append(actionLine, actionBtn);
+
+            card.append(info, action);
+            fragment.appendChild(card);
+        });
+        listEl.replaceChildren(fragment);
     }
 
     function renderThread(thread, unreadMap) {
         const user = thread.other_user || {};
         const nickname = user.nickname || '알 수 없음';
-        const avatar = user.avatar_url
-            ? `<img src="${Utils.escapeHtml(user.avatar_url)}" alt="${Utils.escapeHtml(nickname)}">`
-            : '<span>👤</span>';
         const time = thread.last_message_at ? formatTime(thread.last_message_at) : '';
         const message = thread.last_message || '대화를 시작해보세요.';
         const unreadCount = unreadMap[user.id] || 0;
-        return `
-            <div class="thread-card">
-                <div class="thread-info">
-                    <div class="thread-avatar">${avatar}</div>
-                    <div class="thread-text">
-                        <div class="thread-title">${Utils.escapeHtml(nickname)}</div>
-                        <div class="thread-message">${Utils.escapeHtml(message)}</div>
-                    </div>
-                </div>
-                <div class="thread-action">
-                    <span class="thread-time">${time}</span>
-                    <button class="btn btn-secondary btn-xs" data-action="open-thread" data-user-id="${user.id}">
-                        열기
-                        ${unreadCount ? `<span class="thread-badge">${unreadCount}</span>` : ''}
-                    </button>
-                </div>
-            </div>
-        `;
+        const card = document.createElement('div');
+        card.className = 'thread-card';
+        const info = document.createElement('div');
+        info.className = 'thread-info';
+
+        const avatarWrap = document.createElement('div');
+        avatarWrap.className = 'thread-avatar';
+        Utils.setAvatar(avatarWrap, {
+            url: user.avatar_url || '',
+            alt: nickname,
+            placeholder: '👤',
+        });
+
+        const textWrap = document.createElement('div');
+        textWrap.className = 'thread-text';
+        const title = document.createElement('div');
+        title.className = 'thread-title';
+        title.textContent = nickname;
+        const msg = document.createElement('div');
+        msg.className = 'thread-message';
+        msg.textContent = message;
+        textWrap.append(title, msg);
+        info.append(avatarWrap, textWrap);
+
+        const action = document.createElement('div');
+        action.className = 'thread-action';
+        const timeEl = document.createElement('span');
+        timeEl.className = 'thread-time';
+        timeEl.textContent = time;
+        const button = document.createElement('button');
+        button.className = 'btn btn-secondary btn-xs';
+        button.dataset.action = 'open-thread';
+        button.dataset.userId = String(user.id || '');
+        button.textContent = '열기';
+        button.addEventListener('click', () => {
+            if (user.id) window.location.href = `/messages/${user.id}/`;
+        });
+        if (unreadCount) {
+            const badge = document.createElement('span');
+            badge.className = 'thread-badge';
+            badge.textContent = String(unreadCount);
+            button.appendChild(badge);
+        }
+        action.append(timeEl, button);
+
+        card.append(info, action);
+        return card;
     }
 
     function buildUnreadMap(items) {
