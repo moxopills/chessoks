@@ -115,70 +115,82 @@
         updateMessageBadge(document.getElementById('message-count'));
 
         if (!visibleItems.length) {
-            listEl.innerHTML = '<div class="notification-empty">새 알림이 없습니다</div>';
+            const empty = document.createElement('div');
+            empty.className = 'notification-empty';
+            empty.textContent = '새 알림이 없습니다';
+            listEl.replaceChildren(empty);
             return;
         }
 
-        listEl.innerHTML = visibleItems.map((item) => {
-            const createdAt = item.created_at ? Utils.formatRelativeTime(item.created_at) : '';
-            const safeTitle = Utils.escapeHtml(item.title || '알림');
-            const safeMessage = Utils.escapeHtml(item.message || '');
-            return `
-                <div class="notification-item ${item.is_read ? '' : 'unread'}" data-id="${item.id}">
-                    <div class="notification-item-title">${safeTitle}</div>
-                    <div class="notification-item-message">${safeMessage}</div>
-                    <div class="notification-item-time">${createdAt}</div>
-                </div>
-            `;
-        }).join('');
+        const fragment = document.createDocumentFragment();
+        visibleItems.forEach((item) => {
+            const itemEl = document.createElement('div');
+            itemEl.className = `notification-item ${item.is_read ? '' : 'unread'}`.trim();
+            itemEl.dataset.id = String(item.id);
 
-        listEl.querySelectorAll('.notification-item').forEach((itemEl) => {
+            const titleEl = document.createElement('div');
+            titleEl.className = 'notification-item-title';
+            titleEl.textContent = item.title || '알림';
+
+            const messageEl = document.createElement('div');
+            messageEl.className = 'notification-item-message';
+            messageEl.textContent = item.message || '';
+
+            const timeEl = document.createElement('div');
+            timeEl.className = 'notification-item-time';
+            timeEl.textContent = item.created_at ? Utils.formatRelativeTime(item.created_at) : '';
+
+            itemEl.append(titleEl, messageEl, timeEl);
             itemEl.addEventListener('click', async () => {
-                const id = parseInt(itemEl.dataset.id, 10);
-                if (!id) return;
-                const item = state.items.find((entry) => entry.id === id);
-                if (!item || item.is_read) return;
-                try {
-                    await API.post('/notifications/read/', { ids: [id] });
-                    item.is_read = true;
-                    renderList(listEl, countEl);
-                    if (item.type === 'friend_request') {
-                        window.location.href = '/friends/?tab=requests';
-                        return;
-                    }
-                    if (item.type === 'game_invite') {
-                        openGameInviteModal({
-                            payload: item.payload || {},
-                            title: item.title,
-                            message: item.message,
-                        });
-                        return;
-                    }
-                    if (item.type === 'rematch' && item.payload?.game_id) {
-                        try {
-                            const data = await API.post(`/chess/games/${item.payload.game_id}/rematch/`);
-                            if (data.room_id) {
-                                Toast.success('리매치가 시작됩니다.');
-                                window.location.href = `/games/${data.room_id}/`;
-                                return;
-                            }
-                        } catch {
-                            Toast.error('리매치에 실패했습니다.');
-                        }
-                    }
-                    if (item.payload?.room_id) {
-                        const roomId = item.payload.room_id;
-                        if (item.type === 'match_found' || item.type === 'rematch') {
-                            window.location.href = `/games/${roomId}/`;
-                        } else {
-                            window.location.href = `/rooms/${roomId}/`;
-                        }
-                    }
-                } catch (error) {
-                    Toast.error(error.data?.message || '알림 읽음 처리에 실패했습니다.');
-                }
+                await handleNotificationClick(item, listEl, countEl);
             });
+            fragment.appendChild(itemEl);
         });
+        listEl.replaceChildren(fragment);
+    }
+
+    async function handleNotificationClick(item, listEl, countEl) {
+        const id = parseInt(item?.id, 10);
+        if (!id || !item || item.is_read) return;
+        try {
+            await API.post('/notifications/read/', { ids: [id] });
+            item.is_read = true;
+            renderList(listEl, countEl);
+            if (item.type === 'friend_request') {
+                window.location.href = '/friends/?tab=requests';
+                return;
+            }
+            if (item.type === 'game_invite') {
+                openGameInviteModal({
+                    payload: item.payload || {},
+                    title: item.title,
+                    message: item.message,
+                });
+                return;
+            }
+            if (item.type === 'rematch' && item.payload?.game_id) {
+                try {
+                    const data = await API.post(`/chess/games/${item.payload.game_id}/rematch/`);
+                    if (data.room_id) {
+                        Toast.success('리매치가 시작됩니다.');
+                        window.location.href = `/games/${data.room_id}/`;
+                        return;
+                    }
+                } catch {
+                    Toast.error('리매치에 실패했습니다.');
+                }
+            }
+            if (item.payload?.room_id) {
+                const roomId = item.payload.room_id;
+                if (item.type === 'match_found' || item.type === 'rematch') {
+                    window.location.href = `/games/${roomId}/`;
+                } else {
+                    window.location.href = `/rooms/${roomId}/`;
+                }
+            }
+        } catch (error) {
+            Toast.error(error.data?.message || '알림 읽음 처리에 실패했습니다.');
+        }
     }
 
     function connectSocket(listEl, countEl, messageBadge) {
@@ -348,9 +360,12 @@
         const timeLimit = payload.payload?.time_limit || 10;
 
         if (avatarEl) {
-            avatarEl.innerHTML = avatar
-                ? `<img src="${Utils.escapeHtml(avatar)}" alt="${Utils.escapeHtml(nickname)}">`
-                : '👤';
+            Utils.setAvatar(avatarEl, {
+                url: avatar,
+                alt: nickname,
+                placeholder: '👤',
+                placeholderClass: 'invite-avatar-placeholder',
+            });
         }
         if (nicknameEl) nicknameEl.textContent = nickname;
         if (ratingEl) ratingEl.textContent = `레이팅: ${rating}`;

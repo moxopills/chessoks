@@ -169,9 +169,12 @@
         previewNickname.textContent = nickname;
         previewNickname.style.color = color;
         previewAvatar.style.boxShadow = ring;
-        previewAvatar.innerHTML = avatarUrl
-            ? `<img src="${Utils.escapeHtml(avatarUrl)}" alt="${Utils.escapeHtml(nickname)}">`
-            : '👤';
+        Utils.setAvatar(previewAvatar, {
+            url: avatarUrl,
+            alt: nickname,
+            placeholder: '👤',
+            placeholderClass: 'customize-avatar-placeholder',
+        });
 
         const boardSkinId = parseInt(boardSkinSelect?.value || '0', 10);
         const pieceSkinId = parseInt(pieceSkinSelect?.value || '0', 10);

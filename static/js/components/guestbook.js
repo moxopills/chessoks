@@ -36,13 +36,20 @@ const Guestbook = (function() {
 
     async function load(userId) {
         if (!listEl) return;
-        listEl.innerHTML = '<div class="text-muted">불러오는 중...</div>';
+        renderStatus('불러오는 중...');
         try {
             const data = await API.get(`/accounts/users/${userId}/guestbook/`);
             render(data || []);
         } catch (error) {
-            listEl.innerHTML = '<div class="text-muted">방명록을 불러오지 못했습니다.</div>';
+            renderStatus('방명록을 불러오지 못했습니다.');
         }
+    }
+
+    function renderStatus(message) {
+        const el = document.createElement('div');
+        el.className = 'text-muted';
+        el.textContent = message;
+        listEl.replaceChildren(el);
     }
 
     function render(entries) {
@@ -51,32 +58,46 @@ const Guestbook = (function() {
         const targetUserId = getTargetUserId?.();
 
         if (!entries.length) {
-            listEl.innerHTML = '<div class="text-muted">방명록이 없습니다.</div>';
+            renderStatus('방명록이 없습니다.');
             return;
         }
 
-        listEl.innerHTML = entries.map((entry) => {
+        const fragment = document.createDocumentFragment();
+        entries.forEach((entry) => {
             const canDelete = entry.author?.id === currentUserId || targetUserId === currentUserId;
             const time = formatDate(entry.created_at);
-            return `
-                <div class="guestbook-item" data-entry-id="${entry.id}">
-                    <div>${Utils.escapeHtml(entry.message)}</div>
-                    <div class="guestbook-meta">
-                        <span>${Utils.escapeHtml(entry.author?.nickname || '알 수 없음')}</span>
-                        <span>${time}</span>
-                    </div>
-                    ${canDelete ? '<button class="btn btn-secondary btn-sm" data-action="delete">삭제</button>' : ''}
-                </div>
-            `;
-        }).join('');
+            const item = document.createElement('div');
+            item.className = 'guestbook-item';
+            item.dataset.entryId = String(entry.id);
 
-        listEl.querySelectorAll('[data-action="delete"]').forEach((btn) => {
-            btn.addEventListener('click', async () => {
-                const entryId = btn.closest('.guestbook-item')?.dataset.entryId;
-                if (!entryId) return;
-                await deleteEntry(entryId);
-            });
+            const message = document.createElement('div');
+            message.textContent = entry.message || '';
+
+            const meta = document.createElement('div');
+            meta.className = 'guestbook-meta';
+
+            const author = document.createElement('span');
+            author.textContent = entry.author?.nickname || '알 수 없음';
+            const timeEl = document.createElement('span');
+            timeEl.textContent = time;
+            meta.append(author, timeEl);
+
+            item.append(message, meta);
+
+            if (canDelete) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-secondary btn-sm';
+                deleteBtn.dataset.action = 'delete';
+                deleteBtn.textContent = '삭제';
+                deleteBtn.addEventListener('click', async () => {
+                    await deleteEntry(entry.id);
+                });
+                item.appendChild(deleteBtn);
+            }
+
+            fragment.appendChild(item);
         });
+        listEl.replaceChildren(fragment);
     }
 
     async function submit() {

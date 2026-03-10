@@ -63,7 +63,14 @@
         tierEl.textContent = `티어 · ${tier}`;
         tierEl.style.color = Utils.getTierColor(tier);
         const tierIcon = Utils.getTierIcon(tier);
-        nicknameEl.innerHTML = `${Utils.escapeHtml(nickname)} <span class="profile-tier-icon-inline" title="${Utils.escapeHtml(tier)}">${tierIcon}</span>`;
+        nicknameEl.textContent = '';
+        nicknameEl.appendChild(document.createTextNode(nickname));
+        nicknameEl.appendChild(document.createTextNode(' '));
+        const tierIconEl = document.createElement('span');
+        tierIconEl.className = 'profile-tier-icon-inline';
+        tierIconEl.title = tier;
+        tierIconEl.textContent = tierIcon;
+        nicknameEl.appendChild(tierIconEl);
         applyProfileCustomization({
             nicknameColor: user.stats?.nickname_color || '',
             profileBorder: user.stats?.profile_border || '',
