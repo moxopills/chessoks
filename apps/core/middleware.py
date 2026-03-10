@@ -77,7 +77,9 @@ class SecurityHeadersMiddleware:
         # 기본 보안 헤더(없을 때만 주입)
         response.setdefault("X-Content-Type-Options", "nosniff")
         response.setdefault("X-Frame-Options", getattr(settings, "X_FRAME_OPTIONS", "DENY"))
-        response.setdefault("Referrer-Policy", getattr(settings, "SECURE_REFERRER_POLICY", "same-origin"))
+        response.setdefault(
+            "Referrer-Policy", getattr(settings, "SECURE_REFERRER_POLICY", "same-origin")
+        )
         response.setdefault(
             "Cross-Origin-Resource-Policy",
             getattr(settings, "SECURE_CROSS_ORIGIN_RESOURCE_POLICY", "same-origin"),
