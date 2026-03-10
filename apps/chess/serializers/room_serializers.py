@@ -20,7 +20,7 @@ class RoomSerializer(serializers.Serializer):
     host_start_confirmed = serializers.BooleanField(read_only=True)
     guest_start_confirmed = serializers.BooleanField(read_only=True)
     player_count = serializers.IntegerField(read_only=True)
-    spectator_count = serializers.IntegerField(read_only=True)
+    spectator_count = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField(read_only=True)
     started_at = serializers.DateTimeField(read_only=True, allow_null=True)
     finished_at = serializers.DateTimeField(read_only=True, allow_null=True)
@@ -35,6 +35,12 @@ class RoomSerializer(serializers.Serializer):
             latest = room.games.only("id").order_by("-created_at").first()
             return latest.id if latest else None
         return None
+
+    def get_spectator_count(self, room):
+        annotated = getattr(room, "spectator_count_annotated", None)
+        if annotated is not None:
+            return annotated
+        return room.spectators.count()
 
 
 class PagedRoomSerializer(serializers.Serializer):

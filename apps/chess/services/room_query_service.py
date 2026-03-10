@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import OuterRef, Subquery
+from django.db.models import Count, OuterRef, Subquery
 
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -15,6 +15,19 @@ class RoomQueryService:
     MATCH_HIDE_STATUSES = {"waiting", "ready"}
 
     @staticmethod
+    def _base_queryset():
+        """방 조회 공통 QuerySet (N+1 방지용 annotate 포함)."""
+        playing_game_subquery = Subquery(
+            Game.objects.filter(room_id=OuterRef("pk"), result="playing")
+            .order_by("-created_at")
+            .values("id")[:1]
+        )
+        return Room.objects.select_related("host__stats", "guest__stats").annotate(
+            current_game_id_annotated=playing_game_subquery,
+            spectator_count_annotated=Count("spectators", distinct=True),
+        )
+
+    @staticmethod
     def list_rooms(
         *,
         user,
@@ -24,16 +37,7 @@ class RoomQueryService:
         offset: int,
         no_count: bool = False,
     ) -> tuple[int, list[Room]]:
-        playing_game_subquery = Subquery(
-            Game.objects.filter(room_id=OuterRef("pk"), result="playing")
-            .order_by("-created_at")
-            .values("id")[:1]
-        )
-        queryset = (
-            Room.objects.select_related("host__stats", "guest__stats")
-            .annotate(current_game_id_annotated=playing_game_subquery)
-            .order_by("-created_at")
-        )
+        queryset = RoomQueryService._base_queryset().order_by("-created_at")
 
         if room_type:
             if room_type not in RoomQueryService.VALID_ROOM_TYPES:
@@ -67,7 +71,7 @@ class RoomQueryService:
     @staticmethod
     def get_room(room_id: int, user) -> Room:
         try:
-            room = Room.objects.select_related("host__stats", "guest__stats").get(pk=room_id)
+            room = RoomQueryService._base_queryset().get(pk=room_id)
         except Room.DoesNotExist:
             raise NotFound("방을 찾을 수 없습니다.") from None
 
@@ -80,7 +84,7 @@ class RoomQueryService:
         if not user or not getattr(user, "is_authenticated", False):
             return None
         return (
-            Room.objects.select_related("host__stats", "guest__stats")
+            RoomQueryService._base_queryset()
             .filter(status__in=["waiting", "ready"])
             .filter(models.Q(host=user) | models.Q(guest=user))
             .order_by("-created_at")
@@ -92,7 +96,7 @@ class RoomQueryService:
         if not user or not getattr(user, "is_authenticated", False):
             return None
         return (
-            Room.objects.select_related("host__stats", "guest__stats")
+            RoomQueryService._base_queryset()
             .filter(status="playing")
             .filter(models.Q(host=user) | models.Q(guest=user))
             .order_by("-started_at", "-created_at")
