@@ -1499,18 +1499,9 @@ html[data-theme="dark"] .form-input:focus {
 .mobile-tab.active,
 .hero-tier-toggle[aria-expanded="true"] {
     font-weight: 700;
-    text-decoration: underline;
-    text-underline-offset: 3px;
-    box-shadow: inset 0 -2px 0 var(--color-accent-secondary);
-}
-
-.tab-btn.active::before,
-.mobile-tab.active::before,
-.hero-tier-toggle[aria-expanded="true"]::before {
-    content: '•';
-    margin-right: 4px;
-    color: var(--color-accent-secondary);
-    font-weight: 800;
+    text-decoration: none;
+    box-shadow: inset 0 -3px 0 var(--color-accent-secondary);
+    border-color: var(--color-accent-secondary);
 }
 
 .session-warning-dialog .modal-message strong {
