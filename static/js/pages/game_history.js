@@ -83,12 +83,12 @@
         listEl.innerHTML = Array.from({ length: 4 }).map(() => `
             <div class="history-card">
                 <div class="history-actions">
-                    <div class="skeleton" style="width:54px;height:28px;border-radius:999px;"></div>
-                    <div class="skeleton" style="width:96px;height:28px;border-radius:8px;"></div>
+                    <div class="skeleton sk-w-54 sk-h-28 sk-round-999"></div>
+                    <div class="skeleton sk-w-96 sk-h-28 sk-round-8"></div>
                 </div>
                 <div class="history-info">
-                    <div class="skeleton" style="width:190px;height:14px;margin-bottom:8px;"></div>
-                    <div class="skeleton" style="width:230px;height:12px;"></div>
+                    <div class="skeleton sk-w-190 sk-h-14 sk-mb-8"></div>
+                    <div class="skeleton sk-w-230 sk-h-12"></div>
                 </div>
             </div>
         `).join('');

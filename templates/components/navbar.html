@@ -42,9 +42,9 @@
         <div class="navbar-right">
             <!-- Notification Bell (Authenticated) -->
             <div class="navbar-notifications auth-only hidden" id="notification-bell">
-                <button class="notification-btn" id="notification-toggle" aria-label="알림">
+                <button class="notification-btn" id="notification-toggle" aria-label="알림" aria-haspopup="true" aria-expanded="false" aria-controls="notification-dropdown">
                     <span class="notification-icon">&#128276;</span>
-                    <span class="notification-badge hidden" id="notification-count">0</span>
+                    <span class="notification-badge hidden" id="notification-count" aria-live="polite" aria-atomic="true">0</span>
                 </button>
                 <div class="notification-dropdown hidden" id="notification-dropdown">
                     <div class="notification-header">
@@ -59,7 +59,7 @@
 
             <!-- User Menu (Authenticated) -->
             <div class="navbar-user auth-only hidden" id="user-menu">
-                <button class="user-btn" id="user-toggle">
+                <button class="user-btn" id="user-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="user-dropdown">
                     <div class="avatar avatar-sm" id="user-avatar">
                         <span class="avatar-placeholder">?</span>
                     </div>
@@ -535,6 +535,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const soundSlider = document.getElementById('sound-slider');
     const soundVolText = document.getElementById('sound-vol-text');
     const soundMuteToggle = document.getElementById('sound-mute-toggle');
+
+    function setExpanded(button, expanded) {
+        if (!button) return;
+        button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+
+    function closeAllDropdowns() {
+        userDropdown?.classList.add('hidden');
+        notificationDropdown?.classList.add('hidden');
+        soundDropdown?.classList.add('hidden');
+        setExpanded(userToggle, false);
+        setExpanded(notificationToggle, false);
+    }
     
     function updateSoundUI(vol) {
         if (soundIcon) soundIcon.textContent = vol === 0 ? '🔇' : '🔊';
@@ -559,6 +572,8 @@ document.addEventListener('DOMContentLoaded', function() {
             Utils.Sounds.unlock?.();
             if (soundDropdown) {
                 soundDropdown.classList.toggle('hidden');
+                setExpanded(userToggle, false);
+                setExpanded(notificationToggle, false);
                 if (!soundDropdown.classList.contains('hidden')) {
                     Utils.Sounds.playBGM();
                     Utils.Sounds.chat?.(); // 즉시 반응 확인용
@@ -635,7 +650,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (userToggle && userDropdown) {
         userToggle.addEventListener('click', function(e) {
             e.stopPropagation();
+            const willOpen = userDropdown.classList.contains('hidden');
             userDropdown.classList.toggle('hidden');
+            setExpanded(userToggle, willOpen);
+            setExpanded(notificationToggle, false);
             notificationDropdown?.classList.add('hidden');
             soundDropdown?.classList.add('hidden');
         });
@@ -645,17 +663,22 @@ document.addEventListener('DOMContentLoaded', function() {
     if (notificationToggle && notificationDropdown) {
         notificationToggle.addEventListener('click', function(e) {
             e.stopPropagation();
+            const willOpen = notificationDropdown.classList.contains('hidden');
             notificationDropdown.classList.toggle('hidden');
+            setExpanded(notificationToggle, willOpen);
+            setExpanded(userToggle, false);
             userDropdown?.classList.add('hidden');
             soundDropdown?.classList.add('hidden');
         });
     }
 
     // Close dropdowns when clicking outside
-    document.addEventListener('click', function() {
-        userDropdown?.classList.add('hidden');
-        notificationDropdown?.classList.add('hidden');
-        soundDropdown?.classList.add('hidden');
+    document.addEventListener('click', closeAllDropdowns);
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeAllDropdowns();
+        }
     });
 
     // Logout button

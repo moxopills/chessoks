@@ -170,16 +170,16 @@
         if (!leaderboardBody) return;
         leaderboardBody.innerHTML = Array.from({ length: 5 }).map(() => `
             <tr class="skeleton-row">
-                <td><div class="skeleton" style="width:18px;height:1rem;"></div></td>
+                <td><div class="skeleton sk-w-18 sk-h-1r"></div></td>
                 <td>
                     <div class="user-cell">
-                        <div class="skeleton skeleton-avatar" style="width:32px;height:32px;"></div>
-                        <div class="skeleton" style="width:110px;height:1rem;"></div>
+                        <div class="skeleton skeleton-avatar sk-w-32 sk-h-32"></div>
+                        <div class="skeleton sk-w-110 sk-h-1r"></div>
                     </div>
                 </td>
-                <td><div class="skeleton" style="width:56px;height:1rem;"></div></td>
-                <td><div class="skeleton" style="width:96px;height:1rem;"></div></td>
-                <td><div class="skeleton" style="width:70px;height:1rem;"></div></td>
+                <td><div class="skeleton sk-w-56 sk-h-1r"></div></td>
+                <td><div class="skeleton sk-w-96 sk-h-1r"></div></td>
+                <td><div class="skeleton sk-w-70 sk-h-1r"></div></td>
             </tr>
         `).join('');
     }

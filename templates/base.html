@@ -34,7 +34,7 @@
     {% include 'components/navbar.html' %}
 
     <!-- Flash Messages -->
-    <div id="toast-container"></div>
+    <div id="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
     <div id="status-badge-container" class="status-badge-container"></div>
 
     <!-- Global Notice Modal -->
@@ -113,7 +113,7 @@
     </div>
 
     <!-- Offline Banner -->
-    <div class="offline-banner" id="offline-banner">
+    <div class="offline-banner" id="offline-banner" role="status" aria-live="polite">
         ⚠️ 인터넷 연결이 끊겼습니다. 연결을 확인해주세요.
     </div>
 

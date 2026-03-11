@@ -338,6 +338,32 @@ const Utils = (function() {
         return classMap[key] || '';
     }
 
+    function getDefaultEmojiList() {
+        return ['😊', '😂', '👍', '🔥', '👏', '🤔', '😮', '🙏'];
+    }
+
+    let statusBadgeTimer = null;
+    function showStatusBadge(message, type = 'waiting', duration = 1600) {
+        if (!message) return;
+        let badge = document.getElementById('global-status-badge');
+        if (!badge) {
+            badge = document.createElement('div');
+            badge.id = 'global-status-badge';
+            badge.className = 'global-status-badge';
+            badge.setAttribute('role', 'status');
+            badge.setAttribute('aria-live', 'polite');
+            document.body.appendChild(badge);
+        }
+        badge.className = `global-status-badge global-status-badge--${type}`;
+        badge.textContent = String(message);
+        badge.classList.remove('hidden');
+
+        if (statusBadgeTimer) clearTimeout(statusBadgeTimer);
+        statusBadgeTimer = setTimeout(() => {
+            badge.classList.add('hidden');
+        }, Math.max(600, duration));
+    }
+
     /**
      * 더블 탭 바인딩 (모바일용)
      */
@@ -699,6 +725,8 @@ const Utils = (function() {
         getNicknameColorValue,
         getProfileBorderValue,
         getProfileCardFrameClass,
+        getDefaultEmojiList,
+        showStatusBadge,
         bindDoubleTap,
         ReportModal,
         Sounds,
