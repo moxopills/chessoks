@@ -1979,10 +1979,15 @@
         if (chatForm.previousElementSibling?.classList?.contains('chat-emoji-bar')) return;
         const bar = document.createElement('div');
         bar.className = 'chat-emoji-bar';
-        const emojis = ['😊', '😂', '👍', '🔥', '👏', '🙏'];
-        bar.innerHTML = emojis
-            .map((emoji) => `<button type="button" class="emoji-btn" data-emoji="${emoji}">${emoji}</button>`)
-            .join('');
+        const emojis = Utils.getDefaultEmojiList();
+        emojis.forEach((emoji) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'emoji-btn';
+            button.dataset.emoji = emoji;
+            button.textContent = emoji;
+            bar.appendChild(button);
+        });
         bar.addEventListener('click', (e) => {
             const btn = e.target.closest('.emoji-btn');
             if (!btn) return;

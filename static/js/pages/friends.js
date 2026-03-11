@@ -214,11 +214,11 @@
                 <div class="friend-meta">
                     <div class="skeleton skeleton-avatar"></div>
                     <div class="friend-name">
-                        <div class="skeleton" style="width:120px;height:12px;"></div>
-                        <div class="skeleton" style="width:90px;height:10px;"></div>
+                        <div class="skeleton sk-w-120 sk-h-12"></div>
+                        <div class="skeleton sk-w-90 sk-h-10"></div>
                     </div>
                 </div>
-                <div class="skeleton" style="width:10px;height:10px;border-radius:50%;"></div>
+                <div class="skeleton sk-w-10 sk-h-10 sk-round-full"></div>
             </div>
         `).join('');
     }
@@ -230,12 +230,12 @@
                 <div class="friend-meta">
                     <div class="skeleton skeleton-avatar"></div>
                     <div class="friend-name">
-                        <div class="skeleton" style="width:110px;height:12px;"></div>
-                        <div class="skeleton" style="width:88px;height:10px;"></div>
+                        <div class="skeleton sk-w-110 sk-h-12"></div>
+                        <div class="skeleton sk-w-88 sk-h-10"></div>
                     </div>
                 </div>
                 <div class="request-actions">
-                    <span class="skeleton" style="width:56px;height:28px;border-radius:8px;"></span>
+                    <span class="skeleton sk-w-56 sk-h-28 sk-round-8"></span>
                 </div>
             </div>
         `).join('');
