@@ -17,6 +17,10 @@
     let statsSnapshot = null;
 
     function showStatus(message, type = 'info', duration = 1800) {
+        if (Utils?.showStatusBadge) {
+            const mapped = type === 'info' ? 'waiting' : type;
+            Utils.showStatusBadge(message, mapped, duration);
+        }
         if (window.StatusBadge) {
             window.StatusBadge.show(message, { type, duration });
             return;

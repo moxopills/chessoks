@@ -1,8 +1,8 @@
 /* Global DM Panel */
 #global-dm-fab {
     right: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-    z-index: 1250;
+    bottom: calc(16px + var(--safe-bottom));
+    z-index: var(--z-floating);
     display: flex;
 }
 
@@ -14,7 +14,16 @@
 @media (max-width: 768px) {
     #global-dm-fab {
         right: 12px;
-        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        bottom: calc(12px + var(--safe-bottom));
+    }
+
+    .global-dm-panel {
+        right: 8px;
+        left: 8px;
+        width: auto;
+        bottom: calc(68px + var(--safe-bottom));
+        height: min(68vh, 520px);
+        max-height: calc(100vh - 130px - var(--safe-bottom));
     }
 }
 
@@ -29,7 +38,7 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-lg);
-    z-index: 1200;
+    z-index: var(--z-floating);
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -103,6 +112,8 @@
     background: var(--color-accent-primary);
     border-color: var(--color-accent-primary);
     color: #fff;
+    font-weight: 700;
+    box-shadow: inset 0 -2px 0 rgba(255, 255, 255, 0.32);
 }
 
 .global-dm-subtitle {
@@ -136,6 +147,15 @@
     color: var(--color-text-primary);
 }
 
+.global-dm-back:focus-visible,
+.global-dm-close:focus-visible,
+.global-dm-tab:focus-visible,
+.global-dm-form button:focus-visible,
+.global-dm-emojis .emoji-btn:focus-visible {
+    outline: 2px solid var(--color-accent-secondary);
+    outline-offset: 2px;
+}
+
 /* Body / Thread List */
 .global-dm-body {
     flex: 1;
@@ -146,6 +166,29 @@
 
 .global-dm-lobby-body {
     padding: 0;
+}
+
+.global-dm-emojis {
+    display: flex;
+    gap: 8px;
+    padding: 4px 12px;
+    background: var(--color-bg-secondary);
+    border-top: 1px solid var(--color-border);
+    overflow-x: auto;
+}
+
+.global-dm-emojis .emoji-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 4px;
+    border-radius: 8px;
+    transition: background-color var(--transition-fast);
+}
+
+.global-dm-emojis .emoji-btn:hover {
+    background: var(--color-bg-tertiary);
 }
 
 #global-dm-lobby-slot .chat-container {
