@@ -31,12 +31,21 @@
     init();
 
     async function init() {
+        normalizeTabLabels();
         await loadRooms();
         setupFilters();
         setupTabs();
         setupModal();
         setupCreateForm();
         startAutoRefresh();
+    }
+
+    function normalizeTabLabels() {
+        if (!roomsTabs) return;
+        const gameTab = roomsTabs.querySelector('.tab-btn[data-view="game"]');
+        const spectateTab = roomsTabs.querySelector('.tab-btn[data-view="spectate"]');
+        if (gameTab) gameTab.textContent = '게임방';
+        if (spectateTab) spectateTab.textContent = '관전 가능 방';
     }
 
     /**
