@@ -132,6 +132,53 @@
     font-size: 30px;
 }
 
+.customize-skin-preview-board .mini-piece {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 86%;
+    height: 86%;
+    color: inherit;
+}
+
+.customize-skin-preview-board .mini-piece-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.customize-skin-preview-board .mini-piece-svg .piece-body {
+    fill: currentColor;
+    stroke-width: 2.1;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.customize-skin-preview-board .mini-piece-svg .piece-eye {
+    fill: rgba(18, 18, 18, 0.88);
+    stroke: none;
+}
+
+.customize-skin-preview-board .mini-piece-svg .piece-shadow {
+    fill: rgba(13, 18, 30, 0.32);
+    stroke: none;
+}
+
+.customize-skin-preview-board .mini-piece-svg .piece-accent {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.45);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+}
+
+.customize-skin-preview-board .mini-piece.white .mini-piece-svg .piece-body {
+    stroke: rgba(37, 24, 12, 0.78);
+}
+
+.customize-skin-preview-board .mini-piece.black .mini-piece-svg .piece-body {
+    stroke: rgba(246, 240, 226, 0.82);
+}
+
 .customize-skin-preview-board .mini-piece.white {
     color: #f8fbff;
     text-shadow:
@@ -443,6 +490,85 @@
 .customize-skin-preview-board.skin-piece-rune .mini-piece.black {
     -webkit-text-stroke: 0.8px rgba(26, 18, 12, 0.42);
 }
+
+/* Final piece palette tuning (sync with game board) */
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-p.white,
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-r.white,
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-n.white,
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-b.white,
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-q.white,
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-k.white { color: #f7f7f7; }
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-p.black,
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-r.black,
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-n.black,
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-b.black,
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-q.black,
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-k.black { color: #1f1f1f; }
+
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-p.white { color: #ff6b6b; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-r.white { color: #5b8dff; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-n.white { color: #8bd95f; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-b.white { color: #ffb347; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-q.white { color: #ff78d0; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-k.white { color: #a98bff; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-p.black { color: #8f2b2b; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-r.black { color: #2448a3; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-n.black { color: #48742a; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-b.black { color: #a35e0f; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-q.black { color: #8f3f73; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-k.black { color: #5640a6; }
+
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-p.white { color: #eceff5; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-r.white { color: #dce5f1; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-n.white { color: #e3ebf4; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-b.white { color: #e6edf7; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-q.white { color: #dfe6f2; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-k.white { color: #f2f5fa; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-p.black { color: #495564; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-r.black { color: #3f4b5d; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-n.black { color: #4a5a66; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-b.black { color: #445568; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-q.black { color: #3b4a5b; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-k.black { color: #2f3946; }
+
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-p.white { color: #f6c26f; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-r.white { color: #8ec5ff; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-n.white { color: #95dc86; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-b.white { color: #f5a07c; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-q.white { color: #d88fe5; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-k.white { color: #9fa8ff; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-p.black { color: #87501f; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-r.black { color: #2f5f86; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-n.black { color: #466f32; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-b.black { color: #8d4b2f; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-q.black { color: #7a3f83; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-k.black { color: #464f9e; }
+
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-p.white { color: #ffdce6; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-r.white { color: #d6f7ff; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-n.white { color: #dfffe8; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-b.white { color: #ffe7d7; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-q.white { color: #efdfff; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-k.white { color: #dee8ff; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-p.black { color: #8f5d73; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-r.black { color: #3e7082; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-n.black { color: #4d7a63; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-b.black { color: #8a6a50; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-q.black { color: #6e5f8d; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-k.black { color: #4f6291; }
+
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-p.white { color: #f0c98e; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-r.white { color: #b2b6ff; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-n.white { color: #b7d879; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-b.white { color: #f1aa72; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-q.white { color: #cea4ff; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-k.white { color: #ffd26a; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-p.black { color: #6f4425; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-r.black { color: #414b91; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-n.black { color: #536728; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-b.black { color: #81421f; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-q.black { color: #5f3880; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-k.black { color: #7f6118; }
 
 @media (max-width: 900px) {
     .customize-layout {

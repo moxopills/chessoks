@@ -2923,73 +2923,72 @@
     function getPieceShapeSet(variant) {
         const classic = {
             p: `
-                <circle cx="32" cy="17.5" r="6.6"></circle>
-                <path d="M24.2 31.4c0-6.2 3.8-9.9 7.8-9.9s7.8 3.7 7.8 9.9v4.1H24.2z"></path>
-                <rect x="22.4" y="35.8" width="19.2" height="9.8" rx="4.9"></rect>
-                <rect x="17.2" y="47.4" width="29.6" height="4.8" rx="2.4"></rect>
+                <circle cx="32" cy="16.5" r="6.4"></circle>
+                <path d="M24.8 31.2c0-6.1 3.9-9.7 7.2-9.7s7.2 3.6 7.2 9.7v3.8H24.8z"></path>
+                <rect x="22.2" y="35.5" width="19.6" height="9.4" rx="4.3"></rect>
+                <rect x="17.5" y="47.2" width="29" height="4.8" rx="2.4"></rect>
             `,
             r: `
-                <rect x="16.5" y="14.2" width="6.8" height="8.4" rx="1.9"></rect>
-                <rect x="28.6" y="14.2" width="6.8" height="8.4" rx="1.9"></rect>
-                <rect x="40.7" y="14.2" width="6.8" height="8.4" rx="1.9"></rect>
-                <rect x="16.5" y="22.8" width="31" height="5.8" rx="2.8"></rect>
-                <rect x="21.2" y="29.4" width="21.6" height="16.2" rx="4.8"></rect>
-                <rect x="17.2" y="47.4" width="29.6" height="4.8" rx="2.4"></rect>
+                <rect x="17" y="13" width="6.5" height="8" rx="1.6"></rect>
+                <rect x="28.8" y="13" width="6.5" height="8" rx="1.6"></rect>
+                <rect x="40.5" y="13" width="6.5" height="8" rx="1.6"></rect>
+                <rect x="17" y="21.5" width="30" height="5.5" rx="2.6"></rect>
+                <rect x="21.8" y="28.2" width="20.4" height="16.8" rx="3.8"></rect>
+                <rect x="17.5" y="47.2" width="29" height="4.8" rx="2.4"></rect>
             `,
             n: `
-                <path d="M17.2 47.4h29.6v4.8H17.2z"></path>
-                <path d="M22 45.6c7.8-.7 12.6-4.8 14.2-11.4-3.5.8-6.2.3-8.3-1.8
-                .8-7.4 6.4-13.1 14.5-14.3l4.7 4.1-2.2 6.1c2.8 1.8 4.7 4.6 5.4 8.4
-                -1.3 6.1-6.7 8.9-14.9 8.9z"></path>
-                <circle cx="36.8" cy="24.7" r="2.1" class="piece-eye"></circle>
+                <path d="M17.5 47.2h29v4.8h-29z"></path>
+                <path d="M22.4 45.2c8-.9 12.4-4.8 13.8-10.9-3.2 1.1-5.9.8-8.1-.8
+                .7-7.1 5.8-12.6 13.7-14l4.2 3.8-2 5.8c2.7 1.5 4.5 4.2 5 7.9-1.3 5.6-6.1 8.1-14.3 8.2z"></path>
+                <circle cx="36.5" cy="24.5" r="1.9" class="piece-eye"></circle>
             `,
             b: `
-                <ellipse cx="32" cy="17.6" rx="7.2" ry="8.8"></ellipse>
-                <path d="M29.1 15.7h5.8l-2.2 4.6h-1.4z"></path>
-                <path d="M24 31.9c0-7.4 4.2-11.5 8-11.5s8 4.1 8 11.5v3.8H24z"></path>
-                <rect x="22.4" y="36.2" width="19.2" height="9.4" rx="4.7"></rect>
-                <rect x="17.2" y="47.4" width="29.6" height="4.8" rx="2.4"></rect>
+                <ellipse cx="32" cy="16.8" rx="6.9" ry="8.4"></ellipse>
+                <path d="M29.4 16h5.2l-2 4h-1.2z"></path>
+                <path d="M24.6 31.5c0-7 3.8-11 7.4-11s7.4 4 7.4 11v3.9H24.6z"></path>
+                <rect x="22.2" y="35.7" width="19.6" height="9.2" rx="4.2"></rect>
+                <rect x="17.5" y="47.2" width="29" height="4.8" rx="2.4"></rect>
             `,
             q: `
-                <circle cx="17.8" cy="17.2" r="3.1"></circle>
-                <circle cx="26.9" cy="14.2" r="3.1"></circle>
-                <circle cx="37.1" cy="14.2" r="3.1"></circle>
-                <circle cx="46.2" cy="17.2" r="3.1"></circle>
-                <path d="M17.8 22.7l5.1 14.7h18.2l5.1-14.7-7.3 5-6.9-7.5-6.9 7.5z"></path>
-                <rect x="22.4" y="38.1" width="19.2" height="7.8" rx="3.9"></rect>
-                <rect x="17.2" y="47.4" width="29.6" height="4.8" rx="2.4"></rect>
+                <circle cx="18.2" cy="17.2" r="2.8"></circle>
+                <circle cx="27.3" cy="14.2" r="2.8"></circle>
+                <circle cx="36.7" cy="14.2" r="2.8"></circle>
+                <circle cx="45.8" cy="17.2" r="2.8"></circle>
+                <path d="M18.5 22.8l4.9 14h17.2l4.9-14-6.8 4.7-6.7-7.1-6.7 7.1z"></path>
+                <rect x="22.2" y="37.6" width="19.6" height="7.2" rx="3.6"></rect>
+                <rect x="17.5" y="47.2" width="29" height="4.8" rx="2.4"></rect>
             `,
             k: `
-                <rect x="30.3" y="9.3" width="3.4" height="9.8" rx="1.2"></rect>
-                <rect x="25.1" y="13.1" width="13.8" height="4" rx="1.6"></rect>
-                <path d="M23.8 31.8c0-7.9 4.4-12.2 8.2-12.2s8.2 4.3 8.2 12.2v3H23.8z"></path>
-                <rect x="22.4" y="35.3" width="19.2" height="10.1" rx="4.7"></rect>
-                <rect x="17.2" y="47.4" width="29.6" height="4.8" rx="2.4"></rect>
+                <rect x="30.5" y="9" width="3" height="9.2" rx="1.2"></rect>
+                <rect x="25.6" y="12.4" width="12.8" height="3.6" rx="1.4"></rect>
+                <path d="M24.5 31.4c0-7.7 4.1-11.8 7.5-11.8s7.5 4.1 7.5 11.8v3.4H24.5z"></path>
+                <rect x="22.2" y="35.4" width="19.6" height="9.5" rx="4.3"></rect>
+                <rect x="17.5" y="47.2" width="29" height="4.8" rx="2.4"></rect>
             `,
         };
         const pixel = {
-            p: `<rect x="27" y="12" width="10" height="10"></rect><rect x="23" y="24" width="18" height="10"></rect><rect x="21" y="36" width="22" height="10"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
-            r: `<rect x="16" y="13" width="8" height="8"></rect><rect x="28" y="13" width="8" height="8"></rect><rect x="40" y="13" width="8" height="8"></rect><rect x="16" y="23" width="32" height="6"></rect><rect x="21" y="30" width="22" height="16"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
-            n: `<path d="M17 48h30v5H17zM22 45h18l6-7v-7l-7-12h-8l-10 8v10h8l-7 6z"></path><rect x="33" y="24" width="3" height="3" class="piece-eye"></rect>`,
-            b: `<rect x="28" y="10" width="8" height="8"></rect><rect x="30" y="18" width="4" height="6"></rect><rect x="24" y="24" width="16" height="10"></rect><rect x="22" y="36" width="20" height="10"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
-            q: `<rect x="16" y="15" width="5" height="5"></rect><rect x="26" y="12" width="5" height="5"></rect><rect x="34" y="12" width="5" height="5"></rect><rect x="43" y="15" width="5" height="5"></rect><path d="M18 22h28l-4 16H22z"></path><rect x="22" y="39" width="20" height="7"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
-            k: `<rect x="30" y="9" width="4" height="10"></rect><rect x="25" y="13" width="14" height="4"></rect><rect x="24" y="20" width="16" height="12"></rect><rect x="22" y="34" width="20" height="12"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+            p: `<rect x="27" y="12" width="10" height="8"></rect><rect x="25" y="20" width="14" height="5"></rect><rect x="24" y="25" width="16" height="9"></rect><rect x="22" y="34" width="20" height="10"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+            r: `<rect x="16" y="13" width="8" height="7"></rect><rect x="28" y="13" width="8" height="7"></rect><rect x="40" y="13" width="8" height="7"></rect><rect x="16" y="21" width="32" height="5"></rect><rect x="21" y="27" width="22" height="17"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+            n: `<path d="M17 48h30v5H17zM22 44h19l6-7-2-7 2-7-4-4c-7 1-12 5-14 12l2 2-7 5z"></path><rect x="35" y="25" width="3" height="3" class="piece-eye"></rect>`,
+            b: `<rect x="28" y="10" width="8" height="8"></rect><rect x="30" y="18" width="4" height="4"></rect><rect x="24" y="22" width="16" height="12"></rect><rect x="22" y="34" width="20" height="10"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+            q: `<rect x="17" y="16" width="5" height="4"></rect><rect x="26" y="12" width="5" height="4"></rect><rect x="34" y="12" width="5" height="4"></rect><rect x="43" y="16" width="5" height="4"></rect><path d="M18 22h28l-4 14H22z"></path><rect x="22" y="36" width="20" height="8"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+            k: `<rect x="30" y="9" width="4" height="9"></rect><rect x="25" y="13" width="14" height="3"></rect><rect x="24" y="19" width="16" height="14"></rect><rect x="22" y="34" width="20" height="10"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
         };
         const modern = {
-            p: `<circle cx="32" cy="17" r="5.8"></circle><path d="M25.6 31c0-6 3.1-9.3 6.4-9.3s6.4 3.3 6.4 9.3v4.3H25.6z"></path><rect x="22.8" y="36" width="18.4" height="8.6" rx="4.3"></rect><rect x="18" y="47.1" width="28" height="4.2" rx="2.1"></rect>`,
-            r: `<rect x="18.2" y="14.7" width="5.8" height="7.2" rx="1.6"></rect><rect x="29.1" y="14.7" width="5.8" height="7.2" rx="1.6"></rect><rect x="40" y="14.7" width="5.8" height="7.2" rx="1.6"></rect><rect x="18" y="22.8" width="28" height="4.4" rx="2.2"></rect><rect x="22.2" y="28.6" width="19.6" height="15.6" rx="4.1"></rect><rect x="18" y="47.1" width="28" height="4.2" rx="2.1"></rect>`,
-            n: `<path d="M18 47.1h28v4.2H18z"></path><path d="M22.5 44.5c7.2-.8 11-4.4 12.3-10-3 .9-5.3.5-7.2-1 .6-6.5 5.8-11.7 13.3-12.5l3.6 3.6-1.8 5.1c2.8 1.5 4.4 4 4.9 7.2-1.3 5.4-5.9 7.8-13.6 7.6z"></path><circle cx="36.2" cy="25.5" r="1.8" class="piece-eye"></circle>`,
-            b: `<ellipse cx="32" cy="17.2" rx="6.3" ry="7.9"></ellipse><path d="M29.8 15.5h4.4l-1.4 3.2h-1.6z"></path><path d="M25 31.3c0-7 3.5-10.7 7-10.7s7 3.7 7 10.7v3.8H25z"></path><rect x="22.8" y="36" width="18.4" height="8.6" rx="4.3"></rect><rect x="18" y="47.1" width="28" height="4.2" rx="2.1"></rect>`,
-            q: `<circle cx="18.9" cy="17.4" r="2.5"></circle><circle cx="27.8" cy="14.3" r="2.5"></circle><circle cx="36.2" cy="14.3" r="2.5"></circle><circle cx="45.1" cy="17.4" r="2.5"></circle><path d="M19.5 22.8l4.6 13.2h15.8l4.6-13.2-6.1 4.6-6.4-6.4-6.4 6.4z"></path><rect x="22.8" y="37.1" width="18.4" height="7.3" rx="3.7"></rect><rect x="18" y="47.1" width="28" height="4.2" rx="2.1"></rect>`,
-            k: `<rect x="30.8" y="9.4" width="2.4" height="9.2" rx="1"></rect><rect x="26.2" y="13" width="11.6" height="3.2" rx="1.2"></rect><path d="M24.9 31.1c0-7.5 3.7-11.3 7.1-11.3s7.1 3.8 7.1 11.3v3.2H24.9z"></path><rect x="22.8" y="35.7" width="18.4" height="9.1" rx="4.3"></rect><rect x="18" y="47.1" width="28" height="4.2" rx="2.1"></rect>`,
+            p: `<circle cx="32" cy="16.2" r="5.8"></circle><path d="M26 31.2c0-5.6 3.2-9 6-9s6 3.4 6 9v4H26z"></path><rect x="22.8" y="35.7" width="18.4" height="9" rx="4.5"></rect><rect x="18.4" y="47.2" width="27.2" height="4.2" rx="2.1"></rect>`,
+            r: `<rect x="18.6" y="14" width="5.4" height="6.7" rx="1.4"></rect><rect x="29.3" y="14" width="5.4" height="6.7" rx="1.4"></rect><rect x="40" y="14" width="5.4" height="6.7" rx="1.4"></rect><rect x="18.4" y="21.3" width="27.2" height="4.5" rx="2.1"></rect><rect x="22.8" y="27.2" width="18.4" height="17.5" rx="4"></rect><rect x="18.4" y="47.2" width="27.2" height="4.2" rx="2.1"></rect>`,
+            n: `<path d="M18.4 47.2h27.2v4.2H18.4z"></path><path d="M22.8 44.5c7.2-.8 11.2-4.7 12.5-10.4-3 .9-5.4.7-7.4-.8.7-6.5 5.7-11.6 13.2-13.1l3.7 3.4-1.7 5.3c2.6 1.4 4.3 4 4.7 7.2-1.2 5.3-5.9 7.9-14 8.4z"></path><circle cx="36.2" cy="24.5" r="1.8" class="piece-eye"></circle>`,
+            b: `<ellipse cx="32" cy="16.5" rx="6.1" ry="7.7"></ellipse><path d="M30.1 15.3h3.8l-1.2 3h-1.4z"></path><path d="M25.8 31.3c0-6.6 3.2-10.4 6.2-10.4s6.2 3.8 6.2 10.4v4.1H25.8z"></path><rect x="22.8" y="35.7" width="18.4" height="9" rx="4.5"></rect><rect x="18.4" y="47.2" width="27.2" height="4.2" rx="2.1"></rect>`,
+            q: `<circle cx="19.2" cy="17" r="2.4"></circle><circle cx="27.8" cy="14.2" r="2.4"></circle><circle cx="36.2" cy="14.2" r="2.4"></circle><circle cx="44.8" cy="17" r="2.4"></circle><path d="M20 22.8l4.4 13.1h15.2L44 22.8l-6 4.4-6-6.2-6 6.2z"></path><rect x="22.8" y="37.1" width="18.4" height="7.4" rx="3.5"></rect><rect x="18.4" y="47.2" width="27.2" height="4.2" rx="2.1"></rect>`,
+            k: `<rect x="30.9" y="9.3" width="2.2" height="8.6" rx="1"></rect><rect x="26.7" y="12.7" width="10.6" height="3" rx="1.2"></rect><path d="M25.7 31.1c0-7.2 3.1-11.3 6.3-11.3s6.3 4.1 6.3 11.3v3.6H25.7z"></path><rect x="22.8" y="35.6" width="18.4" height="9.2" rx="4.5"></rect><rect x="18.4" y="47.2" width="27.2" height="4.2" rx="2.1"></rect>`,
         };
         const rune = {
-            p: `<path d="M32 10l6 7-6 8-6-8z"></path><path d="M24 33l8-7 8 7v12H24z"></path><path d="M17 48h30v4H17z"></path>`,
-            r: `<path d="M17 14h8v8h-8zM28 14h8v8h-8zM39 14h8v8h-8z"></path><path d="M17 24h30v4H17z"></path><path d="M22 30h20v16H22z"></path><path d="M17 48h30v4H17z"></path>`,
-            n: `<path d="M17 48h30v4H17z"></path><path d="M22 45l13-1 8-7-3-7 4-7-3-3c-8 1-13 6-15 13l2 2-6 5z"></path><circle cx="36.5" cy="24.5" r="1.7" class="piece-eye"></circle>`,
-            b: `<path d="M32 9l6 8-6 9-6-9z"></path><path d="M25 32l7-9 7 9v12H25z"></path><path d="M17 48h30v4H17z"></path>`,
-            q: `<path d="M18 17l4-4 4 4-4 5zM27 13l4-4 4 4-4 5zM37 13l4-4 4 4-4 5zM46 17l4-4 4 4-4 5z"></path><path d="M18 24l6 14h16l6-14-8 4-6-7-6 7z"></path><path d="M22 39h20v7H22z"></path><path d="M17 48h30v4H17z"></path>`,
-            k: `<path d="M31 8h2v10h-2zM26 13h12v2H26z"></path><path d="M24 32l8-10 8 10v13H24z"></path><path d="M22 36h20v9H22z"></path><path d="M17 48h30v4H17z"></path>`,
+            p: `<path d="M32 10l5 6.5-5 7.5-5-7.5z"></path><path d="M24.8 32.8l7.2-6.2 7.2 6.2v11.8H24.8z"></path><path d="M17.5 47.2h29v4.8h-29z"></path>`,
+            r: `<path d="M17.2 13h6.4v7.6h-6.4zM28.8 13h6.4v7.6h-6.4zM40.4 13h6.4v7.6h-6.4z"></path><path d="M17.2 21.3h29.6v5.1H17.2z"></path><path d="M21.9 27.8h20.2v17.2H21.9z"></path><path d="M17.5 47.2h29v4.8h-29z"></path>`,
+            n: `<path d="M17.5 47.2h29v4.8h-29z"></path><path d="M22.4 45l12.9-1 7.5-6.8-2.8-6.8 3.7-7-2.7-3.2c-7.8 1.2-12.5 5.8-14.3 12.8l1.9 2.3-6.2 4.9z"></path><circle cx="36.2" cy="24.4" r="1.8" class="piece-eye"></circle>`,
+            b: `<path d="M32 9l5.8 7.6-5.8 8.6-5.8-8.6z"></path><path d="M25.2 32.1l6.8-8.6 6.8 8.6v12.7H25.2z"></path><path d="M17.5 47.2h29v4.8h-29z"></path>`,
+            q: `<path d="M18.4 17l3.8-3.8 3.8 3.8-3.8 4.5zM27.4 13.6l3.8-3.8 3.8 3.8-3.8 4.5zM36.8 13.6l3.8-3.8 3.8 3.8-3.8 4.5zM45.8 17l3.8-3.8 3.8 3.8-3.8 4.5z"></path><path d="M18.8 23.4l5.4 13.6h15.6l5.4-13.6-7.2 4.2-6-6.6-6 6.6z"></path><path d="M22.2 38h19.6v6.8H22.2z"></path><path d="M17.5 47.2h29v4.8h-29z"></path>`,
+            k: `<path d="M30.9 8.9h2.2v9h-2.2zM26.5 12.6h11v2.8h-11z"></path><path d="M24.7 31.8l7.3-9.8 7.3 9.8v13H24.7z"></path><path d="M22.2 35.6h19.6v9.2H22.2z"></path><path d="M17.5 47.2h29v4.8h-29z"></path>`,
         };
         const map = { classic, pixel, modern, rune };
         return map[variant] || classic;

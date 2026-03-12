@@ -1096,6 +1096,64 @@ html[data-theme="dark"] .piece.white {
     --piece-k-white: #ffd86e; --piece-k-black: #8d6a16;
 }
 
+/* Final palette tuning
+   - classic: strict white / black
+   - others: concept-aligned accent palettes
+*/
+:is(.chess-board-wrapper, body).skin-piece-classic {
+    --piece-p-white: #f7f7f7; --piece-p-black: #1f1f1f;
+    --piece-r-white: #f7f7f7; --piece-r-black: #1f1f1f;
+    --piece-n-white: #f7f7f7; --piece-n-black: #1f1f1f;
+    --piece-b-white: #f7f7f7; --piece-b-black: #1f1f1f;
+    --piece-q-white: #f7f7f7; --piece-q-black: #1f1f1f;
+    --piece-k-white: #f7f7f7; --piece-k-black: #1f1f1f;
+}
+
+:is(.chess-board-wrapper, body).skin-piece-pixel {
+    --piece-p-white: #ff6b6b; --piece-p-black: #8f2b2b;
+    --piece-r-white: #5b8dff; --piece-r-black: #2448a3;
+    --piece-n-white: #8bd95f; --piece-n-black: #48742a;
+    --piece-b-white: #ffb347; --piece-b-black: #a35e0f;
+    --piece-q-white: #ff78d0; --piece-q-black: #8f3f73;
+    --piece-k-white: #a98bff; --piece-k-black: #5640a6;
+}
+
+:is(.chess-board-wrapper, body).skin-piece-modern {
+    --piece-p-white: #eceff5; --piece-p-black: #495564;
+    --piece-r-white: #dce5f1; --piece-r-black: #3f4b5d;
+    --piece-n-white: #e3ebf4; --piece-n-black: #4a5a66;
+    --piece-b-white: #e6edf7; --piece-b-black: #445568;
+    --piece-q-white: #dfe6f2; --piece-q-black: #3b4a5b;
+    --piece-k-white: #f2f5fa; --piece-k-black: #2f3946;
+}
+
+:is(.chess-board-wrapper, body).skin-piece-3d {
+    --piece-p-white: #f6c26f; --piece-p-black: #87501f;
+    --piece-r-white: #8ec5ff; --piece-r-black: #2f5f86;
+    --piece-n-white: #95dc86; --piece-n-black: #466f32;
+    --piece-b-white: #f5a07c; --piece-b-black: #8d4b2f;
+    --piece-q-white: #d88fe5; --piece-q-black: #7a3f83;
+    --piece-k-white: #9fa8ff; --piece-k-black: #464f9e;
+}
+
+:is(.chess-board-wrapper, body).skin-piece-glass {
+    --piece-p-white: #ffdce6; --piece-p-black: #8f5d73;
+    --piece-r-white: #d6f7ff; --piece-r-black: #3e7082;
+    --piece-n-white: #dfffe8; --piece-n-black: #4d7a63;
+    --piece-b-white: #ffe7d7; --piece-b-black: #8a6a50;
+    --piece-q-white: #efdfff; --piece-q-black: #6e5f8d;
+    --piece-k-white: #dee8ff; --piece-k-black: #4f6291;
+}
+
+:is(.chess-board-wrapper, body).skin-piece-rune {
+    --piece-p-white: #f0c98e; --piece-p-black: #6f4425;
+    --piece-r-white: #b2b6ff; --piece-r-black: #414b91;
+    --piece-n-white: #b7d879; --piece-n-black: #536728;
+    --piece-b-white: #f1aa72; --piece-b-black: #81421f;
+    --piece-q-white: #cea4ff; --piece-q-black: #5f3880;
+    --piece-k-white: #ffd26a; --piece-k-black: #7f6118;
+}
+
 :is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-p.white { color: var(--piece-p-white); }
 :is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-r.white { color: var(--piece-r-white); }
 :is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-n.white { color: var(--piece-n-white); }
