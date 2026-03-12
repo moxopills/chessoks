@@ -13,20 +13,6 @@
     // Constants
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-    const PIECE_SPRITE = {
-        K: '♔',
-        Q: '♕',
-        R: '♖',
-        B: '♗',
-        N: '♘',
-        P: '♙',
-        k: '♚',
-        q: '♛',
-        r: '♜',
-        b: '♝',
-        n: '♞',
-        p: '♟',
-    };
     const PIECE_VALUE = {
         p: 1,
         n: 3,
@@ -900,7 +886,7 @@
         removeDragPiece();
         dragPiece = document.createElement('div');
         dragPiece.className = 'drag-piece';
-        dragPiece.textContent = PIECE_SPRITE[piece] || '';
+        dragPiece.innerHTML = getPieceSvgMarkup(piece);
         dragPiece.classList.add(piece === piece.toUpperCase() ? 'white' : 'black');
         dragPiece.classList.add(getPieceTypeClass(piece));
         dragPiece.style.left = (x - 32) + 'px';
@@ -1714,7 +1700,7 @@
         document.querySelectorAll('.promotion-piece').forEach(btn => {
             const piece = btn.dataset.piece;
             const pieceChar = myColor === 'white' ? piece.toUpperCase() : piece.toLowerCase();
-            btn.textContent = PIECE_SPRITE[pieceChar] || '';
+            btn.innerHTML = getPieceSvgMarkup(pieceChar);
             btn.classList.remove(
                 'piece-type-p',
                 'piece-type-r',
@@ -2906,13 +2892,13 @@
         pieceEl.classList.add(getPieceTypeClass(piece));
         pieceEl.dataset.piece = piece;
         pieceEl.draggable = true;
-        pieceEl.textContent = PIECE_SPRITE[piece] || '';
+        pieceEl.innerHTML = getPieceSvgMarkup(piece);
         return pieceEl;
     }
 
     function createCapturedPieceMarkup(piece) {
         const isWhite = piece === piece.toUpperCase();
-        const glyph = PIECE_SPRITE[piece] || '';
+        const glyph = getPieceSvgMarkup(piece);
         return `<span class="captured-piece ${isWhite ? 'white' : 'black'} ${getPieceTypeClass(piece)}">${glyph}</span>`;
     }
 
@@ -2922,6 +2908,111 @@
             return 'piece-type-p';
         }
         return `piece-type-${type}`;
+    }
+
+    function getPieceSkinVariant() {
+        const cls = String(selectedPieceSkinClass || 'skin-piece-classic');
+        if (cls.includes('pixel')) return 'pixel';
+        if (cls.includes('modern')) return 'modern';
+        if (cls.includes('3d')) return '3d';
+        if (cls.includes('glass')) return 'glass';
+        if (cls.includes('rune')) return 'rune';
+        return 'classic';
+    }
+
+    function getPieceShapeSet(variant) {
+        const classic = {
+            p: `
+                <circle cx="32" cy="17.5" r="6.6"></circle>
+                <path d="M24.2 31.4c0-6.2 3.8-9.9 7.8-9.9s7.8 3.7 7.8 9.9v4.1H24.2z"></path>
+                <rect x="22.4" y="35.8" width="19.2" height="9.8" rx="4.9"></rect>
+                <rect x="17.2" y="47.4" width="29.6" height="4.8" rx="2.4"></rect>
+            `,
+            r: `
+                <rect x="16.5" y="14.2" width="6.8" height="8.4" rx="1.9"></rect>
+                <rect x="28.6" y="14.2" width="6.8" height="8.4" rx="1.9"></rect>
+                <rect x="40.7" y="14.2" width="6.8" height="8.4" rx="1.9"></rect>
+                <rect x="16.5" y="22.8" width="31" height="5.8" rx="2.8"></rect>
+                <rect x="21.2" y="29.4" width="21.6" height="16.2" rx="4.8"></rect>
+                <rect x="17.2" y="47.4" width="29.6" height="4.8" rx="2.4"></rect>
+            `,
+            n: `
+                <path d="M17.2 47.4h29.6v4.8H17.2z"></path>
+                <path d="M22 45.6c7.8-.7 12.6-4.8 14.2-11.4-3.5.8-6.2.3-8.3-1.8
+                .8-7.4 6.4-13.1 14.5-14.3l4.7 4.1-2.2 6.1c2.8 1.8 4.7 4.6 5.4 8.4
+                -1.3 6.1-6.7 8.9-14.9 8.9z"></path>
+                <circle cx="36.8" cy="24.7" r="2.1" class="piece-eye"></circle>
+            `,
+            b: `
+                <ellipse cx="32" cy="17.6" rx="7.2" ry="8.8"></ellipse>
+                <path d="M29.1 15.7h5.8l-2.2 4.6h-1.4z"></path>
+                <path d="M24 31.9c0-7.4 4.2-11.5 8-11.5s8 4.1 8 11.5v3.8H24z"></path>
+                <rect x="22.4" y="36.2" width="19.2" height="9.4" rx="4.7"></rect>
+                <rect x="17.2" y="47.4" width="29.6" height="4.8" rx="2.4"></rect>
+            `,
+            q: `
+                <circle cx="17.8" cy="17.2" r="3.1"></circle>
+                <circle cx="26.9" cy="14.2" r="3.1"></circle>
+                <circle cx="37.1" cy="14.2" r="3.1"></circle>
+                <circle cx="46.2" cy="17.2" r="3.1"></circle>
+                <path d="M17.8 22.7l5.1 14.7h18.2l5.1-14.7-7.3 5-6.9-7.5-6.9 7.5z"></path>
+                <rect x="22.4" y="38.1" width="19.2" height="7.8" rx="3.9"></rect>
+                <rect x="17.2" y="47.4" width="29.6" height="4.8" rx="2.4"></rect>
+            `,
+            k: `
+                <rect x="30.3" y="9.3" width="3.4" height="9.8" rx="1.2"></rect>
+                <rect x="25.1" y="13.1" width="13.8" height="4" rx="1.6"></rect>
+                <path d="M23.8 31.8c0-7.9 4.4-12.2 8.2-12.2s8.2 4.3 8.2 12.2v3H23.8z"></path>
+                <rect x="22.4" y="35.3" width="19.2" height="10.1" rx="4.7"></rect>
+                <rect x="17.2" y="47.4" width="29.6" height="4.8" rx="2.4"></rect>
+            `,
+        };
+        const pixel = {
+            p: `<rect x="27" y="12" width="10" height="10"></rect><rect x="23" y="24" width="18" height="10"></rect><rect x="21" y="36" width="22" height="10"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+            r: `<rect x="16" y="13" width="8" height="8"></rect><rect x="28" y="13" width="8" height="8"></rect><rect x="40" y="13" width="8" height="8"></rect><rect x="16" y="23" width="32" height="6"></rect><rect x="21" y="30" width="22" height="16"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+            n: `<path d="M17 48h30v5H17zM22 45h18l6-7v-7l-7-12h-8l-10 8v10h8l-7 6z"></path><rect x="33" y="24" width="3" height="3" class="piece-eye"></rect>`,
+            b: `<rect x="28" y="10" width="8" height="8"></rect><rect x="30" y="18" width="4" height="6"></rect><rect x="24" y="24" width="16" height="10"></rect><rect x="22" y="36" width="20" height="10"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+            q: `<rect x="16" y="15" width="5" height="5"></rect><rect x="26" y="12" width="5" height="5"></rect><rect x="34" y="12" width="5" height="5"></rect><rect x="43" y="15" width="5" height="5"></rect><path d="M18 22h28l-4 16H22z"></path><rect x="22" y="39" width="20" height="7"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+            k: `<rect x="30" y="9" width="4" height="10"></rect><rect x="25" y="13" width="14" height="4"></rect><rect x="24" y="20" width="16" height="12"></rect><rect x="22" y="34" width="20" height="12"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+        };
+        const modern = {
+            p: `<circle cx="32" cy="17" r="5.8"></circle><path d="M25.6 31c0-6 3.1-9.3 6.4-9.3s6.4 3.3 6.4 9.3v4.3H25.6z"></path><rect x="22.8" y="36" width="18.4" height="8.6" rx="4.3"></rect><rect x="18" y="47.1" width="28" height="4.2" rx="2.1"></rect>`,
+            r: `<rect x="18.2" y="14.7" width="5.8" height="7.2" rx="1.6"></rect><rect x="29.1" y="14.7" width="5.8" height="7.2" rx="1.6"></rect><rect x="40" y="14.7" width="5.8" height="7.2" rx="1.6"></rect><rect x="18" y="22.8" width="28" height="4.4" rx="2.2"></rect><rect x="22.2" y="28.6" width="19.6" height="15.6" rx="4.1"></rect><rect x="18" y="47.1" width="28" height="4.2" rx="2.1"></rect>`,
+            n: `<path d="M18 47.1h28v4.2H18z"></path><path d="M22.5 44.5c7.2-.8 11-4.4 12.3-10-3 .9-5.3.5-7.2-1 .6-6.5 5.8-11.7 13.3-12.5l3.6 3.6-1.8 5.1c2.8 1.5 4.4 4 4.9 7.2-1.3 5.4-5.9 7.8-13.6 7.6z"></path><circle cx="36.2" cy="25.5" r="1.8" class="piece-eye"></circle>`,
+            b: `<ellipse cx="32" cy="17.2" rx="6.3" ry="7.9"></ellipse><path d="M29.8 15.5h4.4l-1.4 3.2h-1.6z"></path><path d="M25 31.3c0-7 3.5-10.7 7-10.7s7 3.7 7 10.7v3.8H25z"></path><rect x="22.8" y="36" width="18.4" height="8.6" rx="4.3"></rect><rect x="18" y="47.1" width="28" height="4.2" rx="2.1"></rect>`,
+            q: `<circle cx="18.9" cy="17.4" r="2.5"></circle><circle cx="27.8" cy="14.3" r="2.5"></circle><circle cx="36.2" cy="14.3" r="2.5"></circle><circle cx="45.1" cy="17.4" r="2.5"></circle><path d="M19.5 22.8l4.6 13.2h15.8l4.6-13.2-6.1 4.6-6.4-6.4-6.4 6.4z"></path><rect x="22.8" y="37.1" width="18.4" height="7.3" rx="3.7"></rect><rect x="18" y="47.1" width="28" height="4.2" rx="2.1"></rect>`,
+            k: `<rect x="30.8" y="9.4" width="2.4" height="9.2" rx="1"></rect><rect x="26.2" y="13" width="11.6" height="3.2" rx="1.2"></rect><path d="M24.9 31.1c0-7.5 3.7-11.3 7.1-11.3s7.1 3.8 7.1 11.3v3.2H24.9z"></path><rect x="22.8" y="35.7" width="18.4" height="9.1" rx="4.3"></rect><rect x="18" y="47.1" width="28" height="4.2" rx="2.1"></rect>`,
+        };
+        const rune = {
+            p: `<path d="M32 10l6 7-6 8-6-8z"></path><path d="M24 33l8-7 8 7v12H24z"></path><path d="M17 48h30v4H17z"></path>`,
+            r: `<path d="M17 14h8v8h-8zM28 14h8v8h-8zM39 14h8v8h-8z"></path><path d="M17 24h30v4H17z"></path><path d="M22 30h20v16H22z"></path><path d="M17 48h30v4H17z"></path>`,
+            n: `<path d="M17 48h30v4H17z"></path><path d="M22 45l13-1 8-7-3-7 4-7-3-3c-8 1-13 6-15 13l2 2-6 5z"></path><circle cx="36.5" cy="24.5" r="1.7" class="piece-eye"></circle>`,
+            b: `<path d="M32 9l6 8-6 9-6-9z"></path><path d="M25 32l7-9 7 9v12H25z"></path><path d="M17 48h30v4H17z"></path>`,
+            q: `<path d="M18 17l4-4 4 4-4 5zM27 13l4-4 4 4-4 5zM37 13l4-4 4 4-4 5zM46 17l4-4 4 4-4 5z"></path><path d="M18 24l6 14h16l6-14-8 4-6-7-6 7z"></path><path d="M22 39h20v7H22z"></path><path d="M17 48h30v4H17z"></path>`,
+            k: `<path d="M31 8h2v10h-2zM26 13h12v2H26z"></path><path d="M24 32l8-10 8 10v13H24z"></path><path d="M22 36h20v9H22z"></path><path d="M17 48h30v4H17z"></path>`,
+        };
+        const map = { classic, pixel, modern, rune };
+        return map[variant] || classic;
+    }
+
+    function getPieceSvgMarkup(piece) {
+        const variant = getPieceSkinVariant();
+        const type = String(piece || '').toLowerCase();
+        const shapeSet = getPieceShapeSet(variant === '3d' ? 'classic' : (variant === 'glass' ? 'modern' : variant));
+        const body = shapeSet[type] || shapeSet.p;
+        const shadowLayer = variant === '3d'
+            ? `<g class="piece-shadow" transform="translate(1.8,1.8)">${body}</g>`
+            : '';
+        const accentLayer = variant === 'glass'
+            ? `<g class="piece-accent"><ellipse cx="28" cy="22" rx="9" ry="5.3"></ellipse><path d="M20 32h24"></path></g>`
+            : '';
+        return `
+            <svg class="piece-svg variant-${variant}" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+                ${shadowLayer}
+                <g class="piece-body">${body}</g>
+                ${accentLayer}
+            </svg>
+        `;
     }
 
     function bindReactionButtons(messageEl) {
