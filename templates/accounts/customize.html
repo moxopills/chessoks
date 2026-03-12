@@ -53,14 +53,24 @@
             <div class="customize-skin-preview-panel">
                 <div class="customize-skin-preview-title">스킨 미리보기</div>
                 <div class="customize-skin-preview-board skin-board-classic skin-piece-classic" id="customize-skin-preview-board">
-                    <div class="mini-square light"><span class="mini-piece white">♔</span></div>
-                    <div class="mini-square dark"><span class="mini-piece black">♛</span></div>
+                    <div class="mini-square light"><span class="mini-piece white piece-type-k">♔</span></div>
+                    <div class="mini-square dark"><span class="mini-piece black piece-type-q">♛</span></div>
                     <div class="mini-square dark"></div>
                     <div class="mini-square light"></div>
                     <div class="mini-square light"></div>
                     <div class="mini-square dark"></div>
-                    <div class="mini-square dark"><span class="mini-piece white">♘</span></div>
-                    <div class="mini-square light"><span class="mini-piece black">♜</span></div>
+                    <div class="mini-square dark"><span class="mini-piece white piece-type-n">♘</span></div>
+                    <div class="mini-square light"><span class="mini-piece black piece-type-r">♜</span></div>
+                </div>
+                <div class="customize-skin-meta" id="customize-skin-meta">
+                    <div class="customize-skin-meta-item">
+                        <strong id="customize-board-title">보드: 클래식</strong>
+                        <span id="customize-board-desc">균형 잡힌 기본 체스 보드</span>
+                    </div>
+                    <div class="customize-skin-meta-item">
+                        <strong id="customize-piece-title">기물: 클래식 아케이드</strong>
+                        <span id="customize-piece-desc">선명한 색 구분과 경쾌한 대비</span>
+                    </div>
                 </div>
             </div>
         </section>
@@ -71,4 +81,3 @@
 {% block extra_js %}
 <script src="{% static 'js/pages/customize.js' %}"></script>
 {% endblock %}
-

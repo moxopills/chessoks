@@ -493,6 +493,8 @@
             ];
             chessBoardWrapper.classList.remove(...pieceClasses);
             chessBoardWrapper.classList.add(selectedPieceSkinClass || 'skin-piece-classic');
+            document.body.classList.remove(...pieceClasses);
+            document.body.classList.add(selectedPieceSkinClass || 'skin-piece-classic');
         }
     }
 
@@ -900,6 +902,7 @@
         dragPiece.className = 'drag-piece';
         dragPiece.textContent = PIECE_SPRITE[piece] || '';
         dragPiece.classList.add(piece === piece.toUpperCase() ? 'white' : 'black');
+        dragPiece.classList.add(getPieceTypeClass(piece));
         dragPiece.style.left = (x - 32) + 'px';
         dragPiece.style.top = (y - 32) + 'px';
         document.body.appendChild(dragPiece);
@@ -1712,6 +1715,18 @@
             const piece = btn.dataset.piece;
             const pieceChar = myColor === 'white' ? piece.toUpperCase() : piece.toLowerCase();
             btn.textContent = PIECE_SPRITE[pieceChar] || '';
+            btn.classList.remove(
+                'piece-type-p',
+                'piece-type-r',
+                'piece-type-n',
+                'piece-type-b',
+                'piece-type-q',
+                'piece-type-k',
+                'white',
+                'black',
+            );
+            btn.classList.add(getPieceTypeClass(pieceChar));
+            btn.classList.add(myColor === 'white' ? 'white' : 'black');
             
             btn.onclick = () => {
                 const uci = pendingPromotion.from + pendingPromotion.to;
@@ -2888,6 +2903,7 @@
         const pieceEl = document.createElement('div');
         const isWhite = piece === piece.toUpperCase();
         pieceEl.className = `piece ${isWhite ? 'white' : 'black'}`;
+        pieceEl.classList.add(getPieceTypeClass(piece));
         pieceEl.dataset.piece = piece;
         pieceEl.draggable = true;
         pieceEl.textContent = PIECE_SPRITE[piece] || '';
@@ -2897,7 +2913,15 @@
     function createCapturedPieceMarkup(piece) {
         const isWhite = piece === piece.toUpperCase();
         const glyph = PIECE_SPRITE[piece] || '';
-        return `<span class="captured-piece ${isWhite ? 'white' : 'black'}">${glyph}</span>`;
+        return `<span class="captured-piece ${isWhite ? 'white' : 'black'} ${getPieceTypeClass(piece)}">${glyph}</span>`;
+    }
+
+    function getPieceTypeClass(piece) {
+        const type = String(piece || '').toLowerCase();
+        if (!['p', 'r', 'n', 'b', 'q', 'k'].includes(type)) {
+            return 'piece-type-p';
+        }
+        return `piece-type-${type}`;
     }
 
     function bindReactionButtons(messageEl) {
