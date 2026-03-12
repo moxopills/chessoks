@@ -190,6 +190,64 @@
         return selected?.css_class || fallback;
     }
 
+    function getPreviewPieceSkinVariant(pieceClass) {
+        const cls = String(pieceClass || 'skin-piece-classic');
+        if (cls.includes('pixel')) return 'pixel';
+        if (cls.includes('modern')) return 'modern';
+        if (cls.includes('3d')) return '3d';
+        if (cls.includes('glass')) return 'glass';
+        if (cls.includes('rune')) return 'rune';
+        return 'classic';
+    }
+
+    function getPreviewShapeSet(variant) {
+        const classic = {
+            p: `<circle cx="32" cy="16.5" r="6.4"></circle><path d="M24.8 31.2c0-6.1 3.9-9.7 7.2-9.7s7.2 3.6 7.2 9.7v3.8H24.8z"></path><rect x="22.2" y="35.5" width="19.6" height="9.4" rx="4.3"></rect><rect x="17.5" y="47.2" width="29" height="4.8" rx="2.4"></rect>`,
+            r: `<rect x="17" y="13" width="6.5" height="8" rx="1.6"></rect><rect x="28.8" y="13" width="6.5" height="8" rx="1.6"></rect><rect x="40.5" y="13" width="6.5" height="8" rx="1.6"></rect><rect x="17" y="21.5" width="30" height="5.5" rx="2.6"></rect><rect x="21.8" y="28.2" width="20.4" height="16.8" rx="3.8"></rect><rect x="17.5" y="47.2" width="29" height="4.8" rx="2.4"></rect>`,
+            n: `<path d="M17.5 47.2h29v4.8h-29z"></path><path d="M22.4 45.2c8-.9 12.4-4.8 13.8-10.9-3.2 1.1-5.9.8-8.1-.8.7-7.1 5.8-12.6 13.7-14l4.2 3.8-2 5.8c2.7 1.5 4.5 4.2 5 7.9-1.3 5.6-6.1 8.1-14.3 8.2z"></path><circle cx="36.5" cy="24.5" r="1.9" class="piece-eye"></circle>`,
+            b: `<ellipse cx="32" cy="16.8" rx="6.9" ry="8.4"></ellipse><path d="M29.4 16h5.2l-2 4h-1.2z"></path><path d="M24.6 31.5c0-7 3.8-11 7.4-11s7.4 4 7.4 11v3.9H24.6z"></path><rect x="22.2" y="35.7" width="19.6" height="9.2" rx="4.2"></rect><rect x="17.5" y="47.2" width="29" height="4.8" rx="2.4"></rect>`,
+            q: `<circle cx="18.2" cy="17.2" r="2.8"></circle><circle cx="27.3" cy="14.2" r="2.8"></circle><circle cx="36.7" cy="14.2" r="2.8"></circle><circle cx="45.8" cy="17.2" r="2.8"></circle><path d="M18.5 22.8l4.9 14h17.2l4.9-14-6.8 4.7-6.7-7.1-6.7 7.1z"></path><rect x="22.2" y="37.6" width="19.6" height="7.2" rx="3.6"></rect><rect x="17.5" y="47.2" width="29" height="4.8" rx="2.4"></rect>`,
+            k: `<rect x="30.5" y="9" width="3" height="9.2" rx="1.2"></rect><rect x="25.6" y="12.4" width="12.8" height="3.6" rx="1.4"></rect><path d="M24.5 31.4c0-7.7 4.1-11.8 7.5-11.8s7.5 4.1 7.5 11.8v3.4H24.5z"></path><rect x="22.2" y="35.4" width="19.6" height="9.5" rx="4.3"></rect><rect x="17.5" y="47.2" width="29" height="4.8" rx="2.4"></rect>`,
+        };
+        const pixel = {
+            p: `<rect x="27" y="12" width="10" height="8"></rect><rect x="25" y="20" width="14" height="5"></rect><rect x="24" y="25" width="16" height="9"></rect><rect x="22" y="34" width="20" height="10"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+            r: `<rect x="16" y="13" width="8" height="7"></rect><rect x="28" y="13" width="8" height="7"></rect><rect x="40" y="13" width="8" height="7"></rect><rect x="16" y="21" width="32" height="5"></rect><rect x="21" y="27" width="22" height="17"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+            n: `<path d="M17 48h30v5H17zM22 44h19l6-7-2-7 2-7-4-4c-7 1-12 5-14 12l2 2-7 5z"></path><rect x="35" y="25" width="3" height="3" class="piece-eye"></rect>`,
+            b: `<rect x="28" y="10" width="8" height="8"></rect><rect x="30" y="18" width="4" height="4"></rect><rect x="24" y="22" width="16" height="12"></rect><rect x="22" y="34" width="20" height="10"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+            q: `<rect x="17" y="16" width="5" height="4"></rect><rect x="26" y="12" width="5" height="4"></rect><rect x="34" y="12" width="5" height="4"></rect><rect x="43" y="16" width="5" height="4"></rect><path d="M18 22h28l-4 14H22z"></path><rect x="22" y="36" width="20" height="8"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+            k: `<rect x="30" y="9" width="4" height="9"></rect><rect x="25" y="13" width="14" height="3"></rect><rect x="24" y="19" width="16" height="14"></rect><rect x="22" y="34" width="20" height="10"></rect><rect x="17" y="48" width="30" height="5"></rect>`,
+        };
+        const modern = classic;
+        const rune = classic;
+        const map = { classic, pixel, modern, rune };
+        return map[variant] || classic;
+    }
+
+    function getPreviewPieceSvgMarkup(piece, pieceClass) {
+        const variant = getPreviewPieceSkinVariant(pieceClass);
+        const type = String(piece || '').toLowerCase();
+        const shapeSet = getPreviewShapeSet(variant === '3d' ? 'classic' : (variant === 'glass' ? 'modern' : variant));
+        const body = shapeSet[type] || shapeSet.p;
+        const shadowLayer = variant === '3d' ? `<g class="piece-shadow" transform="translate(1.4,1.4)">${body}</g>` : '';
+        const accentLayer = variant === 'glass'
+            ? `<g class="piece-accent"><ellipse cx="28" cy="22" rx="8.5" ry="5"></ellipse><path d="M20 32h24"></path></g>`
+            : '';
+        return `
+            <svg class="mini-piece-svg variant-${variant}" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+                ${shadowLayer}
+                <g class="piece-body">${body}</g>
+                ${accentLayer}
+            </svg>
+        `;
+    }
+
+    function renderPreviewPieces(pieceClass) {
+        if (!previewBoard) return;
+        previewBoard.querySelectorAll('.mini-piece[data-piece]').forEach((el) => {
+            el.innerHTML = getPreviewPieceSvgMarkup(el.dataset.piece, pieceClass);
+        });
+    }
+
     function renderPreview() {
         const nickname = me?.nickname || '내 닉네임';
         const avatarUrl = me?.avatar_url || '';
@@ -215,6 +273,7 @@
         previewBoard.className = `customize-skin-preview-board ${boardClass} ${pieceClass}`;
         const boardMeta = SKIN_META.board[boardClass] || { name: boardSkin?.name || '클래식', desc: '보드 스타일' };
         const pieceMeta = SKIN_META.piece[pieceClass] || { name: pieceSkin?.name || '클래식 아케이드', desc: '기물 스타일' };
+        renderPreviewPieces(pieceClass);
         if (previewBoardTitle) previewBoardTitle.textContent = `보드: ${boardMeta.name}`;
         if (previewBoardDesc) previewBoardDesc.textContent = boardMeta.desc;
         if (previewPieceTitle) previewPieceTitle.textContent = `기물: ${pieceMeta.name}`;
