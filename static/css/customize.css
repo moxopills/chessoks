@@ -99,6 +99,31 @@
     border: 1px solid var(--line-color, #d8d0c2);
 }
 
+.customize-skin-meta {
+    margin-top: 10px;
+    display: grid;
+    gap: 8px;
+}
+
+.customize-skin-meta-item {
+    border: 1px solid var(--line-color, #d8d0c2);
+    border-radius: 10px;
+    padding: 8px 10px;
+    background: color-mix(in srgb, var(--card-bg, #fff) 88%, transparent);
+}
+
+.customize-skin-meta-item strong {
+    display: block;
+    font-size: 0.92rem;
+    margin-bottom: 2px;
+}
+
+.customize-skin-meta-item span {
+    display: block;
+    font-size: 0.8rem;
+    opacity: 0.82;
+}
+
 .customize-skin-preview-board .mini-square {
     display: flex;
     align-items: center;
@@ -292,6 +317,131 @@
         1px -1px 0 rgba(254, 239, 206, 0.72),
         -1px 1px 0 rgba(254, 239, 206, 0.72),
         1px 1px 0 rgba(254, 239, 206, 0.72);
+}
+
+/* Mini board piece palette by type (aligned with game board) */
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-k.white { color: #a987ff; }
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-q.black { color: #ab5698; }
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-n.white { color: #88c864; }
+.customize-skin-preview-board.skin-piece-classic .mini-piece.piece-type-r.black { color: #3052ad; }
+
+.customize-skin-preview-board.skin-piece-classic .mini-piece.white {
+    -webkit-text-stroke: 1px rgba(53, 30, 17, 0.82);
+    text-shadow:
+        0 1px 0 rgba(35, 19, 9, 0.82),
+        0 0 4px rgba(255, 255, 255, 0.2);
+}
+
+.customize-skin-preview-board.skin-piece-classic .mini-piece.black {
+    -webkit-text-stroke: 1px rgba(37, 20, 12, 0.58);
+    text-shadow:
+        -1px -1px 0 rgba(247, 240, 228, 0.82),
+        1px -1px 0 rgba(247, 240, 228, 0.82),
+        -1px 1px 0 rgba(247, 240, 228, 0.82),
+        1px 1px 0 rgba(247, 240, 228, 0.82);
+}
+
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-k.white { color: #9a6bff; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-q.black { color: #8a2f73; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-n.white { color: #7ed957; }
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.piece-type-r.black { color: #1d3c8c; }
+
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-k.white { color: #d9d0ff; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-q.black { color: #6e4d80; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-n.white { color: #d6f3d1; }
+.customize-skin-preview-board.skin-piece-modern .mini-piece.piece-type-r.black { color: #41618d; }
+
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-k.white { color: #b8a8ff; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-q.black { color: #8c2f63; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-n.white { color: #baf28e; }
+.customize-skin-preview-board.skin-piece-3d .mini-piece.piece-type-r.black { color: #2d5f86; }
+
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-k.white { color: #dde4ff; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-q.black { color: #7b5d89; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-n.white { color: #ddffd7; }
+.customize-skin-preview-board.skin-piece-glass .mini-piece.piece-type-r.black { color: #3c6f7b; }
+
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-k.white { color: #ffd86e; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-q.black { color: #6b3d8c; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-n.white { color: #a9d36d; }
+.customize-skin-preview-board.skin-piece-rune .mini-piece.piece-type-r.black { color: #3f4a9f; }
+
+/* Per-skin identity pass for preview (same concept as game board) */
+.customize-skin-preview-board.skin-piece-pixel .mini-piece {
+    -webkit-font-smoothing: none;
+    text-rendering: geometricPrecision;
+    letter-spacing: 0;
+}
+
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.white {
+    -webkit-text-stroke: 0.6px rgba(36, 24, 12, 0.9);
+    text-shadow:
+        1px 1px 0 rgba(36, 24, 12, 0.95),
+        2px 2px 0 rgba(36, 24, 12, 0.58);
+}
+
+.customize-skin-preview-board.skin-piece-pixel .mini-piece.black {
+    -webkit-text-stroke: 0.5px rgba(20, 14, 10, 0.7);
+}
+
+.customize-skin-preview-board.skin-piece-modern .mini-piece {
+    filter: drop-shadow(0 1px 2px rgba(12, 25, 44, 0.18));
+    letter-spacing: -0.02em;
+}
+
+.customize-skin-preview-board.skin-piece-modern .mini-piece.white {
+    -webkit-text-stroke: 0.6px rgba(33, 25, 14, 0.62);
+    text-shadow: 0 1px 0 rgba(33, 25, 14, 0.56);
+}
+
+.customize-skin-preview-board.skin-piece-modern .mini-piece.black {
+    -webkit-text-stroke: 0.5px rgba(20, 16, 12, 0.5);
+}
+
+.customize-skin-preview-board.skin-piece-3d .mini-piece {
+    filter: drop-shadow(0 6px 8px rgba(9, 15, 25, 0.34));
+}
+
+.customize-skin-preview-board.skin-piece-3d .mini-piece.white {
+    -webkit-text-stroke: 0.8px rgba(56, 42, 26, 0.56);
+}
+
+.customize-skin-preview-board.skin-piece-3d .mini-piece.black {
+    -webkit-text-stroke: 0.75px rgba(22, 17, 13, 0.5);
+}
+
+.customize-skin-preview-board.skin-piece-glass .mini-piece {
+    opacity: 0.94;
+    filter:
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.14))
+        drop-shadow(0 4px 7px rgba(20, 35, 59, 0.26));
+}
+
+.customize-skin-preview-board.skin-piece-glass .mini-piece.white {
+    -webkit-text-stroke: 0.8px rgba(33, 24, 13, 0.5);
+    text-shadow:
+        0 1px 0 rgba(36, 24, 11, 0.5),
+        0 0 9px rgba(170, 234, 255, 0.4);
+}
+
+.customize-skin-preview-board.skin-piece-glass .mini-piece.black {
+    -webkit-text-stroke: 0.7px rgba(26, 18, 12, 0.42);
+}
+
+.customize-skin-preview-board.skin-piece-rune .mini-piece {
+    letter-spacing: 0.01em;
+    filter: drop-shadow(0 3px 6px rgba(15, 11, 8, 0.34));
+}
+
+.customize-skin-preview-board.skin-piece-rune .mini-piece.white {
+    -webkit-text-stroke: 0.85px rgba(64, 43, 15, 0.58);
+    text-shadow:
+        0 1px 0 rgba(64, 43, 15, 0.62),
+        0 0 8px rgba(255, 203, 120, 0.36);
+}
+
+.customize-skin-preview-board.skin-piece-rune .mini-piece.black {
+    -webkit-text-stroke: 0.8px rgba(26, 18, 12, 0.42);
 }
 
 @media (max-width: 900px) {
