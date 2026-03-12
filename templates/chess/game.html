@@ -998,6 +998,223 @@ html[data-theme="dark"] .piece.white {
     border-radius: 10px;
 }
 
+/* Piece palette by type (arcade color concept) */
+:is(.chess-board-wrapper, body).skin-piece-classic {
+    --piece-p-white: #ff6a60; --piece-p-black: #be3a32;
+    --piece-r-white: #6b8fff; --piece-r-black: #3052ad;
+    --piece-n-white: #88c864; --piece-n-black: #4c7733;
+    --piece-b-white: #ffa322; --piece-b-black: #bf6808;
+    --piece-q-white: #f3a0e3; --piece-q-black: #ab5698;
+    --piece-k-white: #a987ff; --piece-k-black: #6542b2;
+    --piece-outline-light: rgba(49, 27, 14, 0.82);
+    --piece-outline-dark: rgba(246, 239, 227, 0.78);
+    --piece-gloss: rgba(255, 255, 255, 0.22);
+}
+
+:is(.chess-board-wrapper, body).skin-piece-pixel {
+    --piece-p-white: #ff4d4d; --piece-p-black: #8b1f1f;
+    --piece-r-white: #4d7cff; --piece-r-black: #1d3c8c;
+    --piece-n-white: #7ed957; --piece-n-black: #3f6e22;
+    --piece-b-white: #ff9f1a; --piece-b-black: #a75800;
+    --piece-q-white: #ff66c4; --piece-q-black: #8a2f73;
+    --piece-k-white: #9a6bff; --piece-k-black: #4e2d9b;
+}
+
+:is(.chess-board-wrapper, body).skin-piece-modern {
+    --piece-p-white: #e7edf6; --piece-p-black: #596a7f;
+    --piece-r-white: #c7dbff; --piece-r-black: #41618d;
+    --piece-n-white: #d6f3d1; --piece-n-black: #4b6f4f;
+    --piece-b-white: #ffe7c4; --piece-b-black: #8f6e45;
+    --piece-q-white: #f3d5ff; --piece-q-black: #6e4d80;
+    --piece-k-white: #d9d0ff; --piece-k-black: #4a4478;
+}
+
+:is(.chess-board-wrapper, body).skin-piece-3d {
+    --piece-p-white: #ffd27a; --piece-p-black: #9b5c17;
+    --piece-r-white: #9fd8ff; --piece-r-black: #2d5f86;
+    --piece-n-white: #baf28e; --piece-n-black: #4f7d2d;
+    --piece-b-white: #ffbe92; --piece-b-black: #9a4a27;
+    --piece-q-white: #f6a6d7; --piece-q-black: #8c2f63;
+    --piece-k-white: #b8a8ff; --piece-k-black: #54419f;
+}
+
+:is(.chess-board-wrapper, body).skin-piece-glass {
+    --piece-p-white: #ffd9d6; --piece-p-black: #a15f59;
+    --piece-r-white: #c8f2ff; --piece-r-black: #3c6f7b;
+    --piece-n-white: #ddffd7; --piece-n-black: #4b7a5f;
+    --piece-b-white: #ffe9d4; --piece-b-black: #86614a;
+    --piece-q-white: #f7dcff; --piece-q-black: #7b5d89;
+    --piece-k-white: #dde4ff; --piece-k-black: #4d5d8f;
+}
+
+:is(.chess-board-wrapper, body).skin-piece-rune {
+    --piece-p-white: #f0c08a; --piece-p-black: #8a4e2c;
+    --piece-r-white: #9fb0ff; --piece-r-black: #3f4a9f;
+    --piece-n-white: #a9d36d; --piece-n-black: #546e2b;
+    --piece-b-white: #f6a56b; --piece-b-black: #8f4a20;
+    --piece-q-white: #d59cff; --piece-q-black: #6b3d8c;
+    --piece-k-white: #ffd86e; --piece-k-black: #8d6a16;
+}
+
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-p.white { color: var(--piece-p-white); }
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-r.white { color: var(--piece-r-white); }
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-n.white { color: var(--piece-n-white); }
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-b.white { color: var(--piece-b-white); }
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-q.white { color: var(--piece-q-white); }
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-k.white { color: var(--piece-k-white); }
+
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-p.black { color: var(--piece-p-black); }
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-r.black { color: var(--piece-r-black); }
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-n.black { color: var(--piece-n-black); }
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-b.black { color: var(--piece-b-black); }
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-q.black { color: var(--piece-q-black); }
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).piece-type-k.black { color: var(--piece-k-black); }
+
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).white {
+    text-shadow:
+        0 1px 0 rgba(24, 20, 14, 0.78),
+        0 0 8px rgba(255, 255, 255, 0.18);
+}
+
+:is(.chess-board-wrapper, body) :is(.piece, .captured-piece, .promotion-piece, .drag-piece).black {
+    text-shadow:
+        -1px -1px 0 rgba(246, 241, 231, 0.75),
+        1px -1px 0 rgba(246, 241, 231, 0.75),
+        -1px 1px 0 rgba(246, 241, 231, 0.75),
+        1px 1px 0 rgba(246, 241, 231, 0.75);
+}
+
+.chess-board-wrapper.skin-piece-classic :is(.piece, .captured-piece, .promotion-piece, .drag-piece) {
+    filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.24));
+}
+
+.chess-board-wrapper.skin-piece-classic :is(.piece, .captured-piece, .promotion-piece, .drag-piece).white {
+    -webkit-text-stroke: 1.2px var(--piece-outline-light);
+    text-shadow:
+        0 1px 0 rgba(41, 22, 10, 0.85),
+        0 0 1px rgba(41, 22, 10, 0.8),
+        0 0 6px var(--piece-gloss);
+}
+
+.chess-board-wrapper.skin-piece-classic :is(.piece, .captured-piece, .promotion-piece, .drag-piece).black {
+    -webkit-text-stroke: 1.1px rgba(23, 16, 12, 0.56);
+    text-shadow:
+        -1px -1px 0 var(--piece-outline-dark),
+        1px -1px 0 var(--piece-outline-dark),
+        -1px 1px 0 var(--piece-outline-dark),
+        1px 1px 0 var(--piece-outline-dark),
+        0 1px 0 rgba(20, 12, 8, 0.28);
+}
+
+/* Per-skin identity pass (shape/texture cues) */
+.chess-board-wrapper.skin-piece-pixel :is(.piece, .captured-piece, .promotion-piece, .drag-piece) {
+    -webkit-font-smoothing: none;
+    text-rendering: geometricPrecision;
+    filter: none;
+}
+
+.chess-board-wrapper.skin-piece-pixel :is(.piece, .captured-piece, .promotion-piece, .drag-piece).white {
+    -webkit-text-stroke: 0.6px rgba(36, 24, 12, 0.92);
+    text-shadow:
+        1px 1px 0 rgba(36, 24, 12, 0.95),
+        2px 2px 0 rgba(36, 24, 12, 0.62);
+}
+
+.chess-board-wrapper.skin-piece-pixel :is(.piece, .captured-piece, .promotion-piece, .drag-piece).black {
+    -webkit-text-stroke: 0.5px rgba(20, 14, 10, 0.72);
+    text-shadow:
+        -1px -1px 0 rgba(246, 240, 225, 0.86),
+        1px -1px 0 rgba(246, 240, 225, 0.86),
+        -1px 1px 0 rgba(246, 240, 225, 0.86),
+        1px 1px 0 rgba(246, 240, 225, 0.86);
+}
+
+.chess-board-wrapper.skin-piece-modern :is(.piece, .captured-piece, .promotion-piece, .drag-piece) {
+    filter: drop-shadow(0 1px 2px rgba(12, 25, 44, 0.2));
+    letter-spacing: -0.02em;
+}
+
+.chess-board-wrapper.skin-piece-modern :is(.piece, .captured-piece, .promotion-piece, .drag-piece).white {
+    -webkit-text-stroke: 0.6px rgba(33, 25, 14, 0.64);
+    text-shadow: 0 1px 0 rgba(33, 25, 14, 0.56);
+}
+
+.chess-board-wrapper.skin-piece-modern :is(.piece, .captured-piece, .promotion-piece, .drag-piece).black {
+    -webkit-text-stroke: 0.5px rgba(20, 16, 12, 0.52);
+    text-shadow:
+        -1px -1px 0 rgba(247, 240, 226, 0.72),
+        1px -1px 0 rgba(247, 240, 226, 0.72),
+        -1px 1px 0 rgba(247, 240, 226, 0.72),
+        1px 1px 0 rgba(247, 240, 226, 0.72);
+}
+
+.chess-board-wrapper.skin-piece-3d :is(.piece, .captured-piece, .promotion-piece, .drag-piece) {
+    filter: drop-shadow(0 7px 10px rgba(9, 15, 25, 0.42));
+}
+
+.chess-board-wrapper.skin-piece-3d :is(.piece, .captured-piece, .promotion-piece, .drag-piece).white {
+    -webkit-text-stroke: 0.8px rgba(56, 42, 26, 0.56);
+    text-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.58),
+        0 5px 9px rgba(0, 0, 0, 0.26);
+}
+
+.chess-board-wrapper.skin-piece-3d :is(.piece, .captured-piece, .promotion-piece, .drag-piece).black {
+    -webkit-text-stroke: 0.75px rgba(22, 17, 13, 0.52);
+    text-shadow:
+        -1px -1px 0 rgba(246, 240, 228, 0.72),
+        1px -1px 0 rgba(246, 240, 228, 0.72),
+        -1px 1px 0 rgba(246, 240, 228, 0.72),
+        1px 1px 0 rgba(246, 240, 228, 0.72),
+        0 6px 10px rgba(0, 0, 0, 0.28);
+}
+
+.chess-board-wrapper.skin-piece-glass :is(.piece, .captured-piece, .promotion-piece, .drag-piece) {
+    opacity: 0.94;
+    filter:
+        drop-shadow(0 1px 0 rgba(255, 255, 255, 0.14))
+        drop-shadow(0 4px 8px rgba(20, 35, 59, 0.3));
+}
+
+.chess-board-wrapper.skin-piece-glass :is(.piece, .captured-piece, .promotion-piece, .drag-piece).white {
+    -webkit-text-stroke: 0.8px rgba(33, 24, 13, 0.52);
+    text-shadow:
+        0 1px 0 rgba(36, 24, 11, 0.52),
+        0 0 12px rgba(170, 234, 255, 0.42);
+}
+
+.chess-board-wrapper.skin-piece-glass :is(.piece, .captured-piece, .promotion-piece, .drag-piece).black {
+    -webkit-text-stroke: 0.7px rgba(26, 18, 12, 0.44);
+    text-shadow:
+        -1px -1px 0 rgba(246, 240, 228, 0.74),
+        1px -1px 0 rgba(246, 240, 228, 0.74),
+        -1px 1px 0 rgba(246, 240, 228, 0.74),
+        1px 1px 0 rgba(246, 240, 228, 0.74),
+        0 0 12px rgba(122, 182, 255, 0.34);
+}
+
+.chess-board-wrapper.skin-piece-rune :is(.piece, .captured-piece, .promotion-piece, .drag-piece) {
+    letter-spacing: 0.01em;
+    filter: drop-shadow(0 3px 7px rgba(15, 11, 8, 0.42));
+}
+
+.chess-board-wrapper.skin-piece-rune :is(.piece, .captured-piece, .promotion-piece, .drag-piece).white {
+    -webkit-text-stroke: 0.9px rgba(64, 43, 15, 0.6);
+    text-shadow:
+        0 1px 0 rgba(64, 43, 15, 0.64),
+        0 0 10px rgba(255, 203, 120, 0.4);
+}
+
+.chess-board-wrapper.skin-piece-rune :is(.piece, .captured-piece, .promotion-piece, .drag-piece).black {
+    -webkit-text-stroke: 0.85px rgba(26, 18, 12, 0.46);
+    text-shadow:
+        -1px -1px 0 rgba(252, 240, 206, 0.72),
+        1px -1px 0 rgba(252, 240, 206, 0.72),
+        -1px 1px 0 rgba(252, 240, 206, 0.72),
+        1px 1px 0 rgba(252, 240, 206, 0.72),
+        0 0 8px rgba(122, 165, 255, 0.26);
+}
+
 .piece:active {
     cursor: grabbing;
     transform: scale(1.1);
