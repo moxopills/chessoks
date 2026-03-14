@@ -2991,18 +2991,20 @@
     function getPieceSvgMarkup(piece) {
         const variant = getPieceSkinVariant();
         const type = String(piece || '').toLowerCase();
-        const shapeSet = getPieceShapeSet(variant === '3d' ? 'classic' : (variant === 'glass' ? 'modern' : variant));
-        const body = shapeSet[type] || shapeSet.p;
+        const isWhite = piece === piece.toUpperCase();
+        const whiteGlyphMap = { p: '♙', r: '♖', n: '♘', b: '♗', q: '♕', k: '♔' };
+        const blackGlyphMap = { p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚' };
+        const glyph = (isWhite ? whiteGlyphMap : blackGlyphMap)[type] || (isWhite ? '♙' : '♟');
         const shadowLayer = variant === '3d'
-            ? `<g class="piece-shadow" transform="translate(1.8,1.8)">${body}</g>`
+            ? `<text class="piece-shadow-glyph" x="33.2" y="47.2">${glyph}</text>`
             : '';
         const accentLayer = variant === 'glass'
-            ? `<g class="piece-accent"><ellipse cx="28" cy="22" rx="9" ry="5.3"></ellipse><path d="M20 32h24"></path></g>`
+            ? `<g class="piece-accent"><ellipse cx="32" cy="23" rx="11" ry="5.8"></ellipse><path d="M20 34h24"></path></g>`
             : '';
         return `
             <svg class="piece-svg variant-${variant}" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
                 ${shadowLayer}
-                <g class="piece-body">${body}</g>
+                <text class="piece-glyph" x="32" y="45.5">${glyph}</text>
                 ${accentLayer}
             </svg>
         `;
