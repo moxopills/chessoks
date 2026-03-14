@@ -769,6 +769,28 @@
     display: block;
 }
 
+.piece-svg .piece-glyph,
+.piece-svg .piece-shadow-glyph {
+    font-family: "Noto Sans Symbols 2", "Segoe UI Symbol", "Noto Sans KR", sans-serif;
+    font-weight: 700;
+    font-size: 47px;
+    line-height: 1;
+    text-anchor: middle;
+    dominant-baseline: middle;
+}
+
+.piece-svg .piece-glyph {
+    fill: currentColor;
+    paint-order: stroke fill;
+    stroke: var(--piece-stroke);
+    stroke-width: 1.6;
+}
+
+.piece-svg .piece-shadow-glyph {
+    fill: rgba(13, 18, 30, 0.34);
+    stroke: none;
+}
+
 .piece-svg .piece-body {
     fill: currentColor;
     stroke-width: 2.2;
@@ -814,8 +836,8 @@
 .piece.black .piece-svg .piece-body { stroke: var(--piece-stroke); }
 .piece.white .piece-svg.variant-glass { filter: drop-shadow(0 0 4px rgba(219, 248, 255, 0.45)); }
 .piece.black .piece-svg.variant-glass { filter: drop-shadow(0 0 4px rgba(162, 198, 255, 0.32)); }
-.piece.white .piece-svg.variant-3d .piece-shadow { fill: rgba(23, 25, 34, 0.35); }
-.piece.black .piece-svg.variant-3d .piece-shadow { fill: rgba(241, 244, 252, 0.26); }
+.piece.white .piece-svg.variant-3d .piece-shadow-glyph { fill: rgba(23, 25, 34, 0.35); }
+.piece.black .piece-svg.variant-3d .piece-shadow-glyph { fill: rgba(241, 244, 252, 0.26); }
 
 html[data-theme="dark"] .piece.black {
     color: #0e1828;
@@ -2614,5 +2636,5 @@ body.competitive-room #rematch-modal {
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/pages/game.js' %}?v=20260313-2"></script>
+<script src="{% static 'js/pages/game.js' %}?v=20260314-1"></script>
 {% endblock %}

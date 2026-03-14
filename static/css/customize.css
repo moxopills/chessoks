@@ -147,6 +147,28 @@
     display: block;
 }
 
+.customize-skin-preview-board .mini-piece-svg .piece-glyph,
+.customize-skin-preview-board .mini-piece-svg .piece-shadow-glyph {
+    font-family: "Noto Sans Symbols 2", "Segoe UI Symbol", "Noto Sans KR", sans-serif;
+    font-weight: 700;
+    font-size: 47px;
+    line-height: 1;
+    text-anchor: middle;
+    dominant-baseline: middle;
+}
+
+.customize-skin-preview-board .mini-piece-svg .piece-glyph {
+    fill: currentColor;
+    paint-order: stroke fill;
+    stroke: rgba(32, 22, 12, 0.72);
+    stroke-width: 1.5;
+}
+
+.customize-skin-preview-board .mini-piece-svg .piece-shadow-glyph {
+    fill: rgba(13, 18, 30, 0.32);
+    stroke: none;
+}
+
 .customize-skin-preview-board .mini-piece-svg .piece-body {
     fill: currentColor;
     stroke-width: 2.1;
@@ -176,6 +198,14 @@
 }
 
 .customize-skin-preview-board .mini-piece.black .mini-piece-svg .piece-body {
+    stroke: rgba(246, 240, 226, 0.82);
+}
+
+.customize-skin-preview-board .mini-piece.white .mini-piece-svg .piece-glyph {
+    stroke: rgba(37, 24, 12, 0.78);
+}
+
+.customize-skin-preview-board .mini-piece.black .mini-piece-svg .piece-glyph {
     stroke: rgba(246, 240, 226, 0.82);
 }
 
