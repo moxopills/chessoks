@@ -23,7 +23,7 @@ const Modal = (function() {
                         <p class="modal-message" id="modal-message"></p>
                         <input type="text" class="form-input modal-input hidden" id="modal-input" />
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-actions is-centered">
                         <button class="btn btn-secondary" id="modal-cancel">취소</button>
                         <button class="btn btn-primary" id="modal-confirm">확인</button>
                     </div>

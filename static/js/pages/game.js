@@ -633,7 +633,7 @@
         const sections = Array.from(sidePanel.querySelectorAll('.panel-section'));
         if (!sections.length) return;
 
-        const isNarrow = () => window.innerWidth <= 1280;
+        const isNarrow = () => window.innerWidth <= 1360;
 
         const applyLayout = () => {
             const narrow = isNarrow();
@@ -646,7 +646,7 @@
                     section.classList.remove('is-collapsed');
                     return;
                 }
-                const shouldOpen = section.id === 'game-actions' || section.id === 'game-chat-section' || idx === 0;
+                const shouldOpen = ['game-actions', 'game-moves-section', 'game-chat-section'].includes(section.id) || idx === 0;
                 section.classList.toggle('is-collapsed', !shouldOpen);
             });
         };
@@ -1976,26 +1976,7 @@
     }
 
     function injectChatEmojiBar() {
-        if (!chatForm || !chatInput) return;
-        if (chatForm.previousElementSibling?.classList?.contains('chat-emoji-bar')) return;
-        const bar = document.createElement('div');
-        bar.className = 'chat-emoji-bar';
-        const emojis = Utils.getDefaultEmojiList();
-        emojis.forEach((emoji) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'emoji-btn';
-            button.dataset.emoji = emoji;
-            button.textContent = emoji;
-            bar.appendChild(button);
-        });
-        bar.addEventListener('click', (e) => {
-            const btn = e.target.closest('.emoji-btn');
-            if (!btn) return;
-            chatInput.value += btn.dataset.emoji || '';
-            chatInput.focus();
-        });
-        chatForm.parentNode.insertBefore(bar, chatForm);
+        ChatUI?.ensureEmojiBar(chatForm, chatInput);
     }
 
     function setupNotificationEvents() {
@@ -2122,7 +2103,7 @@
         messageEl.appendChild(contentEl);
 
         chatMessages.appendChild(messageEl);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        ChatUI?.scrollToBottom(chatMessages);
         if (!isMine) Utils?.Sounds?.chat?.();
         handleChatBadge(data);
         bindReactionButtons(messageEl);
@@ -2248,6 +2229,7 @@
         noticeEl.className = 'chat-notice';
         noticeEl.textContent = text;
         chatMessages.appendChild(noticeEl);
+        ChatUI?.scrollToBottom(chatMessages);
     }
 
     /**

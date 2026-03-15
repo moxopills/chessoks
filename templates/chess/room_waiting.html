@@ -83,17 +83,20 @@
 
         <!-- Room Chat -->
         <div class="room-chat-section">
-            <div class="section-header">
-                <h2 class="section-title">채팅</h2>
+            <div class="section-header chat-shell-head">
+                <div class="section-title-wrap">
+                    <h2 class="section-title">채팅</h2>
+                    <p class="section-copy">대기실 참가자와 준비 전 메시지를 주고받습니다.</p>
+                </div>
             </div>
-            <div class="chat-container">
+            <div class="chat-container chat-shell-card chat-shell-body">
                 <div class="chat-messages" id="chat-messages"></div>
                 <div class="chat-emoji-bar">
-                    <button type="button" class="chat-emoji-btn" data-emoji="😀">😀</button>
-                    <button type="button" class="chat-emoji-btn" data-emoji="😂">😂</button>
-                    <button type="button" class="chat-emoji-btn" data-emoji="👍">👍</button>
-                    <button type="button" class="chat-emoji-btn" data-emoji="🔥">🔥</button>
-                    <button type="button" class="chat-emoji-btn" data-emoji="👏">👏</button>
+                    <button type="button" class="chat-emoji-btn emoji-btn" data-emoji="😀">😀</button>
+                    <button type="button" class="chat-emoji-btn emoji-btn" data-emoji="😂">😂</button>
+                    <button type="button" class="chat-emoji-btn emoji-btn" data-emoji="👍">👍</button>
+                    <button type="button" class="chat-emoji-btn emoji-btn" data-emoji="🔥">🔥</button>
+                    <button type="button" class="chat-emoji-btn emoji-btn" data-emoji="👏">👏</button>
                 </div>
                 <form class="chat-form" id="chat-form">
                     <input type="text" class="chat-input" id="chat-input" placeholder="메시지 입력..." maxlength="500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
@@ -335,14 +338,19 @@
 
 /* Chat Section */
 .room-chat-section {
-    background-color: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
 }
 
 .room-chat-section .section-title {
     font-size: 0.8rem;
+}
+
+.room-chat-section .section-header {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
 }
 
 .waiting-container .action-area .btn-primary,
@@ -477,6 +485,8 @@
 .chat-container {
     display: flex;
     flex-direction: column;
+    min-height: 380px;
+    padding: var(--space-md);
 }
 
 .chat-messages {

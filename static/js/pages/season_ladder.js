@@ -29,11 +29,21 @@
 
     function bindEvents() {
         refreshBtn?.addEventListener("click", () => {
-            loadLeaderboard(currentPage);
-            loadMySeason();
-            loadRewards();
+            setRefreshLoading(true);
+            Promise.all([
+                loadLeaderboard(currentPage),
+                loadMySeason(),
+                loadRewards(),
+            ]).finally(() => setRefreshLoading(false));
         });
         claimBtn?.addEventListener("click", claimRewards);
+    }
+
+    function setRefreshLoading(isLoading) {
+        if (!refreshBtn) return;
+        refreshBtn.disabled = isLoading;
+        refreshBtn.classList.toggle("is-loading", isLoading);
+        refreshBtn.setAttribute("aria-busy", String(isLoading));
     }
 
     async function loadCurrentUser() {
@@ -61,7 +71,15 @@
 
     async function loadLeaderboard(page) {
         currentPage = page;
-        bodyEl.innerHTML = '<tr><td colspan="5" class="text-muted">불러오는 중...</td></tr>';
+        bodyEl.innerHTML = Array.from({ length: 4 }).map(() => `
+            <tr class="skeleton-row">
+                <td><div class="skeleton sk-w-20 sk-h-12r"></div></td>
+                <td><div class="user-cell"><div class="skeleton skeleton-avatar sk-w-32 sk-h-32"></div><div class="skeleton sk-w-100 sk-h-1r"></div></div></td>
+                <td><div class="skeleton sk-w-50 sk-h-1r"></div></td>
+                <td><div class="skeleton sk-w-80 sk-h-1r"></div></td>
+                <td><div class="skeleton sk-w-40 sk-h-1r"></div></td>
+            </tr>
+        `).join("");
         try {
             const data = await API.get("/seasons/current/leaderboard/", { page, page_size: 20 });
             totalPages = data.total_pages || 1;

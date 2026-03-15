@@ -10,43 +10,62 @@
         <h1 class="hero-title"><span class="hero-logo">♞</span>ChessOK</h1>
         <p class="hero-subtitle">실시간 체스 대전</p>
         <div class="hero-controls">
-            <div class="hero-control-group hero-control-group-guide" aria-label="가이드">
-                <button class="hero-tier-toggle" id="tier-toggle" type="button" aria-expanded="false">
-                    티어 기준 보기
-                </button>
-                <button class="hero-tier-toggle" id="mode-toggle" type="button" aria-expanded="false">
-                    게임 시작 안내
-                </button>
-                <button class="hero-tier-toggle" id="install-toggle" type="button" aria-expanded="false">
-                    웹앱 설치 안내
-                </button>
-                <button class="hero-tier-toggle" id="points-toggle" type="button" aria-expanded="false">
-                    포인트 안내
-                </button>
-                <button class="hero-tier-toggle hidden" id="lobby-customize-open" type="button">
-                    커스터마이징
-                </button>
-            </div>
-            <div class="hero-control-group hero-control-group-match" aria-label="대전 시작">
-                <button class="btn btn-primary btn-arcade btn-lg" id="quick-match-btn">
-                    <span class="btn-text"><span class="btn-icon">⚔</span> 경쟁전</span>
-                </button>
-                <button class="btn btn-secondary btn-arcade btn-lg" id="random-match-btn">
-                    <span class="btn-text"><span class="btn-icon">🎲</span> 빠른 대전</span>
-                </button>
-                <button class="btn btn-secondary btn-arcade btn-lg btn-ai" id="ai-match-btn">
-                    <span class="btn-text"><span class="btn-icon">🤖</span> AI 대전</span>
-                </button>
-                <a class="btn btn-secondary btn-arcade btn-lg" href="/puzzle/">
-                    <span class="btn-text"><span class="btn-icon">🧩</span> 일일 퍼즐</span>
-                </a>
-                <a class="btn btn-secondary btn-arcade btn-lg" href="/rooms/">
-                    <span class="btn-text"><span class="btn-icon">＋</span> 방 만들기</span>
-                </a>
-                <button class="btn btn-secondary btn-arcade btn-lg btn-guest hidden" id="guest-play-btn">
-                    <span class="btn-text"><span class="btn-icon">👤</span> 게스트 플레이</span>
-                </button>
-            </div>
+            <section class="hero-control-card hero-control-card--match" aria-label="대전 시작">
+                <div class="hero-card-head">
+                    <span class="ui-eyebrow">Play</span>
+                    <h2 class="hero-card-title">대전 시작</h2>
+                    <p class="hero-card-copy">원하는 모드를 고르면 바로 매칭하거나 대기방으로 이동할 수 있습니다.</p>
+                </div>
+                <div class="hero-control-group hero-control-group-match">
+                    <button class="btn btn-primary btn-arcade btn-lg" id="quick-match-btn">
+                        <span class="btn-text"><span class="btn-icon">⚔</span> 경쟁전</span>
+                    </button>
+                    <button class="btn btn-secondary btn-arcade btn-lg" id="random-match-btn">
+                        <span class="btn-text"><span class="btn-icon">🎲</span> 빠른 대전</span>
+                    </button>
+                    <button class="btn btn-secondary btn-arcade btn-lg btn-ai" id="ai-match-btn">
+                        <span class="btn-text"><span class="btn-icon">🤖</span> AI 대전</span>
+                    </button>
+                    <a class="btn btn-secondary btn-arcade btn-lg" href="/puzzle/">
+                        <span class="btn-text"><span class="btn-icon">🧩</span> 일일 퍼즐</span>
+                    </a>
+                    <a class="btn btn-secondary btn-arcade btn-lg" href="/rooms/">
+                        <span class="btn-text"><span class="btn-icon">＋</span> 방 만들기</span>
+                    </a>
+                    <button class="btn btn-secondary btn-arcade btn-lg btn-guest hidden" id="guest-play-btn">
+                        <span class="btn-text"><span class="btn-icon">👤</span> 게스트 플레이</span>
+                    </button>
+                </div>
+                <div class="ui-state-badges hero-state-badges">
+                    <span class="ui-state-badge ui-state-badge--success">경쟁전 <strong>레이팅 반영</strong></span>
+                    <span class="ui-state-badge ui-state-badge--pending">빠른 대전 <strong>일반 매칭</strong></span>
+                    <span class="ui-state-badge ui-state-badge--warning">AI/퍼즐 <strong>솔로 모드</strong></span>
+                </div>
+            </section>
+            <section class="hero-control-card hero-control-card--guide" aria-label="가이드">
+                <div class="hero-card-head">
+                    <span class="ui-eyebrow">Guide</span>
+                    <h2 class="hero-card-title">빠른 안내</h2>
+                    <p class="hero-card-copy">설치, 티어, 포인트, 모드 설명을 필요한 만큼만 펼쳐서 확인합니다.</p>
+                </div>
+                <div class="hero-control-group hero-control-group-guide">
+                    <button class="hero-tier-toggle" id="tier-toggle" type="button" aria-expanded="false">
+                        티어 기준 보기
+                    </button>
+                    <button class="hero-tier-toggle" id="mode-toggle" type="button" aria-expanded="false">
+                        게임 시작 안내
+                    </button>
+                    <button class="hero-tier-toggle" id="install-toggle" type="button" aria-expanded="false">
+                        웹앱 설치 안내
+                    </button>
+                    <button class="hero-tier-toggle" id="points-toggle" type="button" aria-expanded="false">
+                        포인트 안내
+                    </button>
+                    <button class="hero-tier-toggle hidden" id="lobby-customize-open" type="button">
+                        커스터마이징
+                    </button>
+                </div>
+            </section>
         </div>
         <div class="hero-tier-panel hidden" id="tier-panel">
             <div class="tier-row"><span class="tier-icon">🥉</span> Beginner: 0-1199</div>
@@ -117,10 +136,13 @@
         <!-- Middle: Lobby Chat -->
         <section class="lobby-section lobby-chat-section">
             <div class="section-header">
-                <h2 class="section-title">💬 로비채팅</h2>
+                <div class="section-title-wrap">
+                    <h2 class="section-title">💬 로비채팅</h2>
+                    <p class="section-copy">로비 참가자와 바로 대화하고 상대를 찾습니다.</p>
+                </div>
                 <button class="btn btn-secondary btn-xs auth-only hidden" id="switch-to-dm-btn">👤 1:1 채팅</button>
             </div>
-            <div class="chat-container" id="lobby-chat">
+            <div class="chat-container chat-shell-card chat-shell-body" id="lobby-chat">
                 <div class="chat-messages" id="chat-messages">
                     <div class="chat-notice">로그인 시 가능합니다.</div>
                 </div>
@@ -355,6 +377,7 @@
 .hero-controls {
     display: grid;
     gap: var(--space-md);
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
     margin-bottom: var(--space-md);
 }
 
@@ -372,6 +395,52 @@
     gap: clamp(0.5rem, 2vw, var(--space-md));
     flex-wrap: wrap;
 }
+
+.hero-control-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    padding: clamp(0.9rem, 2vw, 1.15rem);
+    border: 1px solid var(--color-border);
+    border-radius: calc(var(--radius-lg) + 2px);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-bg-card) 92%, white) 0%, var(--color-bg-card) 100%);
+    box-shadow: var(--shadow-sm);
+    text-align: left;
+}
+
+.hero-control-card--match {
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-accent-primary) 5%, var(--color-bg-card)) 0%, var(--color-bg-card) 100%);
+}
+
+.hero-control-card--guide {
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-accent-secondary) 5%, var(--color-bg-card)) 0%, var(--color-bg-card) 100%);
+}
+
+.hero-card-head {
+    display: grid;
+    gap: 6px;
+    justify-items: start;
+}
+
+.hero-card-title {
+    margin: 0;
+    font-size: clamp(0.95rem, 1.4vw, 1.1rem);
+}
+
+.hero-card-copy {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.hero-state-badges {
+    justify-content: center;
+}
+
 .hero-actions .btn-arcade,
 .hero-control-group-match .btn-arcade {
     min-width: 180px;
@@ -406,6 +475,10 @@
 }
 
 @media (max-width: 1024px) {
+    .hero-controls {
+        grid-template-columns: 1fr;
+    }
+
     .lobby-content {
         grid-template-columns: 1fr 1fr;
     }
@@ -1120,6 +1193,42 @@
     background: color-mix(in srgb, var(--color-accent-primary) 8%, var(--color-bg-tertiary));
 }
 
+.hero-tier-toggle {
+    position: relative;
+    min-height: 42px;
+    padding-inline: 14px;
+    border-radius: 999px;
+    font-weight: 600;
+    transition:
+        border-color var(--transition-fast),
+        background-color var(--transition-fast),
+        color var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+.hero-tier-toggle::after {
+    content: '';
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 7px;
+    height: 2px;
+    border-radius: 999px;
+    background: transparent;
+    transition: background-color var(--transition-fast);
+}
+
+.hero-tier-toggle.is-active,
+.hero-tier-toggle[aria-expanded="true"] {
+    transform: translateY(-1px);
+    color: var(--color-text-primary);
+}
+
+.hero-tier-toggle.is-active::after,
+.hero-tier-toggle[aria-expanded="true"]::after {
+    background: var(--color-accent-secondary);
+}
+
 .hero-tier-panel {
     margin-top: var(--space-sm);
     background: var(--color-bg-secondary);
@@ -1202,11 +1311,15 @@
 
 .users-hint {
     margin-top: var(--space-sm);
-    font-size: 0.7rem;
-    color: var(--color-text-muted);
+    padding: 10px 12px;
+    font-size: 0.74rem;
+    color: var(--color-text-secondary);
     letter-spacing: 0;
     word-spacing: 0;
     font-family: var(--font-body);
+    background: color-mix(in srgb, var(--color-bg-secondary) 84%, transparent);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius-md);
 }
 
 /* Match Modal */

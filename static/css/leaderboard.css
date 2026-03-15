@@ -35,13 +35,16 @@
     width: 100%;
     justify-self: center;
     grid-column: 2;
+    display: grid;
+    gap: 8px;
+    justify-items: center;
 }
 
 .page-title {
     font-family: var(--font-display);
     font-size: clamp(1rem, 2vw, 1.35rem);
     letter-spacing: -0.02em;
-    margin-bottom: var(--space-xs);
+    margin-bottom: 0;
 }
 
 .page-subtitle {
@@ -52,6 +55,7 @@
 .page-summary {
     min-width: 220px;
     padding: var(--space-md);
+    box-shadow: var(--shadow-sm);
 }
 
 .leaderboard-summary {
@@ -113,6 +117,7 @@
 
 .leaderboard-card .card-header--stack {
     margin-bottom: var(--space-sm);
+    gap: var(--space-md);
 }
 
 .card-divider {
@@ -127,7 +132,7 @@
 }
 
 .btn-icon {
-    align-self: flex-start;
+    align-self: center;
     min-width: 36px;
     width: 36px;
     height: 32px;
@@ -183,13 +188,21 @@
     text-transform: uppercase;
 }
 
+.leaderboard-table th:first-child,
+.leaderboard-table td:first-child,
+.leaderboard-table th:last-child,
+.leaderboard-table td:last-child {
+    text-align: center;
+}
+
 .leaderboard-row {
     cursor: pointer;
-    transition: background-color var(--transition-fast);
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .leaderboard-row:hover {
     background-color: var(--color-bg-tertiary);
+    transform: translateY(-1px);
 }
 
 .leaderboard-row.is-me {
@@ -273,6 +286,8 @@
     font-size: 0.75rem;
     color: var(--color-text-secondary);
     padding: 0 var(--space-sm);
+    min-width: 72px;
+    justify-content: center;
 }
 
 .profile-drawer {
