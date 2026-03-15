@@ -10,7 +10,8 @@
 {% block content %}
 <div class="social-page">
     <div class="page-header">
-        <div>
+        <div class="page-title-block">
+            <span class="ui-eyebrow">Social</span>
             <h1 class="page-title">친구</h1>
             <p class="page-subtitle">친구 요청과 온라인 상태를 관리하세요</p>
         </div>
@@ -26,8 +27,8 @@
             </div>
 
             <div class="tabs">
-                <button class="tab-btn active" data-tab="friends">친구</button>
-                <button class="tab-btn" data-tab="requests">요청</button>
+                <button class="tab-btn active" data-tab="friends" aria-selected="true">친구</button>
+                <button class="tab-btn" data-tab="requests" aria-selected="false">요청</button>
             </div>
 
             <div class="tab-panel" id="friends-panel">

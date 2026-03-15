@@ -10,15 +10,24 @@
 {% block content %}
 <div class="dm-page">
     <div class="dm-header">
-        <div>
+        <div class="dm-header-copy">
+            <span class="ui-eyebrow">Direct</span>
             <h1 class="dm-title" id="dm-title">1:1 채팅</h1>
             <p class="dm-subtitle" id="dm-subtitle">상대와 개인 대화를 나눌 수 있습니다.</p>
         </div>
         <button class="btn btn-secondary btn-sm" id="dm-back">뒤로가기</button>
     </div>
 
-    <div class="dm-card">
+    <div class="dm-card chat-shell-card">
         <div class="dm-messages" id="dm-messages"></div>
+        <div class="chat-emoji-bar dm-emoji-bar" role="toolbar" aria-label="이모지 빠른 입력">
+            <button type="button" class="emoji-btn" data-emoji="😊">😊</button>
+            <button type="button" class="emoji-btn" data-emoji="😂">😂</button>
+            <button type="button" class="emoji-btn" data-emoji="👍">👍</button>
+            <button type="button" class="emoji-btn" data-emoji="🔥">🔥</button>
+            <button type="button" class="emoji-btn" data-emoji="👏">👏</button>
+            <button type="button" class="emoji-btn" data-emoji="🤔">🤔</button>
+        </div>
         <form class="dm-form" id="dm-form" autocomplete="off">
             <input type="text" class="dm-input" id="dm-input" name="dm_message" placeholder="메시지 입력..." maxlength="500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" enterkeyhint="send">
             <button type="submit" class="btn btn-primary btn-sm">전송</button>

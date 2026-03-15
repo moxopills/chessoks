@@ -121,9 +121,13 @@
     }
 
     function switchTab(tab) {
-        tabButtons.forEach((item) => item.classList.remove('active'));
+        tabButtons.forEach((item) => {
+            item.classList.remove('active');
+            item.setAttribute('aria-selected', 'false');
+        });
         const targetBtn = document.querySelector(`.tab-btn[data-tab="${tab}"]`);
         targetBtn?.classList.add('active');
+        targetBtn?.setAttribute('aria-selected', 'true');
         friendsPanel.classList.toggle('hidden', tab !== 'friends');
         requestsPanel.classList.toggle('hidden', tab !== 'requests');
     }
@@ -163,9 +167,13 @@
     function applyTabFromUrl() {
         const params = Utils.getUrlParams();
         if (params.tab === 'requests') {
-            tabButtons.forEach((item) => item.classList.remove('active'));
+            tabButtons.forEach((item) => {
+                item.classList.remove('active');
+                item.setAttribute('aria-selected', 'false');
+            });
             const targetBtn = document.querySelector('.tab-btn[data-tab=\"requests\"]');
             targetBtn?.classList.add('active');
+            targetBtn?.setAttribute('aria-selected', 'true');
             friendsPanel.classList.add('hidden');
             requestsPanel.classList.remove('hidden');
         }

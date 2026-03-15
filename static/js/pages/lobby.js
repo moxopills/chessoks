@@ -920,26 +920,7 @@
     }
 
     function injectChatEmojiBar() {
-        if (!chatForm || !chatInput) return;
-        if (chatForm.previousElementSibling?.classList?.contains('chat-emoji-bar')) return;
-        const bar = document.createElement('div');
-        bar.className = 'chat-emoji-bar';
-        const emojis = Utils.getDefaultEmojiList();
-        emojis.forEach((emoji) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'emoji-btn';
-            button.dataset.emoji = emoji;
-            button.textContent = emoji;
-            bar.appendChild(button);
-        });
-        bar.addEventListener('click', (e) => {
-            const btn = e.target.closest('.emoji-btn');
-            if (!btn) return;
-            chatInput.value += btn.dataset.emoji || '';
-            chatInput.focus();
-        });
-        chatForm.parentNode.insertBefore(bar, chatForm);
+        ChatUI?.ensureEmojiBar(chatForm, chatInput);
     }
 
     if (matchToast) {
@@ -1033,7 +1014,7 @@
                 return new Date(a.sent_at) - new Date(b.sent_at);
             });
             messages.forEach(msg => addChatMessage(msg));
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            ChatUI?.scrollToBottom(chatMessages);
         } else if (data.type === 'lobby_users') {
             // 접속자 목록 초기화
             lobbyUsers = {};
@@ -1185,7 +1166,7 @@
         timeEl.textContent = formatChatTime(data.sent_at);
         messageEl.appendChild(timeEl);
         chatMessages.appendChild(messageEl);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        ChatUI?.scrollToBottom(chatMessages);
         bindReactionButtons(messageEl);
     }
 
@@ -1248,7 +1229,7 @@
                     if (chatSection) {
                         chatSection.classList.remove('is-hidden');
                     }
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    ChatUI?.scrollToBottom(chatMessages);
                     resetChatBadge();
                 } else {
                     isChatOpen = false;
@@ -1287,6 +1268,7 @@
             panel.classList.remove('hidden');
             panel.classList.remove('is-open');
             toggle.setAttribute('aria-expanded', 'false');
+            toggle.classList.remove('is-active');
         });
 
         guidePairs.forEach(([toggle, panel]) => {
@@ -1296,6 +1278,7 @@
                     const isCurrent = otherToggle === toggle;
                     otherPanel.classList.toggle('is-open', isCurrent && willOpen);
                     otherToggle.setAttribute('aria-expanded', String(isCurrent && willOpen));
+                    otherToggle.classList.toggle('is-active', isCurrent && willOpen);
                 });
             });
         });
@@ -1330,6 +1313,7 @@
         noticeEl.className = 'chat-notice';
         noticeEl.textContent = text;
         chatMessages.appendChild(noticeEl);
+        ChatUI?.scrollToBottom(chatMessages);
     }
 
     /**
