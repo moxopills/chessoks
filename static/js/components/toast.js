@@ -20,8 +20,16 @@ const Toast = (function() {
     function show(message, type = 'info') {
         if (!container) return;
 
+        const duplicate = container.querySelector(`.toast[data-type="${type}"][data-message="${encodeURIComponent(message)}"]`);
+        if (duplicate) {
+            remove(duplicate);
+        }
+
         const toast = document.createElement('div');
         toast.className = `toast toast-${type}`;
+        toast.dataset.type = type;
+        toast.dataset.message = encodeURIComponent(message);
+        toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
 
         const icon = ICONS[type] || ICONS.info;
         toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-message">${Utils.escapeHtml(message)}</span>`;

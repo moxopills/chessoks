@@ -7,7 +7,6 @@
     const titleEl = document.getElementById('dm-title');
     const subtitleEl = document.getElementById('dm-subtitle');
     const backBtn = document.getElementById('dm-back');
-
     const targetUserId = parseInt(Utils.getPathParam(/\/messages\/(\d+)/), 10);
     let currentUser = null;
     let pollTimer = null;
@@ -33,14 +32,12 @@
         await loadMessages(true);
         await markDirectMessageNotificationsRead();
         bindEvents();
+        ChatUI?.bindEmojiButtons(document.querySelector('.dm-emoji-bar'), inputEl);
         startPolling();
     }
 
     function bindEvents() {
         backBtn?.addEventListener('click', () => window.history.back());
-        inputEl.addEventListener('focus', () => {
-            inputEl.value = '';
-        });
         formEl.addEventListener('submit', async (e) => {
             e.preventDefault();
             const message = inputEl.value.trim();
@@ -90,7 +87,7 @@
             }
 
             renderMessages(reversedItems);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+            ChatUI?.scrollToBottom(messagesEl);
             if (newCount > lastCount && reversedItems.length) {
                 const lastItem = reversedItems[reversedItems.length - 1];
                 if (lastItem.sender?.id !== currentUser.id) {
@@ -115,7 +112,7 @@
             messagesEl.appendChild(renderSingleMessage(item));
         }
         if (forceScroll) {
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+            ChatUI?.scrollToBottom(messagesEl);
         }
         lastCount += 1;
         lastLatestId = item.id;

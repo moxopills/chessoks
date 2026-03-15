@@ -181,15 +181,7 @@
             }
         });
 
-        // Emoji buttons logic
-        panel.querySelectorAll('.emoji-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const emoji = btn.textContent;
-                inputEl.value += emoji;
-                inputEl.focus();
-                Utils?.Sounds?.unlock?.();
-            });
-        });
+        ChatUI?.bindEmojiButtons(panel, inputEl);
     }
 
     function openPanel() {
@@ -273,6 +265,10 @@
         tabLobbyMirror?.classList.toggle('is-active', lobbyActive);
         tabDirect?.classList.toggle('is-active', !lobbyActive);
         tabDirectMirror?.classList.toggle('is-active', !lobbyActive);
+        tabLobby?.setAttribute('aria-selected', String(lobbyActive));
+        tabLobbyMirror?.setAttribute('aria-selected', String(lobbyActive));
+        tabDirect?.setAttribute('aria-selected', String(!lobbyActive));
+        tabDirectMirror?.setAttribute('aria-selected', String(!lobbyActive));
     }
 
     function moveLobbyChatContainer() {
@@ -432,7 +428,7 @@
                 messagesEl.replaceChildren(fragment);
                 
                 if (shouldScroll) {
-                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                    ChatUI?.scrollToBottom(messagesEl);
                 }
 
                 if (data.count > lastMessageCount && reversedItems.length) {

@@ -15,19 +15,23 @@
     gap: var(--space-md);
 }
 
+.dm-header-copy {
+    display: grid;
+    gap: 8px;
+}
+
 .dm-title {
     font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+    margin: 0;
 }
 
 .dm-subtitle {
+    margin: 0;
     font-size: clamp(0.75rem, 1.2vw, 0.9rem);
     color: var(--color-text-secondary);
 }
 
 .dm-card {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
     padding: var(--space-md);
     display: flex;
     flex-direction: column;
@@ -122,6 +126,7 @@
     gap: var(--space-sm);
     width: 100%;
     box-sizing: border-box;
+    padding-top: 4px;
 }
 
 .dm-form .btn {
@@ -140,10 +145,21 @@
     font-size: 16px;
 }
 
+.dm-emoji-bar {
+    margin-top: auto;
+    margin-bottom: 0;
+    padding-top: 8px;
+}
+
 @media (max-width: 768px) {
     .dm-card {
-        height: 60vh;
+        height: min(66vh, 620px);
     }
+
+    .dm-header {
+        align-items: flex-start;
+    }
+
     .dm-content {
         max-width: 85%;
     }

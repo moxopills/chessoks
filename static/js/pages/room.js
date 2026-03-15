@@ -20,7 +20,6 @@
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
-    const chatEmojiButtons = document.querySelectorAll('.chat-emoji-btn');
     const mobileTabbar = document.getElementById('mobile-tabbar');
     const chatBadge = document.getElementById('chat-badge');
     const chatSection = document.querySelector('.room-chat-section');
@@ -389,13 +388,7 @@
             e.preventDefault();
             sendChatMessage();
         });
-        chatEmojiButtons.forEach((btn) => {
-            btn.addEventListener('click', () => {
-                if (!chatInput) return;
-                chatInput.value = `${chatInput.value || ''}${btn.dataset.emoji || ''}`;
-                chatInput.focus();
-            });
-        });
+        ChatUI?.bindEmojiButtons(document.querySelector('.room-chat-section .chat-emoji-bar'), chatInput, '.chat-emoji-btn, .emoji-btn');
     }
 
     function showStatusModal(message) {
@@ -557,7 +550,7 @@
             </div>
         `;
         chatMessages.appendChild(messageEl);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        ChatUI?.scrollToBottom(chatMessages);
         if (!isMine) Utils?.Sounds?.chat?.();
         bindReactionButtons(messageEl);
     }
@@ -603,6 +596,7 @@
         noticeEl.className = 'chat-notice';
         noticeEl.textContent = text;
         chatMessages.appendChild(noticeEl);
+        ChatUI?.scrollToBottom(chatMessages);
     }
 
     /**

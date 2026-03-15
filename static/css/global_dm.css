@@ -171,7 +171,7 @@
 .global-dm-emojis {
     display: flex;
     gap: 8px;
-    padding: 4px 12px;
+    padding: 8px 12px 6px;
     background: var(--color-bg-secondary);
     border-top: 1px solid var(--color-border);
     overflow-x: auto;
@@ -445,5 +445,9 @@ body:not(.is-guest) .chat-fab.auth-only {
 
     .global-dm-input {
         font-size: 16px; /* prevent iOS zoom */
+    }
+
+    .global-dm-form {
+        padding-bottom: max(var(--space-sm), env(safe-area-inset-bottom, 0px));
     }
 }

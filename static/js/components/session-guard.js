@@ -77,7 +77,7 @@ const SessionGuard = (function() {
                         </p>
                         <p class="session-warning-hint">계속 사용하시려면 "연장" 버튼을 클릭해주세요.</p>
                     </div>
-                    <div class="modal-footer">
+                    <div class="modal-actions is-centered">
                         <button class="btn btn-secondary" id="session-logout-btn">로그아웃</button>
                         <button class="btn btn-primary" id="session-extend-btn">연장</button>
                     </div>
