@@ -9,7 +9,7 @@
     const backBtn = document.getElementById('dm-back');
     const targetUserId = parseInt(Utils.getPathParam(/\/messages\/(\d+)/), 10);
     let currentUser = null;
-    let pollTimer = null;
+    let poller = null;
     let lastCount = 0;
     let lastLatestId = 0;
 
@@ -170,14 +170,18 @@
     }
 
     function startPolling() {
-        if (pollTimer) clearInterval(pollTimer);
-        pollTimer = setInterval(() => {
-            if (document.hidden) return;
-            loadMessages();
-        }, 4000);
-        window.addEventListener('beforeunload', () => pollTimer && clearInterval(pollTimer));
+        poller?.stop?.();
+        poller = Utils.createAdaptivePoller({
+            callback: () => loadMessages(),
+            activeInterval: 4000,
+            hiddenInterval: 12000,
+            enabled: () => Boolean(currentUser?.id && targetUserId),
+            immediate: false,
+        });
+        poller.start();
+        window.addEventListener('beforeunload', () => poller?.stop?.());
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) loadMessages();
+            if (!document.hidden) poller?.trigger?.();
         });
     }
 

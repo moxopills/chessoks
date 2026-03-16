@@ -1206,31 +1206,23 @@
             return;
         }
 
-        // PGN 파싱 (간단한 구현)
         const moves = game.pgn.trim().split(/\d+\.\s*/).filter(m => m.trim());
         const totalPages = Math.max(1, Math.ceil(moves.length / movePageSize));
         movePage = Math.min(movePage, totalPages);
         const startIndex = (movePage - 1) * movePageSize;
         const pageMoves = moves.slice(startIndex, startIndex + movePageSize);
-        let html = '';
-        let moveNum = startIndex + 1;
-
-        for (const movePair of pageMoves) {
-            const parts = movePair.trim().split(/\s+/);
-            html += `
-                <div class="move-row">
-                    <span class="move-number">${moveNum}.</span>
-                    <span class="move-san">${parts[0] || ''}</span>
-                    <span class="move-san">${parts[1] || ''}</span>
-                </div>
-            `;
-            moveNum++;
-        }
-
-        moveList.innerHTML = html || '<div class="move-list-empty">아직 착수가 없습니다.</div>';
-        if (movePageLabel) movePageLabel.textContent = `${movePage} / ${totalPages}`;
-        movePrevBtn && (movePrevBtn.disabled = movePage <= 1);
-        moveNextBtn && (moveNextBtn.disabled = movePage >= totalPages);
+        moveList.innerHTML = GameReplayUI.buildMovePage({
+            pageMoves,
+            startIndex,
+            emptyMessage: '아직 착수가 없습니다.',
+        });
+        GameReplayUI.bindPager({
+            labelEl: movePageLabel,
+            prevBtn: movePrevBtn,
+            nextBtn: moveNextBtn,
+            page: movePage,
+            totalPages,
+        });
     }
 
     /**
@@ -2054,10 +2046,6 @@
         if (data.message_id) {
             messageEl.dataset.messageId = String(data.message_id);
         }
-        const reactions = data.reactions || {};
-        const myReactions = data.my_reactions || [];
-        const thumbCount = Number(reactions['👍'] || 0);
-        const clapCount = Number(reactions['👏'] || 0);
         if (!isMine) {
             const avatarWrap = document.createElement('div');
             avatarWrap.className = 'chat-avatar';
@@ -2083,30 +2071,27 @@
         bubbleEl.textContent = data.message || '';
         contentEl.appendChild(bubbleEl);
 
-        const reactionsEl = document.createElement('div');
-        reactionsEl.className = 'chat-reactions';
-        [
-            ['👍', thumbCount, myReactions.includes('👍')],
-            ['👏', clapCount, myReactions.includes('👏')],
-        ].forEach(([emoji, count, active]) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = `reaction-btn ${active ? 'active' : ''}`.trim();
-            btn.dataset.reaction = emoji;
-            btn.appendChild(document.createTextNode(`${emoji} `));
-            const span = document.createElement('span');
-            span.textContent = String(count);
-            btn.appendChild(span);
-            reactionsEl.appendChild(btn);
+        ChatReactions?.ensureReactionBar(contentEl, {
+            reactions: data.reactions || {},
+            myReactions: data.my_reactions || [],
         });
-        contentEl.appendChild(reactionsEl);
         messageEl.appendChild(contentEl);
 
         chatMessages.appendChild(messageEl);
         ChatUI?.scrollToBottom(chatMessages);
         if (!isMine) Utils?.Sounds?.chat?.();
         handleChatBadge(data);
-        bindReactionButtons(messageEl);
+        ChatReactions?.bindReactionButtons(messageEl, {
+            onReact: ({ messageId, reaction, button }) => {
+                if (!socket || socket.readyState !== WebSocket.OPEN || !messageId || !reaction) return;
+                button?.classList.toggle('active');
+                socket.send(JSON.stringify({
+                    action: 'reaction',
+                    message_id: messageId,
+                    reaction,
+                }));
+            },
+        });
     }
 
     async function refreshSpectatorList() {
@@ -2479,16 +2464,19 @@
     }
 
     function setupMovePagination() {
-        if (!movePrevBtn || !moveNextBtn) return;
-        movePrevBtn.addEventListener('click', () => {
-            if (movePage > 1) {
-                movePage -= 1;
+        GameReplayUI.bindPager({
+            prevBtn: movePrevBtn,
+            nextBtn: moveNextBtn,
+            onPrev: () => {
+                if (movePage > 1) {
+                    movePage -= 1;
+                    renderMoveList();
+                }
+            },
+            onNext: () => {
+                movePage += 1;
                 renderMoveList();
-            }
-        });
-        moveNextBtn.addEventListener('click', () => {
-            movePage += 1;
-            renderMoveList();
+            },
         });
     }
 
@@ -2524,18 +2512,22 @@
     }
 
     function setupReplayControls() {
-        if (!replayBtn) return;
-        replayBtn.addEventListener('click', async () => {
-            await openReplay();
+        GameReplayUI.bindReplayControls({
+            replayBtn,
+            replayPrev,
+            replayNext,
+            replayPlay,
+            replayClose,
+            replayPrevDock,
+            replayNextDock,
+            replayPlayDock,
+            replayCloseDock,
+            onOpen: () => openReplay(),
+            onPrev: () => stepReplay(-1),
+            onNext: () => stepReplay(1),
+            onPlayPause: () => toggleReplay(),
+            onClose: () => closeReplay(),
         });
-        replayPrev?.addEventListener('click', () => stepReplay(-1));
-        replayNext?.addEventListener('click', () => stepReplay(1));
-        replayPlay?.addEventListener('click', () => toggleReplay());
-        replayClose?.addEventListener('click', () => closeReplay());
-        replayPrevDock?.addEventListener('click', () => stepReplay(-1));
-        replayNextDock?.addEventListener('click', () => stepReplay(1));
-        replayPlayDock?.addEventListener('click', () => toggleReplay());
-        replayCloseDock?.addEventListener('click', () => closeReplay());
 
         // 키보드 단축키 (좌/우 화살표)
         document.addEventListener('keydown', (e) => {
@@ -2992,46 +2984,22 @@
         `;
     }
 
-    function bindReactionButtons(messageEl) {
-        messageEl.querySelectorAll('.reaction-btn').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                if (!socket || socket.readyState !== WebSocket.OPEN) return;
-                const root = btn.closest('.chat-message');
-                const key = root?.dataset.messageId;
-                const reaction = btn.dataset.reaction;
-                if (!key || !reaction) return;
-                btn.classList.toggle('active');
-                socket.send(
-                    JSON.stringify({
-                        action: 'reaction',
-                        message_id: key,
-                        reaction,
-                    })
-                );
-            });
-        });
-    }
-
     function ensureReactionUIForExistingMessages() {
         if (!chatMessages) return;
         const messageEls = chatMessages.querySelectorAll('.chat-message .chat-content');
         messageEls.forEach((contentEl) => {
-            if (contentEl.querySelector('.chat-reactions')) return;
-            const reactions = document.createElement('div');
-            reactions.className = 'chat-reactions';
-            ['👍', '👏'].forEach((emoji) => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'reaction-btn';
-                btn.dataset.reaction = emoji;
-                btn.appendChild(document.createTextNode(`${emoji} `));
-                const span = document.createElement('span');
-                span.textContent = '0';
-                btn.appendChild(span);
-                reactions.appendChild(btn);
+            ChatReactions?.ensureReactionBar(contentEl);
+            ChatReactions?.bindReactionButtons(contentEl.closest('.chat-message'), {
+                onReact: ({ messageId, reaction, button }) => {
+                    if (!socket || socket.readyState !== WebSocket.OPEN || !messageId || !reaction) return;
+                    button?.classList.toggle('active');
+                    socket.send(JSON.stringify({
+                        action: 'reaction',
+                        message_id: messageId,
+                        reaction,
+                    }));
+                },
             });
-            contentEl.appendChild(reactions);
-            bindReactionButtons(contentEl.closest('.chat-message'));
         });
     }
 
@@ -3039,17 +3007,7 @@
         if (!chatMessages || !messageId) return;
         const target = chatMessages.querySelector(`.chat-message[data-message-id="${String(messageId)}"]`);
         if (!target) return;
-        target.querySelectorAll('.reaction-btn').forEach((btn) => {
-            const emoji = btn.dataset.reaction;
-            if (!emoji) return;
-            const countEl = btn.querySelector('span');
-            if (!countEl) return;
-            const next = Number(reactions?.[emoji] || 0);
-            countEl.textContent = String(next);
-            if (Array.isArray(myReactions)) {
-                btn.classList.toggle('active', myReactions.includes(emoji));
-            }
-        });
+        ChatReactions?.applyReactionUpdate(target, reactions, myReactions);
     }
 
     function injectPieceSpriteStyles() {

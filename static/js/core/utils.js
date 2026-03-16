@@ -403,6 +403,71 @@ const Utils = (function() {
         };
     }
 
+    function createAdaptivePoller({
+        callback,
+        activeInterval = 5000,
+        hiddenInterval = 15000,
+        enabled = () => true,
+        immediate = true,
+    } = {}) {
+        let timer = null;
+        let running = false;
+        let started = false;
+
+        async function tick() {
+            if (!started) return;
+            if (!enabled()) {
+                schedule();
+                return;
+            }
+            if (running) {
+                schedule();
+                return;
+            }
+            running = true;
+            try {
+                await callback?.();
+            } finally {
+                running = false;
+                schedule();
+            }
+        }
+
+        function getDelay() {
+            return document.hidden ? hiddenInterval : activeInterval;
+        }
+
+        function schedule() {
+            if (!started) return;
+            clearTimeout(timer);
+            timer = setTimeout(tick, getDelay());
+        }
+
+        function start() {
+            if (started) return;
+            started = true;
+            if (immediate) {
+                tick();
+            } else {
+                schedule();
+            }
+        }
+
+        function stop() {
+            started = false;
+            clearTimeout(timer);
+            timer = null;
+        }
+
+        function trigger() {
+            if (!started) return;
+            clearTimeout(timer);
+            tick();
+        }
+
+        return { start, stop, trigger };
+    }
+
     const Sounds = (() => {
         let ctx = null;
         let bgmAudio = null;
@@ -728,6 +793,7 @@ const Utils = (function() {
         getDefaultEmojiList,
         showStatusBadge,
         bindDoubleTap,
+        createAdaptivePoller,
         ReportModal,
         Sounds,
     };

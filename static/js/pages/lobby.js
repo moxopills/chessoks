@@ -66,8 +66,7 @@
     let friendIds = new Set();
     let lobbyUsers = {};
     let lobbyRooms = [];
-    let roomRefreshInterval = null;
-    let activeRoomInterval = null;
+    let roomRefreshPoller = null;
     let activeRoomId = null;
     let chatUnread = 0;
     let isChatOpen = true;
@@ -258,10 +257,6 @@
             if (!room || !room.current_game_id) {
                 activeGameCard.classList.add('hidden');
                 activeRoomId = null;
-                if (activeRoomInterval) {
-                    clearInterval(activeRoomInterval);
-                    activeRoomInterval = null;
-                }
                 return;
             }
             if (activeRoomId !== room.id) {
@@ -287,12 +282,6 @@
             activeGameCard.onclick = () => {
                 window.location.href = `/games/${room.id}/`;
             };
-            if (!activeRoomInterval) {
-                activeRoomInterval = setInterval(() => {
-                    if (document.hidden) return;
-                    loadActiveGame();
-                }, 1000);
-            }
         } catch (error) {
             activeGameCard.classList.add('hidden');
         }
@@ -333,28 +322,31 @@
     }
 
     function startRoomAutoRefresh() {
-        roomRefreshInterval = setInterval(() => {
+        roomRefreshPoller?.stop?.();
+        roomRefreshPoller = Utils.createAdaptivePoller({
+            callback: async () => {
             if (document.hidden) return;
-            loadRooms();
+            await loadRooms();
             waitingTick += 1;
             if (isMatching || waitingTick % 3 === 0) {
-                loadWaitingRoom();
+                await loadWaitingRoom();
             }
-            if (waitingTick % 3 === 0) {
-                loadActiveGame();
-            }
-        }, 5000);
+            await loadActiveGame();
+            },
+            activeInterval: 5000,
+            hiddenInterval: 15000,
+            enabled: () => true,
+            immediate: false,
+        });
+        roomRefreshPoller.start();
 
         window.addEventListener('beforeunload', () => {
-            if (roomRefreshInterval) clearInterval(roomRefreshInterval);
-            if (activeRoomInterval) clearInterval(activeRoomInterval);
+            roomRefreshPoller?.stop?.();
         });
 
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) return;
-            loadRooms();
-            loadWaitingRoom();
-            loadActiveGame();
+            roomRefreshPoller?.trigger?.();
         });
     }
 
@@ -1140,25 +1132,10 @@
         bubbleEl.textContent = data.message || '';
         contentEl.appendChild(bubbleEl);
 
-        const reactionsEl = document.createElement('div');
-        reactionsEl.className = 'chat-reactions';
-        const myReactions = data.my_reactions || [];
-        const reactions = data.reactions || {};
-        [
-            ['👍', Number(reactions['👍'] ?? 0)],
-            ['👏', Number(reactions['👏'] ?? 0)],
-        ].forEach(([emoji, count]) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = `reaction-btn ${myReactions.includes(emoji) ? 'active' : ''}`.trim();
-            btn.dataset.reaction = emoji;
-            btn.appendChild(document.createTextNode(`${emoji} `));
-            const span = document.createElement('span');
-            span.textContent = String(count);
-            btn.appendChild(span);
-            reactionsEl.appendChild(btn);
+        ChatReactions?.ensureReactionBar(contentEl, {
+            reactions: data.reactions || {},
+            myReactions: data.my_reactions || [],
         });
-        contentEl.appendChild(reactionsEl);
         messageEl.appendChild(contentEl);
 
         const timeEl = document.createElement('span');
@@ -1167,7 +1144,17 @@
         messageEl.appendChild(timeEl);
         chatMessages.appendChild(messageEl);
         ChatUI?.scrollToBottom(chatMessages);
-        bindReactionButtons(messageEl);
+        ChatReactions?.bindReactionButtons(messageEl, {
+            onReact: ({ messageId, reaction, button }) => {
+                if (!messageId || !reaction || lobbySocket?.readyState !== WebSocket.OPEN) return;
+                button?.classList.toggle('active');
+                lobbySocket.send(JSON.stringify({
+                    action: 'reaction',
+                    message_id: Number(messageId),
+                    reaction,
+                }));
+            },
+        });
     }
 
     function isEmojiOnlyMessage(text) {
@@ -1180,38 +1167,10 @@
         return stripped.length === 0;
     }
 
-    function bindReactionButtons(messageEl) {
-        messageEl.querySelectorAll('.reaction-btn').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const key = messageEl.dataset.messageId;
-                const reaction = btn.dataset.reaction;
-                if (!key || !reaction) return;
-                btn.classList.toggle('active');
-                if (lobbySocket?.readyState === WebSocket.OPEN) {
-                    lobbySocket.send(
-                        JSON.stringify({
-                            action: 'reaction',
-                            message_id: Number(key),
-                            reaction,
-                        })
-                    );
-                }
-            });
-        });
-    }
-
     function applyReactionUpdate(messageId, reactions, myReactions) {
         const target = chatMessages.querySelector(`.chat-message[data-message-id="${messageId}"]`);
         if (!target) return;
-        target.querySelectorAll('.reaction-btn').forEach((btn) => {
-            const emoji = btn.dataset.reaction;
-            const countEl = btn.querySelector('span');
-            if (!emoji || !countEl) return;
-            countEl.textContent = String(reactions[emoji] ?? 0);
-            if (Array.isArray(myReactions)) {
-                btn.classList.toggle('active', myReactions.includes(emoji));
-            }
-        });
+        ChatReactions?.applyReactionUpdate(target, reactions, myReactions);
     }
 
 
