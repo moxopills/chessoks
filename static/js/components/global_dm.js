@@ -10,10 +10,10 @@
     }
 
     let currentUser = null;
-    let pollTimer = null;
+    let roomPoller = null;
     let currentRoomUserId = null;
     let lastMessageCount = 0;
-    let threadPollTimer = null;
+    let threadPoller = null;
     let lobbyChatMoved = false;
     
     // DOM Elements
@@ -521,30 +521,37 @@
 
     // Polling
     function startThreadPolling() {
-        if (threadPollTimer) clearInterval(threadPollTimer);
-        loadThreads();
-        threadPollTimer = setInterval(() => {
-            if (document.hidden) return;
-            loadThreads();
-        }, 10000);
+        threadPoller?.stop?.();
+        threadPoller = Utils.createAdaptivePoller({
+            callback: () => loadThreads(),
+            activeInterval: 10000,
+            hiddenInterval: 30000,
+            enabled: () => Boolean(currentUser?.id),
+            immediate: true,
+        });
+        threadPoller.start();
     }
 
     function startRoomPolling() {
-        if (pollTimer) clearInterval(pollTimer);
-        pollTimer = setInterval(() => {
-            if (document.hidden) return;
-            loadMessages();
-        }, 3000);
+        roomPoller?.stop?.();
+        roomPoller = Utils.createAdaptivePoller({
+            callback: () => loadMessages(),
+            activeInterval: 3000,
+            hiddenInterval: 10000,
+            enabled: () => Boolean(currentUser?.id && currentRoomUserId),
+            immediate: false,
+        });
+        roomPoller.start();
     }
 
     function stopRoomPolling() {
-        if (pollTimer) clearInterval(pollTimer);
-        pollTimer = null;
+        roomPoller?.stop?.();
+        roomPoller = null;
     }
 
     function stopPolling() {
-        if (threadPollTimer) clearInterval(threadPollTimer);
-        threadPollTimer = null;
+        threadPoller?.stop?.();
+        threadPoller = null;
         stopRoomPolling();
     }
 
@@ -586,8 +593,8 @@
     });
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden && currentUser) {
-            loadThreads();
-            if (currentRoomUserId) loadMessages();
+            threadPoller?.trigger?.();
+            if (currentRoomUserId) roomPoller?.trigger?.();
         }
     });
 

@@ -284,11 +284,12 @@
     }
 
     function startOnlineRefresh() {
-        setInterval(() => {
+        const poller = Utils.createAdaptivePoller({
+            callback: () => {
             if (!currentUserId) return;
             const friendIdsArr = Array.from(friendIds);
             if (!friendIdsArr.length) return;
-            applyOnlineStatus(friendIdsArr).then(() => {
+            return applyOnlineStatus(friendIdsArr).then(() => {
                 const rows = Array.from(friendListEl.querySelectorAll('.friend-item'));
                 if (!rows.length) return;
                 const statusMap = JSON.parse(friendListEl.dataset.statusMap || '{}');
@@ -299,7 +300,14 @@
                     dot.classList.toggle('online', !!statusMap[userId]);
                 });
             });
-        }, 5000);
+            },
+            activeInterval: 5000,
+            hiddenInterval: 15000,
+            enabled: () => Boolean(currentUserId && friendIds.size),
+            immediate: false,
+        });
+        poller.start();
+        window.addEventListener('beforeunload', () => poller.stop());
     }
 
     function renderFriends(friends) {

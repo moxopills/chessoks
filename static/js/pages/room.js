@@ -34,7 +34,7 @@
     let socket = null;
     let isHost = false;
     let heartbeatInterval = null;
-    let roomPollInterval = null;
+    let roomPoller = null;
     let chatUnread = 0;
     let isChatOpen = true;
     let lastRoomState = null;
@@ -536,40 +536,31 @@
         if (data.message_id) {
             messageEl.dataset.messageId = String(data.message_id);
         }
-        const reactions = data.reactions || {};
-        const myReactions = data.my_reactions || [];
         messageEl.innerHTML = `
             ${!isMine ? `<div class="chat-avatar">${avatar}</div>` : ''}
             <div class="chat-content">
                 <span class="chat-nickname">${Utils.escapeHtml(data.nickname)}</span>
                 <div class="chat-bubble">${Utils.escapeHtml(data.message)}</div>
-                <div class="chat-reactions">
-                    <button type="button" class="reaction-btn ${myReactions.includes('👍') ? 'active' : ''}" data-reaction="👍">👍 <span>${Number(reactions['👍'] || 0)}</span></button>
-                    <button type="button" class="reaction-btn ${myReactions.includes('👏') ? 'active' : ''}" data-reaction="👏">👏 <span>${Number(reactions['👏'] || 0)}</span></button>
-                </div>
             </div>
         `;
+        const contentEl = messageEl.querySelector('.chat-content');
+        ChatReactions?.ensureReactionBar(contentEl, {
+            reactions: data.reactions || {},
+            myReactions: data.my_reactions || [],
+        });
         chatMessages.appendChild(messageEl);
         ChatUI?.scrollToBottom(chatMessages);
         if (!isMine) Utils?.Sounds?.chat?.();
-        bindReactionButtons(messageEl);
-    }
-
-    function bindReactionButtons(messageEl) {
-        messageEl.querySelectorAll('.reaction-btn').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const key = messageEl.dataset.messageId;
-                const reaction = btn.dataset.reaction;
-                if (!key || !reaction || !socket || socket.readyState !== WebSocket.OPEN) return;
-                btn.classList.toggle('active');
-                socket.send(
-                    JSON.stringify({
-                        action: 'reaction',
-                        message_id: key,
-                        reaction,
-                    })
-                );
-            });
+        ChatReactions?.bindReactionButtons(messageEl, {
+            onReact: ({ messageId, reaction, button }) => {
+                if (!messageId || !reaction || !socket || socket.readyState !== WebSocket.OPEN) return;
+                button?.classList.toggle('active');
+                socket.send(JSON.stringify({
+                    action: 'reaction',
+                    message_id: messageId,
+                    reaction,
+                }));
+            },
         });
     }
 
@@ -577,15 +568,7 @@
         if (!chatMessages || !messageId) return;
         const messageEl = chatMessages.querySelector(`.chat-message[data-message-id="${String(messageId)}"]`);
         if (!messageEl) return;
-        messageEl.querySelectorAll('.reaction-btn').forEach((btn) => {
-            const emoji = btn.dataset.reaction;
-            const countEl = btn.querySelector('span');
-            if (!emoji || !countEl) return;
-            countEl.textContent = String(Number(reactions?.[emoji] || 0));
-            if (Array.isArray(myReactions)) {
-                btn.classList.toggle('active', myReactions.includes(emoji));
-            }
-        });
+        ChatReactions?.applyReactionUpdate(messageEl, reactions, myReactions);
     }
 
     /**
@@ -662,13 +645,16 @@
     }
 
     function startRoomPolling() {
-        roomPollInterval = setInterval(() => {
-            loadRoom();
-        }, 3000);
-
-        window.addEventListener('beforeunload', () => {
-            if (roomPollInterval) clearInterval(roomPollInterval);
+        roomPoller?.stop?.();
+        roomPoller = Utils.createAdaptivePoller({
+            callback: () => loadRoom(),
+            activeInterval: 3000,
+            hiddenInterval: 10000,
+            enabled: () => Boolean(roomId && currentUser?.id),
+            immediate: false,
         });
+        roomPoller.start();
+        window.addEventListener('beforeunload', () => roomPoller?.stop?.());
     }
 
     function setupExitGuard() {
