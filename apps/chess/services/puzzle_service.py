@@ -35,6 +35,8 @@ class PuzzleService:
     DAILY_SAMPLE_SIZE = 1000
     HINT_LIMIT = 3
     GUEST_STATE_TTL_SECONDS = 60 * 60 * 24 * 3
+    DAILY_PUZZLE_CACHE_TTL_SECONDS = 60 * 5
+    USER_METRICS_CACHE_TTL_SECONDS = 60 * 5
     MSG_NO_PUZZLE_DATA = "현재 사용할 수 있는 퍼즐이 없습니다. 잠시 후 다시 시도해주세요."
     MSG_INVALID_MOVE_FORMAT = "수 입력 형식이 올바르지 않습니다. 예: e2e4"
     MSG_INVALID_PUZZLE_DATA = "퍼즐 데이터가 올바르지 않습니다. 관리자에게 문의해주세요."
@@ -61,10 +63,23 @@ class PuzzleService:
     def get_or_create_daily_puzzle(*, level: str | None = None, today=None) -> DailyPuzzle:
         level = PuzzleService.normalize_level(level)
         today = today or timezone.localdate()
+        cache_key = PuzzleService._daily_cache_key(level=level, today=today)
+        cached_id = cache.get(cache_key)
+        if cached_id:
+            cached_daily = (
+                DailyPuzzle.objects.select_related("puzzle")
+                .filter(id=cached_id, date=today, level=level)
+                .first()
+            )
+            if cached_daily:
+                return cached_daily
         daily = DailyPuzzle.objects.select_related("puzzle").filter(date=today, level=level).first()
         if daily:
+            cache.set(cache_key, daily.id, PuzzleService.DAILY_PUZZLE_CACHE_TTL_SECONDS)
             return daily
-        return PuzzleService.select_daily_puzzle(level=level, today=today)
+        daily = PuzzleService.select_daily_puzzle(level=level, today=today)
+        cache.set(cache_key, daily.id, PuzzleService.DAILY_PUZZLE_CACHE_TTL_SECONDS)
+        return daily
 
     @staticmethod
     def select_daily_puzzle(*, level: str | None = None, today=None) -> DailyPuzzle:
@@ -93,7 +108,7 @@ class PuzzleService:
 
             selected_id = random.choice(candidate_ids)
             try:
-                return DailyPuzzle.objects.create(date=today, level=level, puzzle_id=selected_id)
+                daily = DailyPuzzle.objects.create(date=today, level=level, puzzle_id=selected_id)
             except IntegrityError:
                 # 레이스 컨디션: 다른 워커가 먼저 생성
                 daily = (
@@ -103,7 +118,12 @@ class PuzzleService:
                 )
                 if not daily:
                     raise
-                return daily
+            cache.set(
+                PuzzleService._daily_cache_key(level=level, today=today),
+                daily.id,
+                PuzzleService.DAILY_PUZZLE_CACHE_TTL_SECONDS,
+            )
+            return daily
 
     @staticmethod
     def _pick_candidate_ids(*, min_rating: int, max_rating: int, recent_ids) -> list[int]:
@@ -197,6 +217,10 @@ class PuzzleService:
     def get_stats(*, user) -> dict:
         if not getattr(user, "is_authenticated", False) or getattr(user, "is_guest", False):
             return {"total": 0, "solved": 0, "solve_rate": 0.0, "avg_attempts": 0.0}
+        cache_key = PuzzleService._user_stats_cache_key(user_id=user.id)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
         qs = UserPuzzleAttempt.objects.filter(user=user)
         aggs = qs.aggregate(
             total=Count("id"),
@@ -206,17 +230,23 @@ class PuzzleService:
         total = int(aggs.get("total") or 0)
         solved = int(aggs.get("solved") or 0)
         avg_attempts = float(aggs.get("avg_attempts") or 0.0)
-        return {
+        payload = {
             "total": total,
             "solved": solved,
             "solve_rate": round((solved / total) * 100, 2) if total else 0.0,
             "avg_attempts": round(avg_attempts, 2),
         }
+        cache.set(cache_key, payload, PuzzleService.USER_METRICS_CACHE_TTL_SECONDS)
+        return payload
 
     @staticmethod
     def get_streak(*, user) -> dict:
         if not getattr(user, "is_authenticated", False) or getattr(user, "is_guest", False):
             return {"current_streak": 0, "best_streak": 0}
+        cache_key = PuzzleService._user_streak_cache_key(user_id=user.id)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
         solved_dates = list(
             UserPuzzleAttempt.objects.filter(user=user, solved=True)
             .select_related("daily_puzzle")
@@ -247,7 +277,9 @@ class PuzzleService:
             while probe in date_set:
                 current += 1
                 probe -= timedelta(days=1)
-        return {"current_streak": current, "best_streak": best}
+        payload = {"current_streak": current, "best_streak": best}
+        cache.set(cache_key, payload, PuzzleService.USER_METRICS_CACHE_TTL_SECONDS)
+        return payload
 
     @staticmethod
     def _submit_move_for_user(*, user, daily, puzzle, move_uci: str) -> dict:
@@ -271,6 +303,7 @@ class PuzzleService:
                     attempt.solved = True
                     attempt.solved_at = timezone.now()
             attempt.save(update_fields=["attempts", "moves_made", "solved", "solved_at"])
+            PuzzleService._invalidate_user_metrics_cache(user_id=user.id)
             return result
 
     @staticmethod
@@ -402,6 +435,27 @@ class PuzzleService:
         return f"daily_puzzle_guest:{daily.date.isoformat()}:{user_id}"
 
     @staticmethod
+    def _daily_cache_key(*, level: str, today) -> str:
+        return f"daily_puzzle:{today.isoformat()}:{level}"
+
+    @staticmethod
+    def _user_stats_cache_key(*, user_id: int) -> str:
+        return f"puzzle_stats:{user_id}"
+
+    @staticmethod
+    def _user_streak_cache_key(*, user_id: int) -> str:
+        return f"puzzle_streak:{user_id}"
+
+    @staticmethod
+    def _invalidate_user_metrics_cache(*, user_id: int) -> None:
+        cache.delete_many(
+            [
+                PuzzleService._user_stats_cache_key(user_id=user_id),
+                PuzzleService._user_streak_cache_key(user_id=user_id),
+            ]
+        )
+
+    @staticmethod
     def _get_guest_state(*, user, daily: DailyPuzzle) -> dict:
         return cache.get(PuzzleService._guest_cache_key(user=user, daily=daily), {}) or {}
 
@@ -467,6 +521,7 @@ class PuzzleService:
             UserPuzzleAttempt.objects.filter(id=attempt.id).update(hints_used=F("hints_used") + 1)
             attempt.refresh_from_db(fields=["hints_used"])
             used_after = int(attempt.hints_used or 0)
+            PuzzleService._invalidate_user_metrics_cache(user_id=user.id)
             return PuzzleService._build_hint_payload(
                 puzzle=puzzle,
                 expected=expected,

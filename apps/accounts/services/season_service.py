@@ -34,6 +34,8 @@ class SeasonService:
     BASE_RATING = 1200
     MIN_GAMES_FOR_RANK = 10
     CACHE_TTL = 60
+    MY_RANK_CACHE_TTL = 20
+    HISTORY_CACHE_TTL = 60 * 10
     MAX_PAGE_SIZE = 100
     CACHE_VERSION_KEY = "season_leaderboard_version"
 
@@ -334,12 +336,18 @@ class SeasonService:
     @classmethod
     def get_current_my_rank(cls, user_id: int) -> tuple[Season, dict | None]:
         season = cls.get_or_create_current_season()
+        version = cls.get_cache_version()
+        cache_key = f"season_my_rank_v{version}_s{season.id}_u{user_id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return season, cached
         my = (
             SeasonStat.objects.select_related("user")
             .filter(season=season, user_id=user_id, games_played__gte=cls.MIN_GAMES_FOR_RANK)
             .first()
         )
         if my is None:
+            cache.set(cache_key, None, cls.MY_RANK_CACHE_TTL)
             return season, None
 
         higher_count = (
@@ -357,7 +365,7 @@ class SeasonService:
             .count()
         )
         rank = higher_count + 1
-        return season, {
+        payload = {
             "rank": rank,
             "rating": my.rating,
             "peak_rating": my.peak_rating,
@@ -368,6 +376,8 @@ class SeasonService:
             "win_rate": my.win_rate,
             "season_stat_id": my.id,
         }
+        cache.set(cache_key, payload, cls.MY_RANK_CACHE_TTL)
+        return season, payload
 
     @classmethod
     @transaction.atomic
@@ -479,7 +489,14 @@ class SeasonService:
     @classmethod
     def list_history(cls, *, limit: int = 12):
         limit = max(1, min(limit, 24))
-        return list(Season.objects.filter(is_finalized=True).order_by("-start_date")[:limit])
+        version = cls.get_cache_version()
+        cache_key = f"season_history_v{version}_l{limit}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+        payload = list(Season.objects.filter(is_finalized=True).order_by("-start_date")[:limit])
+        cache.set(cache_key, payload, cls.HISTORY_CACHE_TTL)
+        return payload
 
     @classmethod
     @transaction.atomic

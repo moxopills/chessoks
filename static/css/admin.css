@@ -168,9 +168,36 @@
     }
 }
 
+@media (max-width: 900px) {
+    .admin-grid {
+        display: block !important;
+    }
+
+    .admin-grid > .admin-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        display: block !important;
+        margin-bottom: var(--space-md);
+    }
+
+    .admin-actions,
+    .action-buttons,
+    .admin-search,
+    .form-row {
+        flex-direction: column;
+    }
+
+    .action-buttons > *,
+    .admin-search > *,
+    .form-row > * {
+        width: 100%;
+    }
+}
+
 /* 모바일/터치 환경에서는 항상 세로 스택 */
 @media (pointer: coarse) {
     .admin-grid {
+        display: block !important;
         grid-template-columns: 1fr !important;
     }
 }
