@@ -324,9 +324,9 @@
 /* Game Container */
 .game-container {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 408px);
     gap: var(--space-lg);
-    max-width: 1320px;
+    max-width: 1380px;
     width: 100%;
     margin: 0 auto;
     padding: var(--space-sm) var(--space-md);
@@ -370,7 +370,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-md);
-    margin-bottom: var(--space-sm);
+    margin-bottom: 0;
 }
 
 .match-header .player-bar {
@@ -406,7 +406,7 @@
     gap: 4px;
     font-size: 0.75rem;
     font-weight: 500;
-    max-width: 160px;
+    max-width: 190px;
 }
 
 .player-bar .tier-badge {
@@ -466,7 +466,7 @@
     grid-template-columns: repeat(8, 1fr);
     grid-template-rows: repeat(8, 1fr);
     width: 100%;
-    max-width: 640px;
+    max-width: 680px;
     aspect-ratio: 1;
     border: 2px solid var(--color-border);
     border-radius: var(--radius-sm);
@@ -505,7 +505,7 @@
     flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
-    margin-top: -2px;
+    margin-top: 4px;
 }
 
 .guide-toggle {
@@ -1487,7 +1487,7 @@ html[data-theme="dark"] .piece.white {
 .game-side-panel {
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
+    gap: clamp(0.75rem, 1.6vw, var(--space-md));
     min-width: 0;
     align-self: start;
     position: sticky;
@@ -1500,6 +1500,7 @@ html[data-theme="dark"] .piece.white {
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: var(--shadow-sm);
+    min-height: 0;
 }
 
 .game-side-panel.is-accordion .panel-header.is-clickable {
@@ -1664,7 +1665,7 @@ html[data-theme="dark"] .piece.white {
 }
 
 .spectator-list {
-    max-height: 120px;
+    max-height: 160px;
     overflow-y: auto;
     padding: var(--space-sm) var(--space-md);
     display: flex;
@@ -1695,8 +1696,8 @@ html[data-theme="dark"] .piece.white {
 
 /* Move List */
 .move-list {
-    min-height: 210px;
-    max-height: 280px;
+    min-height: 240px;
+    max-height: 340px;
     overflow-y: auto;
     padding: var(--space-sm);
 }
@@ -1732,19 +1733,19 @@ html[data-theme="dark"] .piece.white {
 .game-chat {
     display: flex;
     flex-direction: column;
-    min-height: 260px;
+    min-height: 320px;
 }
 
 .game-chat .chat-messages {
     flex: 1;
-    min-height: 190px;
-    max-height: 280px;
+    min-height: 240px;
+    max-height: 360px;
 }
 
 .game-chat-section.is-floating {
     position: fixed;
     right: 24px;
-    bottom: calc(86px + var(--safe-bottom));
+    bottom: calc(98px + var(--safe-bottom));
     width: min(340px, calc(100vw - 32px));
     max-height: 460px;
     z-index: 1200;
@@ -2460,6 +2461,7 @@ body.competitive-room #rematch-modal {
         display: grid;
         grid-template-columns: 1fr 1fr;
         position: static;
+        align-items: start;
     }
 }
 
@@ -2482,7 +2484,7 @@ body.competitive-room #rematch-modal {
     .game-container {
         padding: var(--space-xs) var(--space-sm);
         padding-top: var(--space-xs);
-        gap: var(--space-xs);
+        gap: var(--space-sm);
     }
 
     .match-header {
@@ -2538,6 +2540,10 @@ body.competitive-room #rematch-modal {
     .game-side-panel {
         grid-template-columns: 1fr;
         gap: var(--space-xs);
+    }
+
+    .board-status-strip {
+        justify-content: flex-start;
     }
 
     .panel-section {
@@ -2606,7 +2612,7 @@ body.competitive-room #rematch-modal {
     }
 
     .game-side-panel {
-        margin-bottom: 60px;
+        margin-bottom: 88px;
     }
 }
 

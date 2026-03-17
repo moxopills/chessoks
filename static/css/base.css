@@ -60,6 +60,8 @@
     --footer-height: 50px;
     --content-max-width: 1200px;
     --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
     --z-mobile-tabbar: 999;
     --z-floating: 1050;
     --z-modal: 1300;
@@ -176,7 +178,7 @@ textarea {
         display: flex;
         justify-content: center;
         gap: var(--space-sm);
-        padding: var(--space-sm) var(--space-md);
+        padding: var(--space-sm) max(var(--space-md), var(--safe-right)) var(--space-sm) max(var(--space-md), var(--safe-left));
         padding-bottom: max(var(--space-sm), var(--safe-bottom));
         background-color: var(--color-bg-secondary);
         border-top: 1px solid var(--color-border);
@@ -259,6 +261,8 @@ a:hover {
     flex: 1;
     padding: clamp(0.75rem, 2.8vw, var(--space-lg));
     padding-top: calc(var(--navbar-height) + env(safe-area-inset-top, 0px) + clamp(0.75rem, 2.8vw, var(--space-lg)));
+    padding-left: max(clamp(0.75rem, 2.8vw, var(--space-lg)), var(--safe-left));
+    padding-right: max(clamp(0.75rem, 2.8vw, var(--space-lg)), var(--safe-right));
     width: min(100%, var(--content-max-width));
     margin: 0 auto;
     overflow-x: hidden;
@@ -1907,6 +1911,29 @@ body.has-chat-fab .chat-fab {
     min-height: 0;
 }
 
+.chat-shell-card .chat-messages,
+.chat-shell-card .dm-messages,
+.chat-shell-card .global-dm-messages {
+    scrollbar-gutter: stable;
+}
+
+.chat-shell-card .chat-form,
+.chat-shell-card .dm-form,
+.chat-shell-card .global-dm-form {
+    align-items: flex-end;
+    background: var(--color-bg-card);
+}
+
+.chat-shell-card .chat-input,
+.chat-shell-card .dm-input,
+.chat-shell-card .global-dm-input {
+    min-height: 44px;
+}
+
+.chat-shell-card .btn-sm {
+    min-height: 44px;
+}
+
 .chat-emoji-bar .emoji-btn {
     border: 1px solid var(--color-border);
     background: var(--color-bg-secondary);
@@ -1963,8 +1990,8 @@ body.has-chat-fab .chat-fab {
 
 @media (max-width: 768px) {
     .chat-fab {
-        bottom: calc(84px + var(--safe-bottom));
-        right: 16px;
+        bottom: calc(92px + var(--safe-bottom));
+        right: max(16px, var(--safe-right));
     }
 
     #toast-container {
@@ -1992,7 +2019,7 @@ body.has-chat-fab .chat-fab {
     .modal-overlay:not(.modal-overlay--dialog) .modal {
         width: 100%;
         max-width: none;
-        max-height: min(86vh, 760px);
+        max-height: min(82vh, 760px);
         border-bottom-left-radius: 0;
         border-bottom-right-radius: 0;
         border-left: none;
@@ -2006,6 +2033,12 @@ body.has-chat-fab .chat-fab {
     .dm-form,
     .global-dm-form {
         padding-bottom: max(var(--space-sm), var(--safe-bottom));
+    }
+
+    .chat-shell-card .chat-input,
+    .chat-shell-card .dm-input,
+    .chat-shell-card .global-dm-input {
+        min-height: 46px;
     }
 }
 
