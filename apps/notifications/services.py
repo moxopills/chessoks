@@ -2,6 +2,7 @@ import json
 import logging
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import transaction
 
 from asgiref.sync import async_to_sync
@@ -16,21 +17,76 @@ class NotificationService:
 
     logger = logging.getLogger(__name__)
     SOCKET_GROUP_PREFIX = "notifications_user_"
+    LIST_CACHE_TTL = 30
+    UNREAD_CACHE_TTL = 30
+    CACHE_VERSION_PREFIX = "notifications_version:"
+    LIST_CACHE_PREFIX = "notifications:list:"
+    UNREAD_CACHE_PREFIX = "notifications:unread:"
+
+    @classmethod
+    def _version_key(cls, user_id: int) -> str:
+        return f"{cls.CACHE_VERSION_PREFIX}{user_id}"
+
+    @classmethod
+    def _list_cache_key(cls, user_id: int, *, limit: int, offset: int, no_count: bool) -> str:
+        version = cls._get_cache_version(user_id)
+        return f"{cls.LIST_CACHE_PREFIX}{user_id}:v{version}:l{limit}:o{offset}:n{int(no_count)}"
+
+    @classmethod
+    def _unread_cache_key(cls, user_id: int) -> str:
+        version = cls._get_cache_version(user_id)
+        return f"{cls.UNREAD_CACHE_PREFIX}{user_id}:v{version}"
+
+    @classmethod
+    def _get_cache_version(cls, user_id: int) -> int:
+        version = cache.get(cls._version_key(user_id))
+        return version if version is not None else 0
+
+    @classmethod
+    def _invalidate_user_cache(cls, user_id: int) -> None:
+        version_key = cls._version_key(user_id)
+        try:
+            cache.incr(version_key)
+        except ValueError:
+            cache.set(version_key, 1, None)
 
     @staticmethod
     def list_notifications(
         user, *, limit: int, offset: int, no_count: bool = False
     ) -> tuple[int, list[Notification]]:
-        queryset = Notification.objects.filter(user=user).order_by("-created_at")
-        items = list(queryset[offset : offset + limit])
-        if no_count:
-            return len(items), items
-        total = queryset.count()
-        return total, items
+        cache_key = NotificationService._list_cache_key(
+            user.id,
+            limit=limit,
+            offset=offset,
+            no_count=no_count,
+        )
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        queryset = Notification.objects.filter(user=user).only(
+            "id",
+            "type",
+            "title",
+            "message",
+            "payload",
+            "is_read",
+            "created_at",
+        )
+        items = list(queryset.order_by("-created_at")[offset : offset + limit])
+        result = (len(items), items) if no_count else (queryset.count(), items)
+        cache.set(cache_key, result, NotificationService.LIST_CACHE_TTL)
+        return result
 
     @staticmethod
     def count_unread(user) -> int:
-        return Notification.objects.filter(user=user, is_read=False).count()
+        cache_key = NotificationService._unread_cache_key(user.id)
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
+        count = Notification.objects.filter(user=user, is_read=False).count()
+        cache.set(cache_key, count, NotificationService.UNREAD_CACHE_TTL)
+        return count
 
     @staticmethod
     def mark_read(user, ids: list[int]) -> int:
@@ -40,6 +96,8 @@ class NotificationService:
             updated = Notification.objects.filter(user=user, id__in=ids, is_read=False).update(
                 is_read=True
             )
+        if updated:
+            NotificationService._invalidate_user_cache(user.id)
         return updated
 
     @staticmethod
@@ -59,6 +117,7 @@ class NotificationService:
             message=message,
             payload=payload or {},
         )
+        NotificationService._invalidate_user_cache(user.id)
         if push:
             NotificationService._push(notification)
         return notification
@@ -82,6 +141,8 @@ class NotificationService:
             for row in rows
         ]
         created = Notification.objects.bulk_create(notifications)
+        for user_id in {item.user_id for item in created if item.user_id}:
+            NotificationService._invalidate_user_cache(user_id)
         if push:
             NotificationService._push_bulk(created)
         return created
