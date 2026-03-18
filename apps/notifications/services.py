@@ -18,10 +18,8 @@ class NotificationService:
     logger = logging.getLogger(__name__)
     SOCKET_GROUP_PREFIX = "notifications_user_"
     LIST_CACHE_TTL = 30
-    UNREAD_CACHE_TTL = 30
     CACHE_VERSION_PREFIX = "notifications_version:"
     LIST_CACHE_PREFIX = "notifications:list:"
-    UNREAD_CACHE_PREFIX = "notifications:unread:"
 
     @classmethod
     def _version_key(cls, user_id: int) -> str:
@@ -31,11 +29,6 @@ class NotificationService:
     def _list_cache_key(cls, user_id: int, *, limit: int, offset: int, no_count: bool) -> str:
         version = cls._get_cache_version(user_id)
         return f"{cls.LIST_CACHE_PREFIX}{user_id}:v{version}:l{limit}:o{offset}:n{int(no_count)}"
-
-    @classmethod
-    def _unread_cache_key(cls, user_id: int) -> str:
-        version = cls._get_cache_version(user_id)
-        return f"{cls.UNREAD_CACHE_PREFIX}{user_id}:v{version}"
 
     @classmethod
     def _get_cache_version(cls, user_id: int) -> int:
@@ -80,13 +73,7 @@ class NotificationService:
 
     @staticmethod
     def count_unread(user) -> int:
-        cache_key = NotificationService._unread_cache_key(user.id)
-        cached = cache.get(cache_key)
-        if cached is not None:
-            return cached
-        count = Notification.objects.filter(user=user, is_read=False).count()
-        cache.set(cache_key, count, NotificationService.UNREAD_CACHE_TTL)
-        return count
+        return Notification.objects.filter(user=user, is_read=False).count()
 
     @staticmethod
     def mark_read(user, ids: list[int]) -> int:
