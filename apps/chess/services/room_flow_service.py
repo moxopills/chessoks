@@ -18,6 +18,15 @@ class RoomFlowService:
     AUTO_START_ROOM_TYPES = {"quick", "random"}
 
     @staticmethod
+    def _schedule_room_broadcast(room: Room) -> None:
+        transaction.on_commit(lambda: broadcast_room_update(room))
+        transaction.on_commit(lambda: broadcast_room_state(room))
+
+    @staticmethod
+    def _schedule_room_removed(room_id: int) -> None:
+        transaction.on_commit(lambda: broadcast_room_removed(room_id))
+
+    @staticmethod
     @transaction.atomic
     def set_ready(room_id: int, user, ready: bool) -> Room:
         if user.is_suspended:
@@ -50,8 +59,7 @@ class RoomFlowService:
                 "status",
             ]
         )
-        broadcast_room_update(room)
-        broadcast_room_state(room)
+        RoomFlowService._schedule_room_broadcast(room)
         return room
 
     @staticmethod
@@ -92,8 +100,7 @@ class RoomFlowService:
         room.save(
             update_fields=["host_start_confirmed", "guest_start_confirmed", "status", "started_at"]
         )
-        broadcast_room_update(room)
-        broadcast_room_state(room)
+        RoomFlowService._schedule_room_broadcast(room)
         return room, game
 
     @staticmethod
@@ -139,17 +146,18 @@ class RoomFlowService:
                 "started_at",
             ]
         )
-        broadcast_room_update(room)
-        broadcast_room_state(room)
+        RoomFlowService._schedule_room_broadcast(room)
         if room.host_id and room.host_id != user.id:
             from apps.notifications.services import NotificationService
 
-            NotificationService.create_notification(
-                user=room.host,
-                type="room_joined",
-                title="게스트 입장",
-                message=f"{user.nickname}님이 방에 입장했습니다.",
-                payload={"room_id": room.id},
+            transaction.on_commit(
+                lambda: NotificationService.create_notification(
+                    user=room.host,
+                    type="room_joined",
+                    title="게스트 입장",
+                    message=f"{user.nickname}님이 방에 입장했습니다.",
+                    payload={"room_id": room.id},
+                )
             )
         return room
 
@@ -168,7 +176,7 @@ class RoomFlowService:
         if user == room.host:
             room_id_value = room.id
             room.delete()
-            broadcast_room_removed(room_id_value)
+            RoomFlowService._schedule_room_removed(room_id_value)
             return True, None
 
         room.guest = None
@@ -189,8 +197,7 @@ class RoomFlowService:
                 "status",
             ]
         )
-        broadcast_room_update(room)
-        broadcast_room_state(room)
+        RoomFlowService._schedule_room_broadcast(room)
         return False, room
 
     @staticmethod
