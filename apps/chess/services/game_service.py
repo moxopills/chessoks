@@ -591,7 +591,12 @@ class GameService:
     @staticmethod
     def _create_rematch_game(game: Game) -> Game:
         """기존 Room에서 흑백을 바꿔 새 Game 생성"""
-        room = game.room
+        room = game.room.__class__.objects.select_for_update().get(pk=game.room_id)
+        existing_game = (
+            room.games.filter(result=Game.Status.PLAYING).order_by("-created_at").first()
+        )
+        if existing_game:
+            return existing_game
         # 흑백 교체
         white_player = game.black_player
         black_player = game.white_player
