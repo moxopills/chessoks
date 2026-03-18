@@ -13,12 +13,28 @@ LEADERBOARD_VERSION_KEY = "leaderboard_version"
 class RankingService:
     """레이팅 기반 랭킹 서비스"""
 
+    LEADERBOARD_ONLY_FIELDS = (
+        "id",
+        "nickname",
+        "avatar_url",
+        "updated_at",
+        "stats__rating",
+        "stats__games_played",
+        "stats__games_won",
+        "stats__games_draw",
+        "stats__games_lost",
+        "stats__competitive_games_played",
+        "stats__nickname_color",
+        "stats__profile_border",
+    )
+
     @staticmethod
     def get_leaderboard_queryset():
         """랭킹 보드 QuerySet 반환 (페이지네이션용) - 게스트 제외"""
         return (
             User.objects.filter(is_active=True, is_guest=False)
             .select_related("stats")
+            .only(*RankingService.LEADERBOARD_ONLY_FIELDS)
             .annotate(rank=RankingService._rank_window())
             .order_by("-stats__rating", "-stats__games_played", "id")
         )
@@ -29,6 +45,7 @@ class RankingService:
         user = (
             User.objects.filter(pk=user_id, is_active=True, is_guest=False)
             .select_related("stats")
+            .only(*RankingService.LEADERBOARD_ONLY_FIELDS)
             .first()
         )
         if user is None or not hasattr(user, "stats") or user.stats is None:
@@ -97,6 +114,7 @@ class RankingService:
         ranked_users = (
             User.objects.filter(is_active=True, is_guest=False, stats__isnull=False)
             .select_related("stats")
+            .only("id", "stats__rating", "stats__games_played")
             .annotate(rank=RankingService._rank_window())
             .filter(id__in=user_ids)
             .values("id", "rank")

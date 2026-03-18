@@ -125,6 +125,12 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         payload["type"] = "move"
         payload["move"] = result.move.san if result.move else None
         if result.move:
+            payload["pgn_append"] = {
+                "san": result.move.san,
+                "move_number": result.move.move_number,
+                "player_color": result.move.player_color,
+            }
+        if result.move:
             payload["last_move"] = {
                 "from": result.move.from_square,
                 "to": result.move.to_square,
@@ -524,7 +530,6 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         return {
             "game_id": game.id,
             "fen": game.fen,
-            "pgn": game.pgn,
             "current_turn": game.current_turn,
             "result": game.result,
             "white_time_remaining": game.white_time_remaining,

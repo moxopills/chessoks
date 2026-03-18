@@ -13,19 +13,94 @@ class RoomQueryService:
     VALID_STATUSES = {choice[0] for choice in Room.STATUS_CHOICES}
     HIDDEN_ROOM_PREFIXES = ("ai_",)
     MATCH_HIDE_STATUSES = {"waiting", "ready"}
+    ROOM_ONLY_FIELDS = (
+        "id",
+        "room_type",
+        "title",
+        "status",
+        "is_private",
+        "allow_spectators",
+        "host_ready",
+        "guest_ready",
+        "host_start_confirmed",
+        "guest_start_confirmed",
+        "time_limit",
+        "increment_seconds",
+        "created_at",
+        "started_at",
+        "finished_at",
+        "host_id",
+        "guest_id",
+        "host__id",
+        "host__nickname",
+        "host__avatar_url",
+        "host__updated_at",
+        "host__stats__rating",
+        "host__stats__competitive_games_played",
+        "host__stats__nickname_color",
+        "host__stats__profile_border",
+        "host__stats__selected_board_skin__css_class",
+        "host__stats__selected_piece_skin__css_class",
+        "guest__id",
+        "guest__nickname",
+        "guest__avatar_url",
+        "guest__updated_at",
+        "guest__stats__rating",
+        "guest__stats__competitive_games_played",
+        "guest__stats__nickname_color",
+        "guest__stats__profile_border",
+        "guest__stats__selected_board_skin__css_class",
+        "guest__stats__selected_piece_skin__css_class",
+    )
 
     @staticmethod
-    def _base_queryset():
+    def _base_queryset(queryset=None):
         """방 조회 공통 QuerySet (N+1 방지용 annotate 포함)."""
         playing_game_subquery = Subquery(
             Game.objects.filter(room_id=OuterRef("pk"), result="playing")
             .order_by("-created_at")
             .values("id")[:1]
         )
-        return Room.objects.select_related("host__stats", "guest__stats").annotate(
-            current_game_id_annotated=playing_game_subquery,
-            spectator_count_annotated=Count("spectators", distinct=True),
+        return (
+            (queryset if queryset is not None else Room.objects)
+            .select_related(
+                "host__stats",
+                "host__stats__selected_board_skin",
+                "host__stats__selected_piece_skin",
+                "guest__stats",
+                "guest__stats__selected_board_skin",
+                "guest__stats__selected_piece_skin",
+            )
+            .only(*RoomQueryService.ROOM_ONLY_FIELDS)
+            .annotate(
+                current_game_id_annotated=playing_game_subquery,
+                spectator_count_annotated=Count("spectators", distinct=True),
+            )
         )
+
+    @staticmethod
+    def _apply_list_filters(queryset, *, room_type: str | None, status: str | None):
+        if room_type:
+            if room_type not in RoomQueryService.VALID_ROOM_TYPES:
+                raise ValidationError({"room_type": "유효하지 않은 방 타입입니다."})
+            queryset = queryset.filter(room_type=room_type)
+        else:
+            if status is None or status in RoomQueryService.MATCH_HIDE_STATUSES:
+                queryset = queryset.exclude(
+                    room_type__in=["quick", "random"],
+                    status__in=RoomQueryService.MATCH_HIDE_STATUSES,
+                )
+            for prefix in RoomQueryService.HIDDEN_ROOM_PREFIXES:
+                queryset = queryset.exclude(room_type__startswith=prefix)
+
+        if status:
+            if status not in RoomQueryService.VALID_STATUSES:
+                raise ValidationError({"status": "유효하지 않은 상태입니다."})
+            queryset = queryset.filter(status=status)
+        else:
+            queryset = queryset.exclude(status="finished")
+
+        return queryset
 
     @staticmethod
     def list_rooms(
@@ -37,35 +112,16 @@ class RoomQueryService:
         offset: int,
         no_count: bool = False,
     ) -> tuple[int, list[Room]]:
-        queryset = RoomQueryService._base_queryset().order_by("-created_at")
-
-        if room_type:
-            if room_type not in RoomQueryService.VALID_ROOM_TYPES:
-                raise ValidationError({"room_type": "유효하지 않은 방 타입입니다."})
-            queryset = queryset.filter(room_type=room_type)
-        else:
-            # 기본 목록에서는 매칭형 방(quick/random)의 대기/준비만 숨기고
-            # 게임 중(playing)은 관전 가능하도록 노출한다.
-            if status is None or status in RoomQueryService.MATCH_HIDE_STATUSES:
-                queryset = queryset.exclude(
-                    room_type__in=["quick", "random"],
-                    status__in=RoomQueryService.MATCH_HIDE_STATUSES,
-                )
-            # AI 방은 기본 목록에서 제외
-            for prefix in RoomQueryService.HIDDEN_ROOM_PREFIXES:
-                queryset = queryset.exclude(room_type__startswith=prefix)
-
-        if status:
-            if status not in RoomQueryService.VALID_STATUSES:
-                raise ValidationError({"status": "유효하지 않은 상태입니다."})
-            queryset = queryset.filter(status=status)
-        else:
-            queryset = queryset.exclude(status="finished")
-
+        filtered_queryset = RoomQueryService._apply_list_filters(
+            Room.objects.all(),
+            room_type=room_type,
+            status=status,
+        )
+        queryset = RoomQueryService._base_queryset(filtered_queryset).order_by("-created_at")
         rooms = list(queryset[offset : offset + limit])
         if no_count:
             return len(rooms), rooms
-        total = queryset.count()
+        total = filtered_queryset.count()
         return total, rooms
 
     @staticmethod
