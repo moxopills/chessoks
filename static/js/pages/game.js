@@ -136,6 +136,7 @@
     let replayGameId = null;
     let replayMode = 'modal';
     let captured = { white: [], black: [] };
+    let currentSpectators = [];
     let squareCache = null; // Map<squareName, element> for DOM caching
     let isChatOpen = false;
     let chatUnread = 0;
@@ -1779,7 +1780,11 @@
                 }
                 // 게임 상태 업데이트
                 game.fen = data.fen;
-                game.pgn = data.pgn;
+                if (data.pgn_append) {
+                    game.pgn = appendPgnMove(game.pgn, data.pgn_append);
+                } else if (typeof data.pgn === 'string') {
+                    game.pgn = data.pgn;
+                }
                 game.current_turn = data.current_turn;
                 game.result = data.result;
                 game.white_time_remaining = data.white_time_remaining;
@@ -1869,12 +1874,14 @@
                     Toast.info(`${nickname}님이 관전에 ${actionText}했습니다.`);
                     addChatNotice(`${nickname}님이 관전에 ${actionText}했습니다.`);
                 }
-                await refreshSpectatorList();
+                applySpectatorDelta(data.action, data.user, data.spectator_count);
                 break;
             }
 
             case 'room_update':
-                await refreshSpectatorList();
+                if (typeof data.room?.spectator_count === 'number' && spectatorCount) {
+                    spectatorCount.textContent = `${data.room.spectator_count}명`;
+                }
                 break;
 
             case 'error':
@@ -2098,9 +2105,7 @@
         if (!spectatorSection || !spectatorList || !spectatorCount || isAiRoom) return;
         try {
             const data = await API.get(`/chess/rooms/${roomId}/spectators/`);
-            const spectators = data?.spectators || [];
-            spectatorCount.textContent = `${spectators.length}명`;
-            renderSpectatorList(spectators);
+            updateSpectatorState(data?.spectators || []);
         } catch (error) {
             if (error?.status === 403 || error?.status === 404) {
                 spectatorSection.classList.add('hidden');
@@ -2142,6 +2147,48 @@
             item.appendChild(name);
             spectatorList.appendChild(item);
         });
+    }
+
+    function updateSpectatorState(users) {
+        if (!spectatorCount) return;
+        const nextUsers = Array.isArray(users) ? users : [];
+        currentSpectators = nextUsers;
+        spectatorCount.textContent = `${nextUsers.length}명`;
+        renderSpectatorList(nextUsers);
+    }
+
+    function applySpectatorDelta(action, user, spectatorCountValue) {
+        if (!user?.id) {
+            if (typeof spectatorCountValue === 'number' && spectatorCount) {
+                spectatorCount.textContent = `${spectatorCountValue}명`;
+            }
+            return;
+        }
+        const nextUsers = Array.isArray(currentSpectators) ? [...currentSpectators] : [];
+        const existingIndex = nextUsers.findIndex((item) => item.id === user.id);
+        if (action === 'leave') {
+            if (existingIndex >= 0) {
+                nextUsers.splice(existingIndex, 1);
+            }
+        } else if (existingIndex >= 0) {
+            nextUsers.splice(existingIndex, 1, user);
+        } else {
+            nextUsers.push(user);
+        }
+        currentSpectators = nextUsers;
+        if (spectatorCount) {
+            spectatorCount.textContent = `${typeof spectatorCountValue === 'number' ? spectatorCountValue : nextUsers.length}명`;
+        }
+        renderSpectatorList(nextUsers);
+    }
+
+    function appendPgnMove(pgn, patch) {
+        if (!patch?.san) return pgn || '';
+        const base = (pgn || '').trim();
+        if (patch.player_color === 'white') {
+            return `${base}${base ? ' ' : ''}${patch.move_number}. ${patch.san}`.trim();
+        }
+        return `${base} ${patch.san}`.trim();
     }
 
     function setupMobileTabs() {

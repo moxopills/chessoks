@@ -23,13 +23,65 @@ class GameQueryService:
         Game.Status.TIMEOUT_WHITE,
         Game.Status.RESIGNATION_WHITE,
     }
+    GAME_PLAYER_ONLY_FIELDS = (
+        "id",
+        "room_id",
+        "result",
+        "move_count",
+        "started_at",
+        "finished_at",
+        "created_at",
+        "fen",
+        "pgn",
+        "current_turn",
+        "white_time_remaining",
+        "black_time_remaining",
+        "turn_started_at",
+        "white_player_id",
+        "black_player_id",
+        "room__id",
+        "room__allow_spectators",
+        "room__host_id",
+        "room__guest_id",
+        "room__room_type",
+        "white_player__id",
+        "white_player__nickname",
+        "white_player__avatar_url",
+        "white_player__updated_at",
+        "white_player__stats__rating",
+        "white_player__stats__competitive_games_played",
+        "white_player__stats__nickname_color",
+        "white_player__stats__profile_border",
+        "white_player__stats__selected_board_skin__css_class",
+        "white_player__stats__selected_piece_skin__css_class",
+        "black_player__id",
+        "black_player__nickname",
+        "black_player__avatar_url",
+        "black_player__updated_at",
+        "black_player__stats__rating",
+        "black_player__stats__competitive_games_played",
+        "black_player__stats__nickname_color",
+        "black_player__stats__profile_border",
+        "black_player__stats__selected_board_skin__css_class",
+        "black_player__stats__selected_piece_skin__css_class",
+    )
+
+    @classmethod
+    def _game_queryset(cls):
+        return Game.objects.select_related(
+            "room",
+            "white_player__stats",
+            "white_player__stats__selected_board_skin",
+            "white_player__stats__selected_piece_skin",
+            "black_player__stats",
+            "black_player__stats__selected_board_skin",
+            "black_player__stats__selected_piece_skin",
+        ).only(*cls.GAME_PLAYER_ONLY_FIELDS)
 
     @staticmethod
     def get_game_for_user(game_id: int, user) -> Game:
         try:
-            game = Game.objects.select_related(
-                "room", "white_player__stats", "black_player__stats"
-            ).get(pk=game_id)
+            game = GameQueryService._game_queryset().get(pk=game_id)
         except Game.DoesNotExist:
             raise NotFound("게임을 찾을 수 없습니다.") from None
 
@@ -81,7 +133,20 @@ class GameQueryService:
         if user_id is None:
             return []
         try:
-            game = Game.objects.select_related("room").get(pk=game_id)
+            game = (
+                Game.objects.select_related("room")
+                .only(
+                    "id",
+                    "fen",
+                    "result",
+                    "current_turn",
+                    "white_player_id",
+                    "black_player_id",
+                    "room__host_id",
+                    "room__guest_id",
+                )
+                .get(pk=game_id)
+            )
         except Game.DoesNotExist:
             raise NotFound("게임을 찾을 수 없습니다.") from None
         if game.result != Game.Status.PLAYING:
@@ -194,8 +259,8 @@ class GameQueryService:
         no_count: bool = False,
     ) -> tuple[int, list[Game]]:
         queryset = (
-            Game.objects.user_games(user)
-            .select_related("room", "white_player__stats", "black_player__stats")
+            GameQueryService._game_queryset()
+            .filter(Q(white_player=user) | Q(black_player=user))
             .order_by("-created_at")
         )
 
@@ -262,8 +327,8 @@ class GameQueryService:
     @staticmethod
     def list_recent_for_user(user, *, limit: int) -> list[Game]:
         return list(
-            Game.objects.user_games(user)
-            .select_related("room", "white_player__stats", "black_player__stats")
+            GameQueryService._game_queryset()
+            .filter(Q(white_player=user) | Q(black_player=user))
             .exclude(result=Game.Status.PLAYING)
             .exclude(room__room_type__startswith="ai_")
             .order_by("-created_at")[:limit]
