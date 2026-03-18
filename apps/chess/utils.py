@@ -190,12 +190,16 @@ def broadcast_spectator_event(room_id: int, user, action: str) -> None:
     channel_layer = get_channel_layer()
     if channel_layer is None:
         return
-    room_snapshot = _get_room_broadcast_snapshot(room_id)
+    try:
+        room_snapshot = _get_room_broadcast_snapshot(room_id)
+        spectator_count = getattr(room_snapshot, "spectator_count_annotated", 0)
+    except Exception:
+        spectator_count = 0
     payload = {
         "type": "spectator_event",
         "action": action,
         "user": _serialize_player_summary(user),
-        "spectator_count": getattr(room_snapshot, "spectator_count_annotated", 0),
+        "spectator_count": spectator_count,
     }
     try:
         async_to_sync(channel_layer.group_send)(
