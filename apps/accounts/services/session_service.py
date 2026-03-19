@@ -1,5 +1,6 @@
 """로그인/세션/탈퇴 관련 서비스"""
 
+import hashlib
 import math
 from datetime import timedelta
 
@@ -25,13 +26,18 @@ LOGIN_LOCKOUT_DURATION = 300  # 5분
 ACCOUNT_DELETION_GRACE_DAYS = 1  # 탈퇴 유예 기간 (일)
 
 
+def _login_cache_key(prefix: str, email: str) -> str:
+    digest = hashlib.sha256(email.strip().lower().encode("utf-8")).hexdigest()
+    return f"{prefix}:{digest}"
+
+
 class AuthService:
     """인증 관련 비즈니스 로직"""
 
     @staticmethod
     def check_lockout(email: str) -> bool:
         """잠금 상태 확인"""
-        return bool(cache.get(f"login_lock:{email}"))
+        return bool(cache.get(_login_cache_key("login_lock", email)))
 
     @staticmethod
     def try_recover_account(email: str, password: str) -> bool:
@@ -69,11 +75,11 @@ class AuthService:
         Returns:
             (남은 시도 횟수, 에러 메시지) - 잠금 시 남은 시도 = 0
         """
-        attempts_key = f"login_fail:{email}"
+        attempts_key = _login_cache_key("login_fail", email)
         attempts = cache.get(attempts_key, 0) + 1
 
         if attempts >= MAX_LOGIN_ATTEMPTS:
-            cache.set(f"login_lock:{email}", 1, LOGIN_LOCKOUT_DURATION)
+            cache.set(_login_cache_key("login_lock", email), 1, LOGIN_LOCKOUT_DURATION)
             cache.delete(attempts_key)
             return 0, "로그인 5회 실패. 5분 후 다시 시도해주세요."
 
@@ -94,7 +100,8 @@ class AuthService:
             stats가 로드된 User 객체
         """
         email = user.email
-        cache.delete(f"login_fail:{email}")
+        cache.delete(_login_cache_key("login_fail", email))
+        cache.delete(_login_cache_key("login_lock", email))
         login(request, user)
         if remember_me:
             request.session.set_expiry(settings.REMEMBER_ME_SESSION_AGE)

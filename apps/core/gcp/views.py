@@ -10,6 +10,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.throttling import AvatarUploadThrottle
+
 from .constants import FileType, GCPConstants
 from .uploader import gcp_uploader
 from .validators import GCPImageValidator
@@ -20,6 +22,7 @@ class GCPDirectUploadView(APIView):
 
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser]
+    throttle_classes = [AvatarUploadThrottle]
 
     @extend_schema(
         summary="이미지 직접 업로드",
@@ -81,13 +84,18 @@ class GCPDirectUploadView(APIView):
         GCPImageValidator.validate_extension(file_name, ext)
         GCPImageValidator.validate_mime_type(ext, content_type)
         GCPImageValidator.validate_file_size(file.size)
+        normalized_image = GCPImageValidator.normalize_image(file)
 
         # GCP 키 생성
         prefix = GCPConstants.PATH_MAPPING.get(file_type_enum)
-        key = f"{prefix}/{uuid.uuid4()}.{ext}"
+        key = f"{prefix}/{uuid.uuid4()}.{normalized_image.extension}"
 
         # 스토리지 업로드 (GCP)
-        gcp_uploader.upload_fileobj(file.file, key, content_type=content_type)
+        gcp_uploader.upload_fileobj(
+            normalized_image.content,
+            key,
+            content_type=normalized_image.content_type,
+        )
 
         file_url = f"{gcp_uploader.get_base_url()}{key}"
 

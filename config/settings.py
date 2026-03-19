@@ -10,6 +10,7 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import logging
 import os
 from pathlib import Path
 
@@ -20,6 +21,7 @@ load_dotenv()
 
 # 프로젝트 기본 경로 설정: BASE_DIR / 'subdir' 형태로 사용
 BASE_DIR = Path(__file__).resolve().parent.parent
+logger = logging.getLogger(__name__)
 
 
 # 개발 환경 빠른 설정 - 프로덕션에는 부적합
@@ -34,8 +36,44 @@ def _env_list(name: str, default: str = "") -> list[str]:
     return [value.strip() for value in os.getenv(name, default).split(",") if value.strip()]
 
 
+def _read_secret_file(path: str) -> str:
+    return Path(path).read_text(encoding="utf-8").strip()
+
+
+def _read_secret_manager(secret_name: str) -> str:
+    project_id = os.getenv("SECRET_MANAGER_PROJECT_ID", "").strip()
+    if not project_id:
+        raise RuntimeError("SECRET_MANAGER_PROJECT_ID가 설정되지 않았습니다.")
+
+    from google.cloud import secretmanager
+
+    client = secretmanager.SecretManagerServiceClient()
+    resource_name = f"projects/{project_id}/secrets/{secret_name}/versions/latest"
+    response = client.access_secret_version(request={"name": resource_name})
+    return response.payload.data.decode("utf-8").strip()
+
+
+def _secret(name: str, default: str = "") -> str:
+    direct_value = os.getenv(name)
+    if direct_value not in (None, ""):
+        return direct_value
+
+    file_path = os.getenv(f"{name}_FILE", "").strip()
+    if file_path:
+        return _read_secret_file(file_path)
+
+    secret_name = os.getenv(f"{name}_SECRET", "").strip()
+    if secret_name:
+        try:
+            return _read_secret_manager(secret_name)
+        except Exception as exc:
+            logger.warning("Secret Manager 로드 실패: %s (%s)", name, exc)
+
+    return default
+
+
 # 보안 경고: 프로덕션 환경에서는 시크릿 키를 반드시 비밀로 유지할 것!
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key")
+SECRET_KEY = _secret("SECRET_KEY", "django-insecure-dev-key")
 
 # 보안 경고: 프로덕션 환경에서는 DEBUG를 켜지 말 것!
 DEBUG = _env_bool("DEBUG", False)
@@ -111,7 +149,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": os.getenv("DB_NAME", "chessdb"),
         "USER": os.getenv("DB_USER", "postgres"),
-        "PASSWORD": os.getenv("DB_PASSWORD", "postgres"),
+        "PASSWORD": _secret("DB_PASSWORD", "postgres"),
         "HOST": os.getenv("DB_HOST", "localhost"),  # 하이브리드: localhost, Docker: "db"
         "PORT": os.getenv("DB_PORT", "5432"),
         # 연결 풀링 설정
@@ -251,6 +289,26 @@ SECURE_PERMISSIONS_POLICY = os.getenv(
     "geolocation=(), microphone=(), camera=(), payment=(), usb=()",
 )
 SECURITY_HEADERS_ENABLED = _env_bool("SECURITY_HEADERS_ENABLED", True)
+SECURE_CONTENT_SECURITY_POLICY_ENABLED = _env_bool(
+    "SECURE_CONTENT_SECURITY_POLICY_ENABLED",
+    not DEBUG,
+)
+SECURE_CONTENT_SECURITY_POLICY = os.getenv(
+    "SECURE_CONTENT_SECURITY_POLICY",
+    (
+        "default-src 'self'; "
+        "img-src 'self' data: blob: https:; "
+        "style-src 'self' 'unsafe-inline' https:; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+        "connect-src 'self' https: ws: wss:; "
+        "font-src 'self' data: https:; "
+        "media-src 'self' data: blob:; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "frame-ancestors 'none'; "
+        "form-action 'self';"
+    ),
+)
 
 # 세션 정책
 # - 기본 15분 만료
@@ -266,8 +324,8 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("FILE_UPLOAD_MAX_MEMORY_SIZE", "5242
 DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.getenv("DATA_UPLOAD_MAX_NUMBER_FIELDS", "2000"))
 
 # Web Push (PWA)
-WEB_PUSH_PUBLIC_KEY = os.getenv("WEB_PUSH_PUBLIC_KEY", "")
-WEB_PUSH_PRIVATE_KEY = os.getenv("WEB_PUSH_PRIVATE_KEY", "")
+WEB_PUSH_PUBLIC_KEY = _secret("WEB_PUSH_PUBLIC_KEY", "")
+WEB_PUSH_PRIVATE_KEY = _secret("WEB_PUSH_PRIVATE_KEY", "")
 WEB_PUSH_SUBJECT = os.getenv("WEB_PUSH_SUBJECT", "mailto:moxopills@gmail.com")
 
 # 인증 설정
@@ -295,6 +353,17 @@ REST_FRAMEWORK = {
         "anon": os.getenv("THROTTLE_ANON", "120/min"),
         "user": os.getenv("THROTTLE_USER", "300/min"),
         "guest": os.getenv("THROTTLE_GUEST", "20/min"),
+        "auth_login": os.getenv("THROTTLE_AUTH_LOGIN", "10/min"),
+        "auth_signup": os.getenv("THROTTLE_AUTH_SIGNUP", "5/min"),
+        "auth_verify": os.getenv("THROTTLE_AUTH_VERIFY", "10/min"),
+        "auth_password_reset": os.getenv("THROTTLE_AUTH_PASSWORD_RESET", "6/min"),
+        "auth_avatar_upload": os.getenv("THROTTLE_AUTH_AVATAR_UPLOAD", "10/hour"),
+        "friend_action": os.getenv("THROTTLE_FRIEND_ACTION", "40/min"),
+        "invite_action": os.getenv("THROTTLE_INVITE_ACTION", "20/min"),
+        "report_action": os.getenv("THROTTLE_REPORT_ACTION", "12/hour"),
+        "message_action": os.getenv("THROTTLE_MESSAGE_ACTION", "90/min"),
+        "skin_action": os.getenv("THROTTLE_SKIN_ACTION", "60/min"),
+        "social_auth": os.getenv("THROTTLE_SOCIAL_AUTH", "20/min"),
     },
     "EXCEPTION_HANDLER": "apps.core.exceptions.custom_exception_handler",
 }
@@ -375,9 +444,9 @@ EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.Em
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.naver.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "qkralstn8070@naver.com")
+EMAIL_HOST_USER = _secret("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = _secret("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = _secret("DEFAULT_FROM_EMAIL", "qkralstn8070@naver.com")
 
 # 도메인/프론트엔드 URL (이메일 링크용)
 DOMAIN = os.getenv("DOMAIN", "")
@@ -385,23 +454,23 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", DOMAIN or "http://localhost:8000")
 
 # 소셜 로그인 설정
 # Google OAuth
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_CLIENT_ID = _secret("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = _secret("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", f"{FRONTEND_URL}/auth/google/callback")
 
 # Kakao OAuth
-KAKAO_CLIENT_ID = os.getenv("KAKAO_CLIENT_ID", "")
-KAKAO_CLIENT_SECRET = os.getenv("KAKAO_CLIENT_SECRET", "")
+KAKAO_CLIENT_ID = _secret("KAKAO_CLIENT_ID", "")
+KAKAO_CLIENT_SECRET = _secret("KAKAO_CLIENT_SECRET", "")
 KAKAO_REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", f"{FRONTEND_URL}/auth/kakao/callback")
 
 # Naver OAuth
-NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID", "")
-NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET", "")
+NAVER_CLIENT_ID = _secret("NAVER_CLIENT_ID", "")
+NAVER_CLIENT_SECRET = _secret("NAVER_CLIENT_SECRET", "")
 NAVER_REDIRECT_URI = os.getenv("NAVER_REDIRECT_URI", f"{FRONTEND_URL}/auth/naver/callback")
 
 # GCS 설정 (이미지 업로드용)
 GCS_BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "")
-GCS_CREDENTIALS_JSON = os.getenv("GCS_CREDENTIALS_JSON", "")
+GCS_CREDENTIALS_JSON = _secret("GCS_CREDENTIALS_JSON", "")
 GCS_BASE_URL = os.getenv("GCS_BASE_URL", "")
 
 # Celery 설정

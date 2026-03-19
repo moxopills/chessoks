@@ -95,8 +95,9 @@ class ReportCreateSerializer(serializers.Serializer):
 
     def validate_target_id(self, value):
         request = self.context.get("request")
-        if request and request.user.is_authenticated and request.user.id == value:
-            raise serializers.ValidationError("자기 자신은 신고할 수 없습니다.")
+        if request and request.user.is_authenticated:
+            if request.user.id == value:
+                raise serializers.ValidationError("자기 자신은 신고할 수 없습니다.")
         return value
 
 

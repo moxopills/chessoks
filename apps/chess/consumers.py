@@ -17,6 +17,10 @@ from apps.chess.utils import check_profanity, get_profanity_warning
 
 logger = logging.getLogger(__name__)
 REACTION_EMOJIS = {"👍", "👏"}
+WS_CHAT_RATE_LIMIT = 12
+WS_CHAT_RATE_WINDOW = 10
+WS_REACTION_RATE_LIMIT = 30
+WS_REACTION_RATE_WINDOW = 10
 
 
 class OnlineStatusMixin:
@@ -39,7 +43,53 @@ class OnlineStatusMixin:
             OnlineStatusService.set_online(user_id)
 
 
-class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
+class WebSocketRateLimitMixin:
+    async def _check_ws_rate_limit(
+        self,
+        scope_name: str,
+        *,
+        limit: int,
+        window_seconds: int,
+        key_suffix: str = "",
+    ) -> bool:
+        allowed = await self._consume_ws_rate_limit(
+            scope_name,
+            limit=limit,
+            window_seconds=window_seconds,
+            key_suffix=key_suffix,
+        )
+        if not allowed:
+            await self.send_json(
+                {"type": "error", "message": "요청이 너무 빠릅니다. 잠시 후 다시 시도해주세요."}
+            )
+        return allowed
+
+    @database_sync_to_async
+    def _consume_ws_rate_limit(
+        self,
+        scope_name: str,
+        *,
+        limit: int,
+        window_seconds: int,
+        key_suffix: str = "",
+    ) -> bool:
+        user = self.scope.get("user")
+        user_key = (
+            user.id if user and getattr(user, "is_authenticated", False) else self.channel_name
+        )
+        group_key = getattr(self, "room_id", "lobby")
+        key = f"wsrl:{scope_name}:{group_key}:{user_key}:{key_suffix}"
+        if cache.add(key, 1, timeout=window_seconds):
+            return True
+        try:
+            current = cache.incr(key)
+        except ValueError:
+            cache.set(key, 1, timeout=window_seconds)
+            return True
+        return current <= limit
+
+
+class ChessConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWebsocketConsumer):
     """체스 게임 WebSocket Consumer"""
 
     async def connect(self):
@@ -263,6 +313,13 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 {"type": "error", "message": "게스트는 채팅을 이용할 수 없습니다."}
             )
             return
+        if not await self._check_ws_rate_limit(
+            "game_chat",
+            limit=WS_CHAT_RATE_LIMIT,
+            window_seconds=WS_CHAT_RATE_WINDOW,
+            key_suffix="player",
+        ):
+            return
         valid, message = await self._validate_chat_message(content)
         if not valid:
             return
@@ -289,6 +346,13 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
                 {"type": "error", "message": "플레이어는 관전자 채팅을 사용할 수 없습니다."}
             )
             return
+        if not await self._check_ws_rate_limit(
+            "spectator_chat",
+            limit=WS_CHAT_RATE_LIMIT,
+            window_seconds=WS_CHAT_RATE_WINDOW,
+            key_suffix="spectator",
+        ):
+            return
         valid, message = await self._validate_chat_message(content)
         if not valid:
             return
@@ -313,6 +377,13 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         message_id = (content.get("message_id") or "").strip()
         emoji = (content.get("reaction") or "").strip()
         if not message_id or emoji not in REACTION_EMOJIS:
+            return
+        if not await self._check_ws_rate_limit(
+            "game_reaction",
+            limit=WS_REACTION_RATE_LIMIT,
+            window_seconds=WS_REACTION_RATE_WINDOW,
+            key_suffix="player" if self.is_player else "spectator",
+        ):
             return
         scope = "player" if self.is_player else "spectator"
         reaction_data = await self._toggle_game_reaction(scope, message_id, emoji)
@@ -538,7 +609,7 @@ class ChessConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         }
 
 
-class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
+class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWebsocketConsumer):
     """로비 채팅 WebSocket Consumer"""
 
     group_name = "chess_lobby"
@@ -608,6 +679,12 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
             if self.scope["user"].is_muted:
                 await self.send_json({"type": "error", "message": "채팅이 제한된 계정입니다."})
                 return
+            if not await self._check_ws_rate_limit(
+                "lobby_chat",
+                limit=WS_CHAT_RATE_LIMIT,
+                window_seconds=WS_CHAT_RATE_WINDOW,
+            ):
+                return
 
             message = (content.get("message") or "").strip()
             if not message:
@@ -661,6 +738,12 @@ class LobbyChatConsumer(OnlineStatusMixin, AsyncJsonWebsocketConsumer):
         message_id = content.get("message_id")
         emoji = (content.get("reaction") or "").strip()
         if not message_id or emoji not in REACTION_EMOJIS:
+            return
+        if not await self._check_ws_rate_limit(
+            "lobby_reaction",
+            limit=WS_REACTION_RATE_LIMIT,
+            window_seconds=WS_REACTION_RATE_WINDOW,
+        ):
             return
         reaction_data = await self._toggle_lobby_reaction(int(message_id), emoji)
         if reaction_data is None:

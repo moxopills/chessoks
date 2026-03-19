@@ -56,14 +56,14 @@ def _check_availability(user: User | None, field_name: str) -> dict:
     return {"available": result["available"], "message": result["message"]}
 
 
-def _validate_avatar_file(file) -> str:
+def _validate_avatar_file(file):
     file_name = file.name
     GCPImageValidator.validate_file_name(file_name)
     ext = file_name.rsplit(".", 1)[-1].lower()
     GCPImageValidator.validate_extension(file_name, ext)
     GCPImageValidator.validate_mime_type(ext, file.content_type)
     GCPImageValidator.validate_file_size(file.size)
-    return ext
+    return GCPImageValidator.normalize_image(file)
 
 
 def _extract_old_avatar_key(user: User) -> str | None:
@@ -72,14 +72,14 @@ def _extract_old_avatar_key(user: User) -> str | None:
     return gcp_uploader.extract_key_from_url(user.avatar_url)
 
 
-def _upload_new_avatar(file, ext: str) -> str:
+def _upload_new_avatar(normalized_image) -> str:
     prefix = GCPConstants.PATH_MAPPING[FileType.USER_AVATAR]
-    key = f"{prefix}/{uuid.uuid4()}.{ext}"
+    key = f"{prefix}/{uuid.uuid4()}.{normalized_image.extension}"
 
     gcp_uploader.upload_fileobj(
-        file.file,
+        normalized_image.content,
         key,
-        content_type=file.content_type,
+        content_type=normalized_image.content_type,
     )
 
     return f"{gcp_uploader.get_base_url()}{key}"
@@ -314,9 +314,9 @@ class UserProfileService:
         if not file:
             raise ValidationError({"avatar": ["아바타 파일이 필요합니다."]})
 
-        ext = _validate_avatar_file(file)
+        normalized_image = _validate_avatar_file(file)
         old_avatar_key = _extract_old_avatar_key(user)
-        new_avatar_url = _upload_new_avatar(file, ext)
+        new_avatar_url = _upload_new_avatar(normalized_image)
 
         user.avatar_url = new_avatar_url
         user.save(update_fields=["avatar_url"])

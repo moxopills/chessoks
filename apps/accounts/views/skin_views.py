@@ -9,6 +9,7 @@ from apps.accounts.serializers import (
     SkinSelectRequestSerializer,
 )
 from apps.accounts.services import SkinService
+from apps.core.throttling import SkinActionThrottle
 
 
 class SkinCatalogView(APIView):
@@ -31,6 +32,7 @@ class SkinMeView(APIView):
 
 class SkinPurchaseView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [SkinActionThrottle]
 
     @extend_schema(
         request=None,
@@ -44,6 +46,7 @@ class SkinPurchaseView(APIView):
 
 class SkinSelectView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [SkinActionThrottle]
 
     @extend_schema(
         request=SkinSelectRequestSerializer, responses={200: {"type": "object"}}, tags=["스킨"]

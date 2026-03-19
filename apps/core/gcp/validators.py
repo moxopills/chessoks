@@ -2,9 +2,23 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from io import BytesIO
+
+from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL.Image import DecompressionBombError
 from rest_framework.exceptions import ValidationError
 
 from .constants import GCPConstants
+
+
+@dataclass
+class NormalizedImage:
+    content: BytesIO
+    extension: str
+    content_type: str
+    width: int
+    height: int
 
 
 class GCPImageValidator:
@@ -54,3 +68,62 @@ class GCPImageValidator:
 
         if file_size > GCPConstants.MAX_FILE_SIZE_BYTES:
             raise ValidationError(f"{GCPConstants.MAX_FILE_SIZE_MB}MB 이하만 업로드 가능합니다.")
+
+    @staticmethod
+    def normalize_image(file) -> NormalizedImage:
+        """실제 이미지 디코드 후 안전한 포맷으로 재인코딩한다."""
+        try:
+            file.seek(0)
+        except Exception:
+            pass
+
+        raw = file.read()
+        GCPImageValidator.validate_file_size(len(raw))
+        if not raw:
+            raise ValidationError("비어 있는 파일은 업로드할 수 없습니다.")
+
+        try:
+            Image.MAX_IMAGE_PIXELS = GCPConstants.MAX_IMAGE_WIDTH * GCPConstants.MAX_IMAGE_HEIGHT
+            image = Image.open(BytesIO(raw))
+            image.load()
+        except DecompressionBombError as exc:
+            raise ValidationError("허용된 범위를 초과하는 이미지입니다.") from exc
+        except (UnidentifiedImageError, OSError) as exc:
+            raise ValidationError("실제 이미지 파일만 업로드할 수 있습니다.") from exc
+
+        image = ImageOps.exif_transpose(image)
+        width, height = image.size
+        if width <= 0 or height <= 0:
+            raise ValidationError("이미지 크기를 확인할 수 없습니다.")
+        if width > GCPConstants.MAX_IMAGE_WIDTH or height > GCPConstants.MAX_IMAGE_HEIGHT:
+            raise ValidationError(
+                f"이미지 해상도는 {GCPConstants.MAX_IMAGE_WIDTH}x"
+                f"{GCPConstants.MAX_IMAGE_HEIGHT} 이하만 허용됩니다."
+            )
+
+        has_alpha = image.mode in {"RGBA", "LA"} or (
+            image.mode == "P" and "transparency" in image.info
+        )
+        if has_alpha:
+            converted = image.convert("RGBA")
+            output_format = "PNG"
+            extension = "png"
+            content_type = "image/png"
+            save_kwargs = {"optimize": True}
+        else:
+            converted = image.convert("RGB")
+            output_format = "WEBP"
+            extension = "webp"
+            content_type = "image/webp"
+            save_kwargs = {"quality": 90, "method": 6}
+
+        normalized = BytesIO()
+        converted.save(normalized, format=output_format, **save_kwargs)
+        normalized.seek(0)
+        return NormalizedImage(
+            content=normalized,
+            extension=extension,
+            content_type=content_type,
+            width=width,
+            height=height,
+        )

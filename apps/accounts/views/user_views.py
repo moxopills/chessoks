@@ -47,6 +47,13 @@ from apps.accounts.services import (
 )
 from apps.chess.serializers import GameHistorySerializer
 from apps.chess.services import GameQueryService
+from apps.core.throttling import (
+    AuthLoginThrottle,
+    AuthPasswordResetThrottle,
+    AuthSignupThrottle,
+    AuthVerificationThrottle,
+    AvatarUploadThrottle,
+)
 
 
 class CurrentUserMixin:
@@ -60,6 +67,7 @@ class LoginView(APIView):
     """로그인 - 3번 실패 시 5분 잠금"""
 
     permission_classes = [AllowAny]
+    throttle_classes = [AuthLoginThrottle]
 
     @extend_schema(
         request=LoginRequestSerializer,
@@ -98,7 +106,7 @@ class SignUpView(APIView):
     """회원가입 - 이메일 인증 완료 후 자동 로그인"""
 
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [AuthSignupThrottle]
 
     @extend_schema(
         request=UserSignUpSerializer,
@@ -130,7 +138,7 @@ class SignupEmailRequestView(APIView):
     """회원가입 이메일 인증 요청"""
 
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [AuthVerificationThrottle]
 
     @extend_schema(
         request=SignupEmailRequestSerializer,
@@ -152,7 +160,7 @@ class SignupEmailConfirmView(APIView):
     """회원가입 이메일 인증 확인"""
 
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [AuthVerificationThrottle]
 
     @extend_schema(
         request=SignupEmailConfirmSerializer,
@@ -215,7 +223,7 @@ class PasswordResetRequestView(APIView):
     """비밀번호 재설정 요청"""
 
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [AuthPasswordResetThrottle]
 
     @extend_schema(
         request=PasswordResetRequestSerializer,
@@ -232,7 +240,7 @@ class PasswordResetConfirmView(APIView):
     """비밀번호 재설정 확인"""
 
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [AuthPasswordResetThrottle]
 
     @extend_schema(
         request=PasswordResetConfirmSerializer,
@@ -283,7 +291,7 @@ class EmailVerificationConfirmView(APIView):
     """이메일 인증 확인"""
 
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [AuthVerificationThrottle]
 
     @extend_schema(
         request=EmailVerificationSerializer,
@@ -300,7 +308,7 @@ class EmailVerificationResendView(APIView):
     """이메일 인증 재전송"""
 
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [AuthVerificationThrottle]
 
     @extend_schema(
         request=EmailVerificationResendSerializer,
@@ -317,6 +325,7 @@ class UserAvatarUpdateView(APIView):
     """유저 아바타 업데이트"""
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [AvatarUploadThrottle]
     parser_classes = [MultiPartParser]
 
     @extend_schema(
@@ -373,7 +382,7 @@ class EmailCheckView(APIView):
     """이메일 중복 체크"""
 
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [AuthVerificationThrottle]
 
     @extend_schema(
         request=EmailCheckSerializer,
@@ -398,7 +407,7 @@ class NicknameCheckView(APIView):
     """닉네임 중복 체크"""
 
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [AuthVerificationThrottle]
 
     @extend_schema(
         request=NicknameCheckSerializer,

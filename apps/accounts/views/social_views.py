@@ -12,17 +12,18 @@ from rest_framework import status
 from rest_framework.generics import ListAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
+from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts.models import SocialUser
 from apps.accounts.serializers import SocialAccountUnlinkSerializer, SocialUserSerializer
 from apps.accounts.services.social_service import SocialAuthService
+from apps.core.throttling import SocialAuthThrottle
 
 
 class SocialOAuthStartView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [SocialAuthThrottle]
 
     def get(self, request, provider: str):
         provider = provider.lower()
@@ -42,7 +43,7 @@ class SocialOAuthStartView(APIView):
 
 class SocialOAuthCallbackView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [SocialAuthThrottle]
 
     @staticmethod
     def get_redirect_uri(request, provider: str) -> str:
