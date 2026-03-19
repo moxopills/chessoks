@@ -11,6 +11,7 @@ from apps.accounts.serializers import (
     FriendSerializer,
 )
 from apps.accounts.services import FriendService
+from apps.core.throttling import FriendActionThrottle
 
 
 class FriendListView(APIView):
@@ -30,6 +31,11 @@ class FriendRequestListCreateView(APIView):
     """친구 요청 목록/생성"""
 
     permission_classes = [IsAuthenticated]
+
+    def get_throttles(self):
+        if self.request.method == "POST":
+            return [FriendActionThrottle()]
+        return super().get_throttles()
 
     @extend_schema(responses={200: FriendRequestListSerializer}, tags=["친구"])
     def get(self, request):
@@ -54,6 +60,7 @@ class FriendRequestAcceptView(APIView):
     """친구 요청 수락"""
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [FriendActionThrottle]
 
     @extend_schema(responses={200: dict}, tags=["친구"])
     def post(self, request, request_id: int):
@@ -65,6 +72,7 @@ class FriendRequestRejectView(APIView):
     """친구 요청 거절"""
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [FriendActionThrottle]
 
     @extend_schema(responses={200: dict}, tags=["친구"])
     def post(self, request, request_id: int):
@@ -76,6 +84,7 @@ class FriendRequestCancelView(APIView):
     """친구 요청 취소 (보낸 요청)"""
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [FriendActionThrottle]
 
     @extend_schema(responses={200: dict}, tags=["친구"])
     def post(self, request, request_id: int):
@@ -87,6 +96,7 @@ class FriendRemoveView(APIView):
     """친구 삭제"""
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [FriendActionThrottle]
 
     @extend_schema(responses={200: dict}, tags=["친구"])
     def post(self, request, user_id: int):

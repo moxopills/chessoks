@@ -19,6 +19,8 @@ class GCPConstants:
     MAX_FILE_SIZE_MB: ClassVar[int] = 10
     MAX_FILE_SIZE_BYTES: ClassVar[int] = MAX_FILE_SIZE_MB * 1024 * 1024
     MIN_FILE_SIZE_BYTES: ClassVar[int] = 1
+    MAX_IMAGE_WIDTH: ClassVar[int] = 4096
+    MAX_IMAGE_HEIGHT: ClassVar[int] = 4096
 
     # 허용 이미지 확장자
     ALLOWED_EXTENSIONS: ClassVar[set[str]] = {"jpg", "jpeg", "png", "gif", "webp"}

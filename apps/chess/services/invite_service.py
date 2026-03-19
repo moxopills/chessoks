@@ -11,6 +11,7 @@ from rest_framework.exceptions import ValidationError
 from apps.accounts.models import User
 from apps.chess.models import GameInvite, Room
 from apps.chess.utils import broadcast_room_state, broadcast_room_update
+from apps.core.access import AccessGuard
 from apps.notifications.services import NotificationService
 
 logger = logging.getLogger(__name__)
@@ -32,8 +33,12 @@ class InviteService:
     ) -> GameInvite:
         """게임 초대 전송"""
         with transaction.atomic():
-            if from_user.id == to_user_id:
-                raise ValidationError("자기 자신에게 초대를 보낼 수 없습니다.")
+            AccessGuard.require_other_user(
+                from_user.id,
+                to_user_id,
+                field_name="user_id",
+                message="자기 자신에게 초대를 보낼 수 없습니다.",
+            )
 
             locked_users = list(
                 User.objects.select_for_update()
@@ -50,8 +55,9 @@ class InviteService:
                 invite_room = Room.objects.select_for_update().filter(id=room_id).first()
                 if not invite_room:
                     raise ValidationError("초대할 방을 찾을 수 없습니다.")
-                if invite_room.host_id != from_user.id and invite_room.guest_id != from_user.id:
-                    raise ValidationError("해당 방의 참가자만 초대할 수 있습니다.")
+                AccessGuard.require_room_participant(
+                    from_user.id, invite_room, "해당 방의 참가자만 초대할 수 있습니다."
+                )
                 if invite_room.status not in {"waiting", "ready"}:
                     raise ValidationError("대기 중인 방에서만 초대할 수 있습니다.")
                 if invite_room.guest_id and invite_room.guest_id != to_user.id:

@@ -92,6 +92,11 @@ class SecurityHeadersMiddleware:
                 "geolocation=(), microphone=(), camera=(), payment=(), usb=()",
             ),
         )
+        if getattr(settings, "SECURE_CONTENT_SECURITY_POLICY_ENABLED", False):
+            response.setdefault(
+                "Content-Security-Policy",
+                getattr(settings, "SECURE_CONTENT_SECURITY_POLICY", ""),
+            )
 
         # 인증/계정 관련 민감 응답은 브라우저 캐시 금지
         path = request.path or ""

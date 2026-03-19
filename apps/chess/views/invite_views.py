@@ -7,7 +7,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.chess.serializers import GameInviteCreateSerializer
 from apps.chess.services.invite_service import InviteService
+from apps.core.throttling import InviteActionThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +18,14 @@ class GameInviteView(APIView):
     """게임 초대 전송"""
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [InviteActionThrottle]
 
     def post(self, request):
-        target_user_id = request.data.get("user_id")
-        time_limit = request.data.get("time_limit", 10)
-        room_id = request.data.get("room_id")
-
-        if not target_user_id:
-            return Response({"detail": "user_id는 필수입니다."}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = GameInviteCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        target_user_id = serializer.validated_data["user_id"]
+        time_limit = serializer.validated_data["time_limit"]
+        room_id = serializer.validated_data.get("room_id")
 
         try:
             invite = InviteService.send_invite(
@@ -41,13 +43,15 @@ class GameInviteView(APIView):
             )
         except Exception as e:
             logger.warning("Game invite failed: %s", e)
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            message = getattr(e, "detail", "초대 처리 중 오류가 발생했습니다.")
+            return Response({"detail": message}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class GameInviteAcceptView(APIView):
     """게임 초대 수락"""
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [InviteActionThrottle]
 
     def post(self, request, invite_id: int):
         try:
@@ -64,13 +68,15 @@ class GameInviteAcceptView(APIView):
             )
         except Exception as e:
             logger.warning("Game invite accept failed: %s", e)
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            message = getattr(e, "detail", "초대 수락 처리 중 오류가 발생했습니다.")
+            return Response({"detail": message}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class GameInviteDeclineView(APIView):
     """게임 초대 거절"""
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [InviteActionThrottle]
 
     def post(self, request, invite_id: int):
         try:
@@ -86,4 +92,5 @@ class GameInviteDeclineView(APIView):
             )
         except Exception as e:
             logger.warning("Game invite decline failed: %s", e)
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            message = getattr(e, "detail", "초대 거절 처리 중 오류가 발생했습니다.")
+            return Response({"detail": message}, status=status.HTTP_400_BAD_REQUEST)
