@@ -16,6 +16,7 @@ from rest_framework.test import APIClient, APIRequestFactory, APITestCase
 from apps.accounts.models import AuthToken, SignupEmailToken
 from apps.accounts.serializers import ProfileUpdateSerializer, UserSignUpSerializer
 from apps.accounts.services import UserProfileService
+from apps.accounts.services.session_service import AuthService
 from apps.accounts.utils import hash_signup_code_for_test
 
 User = get_user_model()
@@ -223,8 +224,7 @@ class AuthE2ETestCase(ErrorResponseMixin, LiveServerTestCase):
         self.assertEqual(response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
         # 5. 캐시 수동 삭제 (실제로는 5분 대기)
-        cache.delete("login_lock:locktest@test.com")
-        cache.delete("login_fail:locktest@test.com")
+        AuthService.clear_login_state("locktest@test.com")
 
         # 6. 잠금 해제 후 올바른 비밀번호로 로그인 성공
         response = self.client.post("/api/accounts/login/", correct_data, format="json")

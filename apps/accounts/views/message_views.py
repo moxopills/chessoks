@@ -12,10 +12,16 @@ from apps.accounts.serializers import (
 )
 from apps.accounts.services import MessageService
 from apps.chess.utils import check_profanity, get_profanity_warning, parse_int
+from apps.core.throttling import MessageActionThrottle
 
 
 class GuestbookView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get_throttles(self):
+        if self.request.method == "POST":
+            return [MessageActionThrottle()]
+        return super().get_throttles()
 
     @extend_schema(responses={200: GuestbookEntrySerializer(many=True)}, tags=["유저"])
     def get(self, request, user_id: int):
@@ -46,6 +52,11 @@ class GuestbookDeleteView(APIView):
 
 class DirectMessageView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get_throttles(self):
+        if self.request.method == "POST":
+            return [MessageActionThrottle()]
+        return super().get_throttles()
 
     @extend_schema(responses={200: DirectMessageSerializer(many=True)}, tags=["유저"])
     def get(self, request, user_id: int):

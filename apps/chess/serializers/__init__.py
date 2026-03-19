@@ -9,6 +9,7 @@ from apps.chess.serializers.game_serializers import (
 )
 from apps.chess.serializers.match_serializers import (
     CancelMatchResponseSerializer,
+    GameInviteCreateSerializer,
     QuickMatchResponseSerializer,
 )
 from apps.chess.serializers.puzzle_serializers import (
@@ -36,6 +37,7 @@ from apps.chess.serializers.spectator_serializers import SpectatorListSerializer
 __all__ = [
     "QuickMatchResponseSerializer",
     "CancelMatchResponseSerializer",
+    "GameInviteCreateSerializer",
     "BaseUserSerializer",
     "PlayerSerializer",
     "MoveSerializer",

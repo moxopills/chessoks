@@ -26,6 +26,7 @@ from apps.adminpanel.serializers import (
     SuspendSerializer,
 )
 from apps.adminpanel.services import AdminPanelService
+from apps.core.throttling import ReportActionThrottle
 from apps.notifications.services import NotificationService
 
 
@@ -265,6 +266,7 @@ class AdminNoticeCreateView(APIView):
 
 class ReportCreateView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ReportActionThrottle]
 
     def post(self, request):
         serializer = ReportCreateSerializer(data=request.data, context={"request": request})

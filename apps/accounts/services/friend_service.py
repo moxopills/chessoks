@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import Friend, FriendRequest, User
+from apps.core.access import AccessGuard
 from apps.notifications.services import NotificationService
 
 
@@ -13,9 +14,13 @@ class FriendService:
     @staticmethod
     @transaction.atomic
     def send_request(from_user, to_user_id: int) -> dict:
+        AccessGuard.require_other_user(
+            from_user.id,
+            to_user_id,
+            field_name="user_id",
+            message="자기 자신에게 친구 요청을 보낼 수 없습니다.",
+        )
         to_user = get_object_or_404(User, pk=to_user_id)
-        if to_user == from_user:
-            raise ValidationError({"user_id": ["자기 자신에게 친구 요청을 보낼 수 없습니다."]})
 
         if Friend.objects.filter(user=from_user, friend=to_user).exists():
             raise ValidationError({"user_id": ["이미 친구 상태입니다."]})
@@ -92,6 +97,12 @@ class FriendService:
     @staticmethod
     @transaction.atomic
     def remove_friend(user, friend_id: int) -> None:
+        AccessGuard.require_other_user(
+            user.id,
+            friend_id,
+            field_name="user_id",
+            message="자기 자신은 친구 목록에서 제거할 수 없습니다.",
+        )
         friend = get_object_or_404(User, pk=friend_id)
         Friend.objects.filter(user=user, friend=friend).delete()
         Friend.objects.filter(user=friend, friend=user).delete()
