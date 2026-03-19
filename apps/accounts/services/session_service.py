@@ -31,13 +31,24 @@ def _login_cache_key(prefix: str, email: str) -> str:
     return f"{prefix}:{digest}"
 
 
+def _legacy_login_cache_key(prefix: str, email: str) -> str:
+    return f"{prefix}:{email.strip().lower()}"
+
+
+def _all_login_cache_keys(prefix: str, email: str) -> tuple[str, str]:
+    return (
+        _login_cache_key(prefix, email),
+        _legacy_login_cache_key(prefix, email),
+    )
+
+
 class AuthService:
     """인증 관련 비즈니스 로직"""
 
     @staticmethod
     def check_lockout(email: str) -> bool:
         """잠금 상태 확인"""
-        return bool(cache.get(_login_cache_key("login_lock", email)))
+        return any(bool(cache.get(key)) for key in _all_login_cache_keys("login_lock", email))
 
     @staticmethod
     def try_recover_account(email: str, password: str) -> bool:
@@ -75,15 +86,18 @@ class AuthService:
         Returns:
             (남은 시도 횟수, 에러 메시지) - 잠금 시 남은 시도 = 0
         """
-        attempts_key = _login_cache_key("login_fail", email)
-        attempts = cache.get(attempts_key, 0) + 1
+        attempt_keys = _all_login_cache_keys("login_fail", email)
+        attempts = max((cache.get(key, 0) for key in attempt_keys), default=0) + 1
 
         if attempts >= MAX_LOGIN_ATTEMPTS:
-            cache.set(_login_cache_key("login_lock", email), 1, LOGIN_LOCKOUT_DURATION)
-            cache.delete(attempts_key)
+            for key in _all_login_cache_keys("login_lock", email):
+                cache.set(key, 1, LOGIN_LOCKOUT_DURATION)
+            for key in attempt_keys:
+                cache.delete(key)
             return 0, "로그인 5회 실패. 5분 후 다시 시도해주세요."
 
-        cache.set(attempts_key, attempts, LOGIN_LOCKOUT_DURATION)
+        for key in attempt_keys:
+            cache.set(key, attempts, LOGIN_LOCKOUT_DURATION)
         remaining = MAX_LOGIN_ATTEMPTS - attempts
 
         if reason == "email":
@@ -100,8 +114,9 @@ class AuthService:
             stats가 로드된 User 객체
         """
         email = user.email
-        cache.delete(_login_cache_key("login_fail", email))
-        cache.delete(_login_cache_key("login_lock", email))
+        for prefix in ("login_fail", "login_lock"):
+            for key in _all_login_cache_keys(prefix, email):
+                cache.delete(key)
         login(request, user)
         if remember_me:
             request.session.set_expiry(settings.REMEMBER_ME_SESSION_AGE)
