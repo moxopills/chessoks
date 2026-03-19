@@ -46,6 +46,12 @@ class AuthService:
     """인증 관련 비즈니스 로직"""
 
     @staticmethod
+    def clear_login_state(email: str) -> None:
+        for prefix in ("login_fail", "login_lock"):
+            for key in _all_login_cache_keys(prefix, email):
+                cache.delete(key)
+
+    @staticmethod
     def check_lockout(email: str) -> bool:
         """잠금 상태 확인"""
         return any(bool(cache.get(key)) for key in _all_login_cache_keys("login_lock", email))
@@ -114,9 +120,7 @@ class AuthService:
             stats가 로드된 User 객체
         """
         email = user.email
-        for prefix in ("login_fail", "login_lock"):
-            for key in _all_login_cache_keys(prefix, email):
-                cache.delete(key)
+        AuthService.clear_login_state(email)
         login(request, user)
         if remember_me:
             request.session.set_expiry(settings.REMEMBER_ME_SESSION_AGE)
