@@ -49,6 +49,15 @@ class RequestTimingMiddleware:
                 request.path,
                 duration_ms,
                 request_id,
+                extra={
+                    "event": "slow_request",
+                    "duration_ms": round(duration_ms, 2),
+                    "request_id": request_id,
+                    "request_method": request.method,
+                    "request_path": request.path,
+                    "status_code": getattr(response, "status_code", None),
+                    "user_id": getattr(getattr(request, "user", None), "id", None),
+                },
             )
 
         return response
