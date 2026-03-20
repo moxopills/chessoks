@@ -70,4 +70,9 @@ app.conf.beat_schedule = {
         "task": "apps.chess.tasks.monitor_puzzle_inventory",
         "schedule": 3600.0,  # 1시간마다 재고 점검
     },
+    # === 운영 모니터링 ===
+    "emit-runtime-health-snapshot": {
+        "task": "apps.core.tasks.emit_runtime_health_snapshot",
+        "schedule": 300.0,  # 5분마다 상태 스냅샷 기록
+    },
 }

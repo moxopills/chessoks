@@ -2,10 +2,10 @@
 
 import logging
 
-from django.core.cache import cache
-from django.db import connection
 from django.http import JsonResponse
 from django.views import View
+
+from apps.core.ops import collect_health_snapshot, collect_runtime_metrics, summarize_health
 
 logger = logging.getLogger(__name__)
 
@@ -18,37 +18,46 @@ class HealthCheckView(View):
 
 
 class ReadinessCheckView(View):
-    """Readiness 체크 - 서비스 준비 상태 확인 (DB, Redis)"""
+    """Readiness 체크 - 서비스 준비 상태 확인."""
 
     def get(self, request):
-        checks = {}
-        is_ready = True
-
-        # Database 체크
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT 1")
-            checks["database"] = "ok"
-        except Exception as e:
-            logger.error("Database health check failed: %s", e)
-            checks["database"] = "error"
-            is_ready = False
-
-        # Redis/Cache 체크
-        try:
-            cache.set("health_check", "ok", 10)
-            if cache.get("health_check") == "ok":
-                checks["cache"] = "ok"
-            else:
-                checks["cache"] = "error"
-                is_ready = False
-        except Exception as e:
-            logger.error("Cache health check failed: %s", e)
-            checks["cache"] = "error"
-            is_ready = False
+        snapshot = collect_health_snapshot()
+        is_ready, checks = summarize_health(snapshot)
 
         status_code = 200 if is_ready else 503
         return JsonResponse(
-            {"status": "ready" if is_ready else "not_ready", "checks": checks},
+            {
+                "status": "ready" if is_ready else "not_ready",
+                "checks": checks,
+                "details": snapshot,
+            },
             status=status_code,
+        )
+
+
+class DetailedHealthCheckView(View):
+    """세부 컴포넌트 상태 확인."""
+
+    def get(self, request):
+        snapshot = collect_health_snapshot()
+        is_ready, checks = summarize_health(snapshot)
+        return JsonResponse(
+            {
+                "status": "ok" if is_ready else "degraded",
+                "checks": checks,
+                "components": snapshot,
+            },
+            status=200 if is_ready else 503,
+        )
+
+
+class RuntimeMetricsView(View):
+    """운영용 런타임 메트릭 스냅샷."""
+
+    def get(self, request):
+        return JsonResponse(
+            {
+                "status": "ok",
+                "metrics": collect_runtime_metrics(),
+            }
         )
