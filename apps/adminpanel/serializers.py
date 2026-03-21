@@ -115,3 +115,11 @@ class AiDifficultySettingSerializer(serializers.ModelSerializer):
     class Meta:
         model = AiDifficultySetting
         fields = ("level", "depth", "randomness", "delay_ms")
+
+
+class AdminOpsReportSerializer(serializers.Serializer):
+    status = serializers.CharField(read_only=True)
+    generated_at = serializers.DateTimeField(read_only=True)
+    checks = serializers.JSONField(read_only=True)
+    components = serializers.JSONField(read_only=True)
+    metrics = serializers.JSONField(read_only=True)

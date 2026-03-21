@@ -4,6 +4,7 @@ from apps.adminpanel.views import (
     AdminAiSettingsView,
     AdminDashboardView,
     AdminNoticeCreateView,
+    AdminOpsReportView,
     AdminReportListView,
     AdminReportResolveView,
     AdminStatsView,
@@ -21,6 +22,7 @@ app_name = "adminpanel"
 urlpatterns = [
     path("panel/", AdminDashboardView.as_view(), name="dashboard"),
     path("stats/", AdminStatsView.as_view(), name="stats"),
+    path("ops/", AdminOpsReportView.as_view(), name="ops-report"),
     path("ai-settings/", AdminAiSettingsView.as_view(), name="ai-settings"),
     path("users/", AdminUserListView.as_view(), name="users"),
     path("users/<int:user_id>/promote/", AdminUserPromoteView.as_view(), name="promote"),
