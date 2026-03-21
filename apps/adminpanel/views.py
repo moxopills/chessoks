@@ -14,6 +14,7 @@ from apps.accounts.models import User
 from apps.adminpanel.models import Report
 from apps.adminpanel.permissions import IsStaff, IsSuperuser
 from apps.adminpanel.serializers import (
+    AdminOpsReportSerializer,
     AdminStatsSerializer,
     AdminUserSerializer,
     AiDifficultySettingSerializer,
@@ -26,6 +27,7 @@ from apps.adminpanel.serializers import (
     SuspendSerializer,
 )
 from apps.adminpanel.services import AdminPanelService
+from apps.core.ops import collect_health_snapshot, collect_runtime_metrics, summarize_health
 from apps.core.throttling import ReportActionThrottle
 from apps.notifications.services import NotificationService
 
@@ -70,6 +72,22 @@ class AdminStatsView(APIView):
     def get(self, request):
         data = AdminPanelService.stats()
         return Response(AdminStatsSerializer(data).data)
+
+
+class AdminOpsReportView(APIView):
+    permission_classes = [IsAuthenticated, IsStaff]
+
+    def get(self, request):
+        snapshot = collect_health_snapshot()
+        is_ready, checks = summarize_health(snapshot)
+        payload = {
+            "status": "ok" if is_ready else "degraded",
+            "generated_at": timezone.now(),
+            "checks": checks,
+            "components": snapshot,
+            "metrics": collect_runtime_metrics(),
+        }
+        return Response(AdminOpsReportSerializer(payload).data)
 
 
 class AdminUserListView(APIView):

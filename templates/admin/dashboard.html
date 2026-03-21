@@ -21,6 +21,20 @@
         </div>
     </div>
 
+    <div class="admin-panel admin-ops-summary" data-admin-group="ops">
+        <div class="admin-ops-summary-head">
+            <div>
+                <h2>🛰️ 운영 리포트</h2>
+                <div class="admin-section-note">DB/캐시/웹소켓/푸시/스토리지/Celery 상태 요약</div>
+            </div>
+            <div class="admin-ops-actions">
+                <span class="ops-status-badge is-loading" id="ops-overall-status">로딩 중</span>
+                <button class="btn btn-secondary btn-sm" id="ops-refresh-btn">새로고침</button>
+            </div>
+        </div>
+        <div class="admin-section-note" id="ops-generated-at">최근 갱신: -</div>
+    </div>
+
     <div class="admin-grid">
         <section class="admin-panel" data-admin-group="users">
             <h2>👥 유저 목록</h2>
@@ -252,12 +266,27 @@
                 </table>
             </div>
         </section>
+
+        <section class="admin-panel" data-admin-group="ops" style="grid-column: span 2;">
+            <h2>🛰️ 컴포넌트 상태</h2>
+            <div class="ops-component-grid" id="ops-component-grid">
+                <div class="admin-section-note">운영 상태를 불러오는 중입니다.</div>
+            </div>
+        </section>
+
+        <section class="admin-panel" data-admin-group="ops" style="grid-column: span 2;">
+            <h2>📊 런타임 메트릭</h2>
+            <div class="ops-metric-grid" id="ops-metric-grid">
+                <div class="admin-section-note">운영 메트릭을 불러오는 중입니다.</div>
+            </div>
+        </section>
     </div>
 </div>
 
 <div class="mobile-tabbar admin-tabbar" id="admin-tabbar">
     <button class="mobile-tab active" data-admin-tab="users">유저 관리</button>
     <button class="mobile-tab" data-admin-tab="reports">설정</button>
+    <button class="mobile-tab" data-admin-tab="ops">운영</button>
 </div>
 
 <div class="admin-modal-overlay hidden" id="admin-notice-modal">
