@@ -45,6 +45,116 @@
     gap: var(--space-md);
 }
 
+.admin-ops-summary {
+    margin-bottom: var(--space-lg);
+}
+
+.admin-ops-summary-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-md);
+}
+
+.admin-ops-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.ops-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 72px;
+    padding: 0.38rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+}
+
+.ops-status-badge.is-ok {
+    border-color: rgba(53, 204, 142, 0.35);
+    background: rgba(53, 204, 142, 0.14);
+    color: #22a96f;
+}
+
+.ops-status-badge.is-error {
+    border-color: rgba(231, 76, 60, 0.35);
+    background: rgba(231, 76, 60, 0.14);
+    color: #cc4b37;
+}
+
+.ops-status-badge.is-loading,
+.ops-status-badge.is-muted {
+    color: var(--color-text-secondary);
+}
+
+.ops-component-grid,
+.ops-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-md);
+}
+
+.ops-card {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+}
+
+.ops-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.ops-card h3 {
+    margin: 0;
+    font-size: 0.82rem;
+    font-family: var(--font-display);
+}
+
+.ops-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.ops-kv {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    font-size: 0.78rem;
+}
+
+.ops-kv span {
+    color: var(--color-text-secondary);
+}
+
+.ops-kv strong {
+    text-align: right;
+    color: var(--color-text-primary);
+}
+
+.ops-subgroup {
+    padding-top: 0.35rem;
+    border-top: 1px dashed var(--color-border);
+}
+
+.ops-subgroup-title {
+    font-size: 0.72rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 0.35rem;
+}
+
 .stat-card {
     background-color: var(--color-bg-secondary);
     border: 1px solid var(--color-border);
@@ -229,7 +339,11 @@
     }
 
     body.admin-tab-users .admin-panel[data-admin-group="reports"],
-    body.admin-tab-reports .admin-panel[data-admin-group="users"] {
+    body.admin-tab-users .admin-panel[data-admin-group="ops"],
+    body.admin-tab-reports .admin-panel[data-admin-group="users"],
+    body.admin-tab-reports .admin-panel[data-admin-group="ops"],
+    body.admin-tab-ops .admin-panel[data-admin-group="users"],
+    body.admin-tab-ops .admin-panel[data-admin-group="reports"] {
         display: none;
     }
 
@@ -254,6 +368,14 @@
         width: 100%;
         min-width: 0;
         flex: 1 1 100%;
+    }
+
+    .admin-ops-summary-head,
+    .admin-ops-actions,
+    .ops-card-head,
+    .ops-kv {
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .admin-table {

@@ -36,6 +36,11 @@
     const aiHardRandom = document.getElementById('ai-hard-random');
     const aiHardDelay = document.getElementById('ai-hard-delay');
     const aiSettingsSave = document.getElementById('ai-settings-save');
+    const opsOverallStatus = document.getElementById('ops-overall-status');
+    const opsGeneratedAt = document.getElementById('ops-generated-at');
+    const opsComponentGrid = document.getElementById('ops-component-grid');
+    const opsMetricGrid = document.getElementById('ops-metric-grid');
+    const opsRefreshBtn = document.getElementById('ops-refresh-btn');
 
     const suspendBtn = document.getElementById('suspend-btn');
     const unsuspendBtn = document.getElementById('unsuspend-btn');
@@ -53,8 +58,10 @@
         await loadUsers();
         await loadReports();
         await loadAiSettings();
+        await loadOpsReport();
         setupActions();
         setupMobileTabs();
+        window.setInterval(loadOpsReport, 30000);
     }
 
     async function loadStats() {
@@ -347,6 +354,11 @@
         noticeModal?.addEventListener('click', (event) => {
             if (event.target === noticeModal) hideNoticeModal();
         });
+
+        opsRefreshBtn?.addEventListener('click', async () => {
+            await loadOpsReport();
+            Toast.success('운영 리포트를 새로고침했습니다.');
+        });
     }
 
     async function loadAiSettings() {
@@ -412,13 +424,138 @@
                 const target = tab.dataset.adminTab;
                 adminTabs.forEach((btn) => btn.classList.remove('active'));
                 tab.classList.add('active');
-                document.body.classList.remove('admin-tab-users', 'admin-tab-reports');
-                if (target === 'reports') {
-                    document.body.classList.add('admin-tab-reports');
-                } else {
-                    document.body.classList.add('admin-tab-users');
-                }
+                document.body.classList.remove('admin-tab-users', 'admin-tab-reports', 'admin-tab-ops');
+                document.body.classList.add(`admin-tab-${target || 'users'}`);
             });
         });
+    }
+
+    async function loadOpsReport() {
+        if (!opsOverallStatus || !opsComponentGrid || !opsMetricGrid) return;
+
+        opsOverallStatus.textContent = '로딩 중';
+        opsOverallStatus.className = 'ops-status-badge is-loading';
+
+        try {
+            const data = await API.get('/admin/ops/');
+            renderOpsSummary(data);
+            renderOpsComponents(data.components || {});
+            renderOpsMetrics(data.metrics || {});
+        } catch (error) {
+            opsOverallStatus.textContent = '오류';
+            opsOverallStatus.className = 'ops-status-badge is-error';
+            if (opsGeneratedAt) opsGeneratedAt.textContent = '최근 갱신: 불러오기 실패';
+            opsComponentGrid.innerHTML = '<div class="admin-section-note">운영 상태를 불러오지 못했습니다.</div>';
+            opsMetricGrid.innerHTML = '<div class="admin-section-note">운영 메트릭을 불러오지 못했습니다.</div>';
+        }
+    }
+
+    function renderOpsSummary(data) {
+        const degraded = data.status !== 'ok';
+        opsOverallStatus.textContent = degraded ? '주의' : '정상';
+        opsOverallStatus.className = `ops-status-badge ${degraded ? 'is-error' : 'is-ok'}`;
+        if (opsGeneratedAt) {
+            opsGeneratedAt.textContent = `최근 갱신: ${formatDateTime(data.generated_at)}`;
+        }
+    }
+
+    function renderOpsComponents(components) {
+        const entries = Object.entries(components);
+        if (!entries.length) {
+            opsComponentGrid.innerHTML = '<div class="admin-section-note">표시할 컴포넌트 상태가 없습니다.</div>';
+            return;
+        }
+
+        opsComponentGrid.innerHTML = entries.map(([name, detail]) => {
+            const status = detail.status || 'unknown';
+            const badgeClass = status === 'ok' ? 'is-ok' : status === 'disabled' ? 'is-muted' : 'is-error';
+            const rows = Object.entries(detail)
+                .filter(([key]) => !['status', 'required'].includes(key))
+                .map(([key, value]) => `<div class="ops-kv"><span>${labelize(key)}</span><strong>${formatMetricValue(value)}</strong></div>`)
+                .join('');
+            return `
+                <article class="ops-card">
+                    <div class="ops-card-head">
+                        <h3>${labelize(name)}</h3>
+                        <span class="ops-status-badge ${badgeClass}">${status}</span>
+                    </div>
+                    <div class="ops-card-body">
+                        ${rows || '<div class="admin-section-note">추가 정보 없음</div>'}
+                    </div>
+                </article>
+            `;
+        }).join('');
+    }
+
+    function renderOpsMetrics(metrics) {
+        const groups = Object.entries(metrics);
+        if (!groups.length) {
+            opsMetricGrid.innerHTML = '<div class="admin-section-note">표시할 메트릭이 없습니다.</div>';
+            return;
+        }
+
+        opsMetricGrid.innerHTML = groups.map(([name, values]) => `
+            <article class="ops-card">
+                <div class="ops-card-head">
+                    <h3>${labelize(name)}</h3>
+                </div>
+                <div class="ops-card-body">
+                    ${renderMetricRows(values)}
+                </div>
+            </article>
+        `).join('');
+    }
+
+    function renderMetricRows(values) {
+        if (!values || typeof values !== 'object') {
+            return `<div class="ops-kv"><span>값</span><strong>${formatMetricValue(values)}</strong></div>`;
+        }
+        return Object.entries(values).map(([key, value]) => {
+            if (value && typeof value === 'object' && !Array.isArray(value)) {
+                return `
+                    <div class="ops-subgroup">
+                        <div class="ops-subgroup-title">${labelize(key)}</div>
+                        ${renderMetricRows(value)}
+                    </div>
+                `;
+            }
+            return `<div class="ops-kv"><span>${labelize(key)}</span><strong>${formatMetricValue(value)}</strong></div>`;
+        }).join('');
+    }
+
+    function formatMetricValue(value) {
+        if (value === null || value === undefined || value === '') return '-';
+        if (typeof value === 'boolean') return value ? '예' : '아니오';
+        return Utils.escapeHtml(String(value));
+    }
+
+    function labelize(value) {
+        const labels = {
+            database: '데이터베이스',
+            cache: '캐시',
+            channels: '웹소켓',
+            web_push: '푸시',
+            gcs: '스토리지',
+            celery: 'Celery',
+            games: '게임',
+            rooms: '방',
+            notifications: '알림',
+            queues: '큐',
+            queue_depth: '큐 깊이',
+            queue_name: '큐 이름',
+            active_subscriptions: '활성 구독',
+            push_subscriptions_active: '활성 푸시 구독',
+            unread: '미읽음',
+            waiting: '대기 중',
+            playing: '진행 중',
+            finished_today: '오늘 종료',
+            duration_ms: '응답 시간(ms)',
+            bucket_name: '버킷',
+            client: '클라이언트',
+            reason: '사유',
+            broker_scheme: '브로커',
+            status: '상태',
+        };
+        return labels[value] || value.replace(/_/g, ' ');
     }
 })();
