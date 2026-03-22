@@ -116,7 +116,7 @@ class MatchmakingService:
         MatchmakingService._ensure_available(user)
         playing = MatchmakingService._find_playing_room(user, room_type)
         if playing is not None:
-            return MatchmakingService._ensure_game(playing), None, "matched"
+            return playing, MatchmakingService._ensure_game(playing), "matched"
 
         existing = MatchmakingService._find_existing_waiting_room(user, room_type)
 
@@ -182,12 +182,14 @@ class MatchmakingService:
         return room
 
     @staticmethod
-    def _ensure_game(room: Room) -> Room:
+    def _ensure_game(room: Room) -> Game | None:
         game = room.games.filter(result="playing").only("id").first()
-        if game is None and room.host_id and room.guest_id:
-            white_player, black_player = assign_colors(room.host, room.guest)
-            Game.objects.create(room=room, white_player=white_player, black_player=black_player)
-        return room
+        if game is not None:
+            return game
+        if not (room.host_id and room.guest_id):
+            return None
+        white_player, black_player = assign_colors(room.host, room.guest)
+        return Game.objects.create(room=room, white_player=white_player, black_player=black_player)
 
     @staticmethod
     def _start_match(room: Room, user, existing: Room | None) -> tuple[Room, Game]:

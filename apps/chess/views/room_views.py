@@ -15,7 +15,7 @@ from apps.chess.serializers import (
     RoomStartConfirmResponseSerializer,
 )
 from apps.chess.services import RoomFlowService, RoomQueryService
-from apps.chess.utils import parse_int
+from apps.core.request import parse_pagination_query
 
 
 class RoomListView(APIView):
@@ -25,13 +25,13 @@ class RoomListView(APIView):
 
     @extend_schema(responses={200: PagedRoomSerializer}, tags=["방"])
     def get(self, request):
-        limit = parse_int(request.query_params.get("limit"), default=20, min_value=1, max_value=100)
-        offset = parse_int(
-            request.query_params.get("offset"), default=0, min_value=0, max_value=10_000
+        limit, offset, no_count = parse_pagination_query(
+            request.query_params,
+            default_limit=20,
+            max_limit=100,
         )
         room_type = request.query_params.get("room_type")
         status = request.query_params.get("status")
-        no_count = request.query_params.get("no_count") in ("1", "true", "True")
 
         total, rooms = RoomQueryService.list_rooms(
             user=request.user,

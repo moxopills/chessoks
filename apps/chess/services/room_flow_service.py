@@ -27,14 +27,35 @@ class RoomFlowService:
         transaction.on_commit(lambda: broadcast_room_removed(room_id))
 
     @staticmethod
-    @transaction.atomic
-    def set_ready(room_id: int, user, ready: bool) -> Room:
+    def _ensure_available(user) -> None:
         if user.is_suspended:
             raise ValidationError("정지된 계정입니다.")
+
+    @staticmethod
+    def _get_room_for_update(room_id: int) -> Room:
         try:
-            room = Room.objects.select_for_update().get(pk=room_id)
+            return Room.objects.select_for_update().get(pk=room_id)
         except Room.DoesNotExist:
             raise NotFound("방을 찾을 수 없습니다.") from None
+
+    @staticmethod
+    def _clear_start_confirmations(room: Room) -> None:
+        room.host_start_confirmed = False
+        room.guest_start_confirmed = False
+
+    @staticmethod
+    def _create_game_if_missing(room: Room) -> Game:
+        game = room.games.filter(result="playing").first()
+        if game is not None:
+            return game
+        white_player, black_player = assign_colors(room.host, room.guest)
+        return Game.objects.create(room=room, white_player=white_player, black_player=black_player)
+
+    @staticmethod
+    @transaction.atomic
+    def set_ready(room_id: int, user, ready: bool) -> Room:
+        RoomFlowService._ensure_available(user)
+        room = RoomFlowService._get_room_for_update(room_id)
         RoomFlowService._ensure_player(room, user)
 
         if room.status == "playing":
@@ -46,8 +67,7 @@ class RoomFlowService:
             room.guest_ready = ready
 
         if not ready:
-            room.host_start_confirmed = False
-            room.guest_start_confirmed = False
+            RoomFlowService._clear_start_confirmations(room)
 
         room.status = RoomFlowService._compute_status(room)
         room.save(
@@ -65,12 +85,8 @@ class RoomFlowService:
     @staticmethod
     @transaction.atomic
     def confirm_start(room_id: int, user) -> tuple[Room, Game]:
-        if user.is_suspended:
-            raise ValidationError("정지된 계정입니다.")
-        try:
-            room = Room.objects.select_for_update().get(pk=room_id)
-        except Room.DoesNotExist:
-            raise NotFound("방을 찾을 수 없습니다.") from None
+        RoomFlowService._ensure_available(user)
+        room = RoomFlowService._get_room_for_update(room_id)
         RoomFlowService._ensure_player(room, user)
 
         if room.status == "playing":
@@ -90,12 +106,7 @@ class RoomFlowService:
         if room.host_start_confirmed and room.guest_start_confirmed:
             room.status = "playing"
             room.started_at = timezone.now()
-            game = room.games.filter(result="playing").first()
-            if game is None:
-                white_player, black_player = assign_colors(room.host, room.guest)
-                game = Game.objects.create(
-                    room=room, white_player=white_player, black_player=black_player
-                )
+            game = RoomFlowService._create_game_if_missing(room)
 
         room.save(
             update_fields=["host_start_confirmed", "guest_start_confirmed", "status", "started_at"]
@@ -106,12 +117,8 @@ class RoomFlowService:
     @staticmethod
     @transaction.atomic
     def join_room(room_id: int, user, password: str | None = None) -> Room:
-        if user.is_suspended:
-            raise ValidationError("정지된 계정입니다.")
-        try:
-            room = Room.objects.select_for_update().get(pk=room_id)
-        except Room.DoesNotExist:
-            raise NotFound("방을 찾을 수 없습니다.") from None
+        RoomFlowService._ensure_available(user)
+        room = RoomFlowService._get_room_for_update(room_id)
 
         if room.status in {"playing", "finished"}:
             raise ValidationError("입장할 수 없는 방입니다.")
@@ -127,14 +134,11 @@ class RoomFlowService:
                 raise ValidationError({"password": ["비밀번호가 올바르지 않습니다."]})
 
         room.guest = user
-        room.host_start_confirmed = False
-        room.guest_start_confirmed = False
+        RoomFlowService._clear_start_confirmations(room)
         if room.room_type in RoomFlowService.AUTO_START_ROOM_TYPES:
             room.status = "playing"
             room.started_at = timezone.now()
-            if not room.games.filter(result="playing").exists():
-                white_player, black_player = assign_colors(room.host, room.guest)
-                Game.objects.create(room=room, white_player=white_player, black_player=black_player)
+            RoomFlowService._create_game_if_missing(room)
         else:
             room.status = RoomFlowService._compute_status(room)
         room.save(
@@ -164,10 +168,7 @@ class RoomFlowService:
     @staticmethod
     @transaction.atomic
     def leave_room(room_id: int, user) -> tuple[bool, Room | None]:
-        try:
-            room = Room.objects.select_for_update().get(pk=room_id)
-        except Room.DoesNotExist:
-            raise NotFound("방을 찾을 수 없습니다.") from None
+        room = RoomFlowService._get_room_for_update(room_id)
         RoomFlowService._ensure_player(room, user)
 
         if room.status == "playing":
@@ -182,8 +183,7 @@ class RoomFlowService:
         room.guest = None
         room.host_ready = False
         room.guest_ready = False
-        room.host_start_confirmed = False
-        room.guest_start_confirmed = False
+        RoomFlowService._clear_start_confirmations(room)
         room.started_at = None
         room.status = "waiting"
         room.save(
