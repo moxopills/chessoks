@@ -212,7 +212,7 @@ class GameService:
             else Game.Status.RESIGNATION_BLACK
         )
         game.finished_at = timezone.now()
-        rating_info = GameService._apply_post_game_updates(game)
+        rating_info = GameResultService.apply_post_game_updates(game)
         game.save(update_fields=["result", "finished_at"])
         transaction.on_commit(lambda: GameResultService.notify_game_end(game, rating_info))
         GameService._clear_cache("draw_offer", game.id)
