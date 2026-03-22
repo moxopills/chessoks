@@ -6,10 +6,18 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import IsAuthenticatedOrGuest
-from apps.chess.models import Game
 from apps.chess.serializers import CancelMatchResponseSerializer, QuickMatchResponseSerializer
 from apps.chess.services import AiMatchService, MatchmakingService
-from apps.chess.utils import assign_colors
+
+
+def _match_response(room, game, status: str) -> Response:
+    return Response(
+        {
+            "status": status,
+            "room_id": room.id,
+            "game_id": game.id if game else None,
+        }
+    )
 
 
 class QuickMatchView(APIView):
@@ -24,19 +32,7 @@ class QuickMatchView(APIView):
     )
     def post(self, request):
         room, game, status = MatchmakingService.quick_match(request.user)
-        if status == "matched" and game is None:
-            game = room.games.filter(result="playing").first()
-            if game is None:
-                white_player, black_player = assign_colors(room.host, room.guest)
-                game = Game.objects.create(
-                    room=room, white_player=white_player, black_player=black_player
-                )
-        data = {
-            "status": status,
-            "room_id": room.id,
-            "game_id": game.id if game else None,
-        }
-        return Response(data)
+        return _match_response(room, game, status)
 
 
 class CancelMatchView(APIView):
@@ -66,19 +62,7 @@ class RandomMatchView(APIView):
     )
     def post(self, request):
         room, game, status = MatchmakingService.random_match(request.user)
-        if status == "matched" and game is None:
-            game = room.games.filter(result="playing").first()
-            if game is None:
-                white_player, black_player = assign_colors(room.host, room.guest)
-                game = Game.objects.create(
-                    room=room, white_player=white_player, black_player=black_player
-                )
-        data = {
-            "status": status,
-            "room_id": room.id,
-            "game_id": game.id if game else None,
-        }
-        return Response(data)
+        return _match_response(room, game, status)
 
 
 class CancelRandomMatchView(APIView):
@@ -112,9 +96,4 @@ class AiMatchView(APIView):
             room, game = AiMatchService.create_ai_match(request.user, level)
         except ValueError:
             return Response({"detail": "유효하지 않은 난이도입니다."}, status=400)
-        data = {
-            "status": "created",
-            "room_id": room.id,
-            "game_id": game.id,
-        }
-        return Response(data)
+        return _match_response(room, game, "created")

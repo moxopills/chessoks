@@ -11,7 +11,8 @@ from apps.accounts.serializers import (
     GuestbookEntrySerializer,
 )
 from apps.accounts.services import MessageService
-from apps.chess.utils import check_profanity, get_profanity_warning, parse_int
+from apps.chess.utils import check_profanity, get_profanity_warning
+from apps.core.request import parse_pagination_query
 from apps.core.throttling import MessageActionThrottle
 
 
@@ -60,11 +61,11 @@ class DirectMessageView(APIView):
 
     @extend_schema(responses={200: DirectMessageSerializer(many=True)}, tags=["유저"])
     def get(self, request, user_id: int):
-        limit = parse_int(request.query_params.get("limit"), default=50, min_value=1, max_value=200)
-        offset = parse_int(
-            request.query_params.get("offset"), default=0, min_value=0, max_value=10_000
+        limit, offset, no_count = parse_pagination_query(
+            request.query_params,
+            default_limit=50,
+            max_limit=200,
         )
-        no_count = request.query_params.get("no_count") in ("1", "true", "True")
         total, messages = MessageService.list_messages(
             request.user, user_id, limit, offset, no_count=no_count
         )
@@ -92,11 +93,11 @@ class DirectMessageThreadView(APIView):
 
     @extend_schema(responses={200: DirectMessageThreadSerializer(many=True)}, tags=["유저"])
     def get(self, request):
-        limit = parse_int(request.query_params.get("limit"), default=50, min_value=1, max_value=200)
-        offset = parse_int(
-            request.query_params.get("offset"), default=0, min_value=0, max_value=10_000
+        limit, offset, no_count = parse_pagination_query(
+            request.query_params,
+            default_limit=50,
+            max_limit=200,
         )
-        no_count = request.query_params.get("no_count") in ("1", "true", "True")
         total, threads = MessageService.list_threads(request.user, limit, offset, no_count=no_count)
         results = []
         for thread in threads:
