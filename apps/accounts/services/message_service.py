@@ -8,6 +8,32 @@ from apps.notifications.services import NotificationService
 
 
 class MessageService:
+    USER_PROFILE_ONLY_SUFFIXES = (
+        "id",
+        "nickname",
+        "avatar_url",
+        "bio",
+        "created_at",
+        "updated_at",
+        "stats__rating",
+        "stats__games_played",
+        "stats__games_won",
+        "stats__games_lost",
+        "stats__games_draw",
+        "stats__competitive_games_played",
+        "stats__style_points",
+        "stats__nickname_color",
+        "stats__profile_border",
+        "stats__season_title",
+        "stats__profile_card_frame",
+        "stats__owned_season_titles",
+        "stats__owned_profile_card_frames",
+        "stats__owned_nickname_colors",
+        "stats__owned_profile_borders",
+        "stats__selected_board_skin__css_class",
+        "stats__selected_piece_skin__css_class",
+    )
+
     THREAD_USER_SELECT_RELATED = (
         "user1",
         "user1__stats",
@@ -27,6 +53,10 @@ class MessageService:
     )
 
     @staticmethod
+    def _user_profile_only_fields(prefix: str) -> tuple[str, ...]:
+        return tuple(f"{prefix}{suffix}" for suffix in MessageService.USER_PROFILE_ONLY_SUFFIXES)
+
+    @staticmethod
     def list_guestbook(profile_user_id: int) -> list[GuestbookEntry]:
         return list(
             GuestbookEntry.objects.select_related(
@@ -41,29 +71,7 @@ class MessageService:
                 "id",
                 "message",
                 "created_at",
-                "author__id",
-                "author__nickname",
-                "author__avatar_url",
-                "author__bio",
-                "author__created_at",
-                "author__updated_at",
-                "author__stats__rating",
-                "author__stats__games_played",
-                "author__stats__games_won",
-                "author__stats__games_lost",
-                "author__stats__games_draw",
-                "author__stats__competitive_games_played",
-                "author__stats__style_points",
-                "author__stats__nickname_color",
-                "author__stats__profile_border",
-                "author__stats__season_title",
-                "author__stats__profile_card_frame",
-                "author__stats__owned_season_titles",
-                "author__stats__owned_profile_card_frames",
-                "author__stats__owned_nickname_colors",
-                "author__stats__owned_profile_borders",
-                "author__stats__selected_board_skin__css_class",
-                "author__stats__selected_piece_skin__css_class",
+                *MessageService._user_profile_only_fields("author__"),
             )
         )
 
@@ -121,29 +129,7 @@ class MessageService:
             "id",
             "message",
             "created_at",
-            "sender__id",
-            "sender__nickname",
-            "sender__avatar_url",
-            "sender__bio",
-            "sender__created_at",
-            "sender__updated_at",
-            "sender__stats__rating",
-            "sender__stats__games_played",
-            "sender__stats__games_won",
-            "sender__stats__games_lost",
-            "sender__stats__games_draw",
-            "sender__stats__competitive_games_played",
-            "sender__stats__style_points",
-            "sender__stats__nickname_color",
-            "sender__stats__profile_border",
-            "sender__stats__season_title",
-            "sender__stats__profile_card_frame",
-            "sender__stats__owned_season_titles",
-            "sender__stats__owned_profile_card_frames",
-            "sender__stats__owned_nickname_colors",
-            "sender__stats__owned_profile_borders",
-            "sender__stats__selected_board_skin__css_class",
-            "sender__stats__selected_piece_skin__css_class",
+            *MessageService._user_profile_only_fields("sender__"),
         )
         messages = list(queryset.order_by("-created_at")[offset : offset + limit])
         if no_count:
@@ -171,52 +157,8 @@ class MessageService:
         queryset = queryset.only(
             "id",
             "updated_at",
-            "user1__id",
-            "user1__nickname",
-            "user1__avatar_url",
-            "user1__bio",
-            "user1__created_at",
-            "user1__updated_at",
-            "user1__stats__rating",
-            "user1__stats__games_played",
-            "user1__stats__games_won",
-            "user1__stats__games_lost",
-            "user1__stats__games_draw",
-            "user1__stats__competitive_games_played",
-            "user1__stats__style_points",
-            "user1__stats__nickname_color",
-            "user1__stats__profile_border",
-            "user1__stats__season_title",
-            "user1__stats__profile_card_frame",
-            "user1__stats__owned_season_titles",
-            "user1__stats__owned_profile_card_frames",
-            "user1__stats__owned_nickname_colors",
-            "user1__stats__owned_profile_borders",
-            "user1__stats__selected_board_skin__css_class",
-            "user1__stats__selected_piece_skin__css_class",
-            "user2__id",
-            "user2__nickname",
-            "user2__avatar_url",
-            "user2__bio",
-            "user2__created_at",
-            "user2__updated_at",
-            "user2__stats__rating",
-            "user2__stats__games_played",
-            "user2__stats__games_won",
-            "user2__stats__games_lost",
-            "user2__stats__games_draw",
-            "user2__stats__competitive_games_played",
-            "user2__stats__style_points",
-            "user2__stats__nickname_color",
-            "user2__stats__profile_border",
-            "user2__stats__season_title",
-            "user2__stats__profile_card_frame",
-            "user2__stats__owned_season_titles",
-            "user2__stats__owned_profile_card_frames",
-            "user2__stats__owned_nickname_colors",
-            "user2__stats__owned_profile_borders",
-            "user2__stats__selected_board_skin__css_class",
-            "user2__stats__selected_piece_skin__css_class",
+            *MessageService._user_profile_only_fields("user1__"),
+            *MessageService._user_profile_only_fields("user2__"),
         )
         threads = list(queryset[offset : offset + limit])
         if no_count:

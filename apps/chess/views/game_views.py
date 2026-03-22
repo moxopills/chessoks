@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from apps.accounts.permissions import IsAuthenticatedOrGuest
 from apps.chess.serializers import GameDetailSerializer, MoveSerializer, PagedMoveSerializer
 from apps.chess.services import GameQueryService, GameService
-from apps.chess.utils import parse_int
+from apps.core.request import parse_pagination_query
 
 
 class GameDetailView(APIView):
@@ -30,9 +30,10 @@ class GameMoveListView(APIView):
 
     @extend_schema(responses={200: PagedMoveSerializer}, tags=["게임"])
     def get(self, request, game_id: int):
-        limit = parse_int(request.query_params.get("limit"), default=50, min_value=1, max_value=200)
-        offset = parse_int(
-            request.query_params.get("offset"), default=0, min_value=0, max_value=10_000
+        limit, offset, _ = parse_pagination_query(
+            request.query_params,
+            default_limit=50,
+            max_limit=200,
         )
         total, moves = GameQueryService.list_moves(game_id, request.user, limit, offset)
         return Response({"count": total, "results": MoveSerializer(moves, many=True).data})
