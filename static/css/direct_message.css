@@ -52,8 +52,8 @@
 .dm-message {
     display: flex;
     align-items: flex-end;
-    gap: var(--space-sm);
-    margin-bottom: 2px;
+    gap: 10px;
+    margin-bottom: 4px;
 }
 
 .dm-message.me {
@@ -66,16 +66,17 @@
 }
 
 .dm-avatar {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
     overflow: hidden;
-    background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border-light);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-secondary) 88%, white), var(--color-bg-secondary));
+    border: 1px solid var(--color-border);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
 }
 
 .dm-avatar img {
@@ -87,7 +88,7 @@
 .dm-content {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
     max-width: 70%;
 }
 
@@ -96,29 +97,35 @@
 }
 
 .dm-message-text {
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-md);
+    padding: 11px 15px;
+    border-radius: 18px;
     font-size: clamp(0.78rem, 1.2vw, 0.9rem);
-    line-height: 1.4;
+    line-height: 1.5;
     word-break: break-word;
     width: fit-content;
     max-width: 100%;
+    box-shadow: 0 10px 20px rgba(20, 24, 31, 0.07);
 }
 
 .dm-message.me .dm-message-text {
-    background: rgba(233, 69, 96, 0.2);
-    border: 1px solid rgba(233, 69, 96, 0.4);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-accent-primary) 90%, white), var(--color-accent-primary));
+    border: 1px solid color-mix(in srgb, var(--color-accent-primary) 75%, black);
+    color: #fff;
+    border-bottom-right-radius: 8px;
 }
 
 .dm-message.other .dm-message-text {
-    background: rgba(15, 155, 142, 0.2);
-    border: 1px solid rgba(15, 155, 142, 0.4);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-card) 92%, white), color-mix(in srgb, var(--color-bg-secondary) 95%, transparent));
+    border: 1px solid color-mix(in srgb, var(--color-border) 88%, white);
+    color: var(--color-text-primary);
+    border-bottom-left-radius: 8px;
 }
 
 .dm-message-time {
     font-size: clamp(0.6rem, 1vw, 0.75rem);
     color: var(--color-text-muted);
-    margin-top: 4px;
+    margin-top: 1px;
+    letter-spacing: 0.01em;
 }
 
 .dm-form {
@@ -148,8 +155,9 @@
 .dm-emoji-bar {
     margin-top: auto;
     margin-bottom: 0;
-    padding-top: 8px;
-    background: var(--color-bg-card);
+    padding: 10px 0 8px;
+    background: transparent;
+    border-top: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
 }
 
 @media (max-width: 768px) {

@@ -808,8 +808,8 @@
     display: flex;
     flex-direction: row;
     align-items: flex-end;
-    gap: var(--space-sm);
-    margin-bottom: var(--space-md);
+    gap: 10px;
+    margin-bottom: 14px;
 }
 
 .chat-message.mine {
@@ -823,16 +823,17 @@
 }
 
 .chat-avatar {
-    width: 22px;
-    height: 22px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     overflow: hidden;
-    background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border-light);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-secondary) 88%, white), var(--color-bg-secondary));
+    border: 1px solid var(--color-border);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
 }
 
 .chat-avatar img {
@@ -844,7 +845,7 @@
 .chat-content {
     display: flex;
     flex-direction: column;
-    gap: var(--space-xs);
+    gap: 6px;
     min-width: 0;
 }
 
@@ -857,10 +858,11 @@
 }
 
 .chat-nickname {
-    font-size: 0.75rem;
-    font-weight: 500;
+    font-size: 0.72rem;
+    font-weight: 700;
     color: var(--color-accent-secondary);
-    margin-bottom: var(--space-xs);
+    letter-spacing: 0.01em;
+    margin-bottom: 0;
 }
 
 .chat-message.mine .chat-nickname {
@@ -869,18 +871,20 @@
 
 .chat-bubble {
     display: block;
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-lg);
+    padding: 11px 15px;
+    border-radius: 18px;
     font-size: 0.875rem;
-    line-height: 1.4;
+    line-height: 1.5;
     word-break: break-word;
     max-width: min(250px, 70vw);
+    box-shadow: 0 10px 20px rgba(20, 24, 31, 0.08);
 }
 
 .chat-message.mine .chat-bubble {
-    background-color: var(--color-accent-primary);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-accent-primary) 90%, white), var(--color-accent-primary));
     color: white;
-    border-bottom-right-radius: var(--radius-sm);
+    border: 1px solid color-mix(in srgb, var(--color-accent-primary) 75%, black);
+    border-bottom-right-radius: 8px;
 }
 
 .chat-bubble.emoji-only {
@@ -892,16 +896,17 @@
 }
 
 .chat-message.others .chat-bubble {
-    background-color: var(--color-bg-card);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-card) 92%, white), color-mix(in srgb, var(--color-bg-secondary) 95%, transparent));
     color: var(--color-text-primary);
-    border: 1px solid var(--color-border);
-    border-bottom-left-radius: var(--radius-sm);
+    border: 1px solid color-mix(in srgb, var(--color-border) 88%, white);
+    border-bottom-left-radius: 8px;
 }
 
 .chat-time {
-    font-size: 0.625rem;
+    font-size: 0.68rem;
     color: var(--color-text-muted);
-    margin-bottom: 2px;
+    margin-bottom: 1px;
+    letter-spacing: 0.01em;
 }
 
 .chat-reactions {
@@ -915,28 +920,27 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px;
+    padding: 10px 12px 8px;
     margin-top: 6px;
-    border-top: 1px solid var(--color-border);
-    background: var(--color-bg-secondary);
+    border-top: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
+    background: color-mix(in srgb, var(--color-bg-card) 94%, white);
     overflow-x: auto;
     white-space: nowrap;
     scrollbar-width: thin;
-    border-radius: var(--radius-sm);
+    border-radius: 14px;
 }
 
 .chat-emoji-bar .emoji-btn {
-    border: none;
-    background: transparent;
-    border-radius: 0;
-    padding: 0;
-    min-width: auto;
-    width: auto;
-    height: auto;
+    border: 1px solid var(--color-border-light);
+    background: color-mix(in srgb, var(--color-bg-secondary) 90%, white);
+    border-radius: 12px;
+    padding: 4px 8px;
+    min-width: 38px;
+    height: 34px;
     line-height: 1;
     font-size: 1.1rem;
     cursor: pointer;
-    transition: transform 0.12s ease;
+    transition: transform 0.12s ease, background-color var(--transition-fast);
 }
 
 .chat-emoji-bar .emoji-btn:hover {
@@ -955,17 +959,18 @@
 }
 
 .reaction-btn {
-    border: 1px solid var(--color-border);
-    background: var(--color-bg-tertiary);
+    border: 1px solid color-mix(in srgb, var(--color-border) 85%, white);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-secondary) 94%, white), color-mix(in srgb, var(--color-bg-card) 94%, transparent));
     color: var(--color-text-secondary);
     border-radius: 999px;
-    padding: 2px 8px;
+    padding: 4px 10px;
     font-size: 0.72rem;
     display: inline-flex;
     align-items: center;
     gap: 4px;
     cursor: pointer;
     transition: all var(--transition-fast);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
 }
 
 .reaction-btn:hover {
@@ -975,7 +980,8 @@
 
 .reaction-btn.active {
     border-color: var(--color-accent-secondary);
-    color: var(--color-accent-secondary);
+    color: var(--color-text-primary);
+    background: color-mix(in srgb, var(--color-accent-secondary) 14%, white);
 }
 
 .chat-notice {

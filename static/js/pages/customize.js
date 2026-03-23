@@ -13,6 +13,16 @@
     const previewBoardDesc = document.getElementById('customize-board-desc');
     const previewPieceTitle = document.getElementById('customize-piece-title');
     const previewPieceDesc = document.getElementById('customize-piece-desc');
+    const stateBanner = document.getElementById('customize-state-banner');
+    const previewBadge = document.getElementById('customize-preview-badge');
+    const summaryBoardName = document.getElementById('customize-summary-board-name');
+    const summaryBoardState = document.getElementById('customize-summary-board-state');
+    const summaryPieceName = document.getElementById('customize-summary-piece-name');
+    const summaryPieceState = document.getElementById('customize-summary-piece-state');
+    const summaryColorName = document.getElementById('customize-summary-color-name');
+    const summaryColorState = document.getElementById('customize-summary-color-state');
+    const summaryBorderName = document.getElementById('customize-summary-border-name');
+    const summaryBorderState = document.getElementById('customize-summary-border-state');
     const purchaseBtn = document.getElementById('customize-purchase');
     const saveBtn = document.getElementById('customize-save');
 
@@ -128,7 +138,7 @@
         const preferredPiece = parseInt(pieceSkinSelect?.value || '0', 10);
         const data = await API.get('/accounts/skins/me/');
         skinCatalog = data;
-        stylePointsText.textContent = `보유 포인트: ${data?.points ?? 0}P`;
+        stylePointsText.textContent = `${data?.points ?? 0}P`;
         fillSkinSelect(boardSkinSelect, data?.board || [], preferredBoard);
         fillSkinSelect(pieceSkinSelect, data?.pieces || [], preferredPiece);
     }
@@ -166,6 +176,52 @@
         selectEl.value = selectedKey || '';
     }
 
+    function findProfileOption(options, selectedKey, normalizer = (value) => value) {
+        const normalized = normalizer(selectedKey || '');
+        return (options || []).find((item) => normalizer(item.key || '') === normalized) || null;
+    }
+
+    function getSkinStateText(skin) {
+        if (!skin) return '선택 안 됨';
+        if (skin.selected) return '착용중';
+        if (skin.owned || skin.is_default) return skin.is_default ? '기본 제공' : '보유중';
+        return `${skin.price}P 구매 필요`;
+    }
+
+    function getProfileStateText(option, selectedKey, normalizer = (value) => value) {
+        if (!option) return '선택 안 됨';
+        if (normalizer(option.key || '') === normalizer(selectedKey || '')) return '착용중';
+        if (option.owned || option.cost === 0) return option.cost === 0 ? '기본 제공' : '보유중';
+        return `저장 시 ${option.cost}P 차감`;
+    }
+
+    function setText(el, value) {
+        if (el) el.textContent = value;
+    }
+
+    function renderSelectionSummary(boardSkin, pieceSkin, nicknameOption, borderOption) {
+        setText(summaryBoardName, SKIN_META.board[boardSkin?.css_class]?.name || boardSkin?.name || '보드 선택');
+        setText(summaryBoardState, getSkinStateText(boardSkin));
+        setText(summaryPieceName, SKIN_META.piece[pieceSkin?.css_class]?.name || pieceSkin?.name || '기물 선택');
+        setText(summaryPieceState, getSkinStateText(pieceSkin));
+        setText(summaryColorName, nicknameOption?.label || '기본');
+        setText(
+            summaryColorState,
+            getProfileStateText(nicknameOption, nicknameColorSelect?.value || '', normalizeNicknameColorKey)
+        );
+        setText(summaryBorderName, borderOption?.label || '기본');
+        setText(
+            summaryBorderState,
+            getProfileStateText(borderOption, profileBorderSelect?.value || '', normalizeProfileBorderKey)
+        );
+    }
+
+    function setStatusBadge(el, type, message) {
+        if (!el) return;
+        el.className = `status-badge status-badge--${type}`;
+        el.textContent = message;
+    }
+
     function populateCustomization(stats) {
         statsSnapshot = stats || {};
         const nicknameColor = normalizeNicknameColorKey(stats.nickname_color || '');
@@ -180,7 +236,7 @@
             stats.unlocked_profile_borders || [{ key: '', label: '기본', cost: 0 }],
             profileBorder
         );
-        stylePointsText.textContent = `보유 포인트: ${stats.style_points ?? skinCatalog?.points ?? 0}P`;
+        stylePointsText.textContent = `${stats.style_points ?? skinCatalog?.points ?? 0}P`;
         renderPreview();
         updateActionState();
     }
@@ -270,6 +326,18 @@
         const pieceSkinId = parseInt(pieceSkinSelect?.value || '0', 10);
         const boardSkin = getSelectedSkin(boardSkinId);
         const pieceSkin = getSelectedSkin(pieceSkinId);
+        const nicknameOptions = statsSnapshot?.unlocked_nickname_colors || [];
+        const borderOptions = statsSnapshot?.unlocked_profile_borders || [];
+        const nicknameOption = findProfileOption(
+            nicknameOptions,
+            nicknameColorSelect?.value || '',
+            normalizeNicknameColorKey
+        );
+        const borderOption = findProfileOption(
+            borderOptions,
+            profileBorderSelect?.value || '',
+            normalizeProfileBorderKey
+        );
         const boardClass = getSkinCssClassById(skinCatalog?.board || [], boardSkinId, 'skin-board-classic');
         const pieceClass = getSkinCssClassById(skinCatalog?.pieces || [], pieceSkinId, 'skin-piece-classic');
         previewBoard.className = `customize-skin-preview-board ${boardClass} ${pieceClass}`;
@@ -280,6 +348,7 @@
         if (previewBoardDesc) previewBoardDesc.textContent = boardMeta.desc;
         if (previewPieceTitle) previewPieceTitle.textContent = `기물: ${pieceMeta.name}`;
         if (previewPieceDesc) previewPieceDesc.textContent = pieceMeta.desc;
+        renderSelectionSummary(boardSkin, pieceSkin, nicknameOption, borderOption);
         updateActionState();
     }
 
@@ -293,13 +362,50 @@
         const pieceSkinId = parseInt(pieceSkinSelect?.value || '0', 10);
         const boardSkin = getSelectedSkin(boardSkinId);
         const pieceSkin = getSelectedSkin(pieceSkinId);
-        const needPurchase = [boardSkin, pieceSkin].some((skin) => skin && !skin.owned && !skin.is_default);
+        const profileOptions = statsSnapshot?.unlocked_nickname_colors || [];
+        const borderOptions = statsSnapshot?.unlocked_profile_borders || [];
+        const nicknameOption = findProfileOption(
+            profileOptions,
+            nicknameColorSelect?.value || '',
+            normalizeNicknameColorKey
+        );
+        const borderOption = findProfileOption(
+            borderOptions,
+            profileBorderSelect?.value || '',
+            normalizeProfileBorderKey
+        );
+        const skinsToBuy = [boardSkin, pieceSkin].filter((skin) => skin && !skin.owned && !skin.is_default);
+        const needPurchase = skinsToBuy.length > 0;
+        const skinPurchaseCost = skinsToBuy.reduce((sum, skin) => sum + (skin?.price || 0), 0);
+        const pendingProfileCost = [nicknameOption, borderOption]
+            .filter((option) => option && !option.owned && (option.cost || 0) > 0)
+            .reduce((sum, option) => sum + (option?.cost || 0), 0);
         if (purchaseBtn) {
             purchaseBtn.disabled = !needPurchase;
-            purchaseBtn.textContent = needPurchase ? '구매하기' : '구매 완료';
+            purchaseBtn.textContent = needPurchase
+                ? `선택 스킨 구매${skinPurchaseCost ? ` · ${skinPurchaseCost}P` : ''}`
+                : '구매 완료';
         }
         if (saveBtn) {
             saveBtn.disabled = false;
+            saveBtn.textContent = pendingProfileCost > 0 ? `적용 및 저장 · ${pendingProfileCost}P` : '적용하기';
+        }
+        if (needPurchase && pendingProfileCost > 0) {
+            setStatusBadge(
+                stateBanner,
+                'warning',
+                `스킨 ${skinPurchaseCost}P 구매 후, 저장 시 프로필 ${pendingProfileCost}P가 추가로 차감됩니다.`
+            );
+            setStatusBadge(previewBadge, 'warning', '구매 + 저장 필요');
+        } else if (needPurchase) {
+            setStatusBadge(stateBanner, 'warning', `스킨 ${skinPurchaseCost}P 구매 후 바로 적용할 수 있습니다.`);
+            setStatusBadge(previewBadge, 'warning', '구매 필요');
+        } else if (pendingProfileCost > 0) {
+            setStatusBadge(stateBanner, 'waiting', `저장 시 프로필 꾸미기 ${pendingProfileCost}P가 차감됩니다.`);
+            setStatusBadge(previewBadge, 'waiting', '저장 시 구매');
+        } else {
+            setStatusBadge(stateBanner, 'success', '현재 조합은 바로 적용할 수 있습니다.');
+            setStatusBadge(previewBadge, 'success', '즉시 적용 가능');
         }
     }
 
