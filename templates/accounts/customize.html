@@ -10,77 +10,137 @@
 {% block content %}
 <div class="customize-page">
     <div class="customize-header">
-        <div>
+        <div class="customize-header-copy">
+            <span class="ui-eyebrow">Showroom</span>
             <h1 class="customize-title">커스터마이징</h1>
-            <p class="customize-subtitle">프로필/보드/기물을 미리 보고 구매 후 적용하세요.</p>
+            <p class="customize-subtitle">프로필 카드, 보드, 기물 조합을 미리 보고 필요한 항목만 구매해 적용하세요.</p>
         </div>
-        <div class="customize-actions-top">
+        <div class="customize-header-side">
+            <div class="customize-points-card">
+                <span class="customize-points-label">보유 포인트</span>
+                <strong class="customize-points-value" id="customize-style-points-text">0P</strong>
+            </div>
             <a class="btn btn-secondary" href="/">로비로</a>
         </div>
     </div>
 
     <div class="customize-layout">
-        <section class="customize-card">
-            <div class="form-group">
-                <label class="form-label" for="customize-board-skin">보드 스킨</label>
-                <select class="form-input" id="customize-board-skin"></select>
+        <section class="customize-card customize-shop-card">
+            <div class="customize-section-head">
+                <div>
+                    <span class="ui-eyebrow">Shop</span>
+                    <h2 class="customize-section-title">아이템 선택</h2>
+                    <p class="customize-section-copy">보드/기물은 먼저 구매하고, 닉네임 색상과 카드 테두리는 저장 시 자동 반영됩니다.</p>
+                </div>
+                <div class="status-badge status-badge--waiting" id="customize-state-banner">현재 조합을 확인하는 중입니다.</div>
             </div>
-            <div class="form-group">
-                <label class="form-label" for="customize-piece-skin">기물 스킨</label>
-                <select class="form-input" id="customize-piece-skin"></select>
+
+            <div class="customize-summary-grid">
+                <article class="customize-summary-card">
+                    <span class="customize-summary-label">보드</span>
+                    <strong class="customize-summary-name" id="customize-summary-board-name">클래식</strong>
+                    <span class="customize-summary-state" id="customize-summary-board-state">기본</span>
+                </article>
+                <article class="customize-summary-card">
+                    <span class="customize-summary-label">기물</span>
+                    <strong class="customize-summary-name" id="customize-summary-piece-name">클래식 아케이드</strong>
+                    <span class="customize-summary-state" id="customize-summary-piece-state">기본</span>
+                </article>
+                <article class="customize-summary-card">
+                    <span class="customize-summary-label">닉네임 색상</span>
+                    <strong class="customize-summary-name" id="customize-summary-color-name">기본</strong>
+                    <span class="customize-summary-state" id="customize-summary-color-state">즉시 적용</span>
+                </article>
+                <article class="customize-summary-card">
+                    <span class="customize-summary-label">프로필 테두리</span>
+                    <strong class="customize-summary-name" id="customize-summary-border-name">기본</strong>
+                    <span class="customize-summary-state" id="customize-summary-border-state">즉시 적용</span>
+                </article>
             </div>
-            <div class="form-group">
-                <label class="form-label" for="customize-nickname-color">닉네임 색상</label>
-                <select class="form-input" id="customize-nickname-color"></select>
+
+            <div class="customize-option-grid">
+                <div class="form-group customize-option-card">
+                    <label class="form-label" for="customize-board-skin">보드 스킨</label>
+                    <span class="customize-option-copy">경기 분위기를 만드는 보드 테마를 선택합니다.</span>
+                    <select class="form-input" id="customize-board-skin"></select>
+                </div>
+                <div class="form-group customize-option-card">
+                    <label class="form-label" for="customize-piece-skin">기물 스킨</label>
+                    <span class="customize-option-copy">기물의 재질감과 실루엣 스타일을 선택합니다.</span>
+                    <select class="form-input" id="customize-piece-skin"></select>
+                </div>
+                <div class="form-group customize-option-card">
+                    <label class="form-label" for="customize-nickname-color">닉네임 색상</label>
+                    <span class="customize-option-copy">랭킹/채팅/프로필에서 닉네임 강조색이 적용됩니다.</span>
+                    <select class="form-input" id="customize-nickname-color"></select>
+                </div>
+                <div class="form-group customize-option-card">
+                    <label class="form-label" for="customize-profile-border">프로필 테두리</label>
+                    <span class="customize-option-copy">프로필 카드와 상단 영역에서 보이는 테두리 효과입니다.</span>
+                    <select class="form-input" id="customize-profile-border"></select>
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label" for="customize-profile-border">프로필 테두리</label>
-                <select class="form-input" id="customize-profile-border"></select>
-            </div>
-            <div class="customize-points" id="customize-style-points-text">보유 포인트: 0P</div>
+
             <div class="customize-actions">
                 <button class="btn btn-secondary" id="customize-purchase" type="button">구매하기</button>
                 <button class="btn btn-primary" id="customize-save" type="button">적용하기</button>
             </div>
         </section>
 
-        <section class="customize-card">
-            <div class="customize-preview" id="customize-preview">
-                <div class="customize-avatar" id="customize-preview-avatar">👤</div>
-                <div class="customize-nickname" id="customize-preview-nickname">내 닉네임</div>
+        <section class="customize-card customize-preview-card">
+            <div class="customize-section-head">
+                <div>
+                    <span class="ui-eyebrow">Preview</span>
+                    <h2 class="customize-section-title">쇼룸 미리보기</h2>
+                    <p class="customize-section-copy">현재 선택한 조합이 실제 프로필 카드와 보드에 어떻게 보이는지 바로 확인할 수 있습니다.</p>
+                </div>
+                <div class="status-badge status-badge--success" id="customize-preview-badge">즉시 적용 가능</div>
             </div>
 
-            <div class="customize-skin-preview-panel">
-                <div class="customize-skin-preview-title">스킨 미리보기</div>
-                <div class="customize-skin-preview-board skin-board-classic skin-piece-classic" id="customize-skin-preview-board">
-                    <div class="mini-square light"><span class="mini-piece white piece-type-r" data-piece="R"></span></div>
-                    <div class="mini-square dark"><span class="mini-piece white piece-type-n" data-piece="N"></span></div>
-                    <div class="mini-square light"><span class="mini-piece white piece-type-b" data-piece="B"></span></div>
-                    <div class="mini-square dark"><span class="mini-piece white piece-type-k" data-piece="K"></span></div>
-
-                    <div class="mini-square dark"><span class="mini-piece white piece-type-q" data-piece="Q"></span></div>
-                    <div class="mini-square light"><span class="mini-piece white piece-type-p" data-piece="P"></span></div>
-                    <div class="mini-square dark"><span class="mini-piece black piece-type-p" data-piece="p"></span></div>
-                    <div class="mini-square light"><span class="mini-piece black piece-type-q" data-piece="q"></span></div>
-
-                    <div class="mini-square light"><span class="mini-piece black piece-type-k" data-piece="k"></span></div>
-                    <div class="mini-square dark"><span class="mini-piece black piece-type-b" data-piece="b"></span></div>
-                    <div class="mini-square light"><span class="mini-piece black piece-type-n" data-piece="n"></span></div>
-                    <div class="mini-square dark"><span class="mini-piece black piece-type-r" data-piece="r"></span></div>
-
-                    <div class="mini-square dark"></div>
-                    <div class="mini-square light"></div>
-                    <div class="mini-square dark"></div>
-                    <div class="mini-square light"></div>
-                </div>
-                <div class="customize-skin-meta" id="customize-skin-meta">
-                    <div class="customize-skin-meta-item">
-                        <strong id="customize-board-title">보드: 클래식</strong>
-                        <span id="customize-board-desc">균형 잡힌 기본 체스 보드</span>
+            <div class="customize-preview-showroom">
+                <div class="customize-preview-card-shell">
+                    <div class="customize-preview-card-meta">
+                        <span class="customize-preview-mini-label">프로필 카드</span>
+                        <span class="customize-preview-mini-subtitle">랭킹/친구/상단바 반영</span>
                     </div>
-                    <div class="customize-skin-meta-item">
-                        <strong id="customize-piece-title">기물: 클래식 아케이드</strong>
-                        <span id="customize-piece-desc">선명한 색 구분과 경쾌한 대비</span>
+                    <div class="customize-preview" id="customize-preview">
+                        <div class="customize-avatar" id="customize-preview-avatar">👤</div>
+                        <div class="customize-nickname" id="customize-preview-nickname">내 닉네임</div>
+                    </div>
+                </div>
+
+                <div class="customize-skin-preview-panel">
+                    <div class="customize-skin-preview-title">보드/기물 미리보기</div>
+                    <div class="customize-skin-preview-board skin-board-classic skin-piece-classic" id="customize-skin-preview-board">
+                        <div class="mini-square light"><span class="mini-piece white piece-type-r" data-piece="R"></span></div>
+                        <div class="mini-square dark"><span class="mini-piece white piece-type-n" data-piece="N"></span></div>
+                        <div class="mini-square light"><span class="mini-piece white piece-type-b" data-piece="B"></span></div>
+                        <div class="mini-square dark"><span class="mini-piece white piece-type-k" data-piece="K"></span></div>
+
+                        <div class="mini-square dark"><span class="mini-piece white piece-type-q" data-piece="Q"></span></div>
+                        <div class="mini-square light"><span class="mini-piece white piece-type-p" data-piece="P"></span></div>
+                        <div class="mini-square dark"><span class="mini-piece black piece-type-p" data-piece="p"></span></div>
+                        <div class="mini-square light"><span class="mini-piece black piece-type-q" data-piece="q"></span></div>
+
+                        <div class="mini-square light"><span class="mini-piece black piece-type-k" data-piece="k"></span></div>
+                        <div class="mini-square dark"><span class="mini-piece black piece-type-b" data-piece="b"></span></div>
+                        <div class="mini-square light"><span class="mini-piece black piece-type-n" data-piece="n"></span></div>
+                        <div class="mini-square dark"><span class="mini-piece black piece-type-r" data-piece="r"></span></div>
+
+                        <div class="mini-square dark"></div>
+                        <div class="mini-square light"></div>
+                        <div class="mini-square dark"></div>
+                        <div class="mini-square light"></div>
+                    </div>
+                    <div class="customize-skin-meta" id="customize-skin-meta">
+                        <div class="customize-skin-meta-item">
+                            <strong id="customize-board-title">보드: 클래식</strong>
+                            <span id="customize-board-desc">균형 잡힌 기본 체스 보드</span>
+                        </div>
+                        <div class="customize-skin-meta-item">
+                            <strong id="customize-piece-title">기물: 클래식 아케이드</strong>
+                            <span id="customize-piece-desc">선명한 색 구분과 경쾌한 대비</span>
+                        </div>
                     </div>
                 </div>
             </div>
