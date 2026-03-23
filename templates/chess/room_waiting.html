@@ -504,8 +504,8 @@
     display: flex;
     flex-direction: row;
     align-items: flex-end;
-    gap: var(--space-sm);
-    margin-bottom: var(--space-sm);
+    gap: 10px;
+    margin-bottom: 12px;
 }
 
 .chat-message.mine {
@@ -519,16 +519,17 @@
 }
 
 .chat-avatar {
-    width: 22px;
-    height: 22px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     overflow: hidden;
-    background: var(--color-bg-secondary);
-    border: 1px solid var(--color-border-light);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-secondary) 88%, white), var(--color-bg-secondary));
+    border: 1px solid var(--color-border);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
 }
 
 .chat-avatar img {
@@ -540,7 +541,7 @@
 .chat-content {
     display: flex;
     flex-direction: column;
-    gap: var(--space-xs);
+    gap: 6px;
     min-width: 0;
 }
 
@@ -553,10 +554,11 @@
 }
 
 .chat-nickname {
-    font-size: 0.75rem;
-    font-weight: 500;
+    font-size: 0.72rem;
+    font-weight: 700;
     color: var(--color-accent-secondary);
-    margin-bottom: var(--space-xs);
+    margin-bottom: 0;
+    letter-spacing: 0.01em;
 }
 
 .chat-message.mine .chat-nickname {
@@ -565,23 +567,26 @@
 
 .chat-bubble {
     display: block;
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-lg);
+    padding: 11px 15px;
+    border-radius: 18px;
     font-size: 0.875rem;
     max-width: 250px;
     word-break: break-word;
+    line-height: 1.5;
+    box-shadow: 0 10px 20px rgba(20, 24, 31, 0.08);
 }
 
 .chat-message.mine .chat-bubble {
-    background-color: var(--color-accent-primary);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--color-accent-primary) 90%, white), var(--color-accent-primary));
     color: white;
-    border-bottom-right-radius: var(--radius-sm);
+    border: 1px solid color-mix(in srgb, var(--color-accent-primary) 75%, black);
+    border-bottom-right-radius: 8px;
 }
 
 .chat-message.others .chat-bubble {
-    background-color: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-bottom-left-radius: var(--radius-sm);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-card) 92%, white), color-mix(in srgb, var(--color-bg-secondary) 95%, transparent));
+    border: 1px solid color-mix(in srgb, var(--color-border) 88%, white);
+    border-bottom-left-radius: 8px;
 }
 
 .chat-notice {
@@ -604,17 +609,17 @@
 
 .chat-emoji-bar {
     display: flex;
-    gap: var(--space-xs);
-    padding: var(--space-xs) 0;
+    gap: 8px;
+    padding: 10px 0 8px;
     overflow-x: auto;
 }
 
 .chat-emoji-btn {
-    border: 1px solid var(--color-border);
-    background: var(--color-bg-card);
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 0.875rem;
+    border: 1px solid var(--color-border-light);
+    background: color-mix(in srgb, var(--color-bg-secondary) 90%, white);
+    border-radius: 12px;
+    padding: 6px 10px;
+    font-size: 1rem;
     line-height: 1;
     cursor: pointer;
 }
@@ -625,12 +630,13 @@
 }
 
 .chat-reactions .reaction-btn {
-    border: 1px solid var(--color-border);
-    background: var(--color-bg-secondary);
+    border: 1px solid color-mix(in srgb, var(--color-border) 85%, white);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-bg-secondary) 94%, white), color-mix(in srgb, var(--color-bg-card) 94%, transparent));
     border-radius: 999px;
-    padding: 2px 8px;
+    padding: 4px 10px;
     font-size: 0.7rem;
     color: var(--color-text-secondary);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.05);
 }
 
 .chat-input {
