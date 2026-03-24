@@ -181,10 +181,212 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
+.customize-option-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.customize-option-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-light);
+    background: rgba(255, 255, 255, 0.75);
+    color: var(--color-text-muted);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
 .customize-option-copy {
     display: block;
     margin: 6px 0 10px;
     font-size: 0.82rem;
+    color: var(--color-text-secondary);
+}
+
+.customize-native-select {
+    display: none;
+}
+
+.customize-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.customize-choice-grid--compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.customize-choice-card {
+    display: grid;
+    align-content: start;
+    justify-items: start;
+    gap: 8px;
+    min-height: 150px;
+    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid var(--color-border);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.58)),
+        linear-gradient(140deg, color-mix(in srgb, var(--color-accent-secondary) 6%, transparent), transparent);
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.customize-choice-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 22px rgba(43, 42, 39, 0.08);
+}
+
+.customize-choice-card.is-selected {
+    border-color: color-mix(in srgb, var(--color-accent-primary) 48%, white);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-primary) 18%, transparent), 0 14px 26px rgba(43, 42, 39, 0.12);
+}
+
+.customize-choice-card.is-locked .customize-choice-state {
+    color: var(--color-accent-warning);
+}
+
+.customize-choice-card--compact {
+    min-height: 124px;
+}
+
+.customize-choice-preview {
+    width: 100%;
+    height: 56px;
+    border-radius: 14px;
+    border: 1px solid var(--color-border-light);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.76), rgba(246, 240, 230, 0.84));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.customize-choice-preview--board.skin-board-classic {
+    background: linear-gradient(135deg, #f3e2c5 0 50%, #bf9468 50% 100%);
+}
+
+.customize-choice-preview--board.skin-board-wood {
+    background: linear-gradient(135deg, #ead2ab 0 50%, #8f5f34 50% 100%);
+}
+
+.customize-choice-preview--board.skin-board-dark {
+    background: linear-gradient(135deg, #8895ad 0 50%, #253247 50% 100%);
+}
+
+.customize-choice-preview--board.skin-board-neon {
+    background: linear-gradient(135deg, #112445 0 50%, #1a2d52 50% 100%);
+    box-shadow: inset 0 0 0 1px rgba(114, 249, 255, 0.35), 0 0 18px rgba(114, 249, 255, 0.16);
+}
+
+.customize-choice-preview--board.skin-board-marble {
+    background: linear-gradient(135deg, #f7faff 0 50%, #c2ccdd 50% 100%);
+}
+
+.customize-choice-preview--board.skin-board-obsidian {
+    background: linear-gradient(135deg, #3f434f 0 50%, #171c28 50% 100%);
+}
+
+.customize-choice-preview--board.skin-board-sakura {
+    background: linear-gradient(135deg, #fde8f0 0 50%, #e59bb8 50% 100%);
+}
+
+.customize-choice-preview--piece {
+    position: relative;
+    background: linear-gradient(160deg, rgba(18, 26, 38, 0.9), rgba(38, 48, 67, 0.92));
+}
+
+.customize-choice-preview--piece::before,
+.customize-choice-preview--piece::after {
+    content: '♘';
+    position: absolute;
+    top: 50%;
+    font-size: 28px;
+    transform: translateY(-50%);
+}
+
+.customize-choice-preview--piece::before {
+    left: 16px;
+    color: #f7fbff;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.customize-choice-preview--piece::after {
+    right: 16px;
+    color: #17253a;
+    text-shadow:
+        -1px -1px 0 rgba(244, 248, 255, 0.82),
+        1px -1px 0 rgba(244, 248, 255, 0.82),
+        -1px 1px 0 rgba(244, 248, 255, 0.82),
+        1px 1px 0 rgba(244, 248, 255, 0.82);
+}
+
+.customize-choice-preview--piece.skin-piece-pixel {
+    background: linear-gradient(160deg, #1e2340, #3b2355);
+}
+
+.customize-choice-preview--piece.skin-piece-modern {
+    background: linear-gradient(160deg, #dde4ef, #aab6c8);
+}
+
+.customize-choice-preview--piece.skin-piece-modern::before,
+.customize-choice-preview--piece.skin-piece-modern::after {
+    text-shadow: none;
+}
+
+.customize-choice-preview--piece.skin-piece-3d {
+    background: linear-gradient(160deg, #31211d, #6d4d42);
+}
+
+.customize-choice-preview--piece.skin-piece-glass {
+    background: linear-gradient(160deg, rgba(203, 232, 255, 0.9), rgba(149, 177, 219, 0.88));
+}
+
+.customize-choice-preview--piece.skin-piece-rune {
+    background: linear-gradient(160deg, #241d35, #54407e);
+}
+
+.customize-choice-preview--color {
+    width: 100%;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--choice-accent) 16%, white), var(--choice-accent));
+}
+
+.customize-choice-preview--border {
+    width: 100%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(250, 246, 239, 0.88));
+    box-shadow: var(--choice-ring);
+}
+
+.customize-choice-name {
+    font-size: 0.94rem;
+    font-weight: 800;
+    color: var(--color-text-primary);
+}
+
+.customize-choice-desc {
+    font-size: 0.79rem;
+    line-height: 1.45;
+    color: var(--color-text-secondary);
+}
+
+.customize-choice-state {
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-bg-secondary) 84%, white);
+    border: 1px solid var(--color-border-light);
+    font-size: 0.74rem;
+    font-weight: 800;
     color: var(--color-text-secondary);
 }
 
@@ -833,6 +1035,9 @@
 
 @media (max-width: 900px) {
     .customize-layout {
+        grid-template-columns: 1fr;
+    }
+    .customize-choice-grid {
         grid-template-columns: 1fr;
     }
     .customize-skin-preview-board {

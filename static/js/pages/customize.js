@@ -25,6 +25,10 @@
     const summaryBorderState = document.getElementById('customize-summary-border-state');
     const purchaseBtn = document.getElementById('customize-purchase');
     const saveBtn = document.getElementById('customize-save');
+    const boardOptions = document.getElementById('customize-board-options');
+    const pieceOptions = document.getElementById('customize-piece-options');
+    const colorOptions = document.getElementById('customize-color-options');
+    const borderOptions = document.getElementById('customize-border-options');
 
     let me = null;
     let skinCatalog = null;
@@ -47,6 +51,21 @@
             'skin-piece-3d': { name: '크라운 3D', desc: '입체광과 깊은 그림자의 메탈 질감' },
             'skin-piece-glass': { name: '크리스탈 글라스', desc: '반투명 하이라이트의 유리 질감' },
             'skin-piece-rune': { name: '아케인 룬', desc: '신비로운 룬 감성의 고대 스타일' },
+        },
+    };
+
+    const PROFILE_OPTION_META = {
+        nickname: {
+            '': { desc: '서비스 기본 색상으로 차분하게 표시됩니다.' },
+            mint: { desc: '산뜻한 민트 포인트로 닉네임을 강조합니다.', accent: '#4ecdc4' },
+            sunset: { desc: '핑크와 오렌지 사이의 따뜻한 하이라이트입니다.', accent: '#ff7b6b' },
+            gold: { desc: '시즌 상위권 분위기의 선명한 골드 포인트입니다.', accent: '#f4b942' },
+        },
+        border: {
+            '': { desc: '기본 카드 외곽선으로 단정하게 유지합니다.' },
+            mint_ring: { desc: '민트빛 링으로 상단/프로필 카드에 시원한 포인트를 줍니다.' },
+            royal_ring: { desc: '로열 블루 계열 광택으로 프리미엄 느낌을 강조합니다.' },
+            champion_ring: { desc: '챔피언 테마의 강한 글로우로 존재감을 드러냅니다.' },
         },
     };
 
@@ -158,6 +177,7 @@
         if (preferredId && skins.some((skin) => skin.id === preferredId)) {
             selectEl.value = String(preferredId);
         }
+        renderSkinCards(selectEl, skins);
     }
 
     function fillSelect(selectEl, options, selectedKey) {
@@ -174,6 +194,90 @@
             })
             .join('');
         selectEl.value = selectedKey || '';
+        renderProfileCards(selectEl, options);
+    }
+
+    function getSkinContainer(selectEl) {
+        if (!selectEl) return null;
+        if (selectEl === boardSkinSelect) return boardOptions;
+        if (selectEl === pieceSkinSelect) return pieceOptions;
+        return null;
+    }
+
+    function getProfileContainer(selectEl) {
+        if (!selectEl) return null;
+        if (selectEl === nicknameColorSelect) return colorOptions;
+        if (selectEl === profileBorderSelect) return borderOptions;
+        return null;
+    }
+
+    function renderSkinCards(selectEl, skins) {
+        const container = getSkinContainer(selectEl);
+        if (!container) return;
+        const selectedId = String(selectEl.value || '');
+        const skinType = selectEl === boardSkinSelect ? 'board' : 'piece';
+        container.innerHTML = skins.map((skin) => {
+            const meta = SKIN_META[skinType]?.[skin.css_class] || {};
+            const selected = String(skin.id) === selectedId;
+            const state = skin.selected
+                ? '착용중'
+                : (skin.owned || skin.is_default ? (skin.is_default ? '기본 제공' : '보유중') : `${skin.price}P`);
+            return `
+                <button
+                    class="customize-choice-card${selected ? ' is-selected' : ''}${!skin.owned && !skin.is_default ? ' is-locked' : ''}"
+                    type="button"
+                    data-target="${selectEl.id}"
+                    data-value="${skin.id}"
+                >
+                    <span class="customize-choice-preview customize-choice-preview--${skinType} ${skin.css_class}"></span>
+                    <span class="customize-choice-name">${Utils.escapeHtml(meta.name || skin.name)}</span>
+                    <span class="customize-choice-desc">${Utils.escapeHtml(meta.desc || '스킨을 미리 보고 선택하세요.')}</span>
+                    <span class="customize-choice-state">${Utils.escapeHtml(state)}</span>
+                </button>
+            `;
+        }).join('');
+        bindChoiceCards(container, selectEl);
+    }
+
+    function renderProfileCards(selectEl, options) {
+        const container = getProfileContainer(selectEl);
+        if (!container) return;
+        const selectedValue = String(selectEl.value || '');
+        const type = selectEl === nicknameColorSelect ? 'nickname' : 'border';
+        container.innerHTML = options.map((option) => {
+            const key = String(option.key || '');
+            const meta = PROFILE_OPTION_META[type]?.[key] || {};
+            const selected = key === selectedValue;
+            const state = selected
+                ? '착용중'
+                : (option.owned || option.cost === 0 ? (option.cost === 0 ? '기본 제공' : '보유중') : `${option.cost}P`);
+            const preview = type === 'nickname'
+                ? `<span class="customize-choice-preview customize-choice-preview--color" style="--choice-accent:${meta.accent || Utils.getNicknameColorValue(key || '')};"></span>`
+                : `<span class="customize-choice-preview customize-choice-preview--border" style="--choice-ring:${Utils.getProfileBorderValue(key || '') || '0 0 0 1px rgba(160,150,135,0.3) inset'};"></span>`;
+            return `
+                <button
+                    class="customize-choice-card customize-choice-card--compact${selected ? ' is-selected' : ''}${!option.owned && (option.cost || 0) > 0 ? ' is-locked' : ''}"
+                    type="button"
+                    data-target="${selectEl.id}"
+                    data-value="${Utils.escapeHtml(key)}"
+                >
+                    ${preview}
+                    <span class="customize-choice-name">${Utils.escapeHtml(option.label)}</span>
+                    <span class="customize-choice-desc">${Utils.escapeHtml(meta.desc || '프로필에 바로 반영되는 스타일 옵션입니다.')}</span>
+                    <span class="customize-choice-state">${Utils.escapeHtml(state)}</span>
+                </button>
+            `;
+        }).join('');
+        bindChoiceCards(container, selectEl);
+    }
+
+    function bindChoiceCards(container, selectEl) {
+        container.querySelectorAll('[data-target]').forEach((card) => {
+            card.addEventListener('click', () => {
+                selectEl.value = card.dataset.value || '';
+                renderPreview();
+            });
+        });
     }
 
     function findProfileOption(options, selectedKey, normalizer = (value) => value) {
@@ -338,6 +442,10 @@
             profileBorderSelect?.value || '',
             normalizeProfileBorderKey
         );
+        renderSkinCards(boardSkinSelect, skinCatalog?.board || []);
+        renderSkinCards(pieceSkinSelect, skinCatalog?.pieces || []);
+        renderProfileCards(nicknameColorSelect, nicknameOptions);
+        renderProfileCards(profileBorderSelect, borderOptions);
         const boardClass = getSkinCssClassById(skinCatalog?.board || [], boardSkinId, 'skin-board-classic');
         const pieceClass = getSkinCssClassById(skinCatalog?.pieces || [], pieceSkinId, 'skin-piece-classic');
         previewBoard.className = `customize-skin-preview-board ${boardClass} ${pieceClass}`;

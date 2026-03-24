@@ -60,24 +60,48 @@
 
             <div class="customize-option-grid">
                 <div class="form-group customize-option-card">
-                    <label class="form-label" for="customize-board-skin">보드 스킨</label>
-                    <span class="customize-option-copy">경기 분위기를 만드는 보드 테마를 선택합니다.</span>
-                    <select class="form-input" id="customize-board-skin"></select>
+                    <div class="customize-option-head">
+                        <div>
+                            <label class="form-label" for="customize-board-skin">보드 스킨</label>
+                            <span class="customize-option-copy">경기 분위기를 만드는 보드 테마를 선택합니다.</span>
+                        </div>
+                        <span class="customize-option-tag">Board</span>
+                    </div>
+                    <select class="form-input customize-native-select" id="customize-board-skin"></select>
+                    <div class="customize-choice-grid" id="customize-board-options" aria-label="보드 스킨 선택"></div>
                 </div>
                 <div class="form-group customize-option-card">
-                    <label class="form-label" for="customize-piece-skin">기물 스킨</label>
-                    <span class="customize-option-copy">기물의 재질감과 실루엣 스타일을 선택합니다.</span>
-                    <select class="form-input" id="customize-piece-skin"></select>
+                    <div class="customize-option-head">
+                        <div>
+                            <label class="form-label" for="customize-piece-skin">기물 스킨</label>
+                            <span class="customize-option-copy">기물의 재질감과 실루엣 스타일을 선택합니다.</span>
+                        </div>
+                        <span class="customize-option-tag">Piece</span>
+                    </div>
+                    <select class="form-input customize-native-select" id="customize-piece-skin"></select>
+                    <div class="customize-choice-grid" id="customize-piece-options" aria-label="기물 스킨 선택"></div>
                 </div>
                 <div class="form-group customize-option-card">
-                    <label class="form-label" for="customize-nickname-color">닉네임 색상</label>
-                    <span class="customize-option-copy">랭킹/채팅/프로필에서 닉네임 강조색이 적용됩니다.</span>
-                    <select class="form-input" id="customize-nickname-color"></select>
+                    <div class="customize-option-head">
+                        <div>
+                            <label class="form-label" for="customize-nickname-color">닉네임 색상</label>
+                            <span class="customize-option-copy">랭킹/채팅/프로필에서 닉네임 강조색이 적용됩니다.</span>
+                        </div>
+                        <span class="customize-option-tag">Color</span>
+                    </div>
+                    <select class="form-input customize-native-select" id="customize-nickname-color"></select>
+                    <div class="customize-choice-grid customize-choice-grid--compact" id="customize-color-options" aria-label="닉네임 색상 선택"></div>
                 </div>
                 <div class="form-group customize-option-card">
-                    <label class="form-label" for="customize-profile-border">프로필 테두리</label>
-                    <span class="customize-option-copy">프로필 카드와 상단 영역에서 보이는 테두리 효과입니다.</span>
-                    <select class="form-input" id="customize-profile-border"></select>
+                    <div class="customize-option-head">
+                        <div>
+                            <label class="form-label" for="customize-profile-border">프로필 테두리</label>
+                            <span class="customize-option-copy">프로필 카드와 상단 영역에서 보이는 테두리 효과입니다.</span>
+                        </div>
+                        <span class="customize-option-tag">Frame</span>
+                    </div>
+                    <select class="form-input customize-native-select" id="customize-profile-border"></select>
+                    <div class="customize-choice-grid customize-choice-grid--compact" id="customize-border-options" aria-label="프로필 테두리 선택"></div>
                 </div>
             </div>
 

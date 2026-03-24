@@ -17,24 +17,22 @@
                     <p class="hero-card-copy">원하는 모드를 고르면 바로 매칭하거나 대기방으로 이동할 수 있습니다.</p>
                 </div>
                 <div class="hero-control-group hero-control-group-match">
-                    <button class="btn btn-primary btn-arcade btn-lg" id="quick-match-btn">
-                        <span class="btn-text"><span class="btn-icon">⚔</span> 경쟁전</span>
+                    <button class="btn btn-primary btn-arcade btn-lg hero-start-button" id="game-start-open" type="button">
+                        <span class="btn-text"><span class="btn-icon">🎮</span> 게임 시작</span>
                     </button>
-                    <button class="btn btn-secondary btn-arcade btn-lg" id="random-match-btn">
-                        <span class="btn-text"><span class="btn-icon">🎲</span> 빠른 대전</span>
-                    </button>
-                    <button class="btn btn-secondary btn-arcade btn-lg btn-ai" id="ai-match-btn">
-                        <span class="btn-text"><span class="btn-icon">🤖</span> AI 대전</span>
-                    </button>
-                    <a class="btn btn-secondary btn-arcade btn-lg" href="/puzzle/">
-                        <span class="btn-text"><span class="btn-icon">🧩</span> 일일 퍼즐</span>
-                    </a>
-                    <a class="btn btn-secondary btn-arcade btn-lg" href="/rooms/">
-                        <span class="btn-text"><span class="btn-icon">＋</span> 방 만들기</span>
-                    </a>
-                    <button class="btn btn-secondary btn-arcade btn-lg btn-guest hidden" id="guest-play-btn">
+                </div>
+                <div class="hero-mode-preview" aria-label="주요 모드">
+                    <span class="hero-mode-pill">⚔ 경쟁전</span>
+                    <span class="hero-mode-pill">🎲 빠른 대전</span>
+                    <span class="hero-mode-pill">🤖 AI 대전</span>
+                    <span class="hero-mode-pill">🧩 퍼즐</span>
+                    <span class="hero-mode-pill">＋ 방 만들기</span>
+                </div>
+                <div class="hero-guest-entry">
+                    <button class="btn btn-secondary btn-arcade btn-lg btn-guest hidden" id="guest-play-btn" type="button">
                         <span class="btn-text"><span class="btn-icon">👤</span> 게스트 플레이</span>
                     </button>
+                    <p class="hero-guest-copy">회원가입 없이 빠른 대전, AI 대전, 방 만들기를 바로 체험할 수 있습니다.</p>
                 </div>
                 <div class="ui-state-badges hero-state-badges">
                     <span class="ui-state-badge ui-state-badge--success">경쟁전 <strong>레이팅 반영</strong></span>
@@ -94,6 +92,48 @@
             <div class="tier-row">• 보유 포인트와 쇼룸 미리보기는 상단 커스터마이징 메뉴에서 확인합니다.</div>
         </div>
     </section>
+
+    <div class="modal-overlay hidden" id="game-start-modal">
+        <div class="modal game-start-modal">
+            <div class="modal-header">
+                <h2 class="modal-title">게임 시작</h2>
+                <button class="modal-close-btn" id="game-start-close" type="button" aria-label="닫기">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="game-start-copy">
+                    <strong>원하는 모드를 선택하세요.</strong>
+                    <span>경쟁전, 빠른 대전, AI 대전, 퍼즐, 방 만들기를 한 곳에서 시작할 수 있습니다.</span>
+                </div>
+                <div class="game-start-grid">
+                    <button class="btn btn-primary btn-arcade btn-lg game-start-card" id="quick-match-btn" type="button">
+                        <span class="game-start-card-icon">⚔</span>
+                        <span class="game-start-card-title">경쟁전</span>
+                        <span class="game-start-card-copy">레이팅 반영 자동 매칭</span>
+                    </button>
+                    <button class="btn btn-secondary btn-arcade btn-lg game-start-card" id="random-match-btn" type="button">
+                        <span class="game-start-card-icon">🎲</span>
+                        <span class="game-start-card-title">빠른 대전</span>
+                        <span class="game-start-card-copy">레이팅 미반영 일반 매칭</span>
+                    </button>
+                    <button class="btn btn-secondary btn-arcade btn-lg btn-ai game-start-card" id="ai-match-btn" type="button">
+                        <span class="game-start-card-icon">🤖</span>
+                        <span class="game-start-card-title">AI 대전</span>
+                        <span class="game-start-card-copy">난이도를 고르고 바로 시작</span>
+                    </button>
+                    <a class="btn btn-secondary btn-arcade btn-lg game-start-card" href="/puzzle/">
+                        <span class="game-start-card-icon">🧩</span>
+                        <span class="game-start-card-title">일일 퍼즐</span>
+                        <span class="game-start-card-copy">오늘의 퍼즐 도전</span>
+                    </a>
+                    <a class="btn btn-secondary btn-arcade btn-lg game-start-card" href="/rooms/">
+                        <span class="game-start-card-icon">＋</span>
+                        <span class="game-start-card-title">방 만들기</span>
+                        <span class="game-start-card-copy">사용자 지정 방 생성</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Main Content -->
     <div class="lobby-content">
@@ -446,6 +486,106 @@
     min-height: 56px;
 }
 
+.hero-start-button {
+    min-width: min(100%, 320px);
+}
+
+.hero-mode-preview {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.hero-mode-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 88%, white);
+    color: var(--color-text-secondary);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.hero-guest-entry {
+    display: grid;
+    gap: 8px;
+    justify-items: center;
+}
+
+.hero-guest-copy {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    color: var(--color-text-secondary);
+    text-align: center;
+}
+
+.game-start-modal {
+    width: min(920px, calc(100vw - 32px));
+}
+
+.game-start-copy {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 16px;
+    color: var(--color-text-secondary);
+    text-align: left;
+}
+
+.game-start-copy strong {
+    color: var(--color-text-primary);
+    font-size: 1rem;
+}
+
+.game-start-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.game-start-card {
+    display: grid;
+    justify-items: start;
+    align-content: start;
+    gap: 8px;
+    min-height: 142px;
+    padding: 16px 18px;
+    text-align: left;
+}
+
+.game-start-card-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+}
+
+.game-start-card-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: inherit;
+}
+
+.game-start-card-copy {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: inherit;
+    opacity: 0.88;
+}
+
+.modal-close-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 86%, white);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    font-size: 1rem;
+}
+
 .btn-ai {
     border-color: rgba(120, 196, 255, 0.7);
     color: var(--color-text-primary);
@@ -496,11 +636,7 @@
     }
 
     .hero-control-group-match {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: var(--space-sm);
-        max-width: 520px;
-        margin: 0 auto;
+        display: flex;
     }
 
     .hero-control-group-guide {
@@ -511,10 +647,13 @@
         margin: 0 auto;
     }
 
-    .hero-control-group-match .btn-arcade {
-        min-width: 0;
+    .hero-start-button {
         width: 100%;
-        min-height: 50px;
+        min-height: 54px;
+    }
+
+    .game-start-grid {
+        grid-template-columns: 1fr 1fr;
     }
 
     .lobby-hero {
@@ -529,6 +668,12 @@
     .chat-container,
     .users-list {
         min-height: 0;
+    }
+}
+
+@media (max-width: 520px) {
+    .game-start-grid {
+        grid-template-columns: 1fr;
     }
 }
 

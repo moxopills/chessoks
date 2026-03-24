@@ -37,6 +37,9 @@
     const installPanel = document.getElementById('install-panel');
     const pointsToggle = document.getElementById('points-toggle');
     const pointsPanel = document.getElementById('points-panel');
+    const gameStartOpen = document.getElementById('game-start-open');
+    const gameStartModal = document.getElementById('game-start-modal');
+    const gameStartClose = document.getElementById('game-start-close');
     const aiMatchModal = document.getElementById('ai-match-modal');
     const aiMatchCancel = document.getElementById('ai-match-cancel');
     const quickMatchModal = document.getElementById('quick-match-modal');
@@ -121,6 +124,9 @@
         setupMobileTabs();
         setupChatToggle();
         setupTierToggle();
+        setupGameStartLauncher();
+        setupQuickMatch();
+        setupRandomMatch();
         setupAiMatch();
         setupUserContextMenu();
         setupUserSearch();
@@ -168,6 +174,21 @@
         } else {
             setTimeout(warm, 800);
         }
+    }
+
+    function setupGameStartLauncher() {
+        if (!gameStartOpen || !gameStartModal) return;
+        const closeModal = () => gameStartModal.classList.add('hidden');
+        gameStartOpen.addEventListener('click', () => gameStartModal.classList.remove('hidden'));
+        gameStartClose?.addEventListener('click', closeModal);
+        gameStartModal.addEventListener('click', (event) => {
+            if (event.target === gameStartModal) closeModal();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !gameStartModal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
     }
 
     /**
@@ -424,8 +445,6 @@
             isGuestUser = false;
             await loadFriendIds();
             setupChat();
-            setupQuickMatch();
-            setupRandomMatch();
             // lobby report removed; using profile report actions instead
             if (user.is_muted) {
                 setChatMutedState(true, user.mute_reason || '');
@@ -474,7 +493,14 @@
      * 빠른 대전 설정
      */
     function setupQuickMatch() {
+        if (!quickMatchBtn || quickMatchBtn.dataset.bound === '1') return;
+        quickMatchBtn.dataset.bound = '1';
         quickMatchBtn.addEventListener('click', async function() {
+            gameStartModal?.classList.add('hidden');
+            if (!currentUserId && !isGuestUser) {
+                Toast.error('로그인 후 이용 가능합니다.');
+                return;
+            }
             if (isGuestUser) {
                 Toast.error('게스트는 경쟁전을 이용할 수 없습니다.');
                 return;
@@ -522,8 +548,10 @@
      * 랜덤 대전 설정
      */
     function setupRandomMatch() {
-        if (!randomMatchBtn) return;
+        if (!randomMatchBtn || randomMatchBtn.dataset.bound === '1') return;
+        randomMatchBtn.dataset.bound = '1';
         randomMatchBtn.addEventListener('click', async function() {
+            gameStartModal?.classList.add('hidden');
             if (!currentUserId && !isGuestUser) {
                 Toast.error('로그인 또는 게스트로 시작하세요.');
                 return;
@@ -568,7 +596,8 @@
     }
 
     function setupAiMatch() {
-        if (!aiMatchBtn) return;
+        if (!aiMatchBtn || aiMatchBtn.dataset.bound === '1') return;
+        aiMatchBtn.dataset.bound = '1';
         const closeModal = () => aiMatchModal?.classList.add('hidden');
         const openModal = () => aiMatchModal?.classList.remove('hidden');
         const setAiLoading = (loading) => {
@@ -583,6 +612,7 @@
         };
 
         aiMatchBtn.addEventListener('click', () => {
+            gameStartModal?.classList.add('hidden');
             if (!currentUserId && !isGuestUser) {
                 Toast.error('로그인 또는 게스트로 시작하세요.');
                 return;
@@ -1580,6 +1610,7 @@
     function setupGuestMode() {
         // 게스트 플레이 버튼 클릭
         guestPlayBtn?.addEventListener('click', async () => {
+            gameStartModal?.classList.add('hidden');
             if (typeof Guest === 'undefined') return;
 
             const result = await Guest.showLoginModal();
@@ -1653,8 +1684,6 @@
         quickMatchBtn?.setAttribute('title', '게스트는 경쟁전을 이용할 수 없습니다.');
 
         // 빠른 대전 이벤트 설정 (AI 대전은 init에서 이미 설정됨)
-        setupRandomMatch();
-
         // WebSocket 연결 (접속자 목록용)
         connectLobbyChat();
     }
