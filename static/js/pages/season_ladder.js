@@ -6,6 +6,7 @@
     const daysLeftEl = document.getElementById("season-days-left");
     const myBoxEl = document.getElementById("my-season-box");
     const rewardBoxEl = document.getElementById("season-reward-box");
+    const goalBoxEl = document.getElementById("season-goal-box");
     const historyBoxEl = document.getElementById("season-history-box");
     const bodyEl = document.getElementById("season-leaderboard-body");
     const paginationEl = document.getElementById("season-pagination");
@@ -17,6 +18,10 @@
     let totalPages = 1;
     let currentUserId = null;
     let currentUserStats = null;
+    let rewardPreviewRows = [];
+    let currentMySeasonRank = null;
+    let currentMinGames = 10;
+    let mySeasonLoadFailed = false;
 
     init();
 
@@ -155,17 +160,28 @@
             const data = await API.get("/seasons/current/me/");
             if (!data.my_rank) {
                 myBoxEl.innerHTML = `배치 기준(${data.min_games_for_rank}판) 미충족입니다. 현재 경기 수가 부족해 랭크에 표시되지 않습니다.`;
+                currentMySeasonRank = null;
+                currentMinGames = data.min_games_for_rank || currentMinGames;
+                mySeasonLoadFailed = false;
+                renderGoalSection();
                 return;
             }
             const m = data.my_rank;
+            currentMySeasonRank = m;
+            currentMinGames = data.min_games_for_rank || currentMinGames;
+            mySeasonLoadFailed = false;
             myBoxEl.innerHTML = `
                 <div>순위: <strong>#${m.rank}</strong></div>
                 <div>레이팅: <strong>${m.rating}</strong> (최고 ${m.peak_rating})</div>
                 <div>전적: ${m.wins}승 ${m.losses}패 ${m.draws}무 · 승률 ${m.win_rate}%</div>
                 <div>현재 시즌 칭호: <strong>${Utils.escapeHtml(currentUserStats?.season_title || '없음')}</strong></div>
             `;
+            renderGoalSection();
         } catch (error) {
             myBoxEl.textContent = error.message || "내 시즌 정보를 불러오지 못했습니다.";
+            currentMySeasonRank = null;
+            mySeasonLoadFailed = true;
+            renderGoalSection();
         }
     }
 
@@ -197,9 +213,74 @@
                     </div>
                 `;
             }).join("");
+            rewardPreviewRows = rows.slice(0, 3);
+            renderGoalSection();
         } catch (error) {
             rewardBoxEl.textContent = error.message || "보상 정보를 불러오지 못했습니다.";
+            if (goalBoxEl) {
+                goalBoxEl.textContent = "보상 목표를 불러오지 못했습니다.";
+            }
         }
+    }
+
+    function renderGoalSection() {
+        if (!goalBoxEl) return;
+        if (mySeasonLoadFailed) {
+            goalBoxEl.textContent = "이번 시즌 목표를 불러오지 못했습니다.";
+            return;
+        }
+        const rewardCards = rewardPreviewRows.length
+            ? `<div class="season-goal-grid">${rewardPreviewRows.map((row) => {
+                const rankText = row.rank_min === row.rank_max ? `${row.rank_min}위` : `${row.rank_min}~${row.rank_max}위`;
+                return `
+                    <article class="season-goal-item">
+                        <span class="season-goal-rank">${rankText}</span>
+                        <strong>${Utils.escapeHtml(row.reward_value)}</strong>
+                        <span class="season-goal-type">${Utils.escapeHtml(row.reward_type_label)}</span>
+                    </article>
+                `;
+            }).join("")}</div>`
+            : "";
+        if (!currentUserId) {
+            goalBoxEl.innerHTML = `
+                <div class="season-goal-stack">
+                    ${rewardCards}
+                    <div class="season-goal-empty">
+                        <strong>로그인 후 목표를 확인할 수 있습니다.</strong>
+                        <span>시즌 래더는 최소 ${currentMinGames || 10}판부터 순위가 반영됩니다.</span>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        if (!currentMySeasonRank) {
+            goalBoxEl.innerHTML = `
+                <div class="season-goal-stack">
+                    ${rewardCards}
+                    <div class="season-goal-empty">
+                        <strong>아직 배치 중입니다.</strong>
+                        <span>최소 ${currentMinGames || 10}판을 채우면 현재 보상 구간과 순위 목표가 표시됩니다.</span>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        const nextMilestone =
+            currentMySeasonRank.rank <= 3 ? '현재 최상위 보상 구간입니다.' :
+            currentMySeasonRank.rank <= 10 ? 'Top 3 진입 시 시즌 상위 프레임 보상이 열립니다.' :
+            currentMySeasonRank.rank <= 100 ? 'Top 10 진입 시 시즌 Top 10 칭호와 프레임이 열립니다.' :
+            'Top 100 진입 시 추가 포인트 보상 구간에 들어갑니다.';
+        goalBoxEl.innerHTML = `
+            <div class="season-goal-stack">
+                ${rewardCards}
+                <div class="season-goal-highlight">
+                    <span class="season-goal-badge">현재 위치</span>
+                    <strong>#${currentMySeasonRank.rank} · 시즌 레이팅 ${currentMySeasonRank.rating}</strong>
+                    <span>${currentMySeasonRank.wins}승 ${currentMySeasonRank.losses}패 ${currentMySeasonRank.draws}무 · 승률 ${currentMySeasonRank.win_rate}%</span>
+                </div>
+                <div class="season-goal-copy">${Utils.escapeHtml(nextMilestone)}</div>
+            </div>
+        `;
     }
 
     async function claimRewards() {
