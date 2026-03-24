@@ -645,10 +645,14 @@
                 header.classList.toggle('is-clickable', narrow);
                 if (!narrow) {
                     section.classList.remove('is-collapsed');
+                    section.dataset.collapsed = 'false';
+                    header.dataset.accordionLabel = '';
                     return;
                 }
-                const shouldOpen = ['game-actions', 'game-moves-section', 'game-chat-section'].includes(section.id) || idx === 0;
+                const shouldOpen = ['game-actions', 'game-moves-section'].includes(section.id) || idx === 0;
                 section.classList.toggle('is-collapsed', !shouldOpen);
+                section.dataset.collapsed = section.classList.contains('is-collapsed') ? 'true' : 'false';
+                header.dataset.accordionLabel = section.classList.contains('is-collapsed') ? '닫힘' : '열림';
             });
         };
 
@@ -660,6 +664,8 @@
                 if (!isNarrow()) return;
                 if (section.id === 'game-actions') return;
                 section.classList.toggle('is-collapsed');
+                section.dataset.collapsed = section.classList.contains('is-collapsed') ? 'true' : 'false';
+                header.dataset.accordionLabel = section.classList.contains('is-collapsed') ? '닫힘' : '열림';
             });
         });
 

@@ -1508,15 +1508,24 @@ html[data-theme="dark"] .piece.white {
 }
 
 .game-side-panel.is-accordion .panel-header.is-clickable::after {
-    content: '▾';
+    content: attr(data-accordion-label);
     margin-left: auto;
-    font-size: 0.75rem;
+    min-width: 64px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid color-mix(in srgb, var(--color-accent-secondary) 18%, var(--color-border));
+    background: color-mix(in srgb, var(--color-accent-secondary) 8%, transparent);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-align: center;
     color: var(--color-text-secondary);
-    transition: transform 0.18s ease;
+    transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease;
 }
 
-.game-side-panel.is-accordion .panel-section.is-collapsed .panel-header.is-clickable::after {
-    transform: rotate(-90deg);
+.game-side-panel.is-accordion .panel-section:not(.is-collapsed) .panel-header.is-clickable::after {
+    color: var(--color-accent-primary);
+    border-color: color-mix(in srgb, var(--color-accent-primary) 32%, var(--color-border));
+    background: color-mix(in srgb, var(--color-accent-primary) 10%, transparent);
 }
 
 .game-side-panel.is-accordion .panel-section.is-collapsed > :not(.panel-header) {
@@ -1565,6 +1574,16 @@ html[data-theme="dark"] .piece.white {
 .panel-title-wrap {
     display: grid;
     gap: 3px;
+}
+
+.game-side-panel.is-accordion .panel-header.is-clickable .panel-title-wrap::after {
+    content: '';
+    display: block;
+    margin-top: 4px;
+    width: 30px;
+    height: 2px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-accent-secondary) 20%, var(--color-border));
 }
 
 .panel-copy {
