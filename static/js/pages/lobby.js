@@ -48,7 +48,6 @@
     const matchToast = document.getElementById('match-toast');
     const aiLevelButtons = Array.from(document.querySelectorAll('.ai-level-card'));
     const aiLevelLoading = document.getElementById('ai-level-loading');
-    const lobbyCustomizeOpen = document.getElementById('lobby-customize-open');
     const guestPlayBtn = document.getElementById('guest-play-btn');
     const guestStatusBar = document.getElementById('guest-status-bar');
     const guestStatusName = document.getElementById('guest-status-name');
@@ -123,7 +122,6 @@
         setupChatToggle();
         setupTierToggle();
         setupAiMatch();
-        setupLobbyCustomization();
         setupUserContextMenu();
         setupUserSearch();
         setupGuestMode();
@@ -419,13 +417,11 @@
             // 게스트 유저인지 확인
             if (user.is_guest) {
                 isGuestUser = true;
-                lobbyCustomizeOpen?.classList.add('hidden');
                 setupGuestSession();
                 return;
             }
 
             isGuestUser = false;
-            lobbyCustomizeOpen?.classList.remove('hidden');
             await loadFriendIds();
             setupChat();
             setupQuickMatch();
@@ -442,7 +438,6 @@
             guestPlayBtn?.classList.add('hidden');
             guestStatusBar?.classList.add('hidden');
         } catch (error) {
-            lobbyCustomizeOpen?.classList.add('hidden');
             // 비로그인 상태 - 게스트 체크
             if (typeof Guest !== 'undefined' && Guest.isGuest()) {
                 isGuestUser = true;
@@ -640,18 +635,6 @@
                     closeModal();
                 }
             }
-        });
-    }
-
-    function setupLobbyCustomization() {
-        if (!lobbyCustomizeOpen) return;
-
-        lobbyCustomizeOpen.addEventListener('click', () => {
-            if (!currentUserId || isGuestUser) {
-                Toast.error('로그인 시 가능합니다.');
-                return;
-            }
-            window.location.href = '/customize/';
         });
     }
 

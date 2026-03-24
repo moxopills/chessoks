@@ -15,6 +15,7 @@
     const drawsEl = document.getElementById('stat-draws');
     const totalEl = document.getElementById('stat-total');
     const recentEl = document.getElementById('recent-games');
+    const activityTimelineEl = document.getElementById('activity-timeline');
     const guestbookList = document.getElementById('guestbook-list');
     const guestbookInput = document.getElementById('guestbook-input');
     const guestbookSubmit = document.getElementById('guestbook-submit');
@@ -22,6 +23,7 @@
     const winrateLegend = document.getElementById('winrate-legend');
     const ratingChart = document.getElementById('rating-chart');
     let currentUserId = null;
+    let currentUser = null;
 
     init();
 
@@ -29,6 +31,7 @@
         try {
             const me = await API.get('/accounts/me/');
             currentUserId = me?.id;
+            currentUser = me;
             renderProfile(me);
             await loadGuestbook();
         } catch (error) {
@@ -47,6 +50,7 @@
             renderDashboard(dashboard);
         } catch (error) {
             if (recentEl) recentEl.textContent = '전적을 불러오지 못했습니다.';
+            if (activityTimelineEl) activityTimelineEl.innerHTML = '<div class="helper-text">최근 활동을 불러오지 못했습니다.</div>';
         }
 
         guestbookSubmit?.addEventListener('click', submitGuestbook);
@@ -153,6 +157,62 @@
                 </div>
             `;
         }).join('');
+
+        renderActivityTimeline(summary, games);
+    }
+
+    function renderActivityTimeline(summary, games) {
+        if (!activityTimelineEl) return;
+        const items = [];
+        const seasonTitle = currentUser?.stats?.season_title || '';
+        const stylePoints = Number(summary?.style_points ?? currentUser?.stats?.style_points ?? 0);
+
+        if (seasonTitle) {
+            items.push({
+                badge: '🏆',
+                title: '현재 시즌 칭호',
+                body: seasonTitle,
+                meta: '시즌 래더 보상'
+            });
+        }
+
+        if (stylePoints > 0) {
+            items.push({
+                badge: '🎨',
+                title: '보유 포인트',
+                body: `${Utils.formatNumber(stylePoints)}P`,
+                meta: '커스터마이징에서 사용 가능'
+            });
+        }
+
+        games.slice(0, 4).forEach((game) => {
+            const resultInfo = getResultInfo(game, currentUserId);
+            const opponent = game.white_player?.id === currentUserId
+                ? game.black_player?.nickname
+                : game.white_player?.nickname;
+            items.push({
+                badge: resultInfo.className === 'win' ? '✅' : (resultInfo.className === 'lose' ? '⚠️' : '🤝'),
+                title: `${resultInfo.label} · ${opponent || '상대'}`,
+                body: `${game.white_player?.nickname || '화이트'} vs ${game.black_player?.nickname || '블랙'}`,
+                meta: `${game.room_type || '대국'} · ${formatDate(game.created_at)}`
+            });
+        });
+
+        if (!items.length) {
+            activityTimelineEl.innerHTML = '<div class="helper-text">표시할 최근 활동이 없습니다.</div>';
+            return;
+        }
+
+        activityTimelineEl.innerHTML = items.map((item) => `
+            <article class="activity-item">
+                <div class="activity-badge">${item.badge}</div>
+                <div class="activity-content">
+                    <strong class="activity-title">${Utils.escapeHtml(item.title)}</strong>
+                    <div class="activity-body">${Utils.escapeHtml(item.body)}</div>
+                    <div class="activity-meta">${Utils.escapeHtml(item.meta)}</div>
+                </div>
+            </article>
+        `).join('');
     }
 
     function renderWinratePieChart(wins, losses, draws) {

@@ -44,12 +44,18 @@
 .season-grid {
     display: grid;
     gap: 16px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .season-card h2 {
     margin: 0 0 12px;
     font-size: 1.05rem;
+}
+
+.season-goal-card {
+    background:
+        linear-gradient(145deg, color-mix(in srgb, var(--color-accent-primary) 5%, var(--color-bg-card)) 0%, var(--color-bg-card) 55%),
+        var(--color-bg-card);
 }
 
 .season-actions {
@@ -208,6 +214,64 @@
     border-bottom: 0;
 }
 
+.season-goal-stack {
+    display: grid;
+    gap: 12px;
+}
+
+.season-goal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.season-goal-item {
+    display: grid;
+    gap: 4px;
+    padding: 12px;
+    border: 1px solid color-mix(in srgb, var(--color-accent-secondary) 20%, var(--color-border));
+    border-radius: var(--radius-md);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--color-accent-secondary) 8%, var(--color-bg-secondary)) 0%, var(--color-bg-secondary) 100%);
+}
+
+.season-goal-rank {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    font-weight: 700;
+}
+
+.season-goal-type {
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+}
+
+.season-goal-highlight,
+.season-goal-empty {
+    display: grid;
+    gap: 6px;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+}
+
+.season-goal-badge {
+    display: inline-flex;
+    width: fit-content;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--color-accent-primary) 12%, transparent);
+    color: var(--color-accent-primary);
+}
+
+.season-goal-copy {
+    color: var(--color-text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.55;
+}
+
 .text-muted {
     color: var(--color-text-secondary);
 }
@@ -219,6 +283,10 @@
     }
 
     .season-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .season-goal-grid {
         grid-template-columns: 1fr;
     }
 }
