@@ -633,27 +633,41 @@
         if (!sidePanel) return;
         const sections = Array.from(sidePanel.querySelectorAll('.panel-section'));
         if (!sections.length) return;
-
+        const storageKey = 'game_side_panel_sections_v2';
+        const defaultStates = {
+            'game-actions': false,
+            'game-moves-section': false,
+            'captured-section': true,
+            'spectator-section': true,
+            'game-chat-section': window.innerWidth <= 1360,
+        };
         const isNarrow = () => window.innerWidth <= 1360;
+
+        const getSavedStates = () => Utils.Storage.get(storageKey, { ...defaultStates }) || { ...defaultStates };
+        const saveStates = (states) => Utils.Storage.set(storageKey, states);
+
+        const setCollapsed = (section, collapsed) => {
+            const header = section.querySelector('.panel-header');
+            section.classList.toggle('is-collapsed', collapsed);
+            section.dataset.collapsed = collapsed ? 'true' : 'false';
+            if (header) {
+                header.dataset.accordionLabel = collapsed ? '닫힘' : '열림';
+                header.classList.add('is-clickable');
+            }
+        };
 
         const applyLayout = () => {
             const narrow = isNarrow();
-            sidePanel.classList.toggle('is-accordion', narrow);
-            sections.forEach((section, idx) => {
+            const states = getSavedStates();
+            sidePanel.classList.add('is-accordion');
+            sections.forEach((section) => {
                 const header = section.querySelector('.panel-header');
                 if (!header) return;
-                header.classList.toggle('is-clickable', narrow);
-                if (!narrow) {
-                    section.classList.remove('is-collapsed');
-                    section.dataset.collapsed = 'false';
-                    header.dataset.accordionLabel = '';
-                    return;
-                }
-                const shouldOpen = ['game-actions', 'game-moves-section'].includes(section.id) || idx === 0;
-                section.classList.toggle('is-collapsed', !shouldOpen);
-                section.dataset.collapsed = section.classList.contains('is-collapsed') ? 'true' : 'false';
-                header.dataset.accordionLabel = section.classList.contains('is-collapsed') ? '닫힘' : '열림';
+                const collapsed = Boolean(states[section.id]);
+                setCollapsed(section, collapsed);
+                header.dataset.accordionMode = narrow ? 'single' : 'multi';
             });
+            syncGameChatFabVisibility();
         };
 
         sections.forEach((section) => {
@@ -661,11 +675,19 @@
             if (!header || header.dataset.accordionBound === '1') return;
             header.dataset.accordionBound = '1';
             header.addEventListener('click', () => {
-                if (!isNarrow()) return;
-                if (section.id === 'game-actions') return;
-                section.classList.toggle('is-collapsed');
-                section.dataset.collapsed = section.classList.contains('is-collapsed') ? 'true' : 'false';
-                header.dataset.accordionLabel = section.classList.contains('is-collapsed') ? '닫힘' : '열림';
+                const states = getSavedStates();
+                const nextCollapsed = !section.classList.contains('is-collapsed');
+                if (isNarrow() && !nextCollapsed) {
+                    sections.forEach((target) => {
+                        if (target.id === section.id) return;
+                        states[target.id] = true;
+                        setCollapsed(target, true);
+                    });
+                }
+                states[section.id] = nextCollapsed;
+                setCollapsed(section, nextCollapsed);
+                saveStates(states);
+                syncGameChatFabVisibility();
             });
         });
 
