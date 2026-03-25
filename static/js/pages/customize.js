@@ -13,6 +13,10 @@
     const previewBoardDesc = document.getElementById('customize-board-desc');
     const previewPieceTitle = document.getElementById('customize-piece-title');
     const previewPieceDesc = document.getElementById('customize-piece-desc');
+    const previewComboTitle = document.getElementById('customize-combo-title');
+    const previewComboDesc = document.getElementById('customize-combo-desc');
+    const previewComboBadges = document.getElementById('customize-combo-badges');
+    const previewComboSpotlight = document.getElementById('customize-combo-spotlight');
     const stateBanner = document.getElementById('customize-state-banner');
     const previewBadge = document.getElementById('customize-preview-badge');
     const summaryBoardName = document.getElementById('customize-summary-board-name');
@@ -68,6 +72,78 @@
             champion_ring: { desc: '챔피언 테마의 강한 글로우로 존재감을 드러냅니다.' },
         },
     };
+
+    const RARITY_META = {
+        common: { label: '기본형', className: 'common' },
+        rare: { label: '희귀', className: 'rare' },
+        epic: { label: '에픽', className: 'epic' },
+        legendary: { label: '레전드', className: 'legendary' },
+    };
+
+    const SHOP_BRAND_META = {
+        board: {
+            'skin-board-classic': { rarity: 'common' },
+            'skin-board-wood': { rarity: 'rare', recommended: true },
+            'skin-board-dark': { rarity: 'rare', recommended: true },
+            'skin-board-neon': { rarity: 'epic', recommended: true, seasonLimited: true },
+            'skin-board-marble': { rarity: 'epic', recommended: true },
+            'skin-board-obsidian': { rarity: 'legendary', seasonLimited: true },
+            'skin-board-sakura': { rarity: 'epic', recommended: true, seasonLimited: true },
+        },
+        piece: {
+            'skin-piece-classic': { rarity: 'common' },
+            'skin-piece-pixel': { rarity: 'rare', recommended: true },
+            'skin-piece-modern': { rarity: 'rare', recommended: true },
+            'skin-piece-3d': { rarity: 'epic', recommended: true },
+            'skin-piece-glass': { rarity: 'epic', recommended: true, seasonLimited: true },
+            'skin-piece-rune': { rarity: 'legendary', seasonLimited: true, recommended: true },
+        },
+    };
+
+    const RECOMMENDED_COMBOS = [
+        {
+            board: 'skin-board-classic',
+            piece: 'skin-piece-classic',
+            title: '스탠다드 밸런스',
+            desc: '기본 UI와 가장 자연스럽게 어울리는 정석형 조합입니다.',
+            badges: ['기본 추천'],
+        },
+        {
+            board: 'skin-board-wood',
+            piece: 'skin-piece-3d',
+            title: '크래프트 살롱',
+            desc: '원목 보드와 입체 기물이 만나 가장 따뜻한 테이블 분위기를 만듭니다.',
+            badges: ['추천 조합'],
+        },
+        {
+            board: 'skin-board-dark',
+            piece: 'skin-piece-modern',
+            title: '토너먼트 포커스',
+            desc: '대비가 분명해서 장시간 대국에도 집중력이 유지되는 조합입니다.',
+            badges: ['추천 조합'],
+        },
+        {
+            board: 'skin-board-neon',
+            piece: 'skin-piece-rune',
+            title: '네온 아레나',
+            desc: '시즌 한정 쇼케이스 느낌을 살린 하이콘트라스트 조합입니다.',
+            badges: ['추천 조합', '시즌 한정'],
+        },
+        {
+            board: 'skin-board-marble',
+            piece: 'skin-piece-glass',
+            title: '크리스탈 홀',
+            desc: '반광 마블 보드와 유리 질감 기물이 만나 가장 프리미엄한 인상을 줍니다.',
+            badges: ['추천 조합', '시즌 한정'],
+        },
+        {
+            board: 'skin-board-sakura',
+            piece: 'skin-piece-glass',
+            title: '스프링 갤러리',
+            desc: '부드러운 사쿠라 톤 위에 투명한 기물이 올라가는 전시형 조합입니다.',
+            badges: ['추천 조합', '시즌 한정'],
+        },
+    ];
 
     function showStatus(message, type = 'info', duration = 1800) {
         if (Utils?.showStatusBadge) {
@@ -218,6 +294,7 @@
         const skinType = selectEl === boardSkinSelect ? 'board' : 'piece';
         container.innerHTML = skins.map((skin) => {
             const meta = SKIN_META[skinType]?.[skin.css_class] || {};
+            const brandMeta = SHOP_BRAND_META[skinType]?.[skin.css_class] || {};
             const selected = String(skin.id) === selectedId;
             const state = skin.selected
                 ? '착용중'
@@ -229,6 +306,9 @@
                     data-target="${selectEl.id}"
                     data-value="${skin.id}"
                 >
+                    <span class="customize-choice-badges">
+                        ${renderBrandBadges(brandMeta)}
+                    </span>
                     <span class="customize-choice-preview customize-choice-preview--${skinType} ${skin.css_class}"></span>
                     <span class="customize-choice-name">${Utils.escapeHtml(meta.name || skin.name)}</span>
                     <span class="customize-choice-desc">${Utils.escapeHtml(meta.desc || '스킨을 미리 보고 선택하세요.')}</span>
@@ -456,6 +536,7 @@
         if (previewBoardDesc) previewBoardDesc.textContent = boardMeta.desc;
         if (previewPieceTitle) previewPieceTitle.textContent = `기물: ${pieceMeta.name}`;
         if (previewPieceDesc) previewPieceDesc.textContent = pieceMeta.desc;
+        renderComboSpotlight(boardClass, pieceClass);
         renderSelectionSummary(boardSkin, pieceSkin, nicknameOption, borderOption);
         updateActionState();
     }
@@ -463,6 +544,54 @@
     function getSelectedSkin(skinId) {
         const allSkins = [...(skinCatalog?.board || []), ...(skinCatalog?.pieces || [])];
         return allSkins.find((skin) => skin.id === skinId) || null;
+    }
+
+    function renderBrandBadges(meta = {}) {
+        const badges = [];
+        const rarityMeta = RARITY_META[meta.rarity || 'common'];
+        if (rarityMeta) {
+            badges.push(
+                `<span class="customize-shop-badge customize-shop-badge--rarity customize-shop-badge--${rarityMeta.className}">${Utils.escapeHtml(rarityMeta.label)}</span>`
+            );
+        }
+        if (meta.recommended) {
+            badges.push('<span class="customize-shop-badge customize-shop-badge--recommended">추천 조합</span>');
+        }
+        if (meta.seasonLimited) {
+            badges.push('<span class="customize-shop-badge customize-shop-badge--limited">시즌 한정</span>');
+        }
+        return badges.join('');
+    }
+
+    function renderComboSpotlight(boardClass, pieceClass) {
+        if (!previewComboTitle || !previewComboDesc || !previewComboBadges || !previewComboSpotlight) return;
+
+        const exactMatch = RECOMMENDED_COMBOS.find((combo) => combo.board === boardClass && combo.piece === pieceClass);
+        const suggestedMatch = exactMatch
+            || RECOMMENDED_COMBOS.find((combo) => combo.board === boardClass)
+            || RECOMMENDED_COMBOS.find((combo) => combo.piece === pieceClass)
+            || RECOMMENDED_COMBOS[0];
+
+        if (!suggestedMatch) {
+            previewComboSpotlight.dataset.mode = 'neutral';
+            previewComboTitle.textContent = '추천 조합 정보 없음';
+            previewComboDesc.textContent = '다른 스킨 조합을 선택하면 시즌 추천 세트를 확인할 수 있습니다.';
+            previewComboBadges.innerHTML = '';
+            return;
+        }
+
+        const boardName = SKIN_META.board[suggestedMatch.board]?.name || '보드';
+        const pieceName = SKIN_META.piece[suggestedMatch.piece]?.name || '기물';
+        previewComboSpotlight.dataset.mode = exactMatch ? 'matched' : 'suggested';
+        previewComboTitle.textContent = exactMatch
+            ? `${suggestedMatch.title} · 추천 조합 일치`
+            : `${suggestedMatch.title} · 추천 조합 제안`;
+        previewComboDesc.textContent = exactMatch
+            ? suggestedMatch.desc
+            : `${boardName} + ${pieceName} 조합이 가장 잘 어울립니다. ${suggestedMatch.desc}`;
+        previewComboBadges.innerHTML = (suggestedMatch.badges || [])
+            .map((badge) => `<span class="customize-shop-badge customize-shop-badge--combo">${Utils.escapeHtml(badge)}</span>`)
+            .join('');
     }
 
     function updateActionState() {

@@ -35,6 +35,12 @@
                 <div class="status-badge status-badge--waiting" id="customize-state-banner">현재 조합을 확인하는 중입니다.</div>
             </div>
 
+            <div class="customize-shop-legend" aria-label="상점 뱃지 안내">
+                <span class="customize-shop-badge customize-shop-badge--rarity customize-shop-badge--rare">희귀</span>
+                <span class="customize-shop-badge customize-shop-badge--recommended">추천 조합</span>
+                <span class="customize-shop-badge customize-shop-badge--limited">시즌 한정</span>
+            </div>
+
             <div class="customize-summary-grid">
                 <article class="customize-summary-card">
                     <span class="customize-summary-label">보드</span>
@@ -106,8 +112,8 @@
             </div>
 
             <div class="customize-actions">
-                <button class="btn btn-secondary" id="customize-purchase" type="button">구매하기</button>
-                <button class="btn btn-primary" id="customize-save" type="button">적용하기</button>
+                <button class="btn btn-secondary customize-action-btn" id="customize-purchase" type="button">구매하기</button>
+                <button class="btn btn-primary customize-action-btn" id="customize-save" type="button">적용하기</button>
             </div>
         </section>
 
@@ -155,6 +161,14 @@
                         <div class="mini-square light"></div>
                         <div class="mini-square dark"></div>
                         <div class="mini-square light"></div>
+                    </div>
+                    <div class="customize-combo-spotlight" id="customize-combo-spotlight" data-mode="neutral">
+                        <div class="customize-combo-head">
+                            <span class="ui-eyebrow">Recommended Combo</span>
+                            <div class="customize-combo-badges" id="customize-combo-badges"></div>
+                        </div>
+                        <strong id="customize-combo-title">추천 조합을 계산하는 중입니다.</strong>
+                        <p id="customize-combo-desc">선택한 보드와 기물에 잘 어울리는 조합을 바로 안내합니다.</p>
                     </div>
                     <div class="customize-skin-meta" id="customize-skin-meta">
                         <div class="customize-skin-meta-item">
