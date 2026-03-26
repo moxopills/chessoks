@@ -49,6 +49,9 @@
     const moveNextBtn = document.getElementById('move-next');
     const movePageLabel = document.getElementById('move-page');
     const turnIndicator = document.getElementById('turn-indicator');
+    const gameModeBadge = document.getElementById('game-mode-badge');
+    const gameTurnBadge = document.getElementById('game-turn-badge');
+    const gameAlertBadge = document.getElementById('game-alert-badge');
     const moveSection = document.getElementById('game-moves-section');
     const guideToggle = document.getElementById('guide-toggle');
     const capturedWhite = document.getElementById('captured-white');
@@ -445,6 +448,7 @@
             if (game.move_count > 0) {
                 await loadLastMove();
                 renderBoard();
+                updateTurn();
             }
             if (replayOnly && replayGameParamId) {
                 await openReplay(replayGameParamId);
@@ -1197,6 +1201,7 @@
 
         applyLastMoveHighlight();
         applyKingDangerHighlight(position);
+        updateBoardBrandState();
     }
 
     /**
@@ -1254,6 +1259,80 @@
         });
     }
 
+    function setUiStateBadge(element, tone, text) {
+        if (!element) return;
+        const nextClass = ['ui-state-badge'];
+        if (tone === 'success') nextClass.push('ui-state-badge--success');
+        if (tone === 'pending') nextClass.push('ui-state-badge--pending');
+        if (tone === 'warning') nextClass.push('ui-state-badge--warning');
+        element.className = nextClass.join(' ');
+        element.textContent = text;
+    }
+
+    function updateBoardBrandState() {
+        if (!chessBoard || !game) return;
+        chessBoard.classList.remove('is-check', 'is-checkmate');
+
+        if (lastMove?.is_checkmate || game.result === 'checkmate_white' || game.result === 'checkmate_black') {
+            chessBoard.classList.add('is-checkmate');
+            return;
+        }
+
+        if (lastMove?.is_check && game.result === 'playing') {
+            chessBoard.classList.add('is-check');
+        }
+    }
+
+    function getModeBadgeText() {
+        if (replayOnly) return '기보 다시보기';
+        if (!game) return '실시간 대국';
+        if (isAiRoom) return 'AI 대전';
+        if (!myColor) return '관전 중';
+        if (game.room_type === 'competitive') return '경쟁전';
+        if (game.room_type === 'quick') return '빠른 대전';
+        return '실시간 대국';
+    }
+
+    function updateGameStatusStrip() {
+        if (!game) return;
+
+        const modeTone = replayOnly ? 'warning' : (!myColor ? 'pending' : 'success');
+        setUiStateBadge(gameModeBadge, modeTone, getModeBadgeText());
+
+        if (game.result && game.result !== 'playing') {
+            const outcome = getOutcome(game.result, myColor);
+            if (outcome === 'win') {
+                setUiStateBadge(gameTurnBadge, 'success', '결과: 승리');
+            } else if (outcome === 'loss') {
+                setUiStateBadge(gameTurnBadge, 'warning', '결과: 패배');
+            } else if (outcome === 'draw') {
+                setUiStateBadge(gameTurnBadge, 'pending', '결과: 무승부');
+            } else {
+                setUiStateBadge(gameTurnBadge, '', '결과 확정');
+            }
+        } else if (!myColor) {
+            setUiStateBadge(gameTurnBadge, 'pending', game.current_turn === 'white' ? '백 차례' : '흑 차례');
+        } else {
+            setUiStateBadge(gameTurnBadge, isMyTurn ? 'success' : '', isMyTurn ? '내 차례' : '상대 차례');
+        }
+
+        if (lastMove?.is_checkmate) {
+            setUiStateBadge(gameAlertBadge, 'warning', '체크메이트');
+        } else if (lastMove?.is_check && game.result === 'playing') {
+            setUiStateBadge(
+                gameAlertBadge,
+                'warning',
+                !myColor ? '체크 발생' : (game.current_turn === myColor ? '체크 경고' : '상대 킹 체크')
+            );
+        } else if (replayOnly) {
+            setUiStateBadge(gameAlertBadge, '', '기보를 단계별로 다시볼 수 있습니다');
+        } else if (!myColor) {
+            setUiStateBadge(gameAlertBadge, '', '우측 패널에서 기보·관전자·채팅 확인');
+        } else {
+            setUiStateBadge(gameAlertBadge, '', '우측 패널에서 기보·채팅·액션 확인');
+        }
+    }
+
     /**
      * 턴 업데이트
      */
@@ -1294,6 +1373,8 @@
         if (!lastTurnColor) {
             lastTurnColor = game.current_turn;
         }
+
+        updateGameStatusStrip();
     }
 
     /**
@@ -2789,6 +2870,7 @@
             clearInterval(timerInterval);
         }
         pendingEnd = false;
+        gameEndModal.classList.remove('outcome-win', 'outcome-loss', 'outcome-draw');
 
         const iconEl = document.getElementById('game-end-icon');
         const titleEl = document.getElementById('game-end-title');
@@ -2837,6 +2919,14 @@
             resultText = result === 'stalemate' ? '스테일메이트' : '합의 무승부';
         }
 
+        if (outcome === 'win') {
+            gameEndModal.classList.add('outcome-win');
+        } else if (outcome === 'loss') {
+            gameEndModal.classList.add('outcome-loss');
+        } else if (outcome === 'draw') {
+            gameEndModal.classList.add('outcome-draw');
+        }
+
         iconEl.textContent = icon;
         titleEl.textContent = title;
         resultEl.textContent = resultText;
@@ -2847,6 +2937,7 @@
 
         gameEndModal.classList.remove('hidden');
         gameEndModal.style.display = 'flex';
+        updateGameStatusStrip();
         loadGameAnalysis();
     }
 
@@ -3149,6 +3240,7 @@
     function showPendingEnd(message) {
         if (pendingEnd) return;
         pendingEnd = true;
+        gameEndModal.classList.remove('outcome-win', 'outcome-loss', 'outcome-draw');
 
         const iconEl = document.getElementById('game-end-icon');
         const titleEl = document.getElementById('game-end-title');
