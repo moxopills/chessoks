@@ -19,6 +19,9 @@
     const previewComboSpotlight = document.getElementById('customize-combo-spotlight');
     const stateBanner = document.getElementById('customize-state-banner');
     const previewBadge = document.getElementById('customize-preview-badge');
+    const previewCardShell = document.querySelector('.customize-preview-card-shell');
+    const previewSectionCard = document.querySelector('.customize-preview-card');
+    const shopSectionCard = document.querySelector('.customize-shop-card');
     const summaryBoardName = document.getElementById('customize-summary-board-name');
     const summaryBoardState = document.getElementById('customize-summary-board-state');
     const summaryPieceName = document.getElementById('customize-summary-piece-name');
@@ -37,6 +40,7 @@
     let me = null;
     let skinCatalog = null;
     let statsSnapshot = null;
+    const transientSelections = Object.create(null);
 
     const SKIN_META = {
         board: {
@@ -176,6 +180,19 @@
         return fallback;
     }
 
+    function pulseElement(element, className = 'is-highlighted', duration = 720) {
+        if (!element) return;
+        element.classList.remove(className);
+        void element.offsetWidth;
+        element.classList.add(className);
+        window.setTimeout(() => element.classList.remove(className), duration);
+    }
+
+    function pulseActionButton(button) {
+        if (!button) return;
+        pulseElement(button, 'is-confirmed', 480);
+    }
+
     function normalizeNicknameColorKey(key) {
         const value = (key || '').trim();
         const map = {
@@ -296,12 +313,13 @@
             const meta = SKIN_META[skinType]?.[skin.css_class] || {};
             const brandMeta = SHOP_BRAND_META[skinType]?.[skin.css_class] || {};
             const selected = String(skin.id) === selectedId;
+            const justSelected = transientSelections[selectEl.id] === String(skin.id);
             const state = skin.selected
                 ? '착용중'
                 : (skin.owned || skin.is_default ? (skin.is_default ? '기본 제공' : '보유중') : `${skin.price}P`);
             return `
                 <button
-                    class="customize-choice-card${selected ? ' is-selected' : ''}${!skin.owned && !skin.is_default ? ' is-locked' : ''}"
+                    class="customize-choice-card${selected ? ' is-selected' : ''}${justSelected ? ' is-just-selected' : ''}${!skin.owned && !skin.is_default ? ' is-locked' : ''}"
                     type="button"
                     data-target="${selectEl.id}"
                     data-value="${skin.id}"
@@ -328,6 +346,7 @@
             const key = String(option.key || '');
             const meta = PROFILE_OPTION_META[type]?.[key] || {};
             const selected = key === selectedValue;
+            const justSelected = transientSelections[selectEl.id] === key;
             const state = selected
                 ? '착용중'
                 : (option.owned || option.cost === 0 ? (option.cost === 0 ? '기본 제공' : '보유중') : `${option.cost}P`);
@@ -336,7 +355,7 @@
                 : `<span class="customize-choice-preview customize-choice-preview--border" style="--choice-ring:${Utils.getProfileBorderValue(key || '') || '0 0 0 1px rgba(160,150,135,0.3) inset'};"></span>`;
             return `
                 <button
-                    class="customize-choice-card customize-choice-card--compact${selected ? ' is-selected' : ''}${!option.owned && (option.cost || 0) > 0 ? ' is-locked' : ''}"
+                    class="customize-choice-card customize-choice-card--compact${selected ? ' is-selected' : ''}${justSelected ? ' is-just-selected' : ''}${!option.owned && (option.cost || 0) > 0 ? ' is-locked' : ''}"
                     type="button"
                     data-target="${selectEl.id}"
                     data-value="${Utils.escapeHtml(key)}"
@@ -354,6 +373,10 @@
     function bindChoiceCards(container, selectEl) {
         container.querySelectorAll('[data-target]').forEach((card) => {
             card.addEventListener('click', () => {
+                transientSelections[selectEl.id] = card.dataset.value || '';
+                window.setTimeout(() => {
+                    delete transientSelections[selectEl.id];
+                }, 260);
                 selectEl.value = card.dataset.value || '';
                 renderPreview();
             });
@@ -682,6 +705,10 @@
             await loadSkinCatalog();
             populateCustomization(me?.stats || statsSnapshot || {});
             if (purchased > 0) {
+                pulseActionButton(purchaseBtn);
+                pulseElement(stylePointsText);
+                pulseElement(stateBanner);
+                pulseElement(shopSectionCard);
                 showStatus(`선택한 스킨 ${purchased}개를 구매했습니다. 이제 적용하기를 눌러주세요.`, 'success');
             } else {
                 showStatus('이미 보유 중인 스킨입니다.', 'info');
@@ -707,6 +734,12 @@
             await loadSkinCatalog();
             populateCustomization(me.stats || {});
             window.dispatchEvent(new CustomEvent('user:updated', { detail: { user: me } }));
+            pulseActionButton(saveBtn);
+            pulseElement(stylePointsText);
+            pulseElement(previewBadge);
+            pulseElement(stateBanner);
+            pulseElement(previewCardShell);
+            pulseElement(previewSectionCard);
             showStatus('커스터마이징이 저장되었습니다.', 'success');
         } catch (error) {
             showStatus(extractErrorMessage(error, '커스터마이징 저장에 실패했습니다.'), 'error');
