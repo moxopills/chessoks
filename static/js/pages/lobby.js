@@ -69,6 +69,7 @@
     let lobbyUsers = {};
     let lobbyRooms = [];
     let roomRefreshPoller = null;
+    let lobbyPresencePoller = null;
     let activeRoomId = null;
     let chatUnread = 0;
     let isChatOpen = true;
@@ -453,6 +454,7 @@
                 setSuspendedState(true, user.suspension_reason || '');
             }
             setupNotificationEvents();
+            startLobbyPresenceRefresh();
             // 로그인 유저는 게스트 버튼 숨김
             guestPlayBtn?.classList.add('hidden');
             guestStatusBar?.classList.add('hidden');
@@ -1312,7 +1314,7 @@
         usersList.textContent = '';
         const fragment = document.createDocumentFragment();
         users.forEach((user) => {
-            const row = createUserRowElement(user, true);
+            const row = createUserRowElement(user);
             fragment.appendChild(row);
         });
         usersList.appendChild(fragment);
@@ -1380,7 +1382,7 @@
             usersList.innerHTML = '';
         }
 
-        const row = createUserRowElement(user, true);
+        const row = createUserRowElement(user);
         usersList.appendChild(row);
         const newItem = usersList.querySelector(`[data-user-id="${user.id}"]`);
         if (newItem) bindUserItemEvents(newItem);
@@ -1430,9 +1432,19 @@
         }
     }
 
-    function createUserRowElement(user, online = true) {
-        const statusText = online ? '온라인' : '오프라인';
-        const statusClass = online ? 'online' : 'offline';
+    function getPresenceViewModel(source, onlineFallback = true) {
+        const isOnline = typeof source?.online === 'boolean' ? source.online : onlineFallback;
+        return {
+            online: isOnline,
+            status: source?.status || (isOnline ? 'online' : 'offline'),
+            label: source?.status_label || (isOnline ? '온라인' : '오프라인'),
+        };
+    }
+
+    function createUserRowElement(user, presenceSource = null) {
+        const presence = getPresenceViewModel(presenceSource || user, true);
+        const statusText = presence.label;
+        const statusClass = presence.online ? 'online' : 'offline';
         const tier = user.rank_tier || user.stats?.rank_tier || 'Junior';
         const tierIcon = Utils.getTierIcon(tier);
         const nicknameColor = Utils.getNicknameColorValue(user.nickname_color || user.stats?.nickname_color || '');
@@ -1539,7 +1551,7 @@
             usersList.textContent = '';
             const fragment = document.createDocumentFragment();
             results.forEach((user) => {
-                fragment.appendChild(createUserRowElement(user, statusMap[user.id] === true));
+                fragment.appendChild(createUserRowElement(user, statusMap[user.id]));
             });
             usersList.appendChild(fragment);
             usersList.querySelectorAll('.user-item').forEach(bindUserItemEvents);
@@ -1553,11 +1565,47 @@
         try {
             const data = await API.get('/accounts/online-status/', { ids: ids.join(',') });
             return (data.results || []).reduce((acc, entry) => {
-                acc[entry.id] = entry.online;
+                acc[entry.id] = entry;
                 return acc;
             }, {});
         } catch (error) {
             return {};
+        }
+    }
+
+    function startLobbyPresenceRefresh() {
+        lobbyPresencePoller?.stop?.();
+        lobbyPresencePoller = Utils.createAdaptivePoller({
+            callback: refreshLobbyPresence,
+            activeInterval: 8000,
+            hiddenInterval: 18000,
+            enabled: () => Boolean(currentUserId && Object.keys(lobbyUsers).length),
+            immediate: false,
+        });
+        lobbyPresencePoller.start();
+        window.addEventListener('beforeunload', () => lobbyPresencePoller?.stop?.(), { once: true });
+    }
+
+    async function refreshLobbyPresence() {
+        const ids = Object.values(lobbyUsers)
+            .map((user) => parseInt(user.id, 10))
+            .filter((id) => Number.isInteger(id));
+        if (!ids.length) return;
+        const statusMap = await fetchOnlineStatusMap(ids);
+        let changed = false;
+        ids.forEach((id) => {
+            const user = lobbyUsers[id];
+            const next = statusMap[id];
+            if (!user || !next) return;
+            if (user.status !== next.status || user.status_label !== next.status_label) {
+                user.status = next.status;
+                user.status_label = next.status_label;
+                user.online = next.online;
+                changed = true;
+            }
+        });
+        if (changed && !isUserSearchMode) {
+            renderUsers();
         }
     }
 

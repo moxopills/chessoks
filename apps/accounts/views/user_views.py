@@ -32,6 +32,7 @@ from apps.accounts.serializers import (
     PasswordChangeSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
+    PresenceUpdateSerializer,
     ProfileUpdateSerializer,
     PublicUserSerializer,
     SignupEmailConfirmSerializer,
@@ -41,7 +42,7 @@ from apps.accounts.serializers import (
 )
 from apps.accounts.services import (
     AccountSessionService,
-    OnlineStatusService,
+    PresenceService,
     RankingService,
     UserProfileService,
 )
@@ -53,6 +54,7 @@ from apps.core.throttling import (
     AuthSignupThrottle,
     AuthVerificationThrottle,
     AvatarUploadThrottle,
+    PresenceActionThrottle,
 )
 
 
@@ -540,12 +542,67 @@ class OnlineStatusView(APIView):
     def get(self, request):
         ids_param = request.query_params.get("ids", "")
         ids = _parse_id_list(ids_param)
-        statuses = OnlineStatusService.bulk_status(ids) if ids else {}
+        statuses = PresenceService.bulk_presence(ids) if ids else {}
         data = [
-            OnlineStatusSerializer({"id": user_id, "online": statuses.get(user_id, False)}).data
+            OnlineStatusSerializer({"id": user_id, **statuses.get(user_id, {})}).data
             for user_id in ids
         ]
         return Response({"results": data})
+
+
+class PresenceUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [PresenceActionThrottle]
+
+    @extend_schema(
+        request=PresenceUpdateSerializer, responses={200: PresenceUpdateSerializer}, tags=["유저"]
+    )
+    def post(self, request):
+        serializer = PresenceUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        status = serializer.validated_data["status"]
+        room_id = serializer.validated_data.get("room_id")
+        game_id = serializer.validated_data.get("game_id")
+        scope_id = serializer.validated_data.get("scope_id") or ""
+        active = serializer.validated_data.get("active", True)
+        scope = (
+            f"{status}:{scope_id}"
+            if scope_id
+            else PresenceService.build_scope(
+                status,
+                room_id=room_id,
+                game_id=game_id,
+            )
+        )
+
+        if active:
+            PresenceService.set_presence(
+                request.user.id,
+                status,
+                scope=scope,
+                room_id=room_id,
+                game_id=game_id,
+            )
+        else:
+            PresenceService.clear_presence(
+                request.user.id,
+                scope=scope,
+                status=status,
+                room_id=room_id,
+                game_id=game_id,
+            )
+
+        payload = PresenceService.get_presence(request.user.id)
+        return Response(
+            {
+                "status": payload["status"],
+                "status_label": payload["status_label"],
+                "online": payload["online"],
+                "room_id": payload.get("room_id"),
+                "game_id": payload.get("game_id"),
+            }
+        )
 
 
 class UserProfileView(APIView):
@@ -566,6 +623,11 @@ class UserProfileView(APIView):
         if cached_data is None:
             cached_data = {"user": PublicUserSerializer(user).data}
             cache.set(cache_key, cached_data, self.CACHE_TTL)
+        presence = PresenceService.get_presence(user_id)
+        user_payload = dict(cached_data["user"])
+        user_payload["online"] = presence["online"]
+        user_payload["status"] = presence["status"]
+        user_payload["status_label"] = presence["status_label"]
 
         recent_games = GameQueryService.list_recent_for_user(user, limit=20)
         previous_season = (
@@ -596,7 +658,7 @@ class UserProfileView(APIView):
 
         return Response(
             {
-                "user": cached_data["user"],
+                "user": user_payload,
                 "recent_games": GameHistorySerializer(recent_games, many=True).data,
                 "vs_summary": vs_summary,
                 "previous_season": (
