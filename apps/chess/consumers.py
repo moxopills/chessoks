@@ -10,7 +10,7 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 from apps.accounts.models import User
-from apps.accounts.services import OnlineStatusService
+from apps.accounts.services import OnlineStatusService, PresenceService
 from apps.chess.models import LobbyMessage, LobbyMessageReaction, Room
 from apps.chess.services import GameService
 from apps.chess.utils import check_profanity, get_profanity_warning
@@ -35,12 +35,84 @@ class OnlineStatusMixin:
         user_id = self._get_user_id()
         if user_id:
             OnlineStatusService.refresh(user_id)
+            await self._refresh_user_presence()
             await self.send_json({"type": "heartbeat_ack"})
 
     async def _set_user_online(self):
         user_id = self._get_user_id()
         if user_id:
             OnlineStatusService.set_online(user_id)
+
+    async def _set_user_presence(self, status: str, *, scope: str, room_id=None, game_id=None):
+        user_id = self._get_user_id()
+        if not user_id:
+            return
+        await self._set_presence_sync(
+            user_id,
+            status,
+            scope=scope,
+            room_id=room_id,
+            game_id=game_id,
+        )
+        self._presence_scope = scope
+        self._presence_status = status
+        self._presence_room_id = room_id
+        self._presence_game_id = game_id
+
+    async def _refresh_user_presence(self):
+        user_id = self._get_user_id()
+        if not user_id or not getattr(self, "_presence_scope", None):
+            return
+        await self._refresh_presence_sync(
+            user_id,
+            scope=self._presence_scope,
+            status=getattr(self, "_presence_status", None),
+            room_id=getattr(self, "_presence_room_id", None),
+            game_id=getattr(self, "_presence_game_id", None),
+        )
+
+    async def _clear_user_presence(self):
+        user_id = self._get_user_id()
+        scope = getattr(self, "_presence_scope", None)
+        if not user_id or not scope:
+            return
+        await self._clear_presence_sync(
+            user_id,
+            scope=scope,
+            status=getattr(self, "_presence_status", None),
+            room_id=getattr(self, "_presence_room_id", None),
+            game_id=getattr(self, "_presence_game_id", None),
+        )
+
+    @database_sync_to_async
+    def _set_presence_sync(self, user_id, status, *, scope, room_id=None, game_id=None):
+        PresenceService.set_presence(
+            user_id,
+            status,
+            scope=scope,
+            room_id=room_id,
+            game_id=game_id,
+        )
+
+    @database_sync_to_async
+    def _refresh_presence_sync(self, user_id, *, scope, status=None, room_id=None, game_id=None):
+        PresenceService.refresh_presence(
+            user_id,
+            scope=scope,
+            status=status,
+            room_id=room_id,
+            game_id=game_id,
+        )
+
+    @database_sync_to_async
+    def _clear_presence_sync(self, user_id, *, scope, status=None, room_id=None, game_id=None):
+        PresenceService.clear_presence(
+            user_id,
+            scope=scope,
+            status=status,
+            room_id=room_id,
+            game_id=game_id,
+        )
 
 
 class WebSocketRateLimitMixin:
@@ -102,16 +174,23 @@ class ChessConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWebsock
             await self.close(code=4001)
             return
 
-        role = await self._check_room_access(user)
-        if role is None:
+        access = await self._check_room_access(user)
+        if access is None:
             await self.close(code=4003)
             return
 
-        self.is_player = role
+        self.is_player = access["is_player"]
+        self.room_type = access["room_type"]
+        self.room_status = access["room_status"]
         group = self.player_group if self.is_player else self.spectator_group
         await self.channel_layer.group_add(group, self.channel_name)
         await self.accept()
         await self._set_user_online()
+        await self._set_user_presence(
+            self._presence_status_for_room(),
+            scope=self._presence_scope_for_room(),
+            room_id=int(self.room_id),
+        )
         await self._send_recent_game_messages()
         if self.is_player:
             await self._clear_disconnect_marker()
@@ -119,6 +198,7 @@ class ChessConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWebsock
             await self._add_spectator_presence(user)
 
     async def disconnect(self, close_code):
+        await self._clear_user_presence()
         if getattr(self, "is_player", False):
             await self._mark_disconnect()
         else:
@@ -483,18 +563,46 @@ class ChessConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWebsock
         }
 
     @database_sync_to_async
-    def _check_room_access(self, user) -> bool | None:
-        """방 접근 권한 확인. 플레이어면 True, 관전자면 False, 접근 불가면 None"""
+    def _check_room_access(self, user) -> dict | None:
+        """방 접근 권한 확인. 접근 가능 시 역할과 방 메타 정보를 반환한다."""
         try:
-            room = Room.objects.only("host_id", "guest_id", "allow_spectators").get(pk=self.room_id)
+            room = Room.objects.only(
+                "host_id", "guest_id", "allow_spectators", "room_type", "status"
+            ).get(pk=self.room_id)
 
             if room.host_id == user.id or room.guest_id == user.id:
-                return True
+                return {
+                    "is_player": True,
+                    "room_type": room.room_type,
+                    "room_status": room.status,
+                }
             if room.allow_spectators:
-                return False
+                return {
+                    "is_player": False,
+                    "room_type": room.room_type,
+                    "room_status": room.status,
+                }
             return None
         except Room.DoesNotExist:
             return None
+
+    def _presence_status_for_room(self) -> str:
+        if not getattr(self, "is_player", False):
+            return PresenceService.STATUS_SPECTATING
+        if getattr(self, "room_status", "playing") != "playing":
+            return PresenceService.STATUS_ROOM_WAITING
+        room_type = getattr(self, "room_type", "")
+        if room_type == "random":
+            return PresenceService.STATUS_COMPETITIVE
+        if room_type == "quick":
+            return PresenceService.STATUS_QUICK
+        if str(room_type).startswith("ai_"):
+            return PresenceService.STATUS_AI_PLAYING
+        return PresenceService.STATUS_PLAYING
+
+    def _presence_scope_for_room(self) -> str:
+        role = "player" if getattr(self, "is_player", False) else "spectator"
+        return f"{self._presence_status_for_room()}:room-{self.room_id}:{role}:{self.channel_name}"
 
     @database_sync_to_async
     def _add_spectator_presence(self, user) -> None:
@@ -636,6 +744,10 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
             await self._add_guest_to_lobby()
         else:
             await self._set_user_online()
+            await self._set_user_presence(
+                PresenceService.STATUS_LOBBY,
+                scope=f"{PresenceService.STATUS_LOBBY}:{self.channel_name}",
+            )
             await self._add_to_lobby()
 
         await self._send_recent_messages()
@@ -647,6 +759,7 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
             await self._broadcast_user_joined()
 
     async def disconnect(self, close_code):
+        await self._clear_user_presence()
         if getattr(self, "is_guest", False):
             await self._remove_guest_from_lobby()
             await self._broadcast_guest_left()
@@ -866,6 +979,7 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
         online_ids = OnlineStatusService.list_online_ids()
         if not online_ids:
             return []
+        presence_map = PresenceService.bulk_presence(online_ids)
         queryset = User.objects.select_related("stats").filter(id__in=online_ids, is_guest=False)
         user_map = {user.id: user for user in queryset}
         users = []
@@ -873,6 +987,7 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
             user = user_map.get(user_id)
             if not user:
                 continue
+            presence = presence_map.get(user.id, {})
             users.append(
                 {
                     "id": user.id,
@@ -881,6 +996,8 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
                     "rank_tier": getattr(getattr(user, "stats", None), "rank_tier", "Junior"),
                     "nickname_color": getattr(getattr(user, "stats", None), "nickname_color", ""),
                     "profile_border": getattr(getattr(user, "stats", None), "profile_border", ""),
+                    "status": presence.get("status", PresenceService.STATUS_ONLINE),
+                    "status_label": presence.get("status_label", "온라인"),
                 }
             )
         return users
@@ -895,6 +1012,7 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
     async def _broadcast_user_joined(self):
         """유저 입장 브로드캐스트"""
         user = self.scope["user"]
+        presence = await self._get_presence_payload(user.id)
         payload = {
             "type": "user_joined",
             "user": {
@@ -904,6 +1022,8 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
                 "rank_tier": getattr(getattr(user, "stats", None), "rank_tier", "Junior"),
                 "nickname_color": getattr(getattr(user, "stats", None), "nickname_color", ""),
                 "profile_border": getattr(getattr(user, "stats", None), "profile_border", ""),
+                "status": presence.get("status", PresenceService.STATUS_ONLINE),
+                "status_label": presence.get("status_label", "온라인"),
             },
         }
         await self.channel_layer.group_send(
@@ -929,6 +1049,10 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
             self.group_name,
             {"type": "broadcast", "payload": {"type": "lobby_users", "users": all_users}},
         )
+
+    @database_sync_to_async
+    def _get_presence_payload(self, user_id: int) -> dict:
+        return PresenceService.get_presence(user_id)
 
     # === 게스트 관련 메서드 ===
 

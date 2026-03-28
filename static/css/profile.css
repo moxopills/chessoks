@@ -98,6 +98,33 @@
     word-break: break-all;
 }
 
+.profile-presence {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    font-size: 0.72rem;
+    color: var(--color-text-secondary);
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-accent-secondary) 10%, var(--color-bg-secondary));
+    border: 1px solid color-mix(in srgb, var(--color-accent-secondary) 18%, var(--color-border));
+}
+
+.profile-presence::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--color-success);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 18%, transparent);
+}
+
+.profile-presence.is-offline::before {
+    background: var(--color-text-muted);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-text-muted) 16%, transparent);
+}
+
 .profile-bio {
     font-size: clamp(0.7rem, 1.2vw, 0.8rem);
     color: var(--color-text-secondary);

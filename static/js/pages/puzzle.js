@@ -31,6 +31,7 @@
     let progressTotal = 0;
     let progressDone = 0;
     let currentLevel = "medium";
+    let presenceController = null;
 
     const boardEl = document.getElementById("puzzle-board");
     const timerEl = document.getElementById("puzzle-timer");
@@ -50,6 +51,18 @@
     const resultActionsEl = document.getElementById("puzzle-result-actions");
     const retryBtn = document.getElementById("puzzle-retry-btn");
     const switchLevelBtn = document.getElementById("puzzle-switch-level-btn");
+
+    function ensurePuzzlePresence() {
+        if (presenceController || document.body?.dataset.authenticated !== "true" || !window.Presence) {
+            return;
+        }
+        presenceController = window.Presence.start({
+            status: "puzzle",
+            scopeId: window.Presence.buildScopeId("puzzle"),
+            activeInterval: 20000,
+            hiddenInterval: 40000,
+        });
+    }
 
     function setStatus(message) {
         if (statusEl) statusEl.textContent = message || "";
@@ -527,5 +540,6 @@
         });
     });
 
+    ensurePuzzlePresence();
     loadDailyPuzzle();
 })();

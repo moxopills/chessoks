@@ -29,7 +29,10 @@
     <link rel="stylesheet" href="{% static 'css/global_dm.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-<body>
+<body
+    data-authenticated="{% if request.user.is_authenticated and not request.user.is_guest %}true{% else %}false{% endif %}"
+    data-guest="{% if request.user.is_guest %}true{% else %}false{% endif %}"
+>
     <!-- Navigation -->
     {% include 'components/navbar.html' %}
 
@@ -134,6 +137,7 @@
     <!-- Core Scripts -->
     <script src="{% static 'js/core/api.js' %}"></script>
     <script src="{% static 'js/core/utils.js' %}"></script>
+    <script src="{% static 'js/core/presence.js' %}"></script>
     <script src="{% static 'js/components/chat_ui.js' %}"></script>
     <script src="{% static 'js/components/chat_reactions.js' %}"></script>
     <script src="{% static 'js/components/game_replay_ui.js' %}"></script>

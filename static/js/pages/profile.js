@@ -7,6 +7,7 @@
     const emailEl = document.getElementById('profile-email');
     const bioEl = document.getElementById('profile-bio');
     const tierEl = document.getElementById('profile-tier');
+    const presenceEl = document.getElementById('profile-presence');
 
     const ratingEl = document.getElementById('stat-rating');
     const winrateEl = document.getElementById('stat-winrate');
@@ -33,6 +34,7 @@
             currentUserId = me?.id;
             currentUser = me;
             renderProfile(me);
+            await refreshPresence();
             await loadGuestbook();
         } catch (error) {
             Toast.error('프로필 정보를 불러올 수 없습니다.');
@@ -54,6 +56,33 @@
         }
 
         guestbookSubmit?.addEventListener('click', submitGuestbook);
+        const presencePoller = Utils.createAdaptivePoller({
+            callback: refreshPresence,
+            activeInterval: 10000,
+            hiddenInterval: 25000,
+            enabled: () => Boolean(currentUserId),
+            immediate: false,
+        });
+        presencePoller.start();
+        window.addEventListener('beforeunload', () => presencePoller.stop(), { once: true });
+    }
+
+    async function refreshPresence() {
+        if (!currentUserId || !presenceEl) return;
+        try {
+            const data = await API.get('/accounts/online-status/', { ids: String(currentUserId) });
+            const entry = (data.results || [])[0];
+            renderPresence(entry || { online: false, status_label: '오프라인' });
+        } catch {
+            renderPresence({ online: false, status_label: '오프라인' });
+        }
+    }
+
+    function renderPresence(entry) {
+        if (!presenceEl) return;
+        const online = Boolean(entry?.online);
+        presenceEl.textContent = entry?.status_label || (online ? '온라인' : '오프라인');
+        presenceEl.classList.toggle('is-offline', !online);
     }
 
     function renderProfile(user) {
