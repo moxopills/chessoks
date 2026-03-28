@@ -59,6 +59,9 @@ class OnlineStatusService:
     def set_offline(user_id: int) -> None:
         """명시적 오프라인 (로그아웃 등)"""
         cache.delete(OnlineStatusService._key(user_id))
+        from apps.accounts.services.presence_service import PresenceService
+
+        PresenceService.clear_all(user_id)
         with _online_list_lock:
             user_ids = OnlineStatusService._get_list()
             if user_id in user_ids:

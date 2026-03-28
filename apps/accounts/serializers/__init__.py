@@ -12,7 +12,11 @@ from .message_serializers import (
     GuestbookCreateSerializer,
     GuestbookEntrySerializer,
 )
-from .online_serializers import OnlineStatusListSerializer, OnlineStatusSerializer
+from .online_serializers import (
+    OnlineStatusListSerializer,
+    OnlineStatusSerializer,
+    PresenceUpdateSerializer,
+)
 from .season_serializers import (
     SeasonLeaderboardEntrySerializer,
     SeasonRewardSerializer,
@@ -85,6 +89,7 @@ __all__ = [
     "EmailChangeConfirmSerializer",
     "OnlineStatusSerializer",
     "OnlineStatusListSerializer",
+    "PresenceUpdateSerializer",
     "FriendSerializer",
     "FriendRequestSerializer",
     "FriendRequestCreateSerializer",

@@ -45,3 +45,7 @@ class SkinActionThrottle(ScopedRateThrottle):
 
 class SocialAuthThrottle(ScopedRateThrottle):
     scope = "social_auth"
+
+
+class PresenceActionThrottle(ScopedRateThrottle):
+    scope = "presence_action"

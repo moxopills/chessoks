@@ -364,6 +364,7 @@ REST_FRAMEWORK = {
         "message_action": os.getenv("THROTTLE_MESSAGE_ACTION", "90/min"),
         "skin_action": os.getenv("THROTTLE_SKIN_ACTION", "60/min"),
         "social_auth": os.getenv("THROTTLE_SOCIAL_AUTH", "20/min"),
+        "presence_action": os.getenv("THROTTLE_PRESENCE_ACTION", "180/min"),
     },
     "EXCEPTION_HANDLER": "apps.core.exceptions.custom_exception_handler",
 }
