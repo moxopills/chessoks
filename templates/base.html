@@ -30,6 +30,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body
+    class="{% block body_class %}{% endblock %}"
     data-authenticated="{% if request.user.is_authenticated and not request.user.is_guest %}true{% else %}false{% endif %}"
     data-guest="{% if request.user.is_guest %}true{% else %}false{% endif %}"
 >
