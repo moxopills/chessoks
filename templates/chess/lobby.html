@@ -9,6 +9,49 @@
     <section class="lobby-hero">
         <h1 class="hero-title"><span class="hero-logo">♞</span>ChessOK</h1>
         <p class="hero-subtitle">실시간 체스 대전</p>
+        <div class="hero-guide-bar">
+            <button class="hero-tier-toggle" id="tier-toggle" type="button" aria-expanded="false">
+                티어 기준
+            </button>
+            <button class="hero-tier-toggle" id="mode-toggle" type="button" aria-expanded="false">
+                게임 안내
+            </button>
+            <button class="hero-tier-toggle" id="install-toggle" type="button" aria-expanded="false">
+                웹앱 설치
+            </button>
+            <button class="hero-tier-toggle" id="points-toggle" type="button" aria-expanded="false">
+                포인트 안내
+            </button>
+        </div>
+        <div class="hero-tier-panel hidden" id="tier-panel">
+            <div class="tier-row"><span class="tier-icon">🥉</span> Beginner: 0-1199</div>
+            <div class="tier-row"><span class="tier-icon">🥈</span> Junior: 1200-1699</div>
+            <div class="tier-row"><span class="tier-icon">🥇</span> Intermediate: 1700-2099</div>
+            <div class="tier-row"><span class="tier-icon">🔷</span> Advanced: 2100-2699</div>
+            <div class="tier-row"><span class="tier-icon">💎</span> Expert: 2700-3499</div>
+            <div class="tier-row"><span class="tier-icon">👑</span> Master: 3500+</div>
+        </div>
+        <div class="hero-tier-panel hidden" id="mode-panel">
+            <div class="tier-row">• 경쟁전: 레이팅에 맞춰 자동 매칭됩니다 게임방 목록에는 안보입니다.</div>
+            <div class="tier-row">• 빠른 대전: 일반 매칭이며 레이팅에 반영되지 않습니다.</div>
+            <div class="tier-row">• 방 만들기: 방을 생성하고 상대가 입장해 게임합니다.</div>
+            <div class="tier-row">• 비밀번호 방: 비밀번호방을 만들어 플레이할 수 있습니다.</div>
+            <div class="tier-row">• 관전: 관전 허용 방만 입장 가능하며 비허용 방은 차단됩니다.</div>
+            <div class="tier-row">• 로비로 나가기: 로비로 나가서 로비 채팅으로 상대방을 찾을수 있고 전적 등 살펴볼 수 있습니다.</div>
+            <div class="tier-row">• AI 대전: AI 난이도를 설정하여 AI와 체스 게임을 할 수 있습니다.</div>
+        </div>
+        <div class="hero-tier-panel hidden" id="install-panel">
+            <div class="tier-row">• iPhone: Safari 공유 → 홈 화면에 추가</div>
+            <div class="tier-row">• Android: 메뉴 → 홈 화면에 추가/앱 설치</div>
+            <div class="tier-row">• 설치 후 앱처럼 실행되고 알림 수신이 가능합니다.</div>
+            <div class="tier-row">• 종 버튼 터치시 알림 권한 설정 가능합니다.</div>
+        </div>
+        <div class="hero-tier-panel hidden" id="points-panel">
+            <div class="tier-row">• 대국/활동으로 포인트를 획득합니다.</div>
+            <div class="tier-row">• 포인트로 닉네임 색상, 프로필 테두리를 구매합니다.</div>
+            <div class="tier-row">• 저장 시 구매 항목 포인트가 자동 차감됩니다.</div>
+            <div class="tier-row">• 보유 포인트와 쇼룸 미리보기는 상단 커스터마이징 메뉴에서 확인합니다.</div>
+        </div>
         <div class="hero-controls">
             <section class="hero-control-card hero-control-card--match" aria-label="대전 시작">
                 <div class="hero-card-head">
@@ -42,10 +85,10 @@
                 <div class="hero-room-divider"></div>
                 <div class="hero-room-preview">
                     <div class="hero-room-preview-head">
-                        <div class="hero-room-preview-copy">
-                            <span class="ui-eyebrow">Rooms</span>
-                            <h3 class="hero-room-preview-title">대기 중인 방</h3>
-                        </div>
+                    <div class="hero-room-preview-copy">
+                        <span class="ui-eyebrow">Rooms</span>
+                        <h3 class="hero-room-preview-title">대기 중인 방</h3>
+                    </div>
                         <a href="/rooms/" class="section-link">전체 보기</a>
                     </div>
                     <div class="room-list room-list--embedded" id="room-list">
@@ -53,58 +96,40 @@
                         <div class="skeleton-card skeleton lobby-room-skeleton"></div>
                         <div class="skeleton-card skeleton lobby-room-skeleton"></div>
                     </div>
+                    <div class="hero-room-preview-actions hidden" id="room-more-wrap">
+                        <a href="/rooms/" class="btn btn-secondary btn-sm" id="room-more-link">방 목록 더보기</a>
+                    </div>
                 </div>
             </section>
-            <section class="hero-control-card hero-control-card--guide" aria-label="가이드">
-                <div class="hero-card-head">
-                    <span class="ui-eyebrow">Guide</span>
-                    <h2 class="hero-card-title">빠른 안내</h2>
-                    <p class="hero-card-copy">설치, 티어, 포인트, 모드 설명을 필요한 만큼만 펼쳐서 확인합니다.</p>
+            <section class="hero-control-card hero-control-card--users lobby-users-section" aria-label="접속자">
+                <div class="section-header">
+                    <h2 class="section-title">👥 접속자 <span class="user-count" id="user-count">0</span></h2>
                 </div>
-                <div class="hero-control-group hero-control-group-guide">
-                    <button class="hero-tier-toggle" id="tier-toggle" type="button" aria-expanded="false">
-                        티어 기준 보기
-                    </button>
-                    <button class="hero-tier-toggle" id="mode-toggle" type="button" aria-expanded="false">
-                        게임 시작 안내
-                    </button>
-                    <button class="hero-tier-toggle" id="install-toggle" type="button" aria-expanded="false">
-                        웹앱 설치 안내
-                    </button>
-                    <button class="hero-tier-toggle" id="points-toggle" type="button" aria-expanded="false">
-                        포인트 안내
-                    </button>
+                <div class="users-search">
+                    <input class="form-input" id="lobby-user-search-input" placeholder="닉네임 검색" maxlength="20">
+                    <button class="btn btn-secondary btn-sm" id="lobby-user-search-btn">검색</button>
+                    <button class="btn btn-secondary btn-sm" id="lobby-user-search-reset">초기화</button>
                 </div>
+                <div class="users-list" id="users-list">
+                    <div class="user-item-skeleton">
+                        <div class="skeleton skeleton-avatar lobby-user-skeleton-avatar"></div>
+                        <div class="skeleton lobby-user-skeleton-line lobby-user-skeleton-line-80"></div>
+                    </div>
+                    <div class="user-item-skeleton">
+                        <div class="skeleton skeleton-avatar lobby-user-skeleton-avatar"></div>
+                        <div class="skeleton lobby-user-skeleton-line lobby-user-skeleton-line-100"></div>
+                    </div>
+                    <div class="user-item-skeleton">
+                        <div class="skeleton skeleton-avatar lobby-user-skeleton-avatar"></div>
+                        <div class="skeleton lobby-user-skeleton-line lobby-user-skeleton-line-70"></div>
+                    </div>
+                    <div class="user-item-skeleton">
+                        <div class="skeleton skeleton-avatar lobby-user-skeleton-avatar"></div>
+                        <div class="skeleton lobby-user-skeleton-line lobby-user-skeleton-line-90"></div>
+                    </div>
+                </div>
+                <div class="users-hint">우클릭(모바일: 탭)으로 프로필/신고/친구추가 메뉴를 확인할 수 있습니다.</div>
             </section>
-        </div>
-        <div class="hero-tier-panel hidden" id="tier-panel">
-            <div class="tier-row"><span class="tier-icon">🥉</span> Beginner: 0-1199</div>
-            <div class="tier-row"><span class="tier-icon">🥈</span> Junior: 1200-1699</div>
-            <div class="tier-row"><span class="tier-icon">🥇</span> Intermediate: 1700-2099</div>
-            <div class="tier-row"><span class="tier-icon">🔷</span> Advanced: 2100-2699</div>
-            <div class="tier-row"><span class="tier-icon">💎</span> Expert: 2700-3499</div>
-            <div class="tier-row"><span class="tier-icon">👑</span> Master: 3500+</div>
-        </div>
-        <div class="hero-tier-panel hidden" id="mode-panel">
-            <div class="tier-row">• 경쟁전: 레이팅에 맞춰 자동 매칭됩니다 게임방 목록에는 안보입니다.</div>
-            <div class="tier-row">• 빠른 대전: 일반 매칭이며 레이팅에 반영되지 않습니다.</div>
-            <div class="tier-row">• 방 만들기: 방을 생성하고 상대가 입장해 게임합니다.</div>
-            <div class="tier-row">• 비밀번호 방: 비밀번호방을 만들어 플레이할 수 있습니다.</div>
-            <div class="tier-row">• 관전: 관전 허용 방만 입장 가능하며 비허용 방은 차단됩니다.</div>
-            <div class="tier-row">• 로비로 나가기: 로비로 나가서 로비 채팅으로 상대방을 찾을수 있고 전적 등 살펴볼 수 있습니다.</div>
-            <div class="tier-row">• AI 대전: AI 난이도를 설정하여 AI와 체스 게임을 할 수 있습니다.</div>
-        </div>
-        <div class="hero-tier-panel hidden" id="install-panel">
-            <div class="tier-row">• iPhone: Safari 공유 → 홈 화면에 추가</div>
-            <div class="tier-row">• Android: 메뉴 → 홈 화면에 추가/앱 설치</div>
-            <div class="tier-row">• 설치 후 앱처럼 실행되고 알림 수신이 가능합니다.</div>
-            <div class="tier-row">• 종 버튼 터치시 알림 권한 설정 가능합니다.</div>
-        </div>
-        <div class="hero-tier-panel hidden" id="points-panel">
-            <div class="tier-row">• 대국/활동으로 포인트를 획득합니다.</div>
-            <div class="tier-row">• 포인트로 닉네임 색상, 프로필 테두리를 구매합니다.</div>
-            <div class="tier-row">• 저장 시 구매 항목 포인트가 자동 차감됩니다.</div>
-            <div class="tier-row">• 보유 포인트와 쇼룸 미리보기는 상단 커스터마이징 메뉴에서 확인합니다.</div>
         </div>
     </section>
 
@@ -203,36 +228,6 @@
             </div>
         </section>
 
-        <!-- Right: Online Users -->
-        <section class="lobby-section lobby-users-section">
-            <div class="section-header">
-                <h2 class="section-title">👥 접속자 <span class="user-count" id="user-count">0</span></h2>
-            </div>
-            <div class="users-search">
-                <input class="form-input" id="lobby-user-search-input" placeholder="닉네임 검색" maxlength="20">
-                <button class="btn btn-secondary btn-sm" id="lobby-user-search-btn">검색</button>
-                <button class="btn btn-secondary btn-sm" id="lobby-user-search-reset">초기화</button>
-            </div>
-            <div class="users-list" id="users-list">
-                <div class="user-item-skeleton">
-                    <div class="skeleton skeleton-avatar lobby-user-skeleton-avatar"></div>
-                    <div class="skeleton lobby-user-skeleton-line lobby-user-skeleton-line-80"></div>
-                </div>
-                <div class="user-item-skeleton">
-                    <div class="skeleton skeleton-avatar lobby-user-skeleton-avatar"></div>
-                    <div class="skeleton lobby-user-skeleton-line lobby-user-skeleton-line-100"></div>
-                </div>
-                <div class="user-item-skeleton">
-                    <div class="skeleton skeleton-avatar lobby-user-skeleton-avatar"></div>
-                    <div class="skeleton lobby-user-skeleton-line lobby-user-skeleton-line-70"></div>
-                </div>
-                <div class="user-item-skeleton">
-                    <div class="skeleton skeleton-avatar lobby-user-skeleton-avatar"></div>
-                    <div class="skeleton lobby-user-skeleton-line lobby-user-skeleton-line-90"></div>
-                </div>
-            </div>
-            <div class="users-hint">우클릭(모바일: 탭)으로 프로필/신고/친구추가 메뉴를 확인할 수 있습니다.</div>
-        </section>
     </div>
 </div>
 
@@ -413,10 +408,18 @@
     margin-bottom: var(--space-xl);
 }
 
+.hero-guide-bar {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: var(--space-md);
+}
+
 .hero-controls {
     display: grid;
     gap: var(--space-md);
-    grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.95fr);
+    grid-template-columns: minmax(0, 1.22fr) minmax(280px, 0.82fr);
     margin-bottom: var(--space-md);
     align-items: stretch;
 }
@@ -455,7 +458,7 @@
         linear-gradient(180deg, color-mix(in srgb, var(--color-accent-primary) 5%, var(--color-bg-card)) 0%, var(--color-bg-card) 100%);
 }
 
-.hero-control-card--guide {
+.hero-control-card--users {
     background:
         linear-gradient(180deg, color-mix(in srgb, var(--color-accent-secondary) 5%, var(--color-bg-card)) 0%, var(--color-bg-card) 100%);
 }
@@ -553,6 +556,11 @@
     font-size: 0.92rem;
 }
 
+.hero-room-preview-actions {
+    display: flex;
+    justify-content: center;
+}
+
 .game-start-modal {
     width: min(920px, calc(100vw - 32px));
 }
@@ -638,7 +646,7 @@
 /* Content Grid */
 .lobby-content {
     display: grid;
-    grid-template-columns: minmax(360px, 1.2fr) minmax(280px, 0.95fr);
+    grid-template-columns: 1fr;
     gap: var(--space-lg);
     align-items: stretch;
 }
@@ -646,13 +654,6 @@
 @media (max-width: 1024px) {
     .hero-controls {
         grid-template-columns: 1fr;
-    }
-
-    .lobby-content {
-        grid-template-columns: 1fr 1fr;
-    }
-    .lobby-users-section {
-        grid-column: span 2;
     }
 }
 
@@ -666,14 +667,6 @@
 
     .hero-control-group-match {
         display: flex;
-    }
-
-    .hero-control-group-guide {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: var(--space-sm);
-        max-width: 520px;
-        margin: 0 auto;
     }
 
     .hero-start-button {
@@ -699,7 +692,8 @@
         min-height: 0;
     }
 
-    .hero-room-preview-head {
+    .hero-room-preview-head,
+    .hero-guide-bar {
         align-items: flex-start;
     }
 }
@@ -727,7 +721,6 @@
 }
 
 .lobby-waiting-section {
-    grid-column: span 2;
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
@@ -742,16 +735,7 @@
     color: var(--color-text-secondary);
 }
 
-@media (max-width: 1024px) {
-    .lobby-waiting-section {
-        grid-column: span 2;
-    }
-}
-
 @media (max-width: 768px) {
-    .lobby-waiting-section {
-        grid-column: span 1;
-    }
     .waiting-room-body {
         flex-direction: column;
         align-items: flex-start;
@@ -1269,8 +1253,8 @@
     }
 
     .users-list {
-        min-height: 500px;
-        max-height: 560px;
+        min-height: 420px;
+        max-height: 500px;
     }
 }
 
