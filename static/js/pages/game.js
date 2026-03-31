@@ -1088,6 +1088,13 @@
         rating.textContent = String(player?.rating || '--');
         details.appendChild(rating);
 
+        if (player?.featured_achievement?.title) {
+            const achievement = document.createElement('span');
+            achievement.className = `player-bar-achievement player-bar-achievement--${player.featured_achievement.tone || 'info'}`;
+            achievement.textContent = `${player.featured_achievement.icon || '🏅'} ${player.featured_achievement.title}`;
+            details.appendChild(achievement);
+        }
+
         info.appendChild(details);
         container.appendChild(info);
 

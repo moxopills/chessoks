@@ -283,34 +283,77 @@
         }
     }
 
+    function getPresenceCssClass(entry) {
+        if (!entry?.online) return 'offline';
+        const normalized = String(entry?.status || 'online');
+        const supported = new Set([
+            'online',
+            'lobby',
+            'room_waiting',
+            'playing',
+            'competitive',
+            'quick',
+            'ai_playing',
+            'spectating',
+            'puzzle',
+        ]);
+        return supported.has(normalized) ? normalized : 'online';
+    }
+
+    function getTrackedPresenceIds() {
+        const ids = new Set(friendIds);
+        if (selectedUserId) ids.add(selectedUserId);
+        document.querySelectorAll('.search-item[data-user-id]').forEach((row) => {
+            const userId = parseInt(row.dataset.userId, 10);
+            if (Number.isInteger(userId)) {
+                ids.add(userId);
+            }
+        });
+        return Array.from(ids);
+    }
+
+    function updatePresenceInList(container, selector, statusMap) {
+        container?.querySelectorAll(selector).forEach((row) => {
+            const userId = parseInt(row.dataset.userId, 10);
+            if (!Number.isInteger(userId)) return;
+            const entry = statusMap[userId] || { online: false, status_label: '오프라인' };
+            const dot = row.querySelector('.status-dot');
+            const label = row.querySelector('.friend-status');
+            const statusClass = getPresenceCssClass(entry);
+            if (dot) {
+                dot.className = `status-dot ${entry.online ? 'online' : ''}`;
+            }
+            if (label) {
+                label.textContent = entry.status_label || (entry.online ? '온라인' : '오프라인');
+                label.className = `friend-status ${statusClass}`;
+            }
+        });
+    }
+
+    function updateDrawerPresence(statusMap) {
+        if (!selectedUserId || !tierEl || drawer?.classList.contains('hidden')) return;
+        const entry = statusMap[selectedUserId];
+        if (!entry) return;
+        const tierText = tierEl.textContent.split(' · ')[0] || '-';
+        tierEl.textContent = `${tierText} · ${entry.status_label || (entry.online ? '온라인' : '오프라인')}`;
+    }
+
     function startOnlineRefresh() {
         const poller = Utils.createAdaptivePoller({
             callback: () => {
             if (!currentUserId) return;
-            const friendIdsArr = Array.from(friendIds);
-            if (!friendIdsArr.length) return;
-            return applyOnlineStatus(friendIdsArr).then(() => {
-                const rows = Array.from(friendListEl.querySelectorAll('.friend-item'));
-                if (!rows.length) return;
-                const statusMap = JSON.parse(friendListEl.dataset.statusMap || '{}');
-                rows.forEach((row) => {
-                    const userId = parseInt(row.dataset.userId, 10);
-                    const dot = row.querySelector('.status-dot');
-                    const statusLabel = row.querySelector('.friend-status');
-                    const entry = statusMap[userId] || { online: false, status_label: '오프라인' };
-                    if (dot) {
-                        dot.classList.toggle('online', !!entry.online);
-                    }
-                    if (statusLabel) {
-                        statusLabel.textContent = entry.status_label || (entry.online ? '온라인' : '오프라인');
-                        statusLabel.classList.toggle('offline', !entry.online);
-                    }
-                });
+            const trackedIds = getTrackedPresenceIds();
+            if (!trackedIds.length) return;
+            return fetchOnlineStatusMap(trackedIds).then((statusMap) => {
+                friendListEl.dataset.statusMap = JSON.stringify(statusMap);
+                updatePresenceInList(friendListEl, '.friend-item[data-user-id]', statusMap);
+                updatePresenceInList(searchResultsEl, '.search-item[data-user-id]', statusMap);
+                updateDrawerPresence(statusMap);
             });
             },
             activeInterval: 5000,
             hiddenInterval: 15000,
-            enabled: () => Boolean(currentUserId && friendIds.size),
+            enabled: () => Boolean(currentUserId && getTrackedPresenceIds().length),
             immediate: false,
         });
         poller.start();
@@ -326,6 +369,7 @@
         friendListEl.innerHTML = friends.map((item) => {
             const friend = item.friend;
             const presence = statusMap[friend.id] || { online: false, status_label: '오프라인' };
+            const statusClass = getPresenceCssClass(presence);
             const nicknameColor = Utils.getNicknameColorValue(friend.nickname_color || friend.stats?.nickname_color || '');
             const profileRing = Utils.getProfileBorderValue(friend.profile_border || friend.stats?.profile_border || '');
             return `
@@ -334,7 +378,7 @@
                         <div class="avatar avatar-sm" style="box-shadow:${profileRing}">${friend.avatar_url ? `<img src="${friend.avatar_url}" alt="${Utils.escapeHtml(friend.nickname)}">` : '<span class="avatar-placeholder">?</span>'}</div>
                         <div class="friend-name">
                             <strong style="color:${nicknameColor}">${Utils.escapeHtml(friend.nickname)}</strong>
-                            <small>레이팅 ${friend.rating} · ${Utils.escapeHtml(friend.rank_tier)} · <span class="friend-status ${presence.online ? 'online' : 'offline'}">${Utils.escapeHtml(presence.status_label || (presence.online ? '온라인' : '오프라인'))}</span></small>
+                            <small>레이팅 ${friend.rating} · ${Utils.escapeHtml(friend.rank_tier)} · <span class="friend-status ${statusClass}">${Utils.escapeHtml(presence.status_label || (presence.online ? '온라인' : '오프라인'))}</span></small>
                         </div>
                     </div>
                     <div class="status-dot ${presence.online ? 'online' : ''}"></div>
@@ -540,6 +584,7 @@
             const isFriend = friendIds.has(user.id);
             const isPending = outgoingRequestUserIds.has(user.id);
             const presence = statusMap[user.id] || { online: false, status_label: '오프라인' };
+            const statusClass = getPresenceCssClass(presence);
             const nicknameColor = Utils.getNicknameColorValue(user.nickname_color || user.stats?.nickname_color || '');
             const profileRing = Utils.getProfileBorderValue(user.profile_border || user.stats?.profile_border || '');
             let buttonLabel = '친구 요청';
@@ -560,7 +605,7 @@
                         <div class="avatar avatar-sm" style="box-shadow:${profileRing}">${user.avatar_url ? `<img src="${user.avatar_url}" alt="${Utils.escapeHtml(user.nickname)}">` : '<span class="avatar-placeholder">?</span>'}</div>
                         <div class="friend-name">
                             <strong style="color:${nicknameColor}">${Utils.escapeHtml(user.nickname)}</strong>
-                            <small>레이팅 ${user.stats?.rating ?? '-'} · ${Utils.escapeHtml(user.stats?.rank_tier ?? '-')} · <span class="friend-status ${presence.online ? 'online' : 'offline'}">${Utils.escapeHtml(presence.status_label || (presence.online ? '온라인' : '오프라인'))}</span></small>
+                            <small>레이팅 ${user.stats?.rating ?? '-'} · ${Utils.escapeHtml(user.stats?.rank_tier ?? '-')} · <span class="friend-status ${statusClass}">${Utils.escapeHtml(presence.status_label || (presence.online ? '온라인' : '오프라인'))}</span></small>
                         </div>
                     </div>
                     <button class="btn btn-secondary btn-sm" data-action="request" ${disabled ? 'disabled' : ''}>${buttonLabel}</button>

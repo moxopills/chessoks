@@ -52,6 +52,7 @@ class GameQueryService:
         "white_player__stats__competitive_games_played",
         "white_player__stats__nickname_color",
         "white_player__stats__profile_border",
+        "white_player__stats__featured_achievement_key",
         "white_player__stats__selected_board_skin__css_class",
         "white_player__stats__selected_piece_skin__css_class",
         "black_player__id",
@@ -62,6 +63,7 @@ class GameQueryService:
         "black_player__stats__competitive_games_played",
         "black_player__stats__nickname_color",
         "black_player__stats__profile_border",
+        "black_player__stats__featured_achievement_key",
         "black_player__stats__selected_board_skin__css_class",
         "black_player__stats__selected_piece_skin__css_class",
     )

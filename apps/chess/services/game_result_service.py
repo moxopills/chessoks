@@ -3,11 +3,12 @@ from __future__ import annotations
 import logging
 
 from django.core.cache import cache
+from django.db import transaction
 from django.utils import timezone
 
 from apps.accounts.models import UserStats
 from apps.accounts.models.skin import SkinPointLog
-from apps.accounts.services import RankingService
+from apps.accounts.services.ranking_service import RankingService
 from apps.chess.models import Game
 from apps.chess.services.rating_service import RatingService
 from apps.notifications.services import NotificationService
@@ -30,8 +31,11 @@ class GameResultService:
         if game.room.room_type.startswith("ai_"):
             return None
         if GameResultService.is_competitive_room(game.room.room_type):
-            return GameResultService._apply_rating_update(game)
+            rating_info = GameResultService._apply_rating_update(game)
+            GameResultService._schedule_achievement_sync(game)
+            return rating_info
         GameResultService._apply_stats_only(game)
+        GameResultService._schedule_achievement_sync(game)
         return None
 
     @staticmethod
@@ -222,6 +226,33 @@ class GameResultService:
                 "tier_after": black_stats.rank_tier,
             },
         }
+
+    @staticmethod
+    def _schedule_achievement_sync(game: Game) -> None:
+        user_ids = [
+            player_id
+            for player_id, is_guest in (
+                (game.white_player_id, getattr(game.white_player, "is_guest", False)),
+                (game.black_player_id, getattr(game.black_player, "is_guest", False)),
+            )
+            if player_id and not is_guest
+        ]
+        if not user_ids:
+            return
+
+        def _sync():
+            try:
+                from apps.accounts.services import AchievementService
+
+                AchievementService.sync_rewards_for_users(user_ids)
+            except Exception:
+                GameResultService.logger.exception(
+                    "Achievement sync failed after game result update game=%s users=%s",
+                    game.id,
+                    user_ids,
+                )
+
+        transaction.on_commit(_sync)
 
     @staticmethod
     def _apply_style_points(

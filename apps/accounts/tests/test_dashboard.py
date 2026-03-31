@@ -32,7 +32,9 @@ class DashboardApiTestCase(TestCase):
         response = self.client.get("/api/accounts/dashboard/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("summary", response.data)
+        self.assertIn("achievements", response.data)
         self.assertEqual(response.data["summary"]["games_played"], 1)
+        self.assertTrue(any(item["key"] == "first_win" for item in response.data["achievements"]))
 
     def test_dashboard_unauthenticated(self):
         """인증 없이 대시보드 접근"""

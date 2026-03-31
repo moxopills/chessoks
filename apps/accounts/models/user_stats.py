@@ -65,6 +65,17 @@ class UserStats(models.Model):
         blank=True,
         help_text="시즌 보상으로 획득한 프로필 카드 프레임 목록",
     )
+    earned_achievement_keys = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="달성한 업적 키 목록",
+    )
+    featured_achievement_key = models.CharField(
+        max_length=40,
+        blank=True,
+        default="",
+        help_text="대표 업적 키",
+    )
     selected_board_skin = models.ForeignKey(
         "accounts.Skin",
         null=True,

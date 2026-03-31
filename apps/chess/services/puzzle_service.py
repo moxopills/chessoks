@@ -304,6 +304,14 @@ class PuzzleService:
                     attempt.solved_at = timezone.now()
             attempt.save(update_fields=["attempts", "moves_made", "solved", "solved_at"])
             PuzzleService._invalidate_user_metrics_cache(user_id=user.id)
+            if result["correct"] and result["completed"]:
+
+                def _sync_achievement(user_id=user.id):
+                    from apps.accounts.services import AchievementService
+
+                    AchievementService.sync_rewards_for_user(user_id)
+
+                transaction.on_commit(_sync_achievement)
             return result
 
     @staticmethod

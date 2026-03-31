@@ -9,6 +9,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import Skin, SkinPointLog, UserSkin
 from apps.accounts.models.user_stats import UserStats
+from apps.accounts.services.achievement_service import AchievementService
 from apps.accounts.services.base_service import ServiceResult, _ok
 
 DEFAULT_BOARD_CLASS = "skin-board-classic"
@@ -127,6 +128,7 @@ class SkinService:
             reference_id=str(skin.id),
             created_at=timezone.now(),
         )
+        transaction.on_commit(lambda: AchievementService.sync_rewards_for_user(user.id))
 
         return _ok(
             {

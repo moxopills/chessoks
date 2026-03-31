@@ -57,6 +57,10 @@
             </div>
         </div>
 
+        <div class="profile-achievements-block" id="profile-achievements">
+            <div class="text-muted">업적을 불러오는 중...</div>
+        </div>
+
             <div class="profile-vs hidden" id="profile-vs">
                 <h3>상대 전적</h3>
                 <div class="vs-grid">
@@ -88,5 +92,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/components/profile_view.js' %}"></script>
+<script src="{% static 'js/components/profile_achievements.js' %}"></script>
 <script src="{% static 'js/pages/user_profile.js' %}"></script>
 {% endblock %}

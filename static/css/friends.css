@@ -184,6 +184,26 @@
     color: var(--color-accent-success);
 }
 
+.friend-status.lobby,
+.friend-status.room_waiting {
+    color: color-mix(in srgb, var(--color-accent-secondary) 72%, var(--color-text-primary));
+}
+
+.friend-status.playing,
+.friend-status.competitive,
+.friend-status.quick,
+.friend-status.ai_playing {
+    color: color-mix(in srgb, var(--color-accent-primary) 78%, var(--color-text-primary));
+}
+
+.friend-status.spectating {
+    color: color-mix(in srgb, var(--color-accent-warning) 78%, var(--color-text-primary));
+}
+
+.friend-status.puzzle {
+    color: color-mix(in srgb, var(--color-accent-success) 82%, var(--color-text-primary));
+}
+
 .friend-status.offline {
     color: var(--color-text-muted);
 }

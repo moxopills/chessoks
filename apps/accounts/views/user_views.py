@@ -1,7 +1,6 @@
 """사용자 인증 및 프로필 관련 View"""
 
 from django.core.cache import cache
-from django.db.models import Q
 
 from drf_spectacular.utils import extend_schema
 from rest_framework.generics import RetrieveAPIView, UpdateAPIView
@@ -11,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
-from apps.accounts.models import Friend, FriendRequest, SeasonStat, User
+from apps.accounts.models import User
 from apps.accounts.permissions import IsAuthenticatedOrGuest
 from apps.accounts.serializers import (
     AccountDeleteSerializer,
@@ -28,6 +27,7 @@ from apps.accounts.serializers import (
     NicknameCheckSerializer,
     OnlineStatusListSerializer,
     OnlineStatusSerializer,
+    OnlineUsersListSerializer,
     OpponentProfileSerializer,
     PasswordChangeSerializer,
     PasswordResetConfirmSerializer,
@@ -43,11 +43,10 @@ from apps.accounts.serializers import (
 from apps.accounts.services import (
     AccountSessionService,
     PresenceService,
+    ProfileViewService,
     RankingService,
     UserProfileService,
 )
-from apps.chess.serializers import GameHistorySerializer
-from apps.chess.services import GameQueryService
 from apps.core.throttling import (
     AuthLoginThrottle,
     AuthPasswordResetThrottle,
@@ -550,6 +549,17 @@ class OnlineStatusView(APIView):
         return Response({"results": data})
 
 
+class OnlineUsersView(APIView):
+    """전체 온라인 유저 + 활동 상태 요약"""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={200: OnlineUsersListSerializer}, tags=["유저"])
+    def get(self, request):
+        users = PresenceService.list_online_users()
+        return Response({"count": len(users), "results": users})
+
+
 class PresenceUpdateView(APIView):
     permission_classes = [IsAuthenticated]
     throttle_classes = [PresenceActionThrottle]
@@ -613,73 +623,12 @@ class UserProfileView(APIView):
 
     @extend_schema(responses={200: OpponentProfileSerializer}, tags=["유저"])
     def get(self, request, user_id: int):
-        cache_key = f"user_profile_{user_id}"
-        cached_data = cache.get(cache_key)
-
-        user = User.objects.select_related("stats").filter(pk=user_id).first()
-        if user is None:
+        payload = ProfileViewService.build_user_profile_payload(
+            viewer=request.user, user_id=user_id
+        )
+        if payload is None:
             return Response({"message": "유저 정보를 찾을 수 없습니다."}, status=404)
-
-        if cached_data is None:
-            cached_data = {"user": PublicUserSerializer(user).data}
-            cache.set(cache_key, cached_data, self.CACHE_TTL)
-        presence = PresenceService.get_presence(user_id)
-        user_payload = dict(cached_data["user"])
-        user_payload["online"] = presence["online"]
-        user_payload["status"] = presence["status"]
-        user_payload["status_label"] = presence["status_label"]
-
-        recent_games = GameQueryService.list_recent_for_user(user, limit=20)
-        previous_season = (
-            SeasonStat.objects.select_related("season")
-            .filter(user_id=user_id, season__is_finalized=True)
-            .order_by("-season__start_date")
-            .first()
-        )
-
-        vs_summary = None
-        friend_status = None
-        if request.user.is_authenticated and request.user.pk != user_id:
-            vs_summary = GameQueryService.head_to_head_summary(request.user, user)
-            request_pairs = set(
-                FriendRequest.objects.filter(
-                    (Q(from_user_id=request.user.pk) & Q(to_user_id=user_id))
-                    | (Q(from_user_id=user_id) & Q(to_user_id=request.user.pk))
-                ).values_list("from_user_id", "to_user_id")
-            )
-            friend_status = {
-                "is_friend": Friend.objects.filter(
-                    user_id=request.user.pk,
-                    friend_id=user_id,
-                ).exists(),
-                "is_request_sent": (request.user.pk, user_id) in request_pairs,
-                "is_request_received": (user_id, request.user.pk) in request_pairs,
-            }
-
-        return Response(
-            {
-                "user": user_payload,
-                "recent_games": GameHistorySerializer(recent_games, many=True).data,
-                "vs_summary": vs_summary,
-                "previous_season": (
-                    {
-                        "season_id": previous_season.season_id,
-                        "season_name": previous_season.season.name,
-                        "final_rank": previous_season.final_rank,
-                        "games_played": previous_season.games_played,
-                        "wins": previous_season.wins,
-                        "losses": previous_season.losses,
-                        "draws": previous_season.draws,
-                        "win_rate": previous_season.win_rate,
-                        "rating": previous_season.rating,
-                        "peak_rating": previous_season.peak_rating,
-                    }
-                    if previous_season
-                    else None
-                ),
-                "friend_status": friend_status,
-            }
-        )
+        return Response(payload)
 
 
 class UserDashboardView(APIView):
@@ -689,23 +638,7 @@ class UserDashboardView(APIView):
 
     @extend_schema(responses={200: DashboardSerializer}, tags=["통계"])
     def get(self, request):
-        user = User.objects.select_related("stats").get(pk=request.user.pk)
-        stats = user.stats
-        recent_games = GameQueryService.list_recent_for_user(user, limit=10)
-        data = {
-            "user": PublicUserSerializer(user).data,
-            "summary": {
-                "rating": stats.rating,
-                "rank_tier": stats.rank_tier,
-                "games_played": stats.games_played,
-                "games_won": stats.games_won,
-                "games_lost": stats.games_lost,
-                "games_draw": stats.games_draw,
-                "win_rate": stats.win_rate,
-            },
-            "recent_games": GameHistorySerializer(recent_games, many=True).data,
-        }
-        return Response(data)
+        return Response(ProfileViewService.build_dashboard_payload(user=request.user))
 
 
 class UserSearchView(APIView):
