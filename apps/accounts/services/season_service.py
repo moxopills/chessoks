@@ -13,6 +13,7 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import Season, SeasonReward, SeasonStat, UserSeasonReward, UserStats
+from apps.accounts.services.achievement_service import AchievementService
 from apps.chess.models import Game
 from apps.chess.services.rating_service import RatingService
 from apps.notifications.services import NotificationService
@@ -550,4 +551,5 @@ class SeasonService:
             message=", ".join(reward_lines) if reward_lines else "보상을 수령했습니다.",
             payload={"season_id": season_id, "claimed_count": len(claims)},
         )
+        transaction.on_commit(lambda: AchievementService.sync_rewards_for_user(user_id))
         return {"claimed_count": len(claims), "rewards": reward_lines}

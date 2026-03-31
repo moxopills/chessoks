@@ -1,6 +1,7 @@
 (function() {
     'use strict';
 
+    const profileView = window.ProfileView;
     const avatarEl = document.getElementById('profile-avatar');
     const profileCardEl = document.getElementById('profile-card');
     const nameEl = document.getElementById('profile-name');
@@ -12,6 +13,7 @@
     const statLosses = document.getElementById('stat-losses');
     const statDraws = document.getElementById('stat-draws');
     const seasonSummaryContent = document.getElementById('profile-season-summary-content');
+    const achievementsEl = document.getElementById('profile-achievements');
     const vsBox = document.getElementById('profile-vs');
     const vsWins = document.getElementById('vs-wins');
     const vsLosses = document.getElementById('vs-losses');
@@ -52,6 +54,7 @@
             const user = data.user;
             renderUser(user);
             renderStats(user.stats);
+            renderAchievements(data.achievements || []);
             renderPreviousSeason(data.previous_season);
             renderRecent(data.recent_games || []);
             await loadGuestbook();
@@ -84,114 +87,44 @@
     }
 
     function renderUser(user) {
-        nameEl.textContent = user.nickname;
-        ratingEl.textContent = `레이팅 ${user.stats?.rating ?? '-'}`;
-        const tierName = user.stats?.rank_tier || user.rank_tier || '-';
-        tierEl.textContent = tierName;
-        if (seasonTitleEl) {
-            seasonTitleEl.textContent = user.stats?.season_title
-                ? `시즌 칭호: ${user.stats.season_title}`
-                : '시즌 칭호 없음';
-        }
-        if (profileCardEl) {
-            profileCardEl.classList.remove(
-                'season-frame-champion',
-                'season-frame-runnerup',
-                'season-frame-third',
-                'season-frame-top10'
-            );
-            const frameClass = Utils.getProfileCardFrameClass(user.stats?.profile_card_frame || '');
-            if (frameClass) {
-                profileCardEl.classList.add(frameClass);
-            }
-        }
-        Utils.setAvatar(avatarEl, {
-            url: user.avatar_url,
-            alt: user.nickname,
-            placeholder: '?',
+        profileView.renderIdentity({
+            user,
+            avatarEl,
+            nameEl,
+            tierEl,
+            ratingEl,
+            seasonTitleEl,
+            profileCardEl,
             placeholderClass: 'avatar-placeholder',
         });
-        const tier = user.stats?.rank_tier || user.rank_tier || 'Junior';
-        avatarEl.insertAdjacentHTML(
-            'beforeend',
-            `<span class="tier-badge" title="${Utils.escapeHtml(tier)}">${Utils.getTierIcon(tier)}</span>`
-        );
     }
 
     function renderStats(stats) {
-        statGames.textContent = stats?.games_played ?? 0;
-        statWins.textContent = stats?.games_won ?? 0;
-        statLosses.textContent = stats?.games_lost ?? 0;
-        statDraws.textContent = stats?.games_draw ?? 0;
+        profileView.renderStats(stats, {
+            games: statGames,
+            wins: statWins,
+            losses: statLosses,
+            draws: statDraws,
+        });
     }
 
     function renderPreviousSeason(season) {
-        if (!seasonSummaryContent) return;
-        if (!season) {
-            seasonSummaryContent.textContent = '지난 시즌 기록이 없습니다.';
-            return;
-        }
-        const rankText = season.final_rank ? `#${season.final_rank}` : '-';
-        seasonSummaryContent.innerHTML = `
-            <div class="season-summary-item"><span>시즌명</span><strong>${Utils.escapeHtml(season.season_name)}</strong></div>
-            <div class="season-summary-item"><span>최종 순위</span><strong>${rankText}</strong></div>
-            <div class="season-summary-item"><span>전적</span><strong>${season.wins}승 ${season.losses}패 ${season.draws}무</strong></div>
-            <div class="season-summary-item"><span>승률/판수</span><strong>${season.win_rate}% · ${season.games_played}판</strong></div>
-        `;
+        profileView.renderPreviousSeason(seasonSummaryContent, season);
+    }
+
+    function renderAchievements(achievements) {
+        if (!achievementsEl || !window.ProfileAchievements) return;
+        window.ProfileAchievements.render(achievementsEl, achievements, {
+            heading: '대표 업적',
+            subheading: '이 유저의 주요 달성 기록입니다.',
+        });
     }
 
     function renderRecent(games) {
-        if (!games.length) {
-            recentList.innerHTML = '<div class="text-muted">최근 전적 없음</div>';
-            return;
-        }
-        const targetId = parseInt(userId, 10);
-        recentList.innerHTML = games.slice(0, 6).map((game) => {
-            const isWhite = Number(game.white_player?.id) === Number(targetId);
-            const opponent = isWhite ? game.black_player.nickname : game.white_player.nickname;
-            const resultLabel = getResultLabel(game.result, isWhite);
-            const playedAt = game.created_at ? Utils.formatDate(game.created_at, {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-            }).replace(/\./g, '').trim() : '';
-            return `
-                <div class="recent-item">
-                    <span class="recent-opponent">${Utils.escapeHtml(opponent)}</span>
-                    <span class="recent-result">${resultLabel}</span>
-                    <span class="recent-meta text-muted">${playedAt}</span>
-                </div>
-            `;
-        }).join('');
-    }
-
-    function getResultLabel(result, isWhite) {
-        if (!result) return '-';
-        const drawResults = new Set([
-            'draw',
-            'draw_agreement',
-            'draw_insufficient',
-            'draw_repetition',
-            'draw_fifty_move',
-            'stalemate',
-        ]);
-        const whiteWin = new Set([
-            'white_win',
-            'checkmate_white',
-            'timeout_black',
-            'resignation_black',
-        ]);
-        const blackWin = new Set([
-            'black_win',
-            'checkmate_black',
-            'timeout_white',
-            'resignation_white',
-        ]);
-        if (result === 'playing') return '진행';
-        if (drawResults.has(result)) return '무';
-        if (whiteWin.has(result)) return isWhite ? '승' : '패';
-        if (blackWin.has(result)) return isWhite ? '패' : '승';
-        return '종료';
+        profileView.renderRecentGames(recentList, games, parseInt(userId, 10), {
+            emptyText: '최근 전적 없음',
+            compact: true,
+        });
     }
 
     function bindActions() {

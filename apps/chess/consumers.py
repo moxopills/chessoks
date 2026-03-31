@@ -12,11 +12,17 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from apps.accounts.models import User
 from apps.accounts.services import OnlineStatusService, PresenceService
 from apps.chess.models import LobbyMessage, LobbyMessageReaction, Room
+from apps.chess.realtime_payloads import (
+    REACTION_EMOJIS,
+    build_chat_payload,
+    build_guest_lobby_payload,
+    build_lobby_user_payload,
+    empty_reactions,
+)
 from apps.chess.services import GameService
 from apps.chess.utils import check_profanity, get_profanity_warning
 
 logger = logging.getLogger(__name__)
-REACTION_EMOJIS = {"👍", "👏"}
 WS_CHAT_RATE_LIMIT = 12
 WS_CHAT_RATE_WINDOW = 10
 WS_REACTION_RATE_LIMIT = 30
@@ -404,19 +410,13 @@ class ChessConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWebsock
         if not valid:
             return
         message_id = self._new_chat_message_id()
-        payload = {
-            "type": "chat",
-            "scope": "player",
-            "message_id": message_id,
-            "room_id": int(self.room_id),
-            "user_id": self.scope["user"].id,
-            "nickname": self.scope["user"].nickname,
-            "avatar_url": self.scope["user"].avatar_url,
-            "message": message,
-            "sent_at": timezone.now().isoformat(),
-            "reactions": {"👍": 0, "👏": 0},
-            "my_reactions": [],
-        }
+        payload = build_chat_payload(
+            scope="player",
+            user=self.scope["user"],
+            message=message,
+            message_id=message_id,
+            room_id=int(self.room_id),
+        )
         await self._append_game_chat_history("player", payload)
         await self._broadcast_to_group(self.player_group, payload)
 
@@ -437,19 +437,13 @@ class ChessConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWebsock
         if not valid:
             return
         message_id = self._new_chat_message_id()
-        payload = {
-            "type": "chat",
-            "scope": "spectator",
-            "message_id": message_id,
-            "room_id": int(self.room_id),
-            "user_id": self.scope["user"].id,
-            "nickname": self.scope["user"].nickname,
-            "avatar_url": self.scope["user"].avatar_url,
-            "message": message,
-            "sent_at": timezone.now().isoformat(),
-            "reactions": {"👍": 0, "👏": 0},
-            "my_reactions": [],
-        }
+        payload = build_chat_payload(
+            scope="spectator",
+            user=self.scope["user"],
+            message=message,
+            message_id=message_id,
+            room_id=int(self.room_id),
+        )
         await self._append_game_chat_history("spectator", payload)
         await self._broadcast_to_group(self.spectator_group, payload)
 
@@ -538,7 +532,7 @@ class ChessConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWebsock
                     if current_user_id in set(state.get(emoji, []))
                 ]
             else:
-                message["reactions"] = message.get("reactions", {"👍": 0, "👏": 0})
+                message["reactions"] = message.get("reactions", empty_reactions())
                 message["my_reactions"] = message.get("my_reactions", [])
             hydrated.append(message)
         return hydrated
@@ -980,26 +974,26 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
         if not online_ids:
             return []
         presence_map = PresenceService.bulk_presence(online_ids)
-        queryset = User.objects.select_related("stats").filter(id__in=online_ids, is_guest=False)
+        queryset = (
+            User.objects.select_related("stats")
+            .only(
+                "id",
+                "nickname",
+                "avatar_url",
+                "stats__rating",
+                "stats__competitive_games_played",
+                "stats__nickname_color",
+                "stats__profile_border",
+            )
+            .filter(id__in=online_ids, is_guest=False)
+        )
         user_map = {user.id: user for user in queryset}
         users = []
         for user_id in online_ids:
             user = user_map.get(user_id)
             if not user:
                 continue
-            presence = presence_map.get(user.id, {})
-            users.append(
-                {
-                    "id": user.id,
-                    "nickname": user.nickname,
-                    "avatar_url": user.avatar_url,
-                    "rank_tier": getattr(getattr(user, "stats", None), "rank_tier", "Junior"),
-                    "nickname_color": getattr(getattr(user, "stats", None), "nickname_color", ""),
-                    "profile_border": getattr(getattr(user, "stats", None), "profile_border", ""),
-                    "status": presence.get("status", PresenceService.STATUS_ONLINE),
-                    "status_label": presence.get("status_label", "온라인"),
-                }
-            )
+            users.append(build_lobby_user_payload(user, presence=presence_map.get(user.id, {})))
         return users
 
     async def _send_lobby_users(self):
@@ -1015,16 +1009,7 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
         presence = await self._get_presence_payload(user.id)
         payload = {
             "type": "user_joined",
-            "user": {
-                "id": user.id,
-                "nickname": user.nickname,
-                "avatar_url": user.avatar_url,
-                "rank_tier": getattr(getattr(user, "stats", None), "rank_tier", "Junior"),
-                "nickname_color": getattr(getattr(user, "stats", None), "nickname_color", ""),
-                "profile_border": getattr(getattr(user, "stats", None), "profile_border", ""),
-                "status": presence.get("status", PresenceService.STATUS_ONLINE),
-                "status_label": presence.get("status_label", "온라인"),
-            },
+            "user": build_lobby_user_payload(user, presence=presence),
         }
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}
@@ -1066,13 +1051,7 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
             return
 
         guests = cache.get(self.lobby_guests_key, {})
-        guests[guest["token"]] = {
-            "id": f"guest_{guest['token'][:8]}",
-            "nickname": guest["display_name"],
-            "avatar_url": None,
-            "rank_tier": None,
-            "is_guest": True,
-        }
+        guests[guest["token"]] = build_guest_lobby_payload(guest)
         cache.set(self.lobby_guests_key, guests, timeout=3600)
 
     @database_sync_to_async
@@ -1104,13 +1083,7 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
 
         payload = {
             "type": "user_joined",
-            "user": {
-                "id": f"guest_{guest['token'][:8]}",
-                "nickname": guest["display_name"],
-                "avatar_url": None,
-                "rank_tier": None,
-                "is_guest": True,
-            },
+            "user": build_guest_lobby_payload(guest),
         }
         await self.channel_layer.group_send(
             self.group_name, {"type": "broadcast", "payload": payload}

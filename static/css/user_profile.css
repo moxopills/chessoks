@@ -66,6 +66,10 @@
     font-family: var(--font-body);
 }
 
+.profile-achievements-block {
+    margin-top: var(--space-lg);
+}
+
 .profile-season-summary h3 {
     font-size: clamp(0.7rem, 1.1vw, 0.85rem);
     margin-bottom: var(--space-sm);

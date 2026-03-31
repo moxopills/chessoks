@@ -13,6 +13,7 @@ from rest_framework import status
 from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import AuthToken, SkinPointLog, User, UserStats
+from apps.accounts.services.achievement_service import AchievementService
 from apps.accounts.services.base_service import ServiceResult, _ok, _validate_serializer
 from apps.accounts.services.session_service import AccountService, PasswordService
 from apps.accounts.utils import (
@@ -385,6 +386,7 @@ class UserProfileService:
         stats = getattr(user, "stats", None)
 
         old_nickname = user.nickname
+        customization_reward_dirty = False
         with transaction.atomic():
             if stats and (nickname_color is not None or profile_border is not None):
                 stats = UserStats.objects.select_for_update().get(pk=stats.pk)
@@ -423,6 +425,7 @@ class UserProfileService:
                         if nickname_color not in owned:
                             owned.append(nickname_color)
                         purchase_updates["owned_nickname_colors"] = owned
+                        customization_reward_dirty = True
                         SkinPointLog.objects.create(
                             user_id=user.id,
                             amount=-selected["cost"],
@@ -466,6 +469,7 @@ class UserProfileService:
                         if profile_border not in owned:
                             owned.append(profile_border)
                         purchase_updates["owned_profile_borders"] = owned
+                        customization_reward_dirty = True
                         SkinPointLog.objects.create(
                             user_id=user.id,
                             amount=-selected["cost"],
@@ -490,6 +494,8 @@ class UserProfileService:
             if new_nickname and new_nickname != old_nickname:
                 user.nickname_changed_at = timezone.now()
                 user.save(update_fields=["nickname_changed_at"])
+            if customization_reward_dirty:
+                transaction.on_commit(lambda: AchievementService.sync_rewards_for_user(user.id))
         cache.delete(f"user_profile_{user.id}")
         return _ok({"message": "프로필이 업데이트되었습니다."}, status.HTTP_200_OK)
 

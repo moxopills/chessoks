@@ -79,6 +79,7 @@ class SkinPointLog(models.Model):
         SKIN_PURCHASE = "skin_purchase", "스킨 구매"
         PUZZLE_SOLVE = "puzzle_solve", "퍼즐 클리어"
         SEASON_REWARD = "season_reward", "시즌 보상"
+        ACHIEVEMENT_REWARD = "achievement_reward", "업적 달성"
         ADJUST = "adjust", "운영자 조정"
 
     user = models.ForeignKey(

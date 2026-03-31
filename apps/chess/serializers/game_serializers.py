@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.accounts.services.achievement_service import AchievementService
+
 
 def _avatar_with_cache_bust(user) -> str | None:
     if user is None:
@@ -25,6 +27,7 @@ class BaseUserSerializer(serializers.Serializer):
     profile_border = serializers.SerializerMethodField()
     selected_board_skin_class = serializers.SerializerMethodField()
     selected_piece_skin_class = serializers.SerializerMethodField()
+    featured_achievement = serializers.SerializerMethodField()
 
     def get_avatar_url(self, obj):
         return _avatar_with_cache_bust(obj)
@@ -44,6 +47,9 @@ class BaseUserSerializer(serializers.Serializer):
         return getattr(
             getattr(obj, "stats", None), "selected_piece_skin_class", "skin-piece-classic"
         )
+
+    def get_featured_achievement(self, obj):
+        return AchievementService.get_featured_achievement_for_stats(getattr(obj, "stats", None))
 
 
 class PlayerSerializer(BaseUserSerializer):
