@@ -128,10 +128,14 @@ const Utils = (function() {
         const safeUrl = sanitizeUrl(url, '');
         if (safeUrl) {
             const img = document.createElement('img');
+            const fallbackSize = Math.max(el.clientWidth || 0, el.clientHeight || 0, 32);
             img.src = safeUrl;
             img.alt = String(alt || 'avatar');
             img.loading = 'lazy';
+            img.decoding = 'async';
             img.referrerPolicy = 'no-referrer';
+            img.width = fallbackSize;
+            img.height = fallbackSize;
             el.appendChild(img);
             return;
         }
