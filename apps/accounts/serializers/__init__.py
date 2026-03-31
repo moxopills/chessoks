@@ -15,6 +15,8 @@ from .message_serializers import (
 from .online_serializers import (
     OnlineStatusListSerializer,
     OnlineStatusSerializer,
+    OnlineUsersListSerializer,
+    OnlineUserSummarySerializer,
     PresenceUpdateSerializer,
 )
 from .season_serializers import (
@@ -49,6 +51,7 @@ from .user_serializer import (
     PasswordChangeSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
+    ProfileAchievementSerializer,
     ProfileUpdateSerializer,
     PublicUserSerializer,
     SignupEmailConfirmSerializer,
@@ -68,6 +71,7 @@ __all__ = [
     "PublicUserSerializer",
     "OpponentSummarySerializer",
     "OpponentProfileSerializer",
+    "ProfileAchievementSerializer",
     "DashboardSummarySerializer",
     "SignupEmailConfirmSerializer",
     "SignupEmailRequestSerializer",
@@ -89,6 +93,8 @@ __all__ = [
     "EmailChangeConfirmSerializer",
     "OnlineStatusSerializer",
     "OnlineStatusListSerializer",
+    "OnlineUserSummarySerializer",
+    "OnlineUsersListSerializer",
     "PresenceUpdateSerializer",
     "FriendSerializer",
     "FriendRequestSerializer",

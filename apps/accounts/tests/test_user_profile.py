@@ -41,6 +41,7 @@ class OpponentProfileApiTestCase(TestCase):
         response = self.client.get(f"/api/accounts/users/{self.opponent.id}/profile/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["user"]["id"], self.opponent.id)
+        self.assertIn("achievements", response.data)
         self.assertEqual(response.data["vs_summary"]["total"], 3)
         self.assertEqual(response.data["vs_summary"]["wins"], 2)
         self.assertEqual(response.data["vs_summary"]["losses"], 0)

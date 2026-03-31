@@ -55,6 +55,31 @@ class OnlineStatusApiTestCase(TestCase):
             },
         )
 
+    def test_online_users_list_includes_activity_status(self):
+        self.user1.stats.featured_achievement_key = "first_win"
+        self.user1.stats.save(update_fields=["featured_achievement_key"])
+        PresenceService.set_presence(
+            self.user1.id,
+            PresenceService.STATUS_PLAYING,
+            scope="playing:test",
+            room_id=17,
+            game_id=23,
+        )
+
+        self.client.force_authenticate(user=self.user1)
+        response = self.client.get("/api/accounts/online-users/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(
+            response.data["results"][0]["status"],
+            PresenceService.STATUS_PLAYING,
+        )
+        self.assertEqual(response.data["results"][0]["status_label"], "대국 중")
+        self.assertEqual(response.data["results"][0]["room_id"], 17)
+        self.assertEqual(response.data["results"][0]["game_id"], 23)
+        self.assertEqual(response.data["results"][0]["featured_achievement"]["key"], "first_win")
+
     def test_presence_update_sets_and_clears_presence(self):
         self.client.force_authenticate(user=self.user1)
 

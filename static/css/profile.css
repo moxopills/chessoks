@@ -294,6 +294,10 @@
     gap: var(--space-xs);
 }
 
+#profile-achievements {
+    width: 100%;
+}
+
 @media (max-width: 1024px) {
     .profile-layout {
         grid-template-columns: 1fr;

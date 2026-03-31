@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import Friend, FriendRequest, User
+from apps.accounts.services.achievement_service import AchievementService
 from apps.core.access import AccessGuard
 from apps.notifications.services import NotificationService
 
@@ -32,6 +33,9 @@ class FriendService:
         if reverse_request:
             FriendService._create_friendship(from_user, to_user)
             reverse_request.delete()
+            transaction.on_commit(
+                lambda: AchievementService.sync_rewards_for_users([from_user.id, to_user.id])
+            )
             NotificationService.create_notification(
                 user=to_user,
                 type="friend_accept",
@@ -57,6 +61,11 @@ class FriendService:
         request = get_object_or_404(FriendRequest, pk=request_id, to_user=user)
         FriendService._create_friendship(request.from_user, request.to_user)
         request.delete()
+        transaction.on_commit(
+            lambda: AchievementService.sync_rewards_for_users(
+                [request.from_user_id, request.to_user_id]
+            )
+        )
         NotificationService.create_notification(
             user=request.from_user,
             type="friend_accept",

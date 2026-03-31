@@ -178,17 +178,10 @@
     }
 
     function setupGameStartLauncher() {
-        if (!gameStartOpen || !gameStartModal) return;
-        const closeModal = () => gameStartModal.classList.add('hidden');
-        gameStartOpen.addEventListener('click', () => gameStartModal.classList.remove('hidden'));
-        gameStartClose?.addEventListener('click', closeModal);
-        gameStartModal.addEventListener('click', (event) => {
-            if (event.target === gameStartModal) closeModal();
-        });
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && !gameStartModal.classList.contains('hidden')) {
-                closeModal();
-            }
+        window.ModalLauncher?.bind({
+            openButton: gameStartOpen,
+            modal: gameStartModal,
+            closeButton: gameStartClose,
         });
     }
 
@@ -1441,10 +1434,35 @@
         };
     }
 
+    function getPresenceCssClass(status, online) {
+        if (!online) return 'offline';
+        const normalized = String(status || 'online');
+        const supported = new Set([
+            'online',
+            'lobby',
+            'room_waiting',
+            'playing',
+            'competitive',
+            'quick',
+            'ai_playing',
+            'spectating',
+            'puzzle',
+        ]);
+        return supported.has(normalized) ? normalized : 'online';
+    }
+
+    function createAchievementLabel(achievement) {
+        if (!achievement?.title) return null;
+        const badge = document.createElement('div');
+        badge.className = `user-achievement user-achievement--${achievement.tone || 'info'}`;
+        badge.textContent = `${achievement.icon || '🏅'} ${achievement.title}`;
+        return badge;
+    }
+
     function createUserRowElement(user, presenceSource = null) {
         const presence = getPresenceViewModel(presenceSource || user, true);
         const statusText = presence.label;
-        const statusClass = presence.online ? 'online' : 'offline';
+        const statusClass = getPresenceCssClass(presence.status, presence.online);
         const tier = user.rank_tier || user.stats?.rank_tier || 'Junior';
         const tierIcon = Utils.getTierIcon(tier);
         const nicknameColor = Utils.getNicknameColorValue(user.nickname_color || user.stats?.nickname_color || '');
@@ -1478,6 +1496,11 @@
         badge.textContent = tierIcon;
         nick.appendChild(badge);
         info.appendChild(nick);
+
+        const achievement = createAchievementLabel(user.featured_achievement);
+        if (achievement) {
+            info.appendChild(achievement);
+        }
 
         const status = document.createElement('div');
         status.className = `user-status ${statusClass}`;
@@ -1573,38 +1596,65 @@
         }
     }
 
+    async function fetchOnlineUsersSnapshot() {
+        try {
+            const data = await API.get('/accounts/online-users/');
+            return Array.isArray(data?.results) ? data.results : [];
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function mergeLobbyUsersSnapshot(users) {
+        const nextUsers = {};
+        Object.values(lobbyUsers).forEach((user) => {
+            if (user?.is_guest) {
+                nextUsers[user.id] = user;
+            }
+        });
+        users.forEach((user) => {
+            if (!user?.id) return;
+            nextUsers[user.id] = user;
+        });
+        return nextUsers;
+    }
+
+    function buildLobbyUsersSignature(users) {
+        return Object.values(users)
+            .map((user) => {
+                const id = user?.id ?? '';
+                const status = user?.status ?? '';
+                const label = user?.status_label ?? '';
+                const guest = user?.is_guest ? 'guest' : 'user';
+                return `${guest}:${id}:${status}:${label}`;
+            })
+            .sort()
+            .join('|');
+    }
+
     function startLobbyPresenceRefresh() {
         lobbyPresencePoller?.stop?.();
         lobbyPresencePoller = Utils.createAdaptivePoller({
-            callback: refreshLobbyPresence,
+            callback: refreshLobbyUsersSnapshot,
             activeInterval: 8000,
             hiddenInterval: 18000,
-            enabled: () => Boolean(currentUserId && Object.keys(lobbyUsers).length),
+            enabled: () => Boolean(currentUserId),
             immediate: false,
         });
         lobbyPresencePoller.start();
+        lobbyPresencePoller.trigger?.();
         window.addEventListener('beforeunload', () => lobbyPresencePoller?.stop?.(), { once: true });
     }
 
-    async function refreshLobbyPresence() {
-        const ids = Object.values(lobbyUsers)
-            .map((user) => parseInt(user.id, 10))
-            .filter((id) => Number.isInteger(id));
-        if (!ids.length) return;
-        const statusMap = await fetchOnlineStatusMap(ids);
-        let changed = false;
-        ids.forEach((id) => {
-            const user = lobbyUsers[id];
-            const next = statusMap[id];
-            if (!user || !next) return;
-            if (user.status !== next.status || user.status_label !== next.status_label) {
-                user.status = next.status;
-                user.status_label = next.status_label;
-                user.online = next.online;
-                changed = true;
-            }
-        });
-        if (changed && !isUserSearchMode) {
+    async function refreshLobbyUsersSnapshot() {
+        const onlineUsers = await fetchOnlineUsersSnapshot();
+        if (!Array.isArray(onlineUsers)) return;
+        const nextUsers = mergeLobbyUsersSnapshot(onlineUsers);
+        const currentSignature = buildLobbyUsersSignature(lobbyUsers);
+        const nextSignature = buildLobbyUsersSignature(nextUsers);
+        if (currentSignature === nextSignature) return;
+        lobbyUsers = nextUsers;
+        if (!isUserSearchMode) {
             renderUsers();
         }
     }

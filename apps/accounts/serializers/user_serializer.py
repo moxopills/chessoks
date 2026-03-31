@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.accounts.models import User
+from apps.accounts.services.achievement_service import AchievementService
 from apps.accounts.utils.validators import validate_password_strength
 from apps.chess.serializers import GameHistorySerializer
 
@@ -24,6 +25,8 @@ class UserStatsSerializer(serializers.Serializer):
     profile_card_frame = serializers.CharField(read_only=True)
     owned_season_titles = serializers.ListField(read_only=True)
     owned_profile_card_frames = serializers.ListField(read_only=True)
+    earned_achievement_keys = serializers.ListField(read_only=True)
+    featured_achievement_key = serializers.CharField(read_only=True)
     selected_board_skin_class = serializers.CharField(read_only=True)
     selected_piece_skin_class = serializers.CharField(read_only=True)
 
@@ -53,6 +56,7 @@ class UserSerializer(serializers.ModelSerializer):
     is_muted = serializers.SerializerMethodField()
     is_suspended = serializers.SerializerMethodField()
     avatar_url = serializers.SerializerMethodField()
+    featured_achievement = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -71,6 +75,7 @@ class UserSerializer(serializers.ModelSerializer):
             "is_suspended",
             "is_guest",
             "stats",
+            "featured_achievement",
         )
         read_only_fields = (
             "id",
@@ -86,12 +91,16 @@ class UserSerializer(serializers.ModelSerializer):
     def get_avatar_url(self, obj):
         return _avatar_with_cache_bust(obj)
 
+    def get_featured_achievement(self, obj):
+        return AchievementService.get_featured_achievement(obj)
+
 
 class PublicUserSerializer(serializers.ModelSerializer):
     """공개 사용자 정보 Serializer (이메일 제외)"""
 
     stats = UserStatsSerializer(read_only=True)
     avatar_url = serializers.SerializerMethodField()
+    featured_achievement = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -102,10 +111,14 @@ class PublicUserSerializer(serializers.ModelSerializer):
             "bio",
             "created_at",
             "stats",
+            "featured_achievement",
         )
 
     def get_avatar_url(self, obj):
         return _avatar_with_cache_bust(obj)
+
+    def get_featured_achievement(self, obj):
+        return AchievementService.get_featured_achievement(obj)
 
 
 class LeaderboardEntrySerializer(serializers.Serializer):
@@ -182,10 +195,25 @@ class PreviousSeasonSummarySerializer(serializers.Serializer):
     peak_rating = serializers.IntegerField()
 
 
+class ProfileAchievementSerializer(serializers.Serializer):
+    key = serializers.CharField()
+    title = serializers.CharField()
+    description = serializers.CharField()
+    icon = serializers.CharField()
+    tone = serializers.CharField()
+    is_earned = serializers.BooleanField()
+    progress = serializers.IntegerField()
+    current_value = serializers.IntegerField()
+    target_value = serializers.IntegerField()
+    progress_text = serializers.CharField()
+    reward_points = serializers.IntegerField()
+
+
 class OpponentProfileSerializer(serializers.Serializer):
     """상대 프로필 + 최근 전적"""
 
     user = PublicUserSerializer()
+    achievements = ProfileAchievementSerializer(many=True)
     recent_games = GameHistorySerializer(many=True)
     vs_summary = OpponentSummarySerializer(allow_null=True)
     previous_season = PreviousSeasonSummarySerializer(allow_null=True)
@@ -201,6 +229,7 @@ class DashboardSummarySerializer(UserStatsSerializer):
 class DashboardSerializer(serializers.Serializer):
     user = PublicUserSerializer()
     summary = DashboardSummarySerializer()
+    achievements = ProfileAchievementSerializer(many=True)
     recent_games = GameHistorySerializer(many=True)
 
 

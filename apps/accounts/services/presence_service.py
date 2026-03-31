@@ -4,6 +4,8 @@ from time import time
 
 from django.core.cache import cache
 
+from apps.accounts.models import User
+from apps.accounts.services.achievement_service import AchievementService
 from apps.accounts.services.online_status_service import OnlineStatusService
 
 logger = logging.getLogger(__name__)
@@ -38,6 +40,16 @@ class PresenceService:
         STATUS_PUZZLE: {"priority": 70, "label": "퍼즐 풀이 중"},
     }
     CLIENT_ALLOWED_STATUSES = {STATUS_ONLINE, STATUS_ROOM_WAITING, STATUS_PUZZLE}
+    ONLINE_USER_ONLY_FIELDS = (
+        "id",
+        "nickname",
+        "avatar_url",
+        "stats__competitive_games_played",
+        "stats__nickname_color",
+        "stats__profile_border",
+        "stats__rating",
+        "stats__featured_achievement_key",
+    )
 
     @staticmethod
     def _list_key(user_id: int) -> str:
@@ -249,3 +261,52 @@ class PresenceService:
                 "status_label": "오프라인",
             },
         )
+
+    @staticmethod
+    def list_online_users(*, exclude_user_id: int | None = None) -> list[dict]:
+        online_ids = OnlineStatusService.list_online_ids()
+        if exclude_user_id is not None:
+            online_ids = [user_id for user_id in online_ids if user_id != exclude_user_id]
+        if not online_ids:
+            return []
+
+        presence_map = PresenceService.bulk_presence(online_ids)
+        queryset = (
+            User.objects.select_related("stats")
+            .only(*PresenceService.ONLINE_USER_ONLY_FIELDS)
+            .filter(id__in=online_ids, is_guest=False)
+        )
+        user_map = {user.id: user for user in queryset}
+        payloads = []
+        for user_id in online_ids:
+            user = user_map.get(user_id)
+            if user is None:
+                continue
+            presence = presence_map.get(user_id, {})
+            stats = getattr(user, "stats", None)
+            payloads.append(
+                {
+                    "id": user.id,
+                    "nickname": user.nickname,
+                    "avatar_url": user.avatar_url,
+                    "rank_tier": getattr(stats, "rank_tier", "Junior"),
+                    "nickname_color": getattr(stats, "nickname_color", ""),
+                    "profile_border": getattr(stats, "profile_border", ""),
+                    "online": presence.get("online", True),
+                    "status": presence.get("status", PresenceService.STATUS_ONLINE),
+                    "status_label": presence.get("status_label", "온라인"),
+                    "room_id": presence.get("room_id"),
+                    "game_id": presence.get("game_id"),
+                    "featured_achievement": AchievementService.get_featured_achievement_for_stats(
+                        stats
+                    ),
+                }
+            )
+
+        payloads.sort(
+            key=lambda item: (
+                -PresenceService.STATUS_DEFINITIONS.get(item["status"], {}).get("priority", 0),
+                item["nickname"].casefold(),
+            )
+        )
+        return payloads

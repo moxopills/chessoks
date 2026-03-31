@@ -2,6 +2,7 @@
 (function() {
     'use strict';
 
+    const profileView = window.ProfileView;
     const avatarEl = document.getElementById('profile-avatar');
     const nicknameEl = document.getElementById('profile-nickname');
     const emailEl = document.getElementById('profile-email');
@@ -17,6 +18,7 @@
     const totalEl = document.getElementById('stat-total');
     const recentEl = document.getElementById('recent-games');
     const activityTimelineEl = document.getElementById('activity-timeline');
+    const achievementsEl = document.getElementById('profile-achievements');
     const guestbookList = document.getElementById('guestbook-list');
     const guestbookInput = document.getElementById('guestbook-input');
     const guestbookSubmit = document.getElementById('guestbook-submit');
@@ -87,72 +89,28 @@
 
     function renderProfile(user) {
         if (!user) return;
-        const nickname = user.nickname || '닉네임 없음';
-        nicknameEl.textContent = nickname;
-        emailEl.textContent = user.email || '';
-        bioEl.textContent = user.bio || '소개가 없습니다.';
-        const rating = user.stats?.rating ?? user.rating ?? 0;
-        const tier = user.stats?.rank_tier || deriveTierFromRating(rating);
-        tierEl.textContent = `티어 · ${tier}`;
-        tierEl.style.color = Utils.getTierColor(tier);
-        const tierIcon = Utils.getTierIcon(tier);
-        nicknameEl.textContent = '';
-        nicknameEl.appendChild(document.createTextNode(nickname));
-        nicknameEl.appendChild(document.createTextNode(' '));
-        const tierIconEl = document.createElement('span');
-        tierIconEl.className = 'profile-tier-icon-inline';
-        tierIconEl.title = tier;
-        tierIconEl.textContent = tierIcon;
-        nicknameEl.appendChild(tierIconEl);
-        applyProfileCustomization({
-            nicknameColor: user.stats?.nickname_color || '',
-            profileBorder: user.stats?.profile_border || '',
+        profileView.renderIdentity({
+            user,
+            avatarEl,
+            nicknameEl,
+            emailEl,
+            bioEl,
+            tierEl,
+            placeholderClass: 'profile-avatar-placeholder',
         });
-
-        if (avatarEl) {
-            avatarEl.innerHTML = '';
-            if (user.avatar_url) {
-                const img = document.createElement('img');
-                img.src = user.avatar_url;
-                img.alt = user.nickname;
-                avatarEl.appendChild(img);
-            } else {
-                const span = document.createElement('span');
-                span.className = 'profile-avatar-placeholder';
-                span.textContent = user.nickname?.[0] || '?';
-                avatarEl.appendChild(span);
-            }
-        }
-    }
-
-    function applyProfileCustomization({ nicknameColor, profileBorder }) {
-        if (nicknameEl) {
-            nicknameEl.style.color = Utils.getNicknameColorValue(nicknameColor);
-        }
-        if (avatarEl) {
-            avatarEl.style.boxShadow = Utils.getProfileBorderValue(profileBorder);
-        }
-    }
-
-    function deriveTierFromRating(rating) {
-        const value = Number(rating) || 0;
-        if (value >= 3000) return 'Master';
-        if (value >= 2500) return 'Expert';
-        if (value >= 2000) return 'Advanced';
-        if (value >= 1500) return 'Intermediate';
-        if (value >= 1000) return 'Junior';
-        return 'Beginner';
     }
 
     function renderDashboard(data) {
         if (!data || !data.summary) return;
         const summary = data.summary;
-        ratingEl.textContent = Utils.formatNumber(summary.rating ?? 0);
-        winsEl.textContent = summary.games_won ?? 0;
-        lossesEl.textContent = summary.games_lost ?? 0;
-        drawsEl.textContent = summary.games_draw ?? 0;
-        totalEl.textContent = summary.games_played ?? 0;
-        winrateEl.textContent = `${summary.win_rate ?? 0}%`;
+        profileView.renderStats(summary, {
+            rating: ratingEl,
+            wins: winsEl,
+            losses: lossesEl,
+            draws: drawsEl,
+            total: totalEl,
+            winrate: winrateEl,
+        });
 
         // 파이차트 렌더링
         renderWinratePieChart(
@@ -166,28 +124,19 @@
 
         const games = data.recent_games || [];
         const userId = data.user?.id;
-        if (!games.length) {
-            recentEl.innerHTML = '<div class="helper-text">최근 경기가 없습니다.</div>';
-            return;
-        }
-        recentEl.innerHTML = games.map(game => {
-            const resultInfo = getResultInfo(game, userId);
-            const resultClass = resultInfo.className;
-            const resultText = resultInfo.label;
-            const title = `${game.white_player?.nickname || '화이트'} vs ${game.black_player?.nickname || '블랙'}`;
-            const meta = `${Utils.formatDate(game.created_at)} · ${game.room_type}`;
-            return `
-                <div class="game-row">
-                    <div class="game-meta">
-                        <div class="game-title">${Utils.escapeHtml(title)}</div>
-                        <div>${Utils.escapeHtml(meta)}</div>
-                    </div>
-                    <span class="game-result ${resultClass}">${resultText}</span>
-                </div>
-            `;
-        }).join('');
-
+        renderAchievements(data.achievements || []);
+        profileView.renderRecentGames(recentEl, games, userId, {
+            emptyText: '최근 경기가 없습니다.',
+        });
         renderActivityTimeline(summary, games);
+    }
+
+    function renderAchievements(achievements) {
+        if (!achievementsEl || !window.ProfileAchievements) return;
+        window.ProfileAchievements.render(achievementsEl, achievements, {
+            heading: '대표 업적',
+            subheading: '경기·퍼즐·시즌 활동 기반으로 자동 갱신됩니다.',
+        });
     }
 
     function renderActivityTimeline(summary, games) {
@@ -215,7 +164,7 @@
         }
 
         games.slice(0, 4).forEach((game) => {
-            const resultInfo = getResultInfo(game, currentUserId);
+            const resultInfo = profileView.getResultInfo(game, currentUserId);
             const opponent = game.white_player?.id === currentUserId
                 ? game.black_player?.nickname
                 : game.white_player?.nickname;
@@ -351,33 +300,6 @@
         ctx.textAlign = 'right';
         ctx.fillText(Math.round(maxRating), padding.left - 5, padding.top + 10);
         ctx.fillText(Math.round(minRating), padding.left - 5, height - padding.bottom);
-    }
-
-    function getResultInfo(game, userId) {
-        const result = game.result || '';
-        if (result.includes('draw') || result === 'draw' || result === 'stalemate') {
-            return { className: 'draw', label: '무승부' };
-        }
-        if (!userId || !game.white_player || !game.black_player) {
-            return { className: 'draw', label: '종료' };
-        }
-        const isWhite = game.white_player.id === userId;
-        const winSet = new Set([
-            'white_win',
-            'black_win',
-            'checkmate_white',
-            'checkmate_black',
-            'timeout_white',
-            'timeout_black',
-            'resignation_white',
-            'resignation_black',
-        ]);
-        if (!winSet.has(result)) {
-            return { className: 'draw', label: '종료' };
-        }
-        const whiteWin = new Set(['white_win', 'checkmate_white', 'timeout_black', 'resignation_black']);
-        const didWin = whiteWin.has(result) ? isWhite : !isWhite;
-        return { className: didWin ? 'win' : 'lose', label: didWin ? '승리' : '패배' };
     }
 
     async function loadGuestbook() {

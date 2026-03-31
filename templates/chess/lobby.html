@@ -1340,6 +1340,51 @@
     vertical-align: middle;
 }
 
+.user-achievement {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 3px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    line-height: 1.2;
+    border: 1px solid rgba(214, 73, 92, 0.16);
+    background: rgba(214, 73, 92, 0.08);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-achievement--success {
+    background: rgba(71, 179, 132, 0.12);
+    border-color: rgba(71, 179, 132, 0.22);
+    color: #2d8c68;
+}
+
+.user-achievement--warning {
+    background: rgba(236, 176, 70, 0.14);
+    border-color: rgba(236, 176, 70, 0.24);
+    color: #b87417;
+}
+
+.user-achievement--danger {
+    background: rgba(214, 73, 92, 0.12);
+    border-color: rgba(214, 73, 92, 0.22);
+    color: #c14b5d;
+}
+
+.user-achievement--accent,
+.user-achievement--info {
+    background: rgba(86, 128, 233, 0.11);
+    border-color: rgba(86, 128, 233, 0.22);
+    color: #5270c9;
+}
+
 .hero-tier-toggle {
     border: 1px solid var(--color-border);
     background: var(--color-bg-tertiary);
@@ -1455,12 +1500,52 @@
     color: var(--color-accent-success);
 }
 
+.user-status.lobby,
+.user-status.room_waiting {
+    color: color-mix(in srgb, var(--color-accent-secondary) 72%, var(--color-text-primary));
+}
+
+.user-status.playing,
+.user-status.competitive,
+.user-status.quick,
+.user-status.ai_playing {
+    color: color-mix(in srgb, var(--color-accent-primary) 78%, var(--color-text-primary));
+}
+
+.user-status.spectating {
+    color: color-mix(in srgb, var(--color-accent-warning) 78%, var(--color-text-primary));
+}
+
+.user-status.puzzle {
+    color: color-mix(in srgb, var(--color-accent-success) 82%, var(--color-text-primary));
+}
+
 .user-status::before {
     content: '';
     width: 6px;
     height: 6px;
     border-radius: 50%;
     background-color: var(--color-accent-success);
+}
+
+.user-status.lobby::before,
+.user-status.room_waiting::before {
+    background-color: color-mix(in srgb, var(--color-accent-secondary) 72%, var(--color-text-primary));
+}
+
+.user-status.playing::before,
+.user-status.competitive::before,
+.user-status.quick::before,
+.user-status.ai_playing::before {
+    background-color: color-mix(in srgb, var(--color-accent-primary) 78%, var(--color-text-primary));
+}
+
+.user-status.spectating::before {
+    background-color: color-mix(in srgb, var(--color-accent-warning) 78%, var(--color-text-primary));
+}
+
+.user-status.puzzle::before {
+    background-color: color-mix(in srgb, var(--color-accent-success) 82%, var(--color-text-primary));
 }
 
 .user-status.offline {
@@ -1656,5 +1741,6 @@
 
 {% block extra_js %}
 <script src="{% static 'js/components/context-menu.js' %}"></script>
+<script src="{% static 'js/components/modal_launcher.js' %}"></script>
 <script src="{% static 'js/pages/lobby.js' %}"></script>
 {% endblock %}

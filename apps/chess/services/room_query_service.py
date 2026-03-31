@@ -39,6 +39,7 @@ class RoomQueryService:
         "host__stats__competitive_games_played",
         "host__stats__nickname_color",
         "host__stats__profile_border",
+        "host__stats__featured_achievement_key",
         "host__stats__selected_board_skin__css_class",
         "host__stats__selected_piece_skin__css_class",
         "guest__id",
@@ -49,6 +50,7 @@ class RoomQueryService:
         "guest__stats__competitive_games_played",
         "guest__stats__nickname_color",
         "guest__stats__profile_border",
+        "guest__stats__featured_achievement_key",
         "guest__stats__selected_board_skin__css_class",
         "guest__stats__selected_piece_skin__css_class",
     )
