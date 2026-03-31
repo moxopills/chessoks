@@ -39,6 +39,21 @@
                     <span class="ui-state-badge ui-state-badge--pending">빠른 대전 <strong>일반 매칭</strong></span>
                     <span class="ui-state-badge ui-state-badge--warning">AI/퍼즐 <strong>솔로 모드</strong></span>
                 </div>
+                <div class="hero-room-divider"></div>
+                <div class="hero-room-preview">
+                    <div class="hero-room-preview-head">
+                        <div class="hero-room-preview-copy">
+                            <span class="ui-eyebrow">Rooms</span>
+                            <h3 class="hero-room-preview-title">대기 중인 방</h3>
+                        </div>
+                        <a href="/rooms/" class="section-link">전체 보기</a>
+                    </div>
+                    <div class="room-list room-list--embedded" id="room-list">
+                        <div class="skeleton-card skeleton lobby-room-skeleton"></div>
+                        <div class="skeleton-card skeleton lobby-room-skeleton"></div>
+                        <div class="skeleton-card skeleton lobby-room-skeleton"></div>
+                    </div>
+                </div>
             </section>
             <section class="hero-control-card hero-control-card--guide" aria-label="가이드">
                 <div class="hero-card-head">
@@ -156,19 +171,6 @@
             <button class="btn btn-secondary btn-sm" id="active-game-enter">게임으로 복귀</button>
         </div>
     </section>
-
-        <!-- Left: Room List Preview -->
-        <section class="lobby-section">
-            <div class="section-header">
-                <h2 class="section-title">☗ 게임방</h2>
-                <a href="/rooms/" class="section-link">전체 보기</a>
-            </div>
-            <div class="room-list" id="room-list">
-                <div class="skeleton-card skeleton lobby-room-skeleton"></div>
-                <div class="skeleton-card skeleton lobby-room-skeleton"></div>
-                <div class="skeleton-card skeleton lobby-room-skeleton"></div>
-            </div>
-        </section>
 
         <!-- Middle: Lobby Chat -->
         <section class="lobby-section lobby-chat-section">
@@ -524,6 +526,33 @@
     text-align: center;
 }
 
+.hero-room-divider {
+    height: 1px;
+    background: color-mix(in srgb, var(--color-border) 84%, transparent);
+}
+
+.hero-room-preview {
+    display: grid;
+    gap: 12px;
+}
+
+.hero-room-preview-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.hero-room-preview-copy {
+    display: grid;
+    gap: 4px;
+}
+
+.hero-room-preview-title {
+    margin: 0;
+    font-size: 0.92rem;
+}
+
 .game-start-modal {
     width: min(920px, calc(100vw - 32px));
 }
@@ -609,7 +638,7 @@
 /* Content Grid */
 .lobby-content {
     display: grid;
-    grid-template-columns: minmax(260px, 0.95fr) minmax(360px, 1.2fr) minmax(280px, 0.95fr);
+    grid-template-columns: minmax(360px, 1.2fr) minmax(280px, 0.95fr);
     gap: var(--space-lg);
     align-items: stretch;
 }
@@ -669,6 +698,10 @@
     .users-list {
         min-height: 0;
     }
+
+    .hero-room-preview-head {
+        align-items: flex-start;
+    }
 }
 
 @media (max-width: 520px) {
@@ -694,7 +727,7 @@
 }
 
 .lobby-waiting-section {
-    grid-column: span 3;
+    grid-column: span 2;
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
@@ -750,6 +783,10 @@
 /* Room List */
 .room-list {
     min-height: 260px;
+}
+
+.room-list--embedded {
+    min-height: 220px;
 }
 
 .lobby-room-skeleton {

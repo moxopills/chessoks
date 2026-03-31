@@ -47,7 +47,7 @@
         <!-- Right Section -->
         <div class="navbar-right">
             <!-- Notification Bell (Authenticated) -->
-            <div class="navbar-notifications auth-only hidden" id="notification-bell">
+            <div class="navbar-notifications auth-only{% if not request.user.is_authenticated or request.user.is_guest %} hidden{% endif %}" id="notification-bell">
                 <button class="notification-btn" id="notification-toggle" aria-label="알림" aria-haspopup="true" aria-expanded="false" aria-controls="notification-dropdown">
                     <span class="notification-icon">&#128276;</span>
                     <span class="notification-badge hidden" id="notification-count" aria-live="polite" aria-atomic="true">0</span>
@@ -64,7 +64,7 @@
             </div>
 
             <!-- User Menu (Authenticated) -->
-            <div class="navbar-user auth-only hidden" id="user-menu">
+            <div class="navbar-user auth-only{% if not request.user.is_authenticated or request.user.is_guest %} hidden{% endif %}" id="user-menu">
                 <button class="user-btn" id="user-toggle" aria-haspopup="true" aria-expanded="false" aria-controls="user-dropdown">
                     <div class="avatar avatar-sm" id="user-avatar">
                         <span class="avatar-placeholder">?</span>
@@ -115,7 +115,7 @@
             </button>
 
             <!-- Auth Buttons (Guest) -->
-            <div class="navbar-auth guest-only" id="auth-buttons">
+            <div class="navbar-auth guest-only{% if request.user.is_authenticated and not request.user.is_guest %} hidden{% endif %}" id="auth-buttons">
                 <a href="/login/" class="btn btn-secondary btn-sm">로그인</a>
                 <a href="/signup/" class="btn btn-primary btn-sm">회원가입</a>
             </div>
@@ -263,6 +263,9 @@
 /* Notifications */
 .navbar-notifications {
     position: relative;
+    flex: 0 0 30px;
+    width: 30px;
+    min-height: 30px;
 }
 
 .notification-btn {
@@ -374,11 +377,13 @@
 /* User Menu */
 .navbar-user {
     position: relative;
+    min-width: 176px;
 }
 
 .user-btn {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: var(--space-sm);
     padding: var(--space-xs) var(--space-sm);
     background: none;
@@ -387,6 +392,8 @@
     cursor: pointer;
     color: var(--color-text-primary);
     transition: border-color var(--transition-fast);
+    min-width: 176px;
+    min-height: 40px;
 }
 
 .user-btn:hover {
@@ -405,6 +412,8 @@
 .navbar .user-rating {
     font-size: 0.75rem;
     color: var(--color-accent-secondary);
+    min-width: 3ch;
+    text-align: right;
 }
 
 .user-dropdown {
@@ -453,6 +462,7 @@
 .navbar-auth {
     display: flex;
     gap: var(--space-sm);
+    min-height: 40px;
 }
 
 /* Mobile Toggle */

@@ -160,7 +160,23 @@
     border-top: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
 }
 
+body.dm-page-active #toast-container {
+    top: calc(var(--navbar-height) + var(--space-md));
+    bottom: auto;
+    right: var(--space-md);
+    left: auto;
+    align-items: flex-end;
+}
+
 @media (max-width: 768px) {
+    body.dm-page-active #toast-container {
+        top: calc(var(--navbar-height) + var(--space-sm));
+        bottom: auto;
+        right: var(--space-sm);
+        left: var(--space-sm);
+        align-items: stretch;
+    }
+
     .dm-card {
         height: min(68vh, 640px);
     }
