@@ -12,6 +12,7 @@
     const randomMatchBtn = document.getElementById('random-match-btn');
     const aiMatchBtn = document.getElementById('ai-match-btn');
     const roomList = document.getElementById('room-list');
+    const roomMoreWrap = document.getElementById('room-more-wrap');
     const chatMessages = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
@@ -190,27 +191,31 @@
      */
     async function loadRooms() {
         try {
-            const data = await API.get('/chess/rooms/', { status: 'waiting', limit: 5, no_count: 1 });
+            const data = await API.get('/chess/rooms/', { status: 'waiting', limit: 6, no_count: 1 });
             const rawRooms = Array.isArray(data?.results)
                 ? data.results
                 : (Array.isArray(data) ? data : []);
             const rooms = rawRooms.filter((room) => !isHiddenRoomType(room));
+            const visibleRooms = rooms.slice(0, 5);
             const signature = rooms
                 .map((room) => `${room.id}:${room.status}:${room.guest?.id || 0}:${room.current_game_id || 0}`)
                 .join('|');
             const isLoading = roomList && roomList.querySelector('.loading-placeholder');
             if (signature !== lastRoomsSignature || isLoading) {
                 lastRoomsSignature = signature;
-                lobbyRooms = rooms;
+                lobbyRooms = visibleRooms;
                 try {
                     renderRooms(lobbyRooms);
+                    roomMoreWrap?.classList.toggle('hidden', rooms.length <= 5);
                 } catch (renderError) {
                     console.error('Failed to render rooms:', renderError);
                     roomList.innerHTML = '<div class="room-empty">방 목록을 불러올 수 없습니다.</div>';
+                    roomMoreWrap?.classList.add('hidden');
                 }
             }
         } catch (error) {
             roomList.innerHTML = '<div class="room-empty">방 목록을 불러올 수 없습니다.</div>';
+            roomMoreWrap?.classList.add('hidden');
             showStatus('방 목록을 불러오지 못했습니다.', 'error', 2000);
         }
     }
