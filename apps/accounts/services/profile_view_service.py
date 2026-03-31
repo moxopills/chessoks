@@ -6,9 +6,9 @@ from django.core.cache import cache
 from django.db.models import Q
 
 from apps.accounts.models import Friend, FriendRequest, SeasonStat, User
-from apps.accounts.serializers import PublicUserSerializer
-from apps.chess.serializers import GameHistorySerializer
-from apps.chess.services import GameQueryService
+from apps.accounts.serializers.user_serializer import PublicUserSerializer
+from apps.chess.serializers.game_serializers import GameHistorySerializer
+from apps.chess.services.game_query_service import GameQueryService
 
 from .achievement_service import AchievementService
 from .presence_service import PresenceService
