@@ -37,7 +37,7 @@
 
 .customize-layout {
     display: grid;
-    grid-template-columns: minmax(360px, 0.95fr) minmax(420px, 1.1fr);
+    grid-template-columns: minmax(340px, 0.88fr) minmax(500px, 1.12fr);
     gap: 20px;
 }
 
@@ -575,7 +575,7 @@
 
 .customize-preview-showroom {
     display: grid;
-    grid-template-columns: minmax(250px, 320px) minmax(0, 1fr);
+    grid-template-columns: minmax(210px, 270px) minmax(320px, 1fr);
     gap: 18px;
     align-items: start;
 }
@@ -701,18 +701,22 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 .customize-combo-badges {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    justify-content: flex-end;
+    justify-content: flex-start;
+    max-width: 100%;
 }
 
 .customize-combo-spotlight strong {
     font-size: 0.98rem;
     color: var(--color-text-primary);
+    line-height: 1.35;
+    word-break: keep-all;
 }
 
 .customize-combo-spotlight p {
@@ -720,6 +724,7 @@
     font-size: 0.82rem;
     line-height: 1.5;
     color: var(--color-text-secondary);
+    word-break: keep-all;
 }
 
 .customize-skin-meta-item {

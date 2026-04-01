@@ -438,7 +438,7 @@
             applySkinClasses();
 
             renderPlayerBars();
-            renderBoard();
+            renderBoard({ animatePieceChanges: false });
             renderMoveList();
             await loadCapturedPieces();
             renderCapturedPieces();
@@ -447,7 +447,7 @@
             startTimer();
             if (game.move_count > 0) {
                 await loadLastMove();
-                renderBoard();
+                renderBoard({ animatePieceChanges: false });
                 updateTurn();
             }
             if (replayOnly && replayGameParamId) {
@@ -574,7 +574,7 @@
         }
 
         renderPlayerBars();
-        renderBoard();
+        renderBoard({ animatePieceChanges: false });
         renderMoveList();
         renderCapturedPieces();
         updateTurn();
@@ -1130,8 +1130,9 @@
     /**
      * 보드 렌더링
      */
-    function renderBoard() {
+    function renderBoard(options = {}) {
         if (!game || !game.fen) return;
+        const animatePieceChanges = options.animatePieceChanges === true;
 
         const fen = game.fen;
         const position = parseFEN(fen);
@@ -1173,32 +1174,38 @@
                         if (existingPiece !== piece) {
                             // 기물이 바뀌었거나 새로 생성됨
                             if (existingPieceEl) existingPieceEl.remove();
-                            
+
                             const pieceEl = createPieceElement(piece);
-                            
-                            // 등장 애니메이션 준비
-                            pieceEl.style.opacity = '0';
-                            pieceEl.style.transform = 'scale(0.6)';
                             squareEl.appendChild(pieceEl);
-                            
-                            // 애니메이션 실행
-                            requestAnimationFrame(() => {
-                                pieceEl.style.opacity = '1';
-                                pieceEl.style.transform = 'scale(1)';
-                            });
+
+                            if (animatePieceChanges) {
+                                pieceEl.style.opacity = '0';
+                                pieceEl.style.transform = 'scale(0.6)';
+                                requestAnimationFrame(() => {
+                                    pieceEl.style.opacity = '1';
+                                    pieceEl.style.transform = 'scale(1)';
+                                });
+                            } else {
+                                pieceEl.style.opacity = '';
+                                pieceEl.style.transform = '';
+                            }
 
                             pieceEl.addEventListener('dragstart', (e) => handleDragStart(e, squareName));
                         }
                     } else {
-                        // 빈 칸인데 기물이 남아있는 경우 부드럽게 제거
+                        // 빈 칸인데 기물이 남아있는 경우 정리
                         if (existingPieceEl) {
-                            existingPieceEl.style.opacity = '0';
-                            existingPieceEl.style.transform = 'scale(0.6)';
-                            setTimeout(() => {
-                                if (existingPieceEl.parentNode === squareEl) {
-                                    existingPieceEl.remove();
-                                }
-                            }, 200);
+                            if (animatePieceChanges) {
+                                existingPieceEl.style.opacity = '0';
+                                existingPieceEl.style.transform = 'scale(0.6)';
+                                setTimeout(() => {
+                                    if (existingPieceEl.parentNode === squareEl) {
+                                        existingPieceEl.remove();
+                                    }
+                                }, 200);
+                            } else {
+                                existingPieceEl.remove();
+                            }
                         }
                         squareEl.setAttribute('aria-label', `${actualSquareName} 빈 칸`);
                     }
@@ -1922,7 +1929,7 @@
                     }
                 }
 
-                renderBoard();
+                renderBoard({ animatePieceChanges: false });
                 renderMoveList();
                 updateCapturedFromMove(data);
                 renderCapturedPieces();
@@ -2405,7 +2412,7 @@
         confirmNo?.addEventListener('click', () => {
             pendingConfirmedMove = null;
             confirmOverlay?.classList.add('hidden');
-            renderBoard();
+            renderBoard({ animatePieceChanges: false });
         });
 
         if (isAiRoom) {
@@ -2798,7 +2805,7 @@
         if (liveFen) {
             game.fen = liveFen;
             lastMove = liveLastMove;
-            renderBoard();
+            renderBoard({ animatePieceChanges: false });
         }
     }
 
@@ -2865,7 +2872,7 @@
             lastMove = replayIndex === 0
                 ? null
                 : { from: replayMoves[replayIndex - 1].from_square, to: replayMoves[replayIndex - 1].to_square };
-            renderBoard();
+            renderBoard({ animatePieceChanges: false });
         }
     }
 
@@ -3383,13 +3390,11 @@
     // 화면 회전 시 보드 크기 재계산
     window.addEventListener('orientationchange', () => {
         setTimeout(() => {
-            renderBoard();
             syncGameChatFabVisibility();
         }, 100);
     });
 
     window.addEventListener('resize', Utils.debounce(() => {
-        renderBoard();
         syncGameChatFabVisibility();
     }, 200));
 
