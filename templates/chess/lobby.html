@@ -361,7 +361,7 @@
 <style>
 /* Lobby Styles */
 .lobby-container {
-    max-width: 1360px;
+    max-width: 1460px;
     margin: 0 auto;
     overflow-x: hidden;
 }
@@ -423,7 +423,7 @@
 .hero-controls {
     display: grid;
     gap: var(--space-md);
-    grid-template-columns: minmax(0, 1.14fr) repeat(2, minmax(300px, 0.93fr));
+    grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(340px, 1fr));
     grid-template-areas: "match users chat";
     margin-bottom: var(--space-md);
     align-items: stretch;
@@ -478,7 +478,7 @@
 
 .hero-control-card--users,
 .hero-control-card--chat {
-    min-height: clamp(460px, 50vh, 560px);
+    min-height: clamp(340px, 40vh, 420px);
 }
 
 .hero-card-head {
@@ -865,11 +865,11 @@
 
 /* Room List */
 .room-list {
-    min-height: 220px;
+    min-height: 140px;
 }
 
 .room-list--embedded {
-    min-height: 180px;
+    min-height: 120px;
 }
 
 .lobby-room-skeleton {
@@ -1045,7 +1045,7 @@
 
 .lobby-chat-card .chat-container {
     flex: 1;
-    min-height: 340px;
+    min-height: 260px;
 }
 
 .lobby-chat-card .section-header,
@@ -1072,7 +1072,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 320px;
+    min-height: 240px;
 }
 
 .chat-messages {
@@ -1083,8 +1083,8 @@
     background-color: var(--color-bg-secondary);
     border-radius: var(--radius-md);
     margin-bottom: var(--space-md);
-    min-height: 220px;
-    max-height: 360px;
+    min-height: 180px;
+    max-height: 280px;
     display: flex;
     flex-direction: column;
 }
@@ -1337,8 +1337,8 @@
 .users-list {
     flex: 1;
     overflow-y: auto;
-    min-height: 240px;
-    max-height: 360px;
+    min-height: 120px;
+    max-height: 240px;
 }
 
 .user-item-skeleton {
@@ -1364,12 +1364,12 @@
 
 @media (min-width: 769px) {
     .room-list {
-        min-height: 300px;
+        min-height: 180px;
     }
 
     .hero-control-card--users,
     .hero-control-card--chat {
-        min-height: 520px;
+        min-height: 380px;
     }
 
     .hero-control-card--users .section-header,
@@ -1389,17 +1389,17 @@
     }
 
     .chat-container {
-        min-height: 340px;
+        min-height: 260px;
     }
 
     .chat-messages {
-        min-height: 240px;
-        max-height: 380px;
+        min-height: 180px;
+        max-height: 280px;
     }
 
     .users-list {
-        min-height: 260px;
-        max-height: 380px;
+        min-height: 120px;
+        max-height: 240px;
     }
 
     .lobby-content {
