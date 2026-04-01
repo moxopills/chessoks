@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
+from django.db.models import Q
 from django.utils import timezone
 
 from channels.layers import get_channel_layer
@@ -158,9 +159,9 @@ def collect_runtime_metrics() -> dict[str, Any]:
     try:
         games_queryset = Game.objects.all()
         metrics["games"] = {
-            "playing": games_queryset.filter(status="playing").count(),
+            "playing": games_queryset.filter(result=Game.Status.PLAYING).count(),
             "finished_today": games_queryset.filter(
-                status="finished",
+                ~Q(result=Game.Status.PLAYING),
                 finished_at__date=timezone.localdate(),
             ).count(),
         }
