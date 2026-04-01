@@ -1,15 +1,6 @@
-"""Chess 서비스"""
+"""Chess 서비스 lazy export."""
 
-from apps.chess.services.ai_match_service import AiMatchService
-from apps.chess.services.ai_service import AiService
-from apps.chess.services.game_query_service import GameQueryService
-from apps.chess.services.game_service import GameService
-from apps.chess.services.matchmaking_service import MatchmakingService
-from apps.chess.services.puzzle_service import PuzzleService
-from apps.chess.services.rating_service import RatingService
-from apps.chess.services.room_flow_service import RoomFlowService
-from apps.chess.services.room_query_service import RoomQueryService
-from apps.chess.services.spectator_service import SpectatorService
+from importlib import import_module
 
 __all__ = [
     "GameService",
@@ -23,3 +14,27 @@ __all__ = [
     "RatingService",
     "PuzzleService",
 ]
+
+_EXPORTS = {
+    "GameService": ("apps.chess.services.game_service", "GameService"),
+    "GameQueryService": ("apps.chess.services.game_query_service", "GameQueryService"),
+    "AiService": ("apps.chess.services.ai_service", "AiService"),
+    "AiMatchService": ("apps.chess.services.ai_match_service", "AiMatchService"),
+    "MatchmakingService": ("apps.chess.services.matchmaking_service", "MatchmakingService"),
+    "RoomFlowService": ("apps.chess.services.room_flow_service", "RoomFlowService"),
+    "RoomQueryService": ("apps.chess.services.room_query_service", "RoomQueryService"),
+    "SpectatorService": ("apps.chess.services.spectator_service", "SpectatorService"),
+    "RatingService": ("apps.chess.services.rating_service", "RatingService"),
+    "PuzzleService": ("apps.chess.services.puzzle_service", "PuzzleService"),
+}
+
+
+def __getattr__(name: str):
+    try:
+        module_path, attr_name = _EXPORTS[name]
+    except KeyError as exc:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
+    module = import_module(module_path)
+    value = getattr(module, attr_name)
+    globals()[name] = value
+    return value

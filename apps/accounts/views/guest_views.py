@@ -12,6 +12,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts.models import GuestSession, User
+from apps.accounts.services.guest_session_service import GuestSessionService
 
 
 class GuestSessionView(APIView):
@@ -49,8 +50,9 @@ class GuestSessionView(APIView):
         final_nickname = self._get_unique_nickname(nickname)
 
         # 세션 생성
-        guest = GuestSession.objects.create(
-            nickname=final_nickname, ip_address=self._get_client_ip(request)
+        guest = GuestSessionService.create_session(
+            nickname=final_nickname,
+            ip_address=self._get_client_ip(request),
         )
 
         return Response(

@@ -11,6 +11,8 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 from apps.accounts.models import User
 from apps.accounts.services import OnlineStatusService, PresenceService
+from apps.accounts.services.user_state_service import UserStateService
+from apps.accounts.services.user_stats_service import UserStatsService
 from apps.chess.models import LobbyMessage, LobbyMessageReaction, Room
 from apps.chess.realtime_payloads import (
     REACTION_EMOJIS,
@@ -367,10 +369,10 @@ class ChessConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWebsock
 
     async def _validate_chat_message(self, content) -> tuple[bool, str | None]:
         """채팅 메시지 공통 검증"""
-        if self.scope["user"].is_suspended:
+        if UserStateService.is_suspended(self.scope["user"]):
             await self.send_json({"type": "error", "message": "정지된 계정입니다."})
             return False, None
-        if self.scope["user"].is_muted:
+        if UserStateService.is_muted(self.scope["user"]):
             await self.send_json({"type": "error", "message": "채팅이 제한된 계정입니다."})
             return False, None
         message = (content.get("message") or "").strip()
@@ -780,10 +782,10 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
                     {"type": "error", "message": "게스트는 채팅을 이용할 수 없습니다."}
                 )
                 return
-            if self.scope["user"].is_suspended:
+            if UserStateService.is_suspended(self.scope["user"]):
                 await self.send_json({"type": "error", "message": "정지된 계정입니다."})
                 return
-            if self.scope["user"].is_muted:
+            if UserStateService.is_muted(self.scope["user"]):
                 await self.send_json({"type": "error", "message": "채팅이 제한된 계정입니다."})
                 return
             if not await self._check_ws_rate_limit(
@@ -948,7 +950,7 @@ class LobbyChatConsumer(OnlineStatusMixin, WebSocketRateLimitMixin, AsyncJsonWeb
 
         user = self.scope["user"]
         users = cache.get(self.lobby_users_key, {})
-        rank_tier = getattr(getattr(user, "stats", None), "rank_tier", "Junior")
+        rank_tier = UserStatsService.get_rank_tier(getattr(user, "stats", None))
         users[str(user.id)] = {
             "id": user.id,
             "nickname": user.nickname,

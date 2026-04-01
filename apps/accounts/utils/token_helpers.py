@@ -12,6 +12,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from apps.accounts.models import AuthToken, SignupEmailToken
+from apps.accounts.services.token_service import TokenService
 
 
 def create_token(
@@ -41,7 +42,7 @@ def create_token(
     token = AuthToken.objects.create(
         user=user,
         token_type=token_type,
-        token=AuthToken.generate_token(),
+        token=TokenService.generate_token(),
         expires_at=timezone.now() + timedelta(hours=expiry_hours),
         new_email=new_email,
     )
@@ -88,7 +89,7 @@ def validate_token(
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    if not token.is_valid:
+    if not TokenService.is_valid(token):
         return None, Response(
             {"code": [default_messages["invalid"]]},
             status=status.HTTP_400_BAD_REQUEST,
@@ -124,12 +125,12 @@ def create_signup_email_token(
         (토큰 인스턴스, 코드 문자열)
     """
     if invalidate_existing:
-        SignupEmailToken.objects.invalidate_existing(email=email)
+        TokenService.invalidate_existing_signup_tokens(email=email)
 
     code = f"{secrets.randbelow(1000000):06d}"
     token = SignupEmailToken.objects.create(
         email=email,
-        token=SignupEmailToken.generate_token(),
+        token=TokenService.generate_token(),
         code_hash=_hash_signup_code(email, code),
         expires_at=timezone.now() + timedelta(hours=expiry_hours),
     )
@@ -176,7 +177,7 @@ def validate_signup_email_code(
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    if not token.is_valid:
+    if not TokenService.is_valid(token):
         return None, Response(
             {"code": [default_messages["invalid"]]},
             status=status.HTTP_400_BAD_REQUEST,

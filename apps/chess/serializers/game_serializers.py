@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.accounts.services.achievement_service import AchievementService
+from apps.accounts.services.user_stats_service import UserStatsService
 
 
 def _avatar_with_cache_bust(user) -> str | None:
@@ -39,14 +40,10 @@ class BaseUserSerializer(serializers.Serializer):
         return getattr(getattr(obj, "stats", None), "profile_border", "")
 
     def get_selected_board_skin_class(self, obj):
-        return getattr(
-            getattr(obj, "stats", None), "selected_board_skin_class", "skin-board-classic"
-        )
+        return UserStatsService.get_selected_board_skin_class(getattr(obj, "stats", None))
 
     def get_selected_piece_skin_class(self, obj):
-        return getattr(
-            getattr(obj, "stats", None), "selected_piece_skin_class", "skin-piece-classic"
-        )
+        return UserStatsService.get_selected_piece_skin_class(getattr(obj, "stats", None))
 
     def get_featured_achievement(self, obj):
         return AchievementService.get_featured_achievement_for_stats(getattr(obj, "stats", None))
@@ -56,7 +53,10 @@ class PlayerSerializer(BaseUserSerializer):
     """플레이어 정보 (레이팅 포함)"""
 
     rating = serializers.IntegerField(source="stats.rating", read_only=True)
-    rank_tier = serializers.CharField(source="stats.rank_tier", read_only=True)
+    rank_tier = serializers.SerializerMethodField()
+
+    def get_rank_tier(self, obj):
+        return UserStatsService.get_rank_tier(getattr(obj, "stats", None))
 
 
 class MoveSerializer(serializers.Serializer):

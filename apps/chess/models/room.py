@@ -1,19 +1,7 @@
 from django.conf import settings
-from django.contrib.auth.hashers import check_password, make_password
-from django.core.exceptions import ValidationError
 from django.db import models
 
-
-class RoomManager(models.Manager):
-    """Room 커스텀 매니저"""
-
-    def available_rooms(self):
-        """입장 가능한 방 목록"""
-        return self.filter(status="waiting", is_private=False, guest__isnull=True)
-
-    def user_rooms(self, user):
-        """유저가 속한 방 목록"""
-        return self.filter(models.Q(host=user) | models.Q(guest=user))
+from apps.chess.services.model_integrity_service import ChessModelIntegrityService
 
 
 class Room(models.Model):
@@ -104,8 +92,6 @@ class Room(models.Model):
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
 
-    objects = RoomManager()
-
     class Meta:
         db_table = "rooms"
         verbose_name = "방"
@@ -135,32 +121,4 @@ class Room(models.Model):
     def clean(self):
         """모델 검증"""
         super().clean()
-        if self.is_private and not self.password:
-            raise ValidationError("비공개방은 비밀번호가 필요합니다")
-        if self.time_limit < 0:
-            raise ValidationError("시간 제한은 음수일 수 없습니다")
-        if self.host == self.guest:
-            raise ValidationError("호스트와 게스트가 동일할 수 없습니다")
-
-    def set_password(self, raw_password):
-        """비밀번호 해싱하여 저장"""
-        self.password = make_password(raw_password)
-
-    def check_password(self, raw_password):
-        """비밀번호 확인"""
-        return check_password(raw_password, self.password)
-
-    @property
-    def is_full(self):
-        """방이 가득 찼는지 확인 (읽기 전용 property)"""
-        return self.guest is not None
-
-    @property
-    def player_count(self):
-        """현재 플레이어 수 (읽기 전용 property)"""
-        return 2 if self.is_full else 1
-
-    @property
-    def spectator_count(self):
-        """현재 관전자 수 (읽기 전용 property)"""
-        return self.spectators.count()
+        ChessModelIntegrityService.validate_room(self)

@@ -5,9 +5,12 @@
     const pieceSkinSelect = document.getElementById('customize-piece-skin');
     const nicknameColorSelect = document.getElementById('customize-nickname-color');
     const profileBorderSelect = document.getElementById('customize-profile-border');
+    const seasonTitleSelect = document.getElementById('customize-season-title');
+    const profileCardFrameSelect = document.getElementById('customize-profile-card-frame');
     const stylePointsText = document.getElementById('customize-style-points-text');
     const previewAvatar = document.getElementById('customize-preview-avatar');
     const previewNickname = document.getElementById('customize-preview-nickname');
+    const previewSeasonTitle = document.getElementById('customize-preview-season-title');
     const previewBoard = document.getElementById('customize-skin-preview-board');
     const previewBoardTitle = document.getElementById('customize-board-title');
     const previewBoardDesc = document.getElementById('customize-board-desc');
@@ -30,12 +33,18 @@
     const summaryColorState = document.getElementById('customize-summary-color-state');
     const summaryBorderName = document.getElementById('customize-summary-border-name');
     const summaryBorderState = document.getElementById('customize-summary-border-state');
+    const summaryTitleName = document.getElementById('customize-summary-title-name');
+    const summaryTitleState = document.getElementById('customize-summary-title-state');
+    const summaryFrameName = document.getElementById('customize-summary-frame-name');
+    const summaryFrameState = document.getElementById('customize-summary-frame-state');
     const purchaseBtn = document.getElementById('customize-purchase');
     const saveBtn = document.getElementById('customize-save');
     const boardOptions = document.getElementById('customize-board-options');
     const pieceOptions = document.getElementById('customize-piece-options');
     const colorOptions = document.getElementById('customize-color-options');
     const borderOptions = document.getElementById('customize-border-options');
+    const titleOptions = document.getElementById('customize-title-options');
+    const frameOptions = document.getElementById('customize-frame-options');
 
     let me = null;
     let skinCatalog = null;
@@ -75,7 +84,24 @@
             royal_ring: { desc: '로열 블루 계열 광택으로 프리미엄 느낌을 강조합니다.' },
             champion_ring: { desc: '챔피언 테마의 강한 글로우로 존재감을 드러냅니다.' },
         },
+        title: {
+            '': { desc: '시즌 칭호를 표시하지 않습니다.' },
+        },
+        frame: {
+            '': { desc: '기본 프로필 카드 프레임입니다.' },
+            season_champion_frame: { desc: '시즌 1위 전용 챔피언 프레임입니다.' },
+            season_runnerup_frame: { desc: '시즌 2위 전용 준우승 프레임입니다.' },
+            season_third_frame: { desc: '시즌 3위 전용 프레임입니다.' },
+            season_top10_frame: { desc: '시즌 TOP 10 전용 프레임입니다.' },
+        },
     };
+
+    const PROFILE_CARD_FRAME_CLASSES = [
+        'season-frame-champion',
+        'season-frame-runnerup',
+        'season-frame-third',
+        'season-frame-top10',
+    ];
 
     const RARITY_META = {
         common: { label: '기본형', className: 'common' },
@@ -241,6 +267,8 @@
         pieceSkinSelect?.addEventListener('change', renderPreview);
         nicknameColorSelect?.addEventListener('change', renderPreview);
         profileBorderSelect?.addEventListener('change', renderPreview);
+        seasonTitleSelect?.addEventListener('change', renderPreview);
+        profileCardFrameSelect?.addEventListener('change', renderPreview);
         purchaseBtn?.addEventListener('click', handlePurchase);
         saveBtn?.addEventListener('click', handleApply);
     }
@@ -301,6 +329,8 @@
         if (!selectEl) return null;
         if (selectEl === nicknameColorSelect) return colorOptions;
         if (selectEl === profileBorderSelect) return borderOptions;
+        if (selectEl === seasonTitleSelect) return titleOptions;
+        if (selectEl === profileCardFrameSelect) return frameOptions;
         return null;
     }
 
@@ -341,7 +371,11 @@
         const container = getProfileContainer(selectEl);
         if (!container) return;
         const selectedValue = String(selectEl.value || '');
-        const type = selectEl === nicknameColorSelect ? 'nickname' : 'border';
+        const type = selectEl === nicknameColorSelect
+            ? 'nickname'
+            : (selectEl === profileBorderSelect
+                ? 'border'
+                : (selectEl === seasonTitleSelect ? 'title' : 'frame'));
         container.innerHTML = options.map((option) => {
             const key = String(option.key || '');
             const meta = PROFILE_OPTION_META[type]?.[key] || {};
@@ -352,7 +386,11 @@
                 : (option.owned || option.cost === 0 ? (option.cost === 0 ? '기본 제공' : '보유중') : `${option.cost}P`);
             const preview = type === 'nickname'
                 ? `<span class="customize-choice-preview customize-choice-preview--color" style="--choice-accent:${meta.accent || Utils.getNicknameColorValue(key || '')};"></span>`
-                : `<span class="customize-choice-preview customize-choice-preview--border" style="--choice-ring:${Utils.getProfileBorderValue(key || '') || '0 0 0 1px rgba(160,150,135,0.3) inset'};"></span>`;
+                : (type === 'border'
+                    ? `<span class="customize-choice-preview customize-choice-preview--border" style="--choice-ring:${Utils.getProfileBorderValue(key || '') || '0 0 0 1px rgba(160,150,135,0.3) inset'};"></span>`
+                    : (type === 'title'
+                        ? `<span class="customize-choice-preview customize-choice-preview--title">${Utils.escapeHtml(key ? '칭호' : 'OFF')}</span>`
+                        : `<span class="customize-choice-preview customize-choice-preview--frame ${Utils.getProfileCardFrameClass(key || '')}"></span>`));
             return `
                 <button
                     class="customize-choice-card customize-choice-card--compact${selected ? ' is-selected' : ''}${justSelected ? ' is-just-selected' : ''}${!option.owned && (option.cost || 0) > 0 ? ' is-locked' : ''}"
@@ -421,6 +459,18 @@
             summaryBorderState,
             getProfileStateText(borderOption, profileBorderSelect?.value || '', normalizeProfileBorderKey)
         );
+        const titleOption = findProfileOption(
+            statsSnapshot?.available_season_titles || [],
+            seasonTitleSelect?.value || ''
+        );
+        const frameOption = findProfileOption(
+            statsSnapshot?.available_profile_card_frames || [],
+            profileCardFrameSelect?.value || ''
+        );
+        setText(summaryTitleName, titleOption?.label || '표시 안 함');
+        setText(summaryTitleState, getProfileStateText(titleOption, seasonTitleSelect?.value || ''));
+        setText(summaryFrameName, frameOption?.label || '기본 프레임');
+        setText(summaryFrameState, getProfileStateText(frameOption, profileCardFrameSelect?.value || ''));
     }
 
     function setStatusBadge(el, type, message) {
@@ -442,6 +492,16 @@
             profileBorderSelect,
             stats.unlocked_profile_borders || [{ key: '', label: '기본', cost: 0 }],
             profileBorder
+        );
+        fillSelect(
+            seasonTitleSelect,
+            stats.available_season_titles || [{ key: '', label: '표시 안 함', cost: 0, owned: true }],
+            stats.season_title || ''
+        );
+        fillSelect(
+            profileCardFrameSelect,
+            stats.available_profile_card_frames || [{ key: '', label: '기본 프레임', cost: 0, owned: true }],
+            stats.profile_card_frame || ''
         );
         stylePointsText.textContent = `${stats.style_points ?? skinCatalog?.points ?? 0}P`;
         renderPreview();
@@ -518,10 +578,23 @@
         const avatarUrl = me?.avatar_url || '';
         const color = Utils.getNicknameColorValue(nicknameColorSelect?.value || '');
         const ring = Utils.getProfileBorderValue(profileBorderSelect?.value || '');
+        const seasonTitle = seasonTitleSelect?.value || '';
+        const profileCardFrame = profileCardFrameSelect?.value || '';
 
         previewNickname.textContent = nickname;
         previewNickname.style.color = color;
         previewAvatar.style.boxShadow = ring;
+        if (previewSeasonTitle) {
+            previewSeasonTitle.textContent = seasonTitle || '시즌 칭호 없음';
+            previewSeasonTitle.classList.toggle('is-empty', !seasonTitle);
+        }
+        if (previewCardShell) {
+            PROFILE_CARD_FRAME_CLASSES.forEach((className) => previewCardShell.classList.remove(className));
+            const frameClass = Utils.getProfileCardFrameClass(profileCardFrame);
+            if (frameClass) {
+                previewCardShell.classList.add(frameClass);
+            }
+        }
         Utils.setAvatar(previewAvatar, {
             url: avatarUrl,
             alt: nickname,
@@ -535,6 +608,8 @@
         const pieceSkin = getSelectedSkin(pieceSkinId);
         const nicknameOptions = statsSnapshot?.unlocked_nickname_colors || [];
         const borderOptions = statsSnapshot?.unlocked_profile_borders || [];
+        const titleOptionsList = statsSnapshot?.available_season_titles || [];
+        const frameOptionsList = statsSnapshot?.available_profile_card_frames || [];
         const nicknameOption = findProfileOption(
             nicknameOptions,
             nicknameColorSelect?.value || '',
@@ -549,6 +624,8 @@
         renderSkinCards(pieceSkinSelect, skinCatalog?.pieces || []);
         renderProfileCards(nicknameColorSelect, nicknameOptions);
         renderProfileCards(profileBorderSelect, borderOptions);
+        renderProfileCards(seasonTitleSelect, titleOptionsList);
+        renderProfileCards(profileCardFrameSelect, frameOptionsList);
         const boardClass = getSkinCssClassById(skinCatalog?.board || [], boardSkinId, 'skin-board-classic');
         const pieceClass = getSkinCssClassById(skinCatalog?.pieces || [], pieceSkinId, 'skin-piece-classic');
         previewBoard.className = `customize-skin-preview-board ${boardClass} ${pieceClass}`;
@@ -624,6 +701,8 @@
         const pieceSkin = getSelectedSkin(pieceSkinId);
         const profileOptions = statsSnapshot?.unlocked_nickname_colors || [];
         const borderOptions = statsSnapshot?.unlocked_profile_borders || [];
+        const titleOptionsList = statsSnapshot?.available_season_titles || [];
+        const frameOptionsList = statsSnapshot?.available_profile_card_frames || [];
         const nicknameOption = findProfileOption(
             profileOptions,
             nicknameColorSelect?.value || '',
@@ -634,10 +713,18 @@
             profileBorderSelect?.value || '',
             normalizeProfileBorderKey
         );
+        const titleOption = findProfileOption(
+            titleOptionsList,
+            seasonTitleSelect?.value || ''
+        );
+        const frameOption = findProfileOption(
+            frameOptionsList,
+            profileCardFrameSelect?.value || ''
+        );
         const skinsToBuy = [boardSkin, pieceSkin].filter((skin) => skin && !skin.owned && !skin.is_default);
         const needPurchase = skinsToBuy.length > 0;
         const skinPurchaseCost = skinsToBuy.reduce((sum, skin) => sum + (skin?.price || 0), 0);
-        const pendingProfileCost = [nicknameOption, borderOption]
+        const pendingProfileCost = [nicknameOption, borderOption, titleOption, frameOption]
             .filter((option) => option && !option.owned && (option.cost || 0) > 0)
             .reduce((sum, option) => sum + (option?.cost || 0), 0);
         if (purchaseBtn) {
@@ -727,6 +814,8 @@
             const payload = {
                 nickname_color: nicknameColorSelect?.value || '',
                 profile_border: profileBorderSelect?.value || '',
+                season_title: seasonTitleSelect?.value || '',
+                profile_card_frame: profileCardFrameSelect?.value || '',
             };
             await API.patch('/accounts/profile/', payload);
             // profile/stats 응답 캐시/관계 객체 지연 반영 이슈를 피하기 위해 최신 me를 재조회

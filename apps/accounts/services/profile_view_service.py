@@ -6,12 +6,13 @@ from django.core.cache import cache
 from django.db.models import Q
 
 from apps.accounts.models import Friend, FriendRequest, SeasonStat, User
-from apps.accounts.serializers.user_serializer import PublicUserSerializer
 from apps.chess.serializers.game_serializers import GameHistorySerializer
 from apps.chess.services.game_query_service import GameQueryService
 
 from .achievement_service import AchievementService
 from .presence_service import PresenceService
+from .season_stat_service import SeasonStatService
+from .user_stats_service import UserStatsService
 
 
 class ProfileViewService:
@@ -48,6 +49,18 @@ class ProfileViewService:
         "stats__selected_board_skin__css_class",
         "stats__selected_piece_skin__css_class",
     )
+    PREVIOUS_SEASON_ONLY_FIELDS = (
+        "season_id",
+        "season__name",
+        "season__start_date",
+        "final_rank",
+        "games_played",
+        "wins",
+        "losses",
+        "draws",
+        "rating",
+        "peak_rating",
+    )
 
     @classmethod
     def build_user_profile_payload(cls, *, viewer, user_id: int) -> dict | None:
@@ -82,12 +95,12 @@ class ProfileViewService:
             "user": cls._build_public_user_payload(user),
             "summary": {
                 "rating": stats.rating,
-                "rank_tier": stats.rank_tier,
+                "rank_tier": UserStatsService.get_rank_tier(stats),
                 "games_played": stats.games_played,
                 "games_won": stats.games_won,
                 "games_lost": stats.games_lost,
                 "games_draw": stats.games_draw,
-                "win_rate": stats.win_rate,
+                "win_rate": UserStatsService.get_win_rate(stats),
                 "style_points": stats.style_points,
             },
             "achievements": AchievementService.get_profile_achievements(user),
@@ -117,7 +130,47 @@ class ProfileViewService:
         cache_key = f"user_profile:{user.id}:public"
         cached = cache.get(cache_key)
         if cached is None:
-            cached = PublicUserSerializer(user).data
+            stats = user.stats
+            cached = {
+                "id": user.id,
+                "nickname": user.nickname,
+                "avatar_url": user.avatar_url,
+                "bio": user.bio,
+                "created_at": user.created_at,
+                "stats": {
+                    "rating": stats.rating,
+                    "games_played": stats.games_played,
+                    "games_won": stats.games_won,
+                    "games_lost": stats.games_lost,
+                    "games_draw": stats.games_draw,
+                    "rank_tier": UserStatsService.get_rank_tier(stats),
+                    "win_rate": UserStatsService.get_win_rate(stats),
+                    "style_points": stats.style_points,
+                    "nickname_color": stats.nickname_color,
+                    "profile_border": stats.profile_border,
+                    "unlocked_nickname_colors": UserStatsService.get_nickname_color_options(stats),
+                    "unlocked_profile_borders": UserStatsService.get_profile_border_options(stats),
+                    "season_title": stats.season_title,
+                    "profile_card_frame": stats.profile_card_frame,
+                    "owned_season_titles": list(stats.owned_season_titles or []),
+                    "owned_profile_card_frames": list(stats.owned_profile_card_frames or []),
+                    "available_season_titles": UserStatsService.get_available_season_titles(stats),
+                    "available_profile_card_frames": UserStatsService.get_available_profile_card_frames(
+                        stats
+                    ),
+                    "earned_achievement_keys": list(stats.earned_achievement_keys or []),
+                    "featured_achievement_key": stats.featured_achievement_key,
+                    "selected_board_skin_class": UserStatsService.get_selected_board_skin_class(
+                        stats
+                    ),
+                    "selected_piece_skin_class": UserStatsService.get_selected_piece_skin_class(
+                        stats
+                    ),
+                },
+                "featured_achievement": AchievementService.get_featured_achievement_for_stats(
+                    stats
+                ),
+            }
             cache.set(cache_key, cached, cls.PROFILE_CACHE_TTL_SECONDS)
 
         payload = dict(cached)
@@ -145,6 +198,7 @@ class ProfileViewService:
     def _get_previous_season_summary(*, user_id: int) -> dict | None:
         previous_season = (
             SeasonStat.objects.select_related("season")
+            .only(*ProfileViewService.PREVIOUS_SEASON_ONLY_FIELDS)
             .filter(user_id=user_id, season__is_finalized=True)
             .order_by("-season__start_date")
             .first()
@@ -160,7 +214,7 @@ class ProfileViewService:
             "wins": previous_season.wins,
             "losses": previous_season.losses,
             "draws": previous_season.draws,
-            "win_rate": previous_season.win_rate,
+            "win_rate": SeasonStatService.get_win_rate(previous_season),
             "rating": previous_season.rating,
             "peak_rating": previous_season.peak_rating,
         }

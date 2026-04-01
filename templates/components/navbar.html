@@ -488,6 +488,11 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+    .navbar-container {
+        padding: 0 var(--space-sm);
+        gap: 8px;
+    }
+
     .navbar-menu {
         display: none;
         position: absolute;
@@ -511,10 +516,48 @@
 
     .navbar-toggle {
         display: flex;
+        flex: 0 0 32px;
     }
 
     .navbar-auth .btn span {
         display: none;
+    }
+
+    .navbar-right {
+        gap: 6px;
+        min-width: 0;
+        flex-shrink: 0;
+    }
+
+    .navbar-user {
+        min-width: auto;
+    }
+
+    .user-btn {
+        min-width: 40px;
+        width: 40px;
+        padding: 3px;
+        justify-content: center;
+        border-radius: 999px;
+    }
+
+    .navbar-notifications {
+        flex: 0 0 28px;
+        width: 28px;
+        min-height: 28px;
+    }
+
+    .notification-btn {
+        padding: 0;
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #install-app-btn {
+        display: none !important;
     }
 
     .navbar .user-nickname,

@@ -6,6 +6,7 @@ from channels.layers import get_channel_layer
 from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import UserStats
+from apps.accounts.services.user_state_service import UserStateService
 from apps.chess.models import Game, Room
 from apps.chess.utils import assign_colors, broadcast_room_removed, broadcast_room_update
 from apps.notifications.services import NotificationService
@@ -138,7 +139,7 @@ class MatchmakingService:
 
     @staticmethod
     def _ensure_available(user) -> None:
-        if user.is_suspended:
+        if UserStateService.is_suspended(user):
             raise ValidationError("정지된 계정입니다.")
 
     @staticmethod

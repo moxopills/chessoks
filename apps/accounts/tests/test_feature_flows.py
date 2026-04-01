@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.accounts.models import SignupEmailToken
+from apps.accounts.services.token_service import TokenService
 from apps.accounts.tests.test_auth import User
 from apps.accounts.utils import hash_signup_code_for_test
 from apps.notifications.models import Notification
@@ -19,7 +20,7 @@ class AccountAndSocialFlowsTestCase(TestCase):
     def test_account_flow_signup_profile_logout(self):
         SignupEmailToken.objects.create(
             email="flow@test.com",
-            token=SignupEmailToken.generate_token(),
+            token=TokenService.generate_token(),
             code_hash=hash_signup_code_for_test("flow@test.com", "123456"),
             expires_at=timezone.now() + timedelta(hours=24),
         )

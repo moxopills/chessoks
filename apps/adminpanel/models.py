@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.db import models
-from django.utils import timezone
 
 
 class Report(models.Model):
@@ -56,10 +55,3 @@ class Report(models.Model):
             models.Index(fields=["status", "created_at"], name="reports_status_created_idx"),
             models.Index(fields=["target", "status"], name="reports_target_status_idx"),
         ]
-
-    def mark_resolved(self, admin_user, status: str, note: str = "") -> None:
-        self.status = status
-        self.resolution_note = note
-        self.resolved_by = admin_user
-        self.resolved_at = timezone.now()
-        self.save(update_fields=["status", "resolution_note", "resolved_by", "resolved_at"])

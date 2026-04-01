@@ -1,8 +1,9 @@
 """사용자 게임 통계 모델"""
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.db import models
+
+from apps.accounts.services.model_integrity_service import AccountModelIntegrityService
 
 
 class UserStats(models.Model):
@@ -161,130 +162,4 @@ class UserStats(models.Model):
 
     def clean(self):
         super().clean()
-        if self.rating < 0 or self.rating > 4000:
-            raise ValidationError("레이팅은 0-4000 사이여야 합니다")
-        if self.games_played < 0:
-            raise ValidationError("게임 수는 음수가 될 수 없습니다")
-
-    @property
-    def win_rate(self):
-        """승률 계산"""
-        if self.games_played == 0:
-            return 0
-        return round((self.games_won / self.games_played) * 100, 2)
-
-    @property
-    def rank_tier(self):
-        """레이팅 구간 기반 등급"""
-        if self.competitive_games_played < 5:
-            return "Unranked"
-        rating = self.rating
-        if rating >= 3500:
-            return "Master"
-        if rating >= 2700:
-            return "Expert"
-        if rating >= 2100:
-            return "Advanced"
-        if rating >= 1700:
-            return "Intermediate"
-        if rating >= 1200:
-            return "Junior"
-        return "Beginner"
-
-    @property
-    def unlocked_nickname_colors(self):
-        return self.nickname_color_options()
-
-    @property
-    def unlocked_profile_borders(self):
-        return self.profile_border_options()
-
-    @staticmethod
-    def nickname_color_catalog() -> list[dict]:
-        return [
-            {"key": "", "label": "기본", "cost": 0},
-            {"key": "mint", "label": "민트", "cost": 100},
-            {"key": "sunset", "label": "선셋", "cost": 250},
-            {"key": "gold", "label": "골드", "cost": 450},
-        ]
-
-    @staticmethod
-    def _nickname_color_alias_map() -> dict[str, str]:
-        return {
-            "mint_color": "mint",
-            "mintgreen": "mint",
-            "sunset_color": "sunset",
-            "gold_color": "gold",
-        }
-
-    @classmethod
-    def normalize_nickname_color_key(cls, key: str) -> str:
-        value = (key or "").strip()
-        return cls._nickname_color_alias_map().get(value, value)
-
-    @staticmethod
-    def profile_border_catalog() -> list[dict]:
-        return [
-            {"key": "", "label": "기본", "cost": 0},
-            {"key": "mint_ring", "label": "민트 링", "cost": 120},
-            {"key": "royal_ring", "label": "로열 링", "cost": 300},
-            {"key": "champion_ring", "label": "챔피언 링", "cost": 500},
-        ]
-
-    @staticmethod
-    def _profile_border_alias_map() -> dict[str, str]:
-        return {
-            "mint": "mint_ring",
-            "mint_border": "mint_ring",
-            "royal": "royal_ring",
-            "royal_border": "royal_ring",
-            "champion": "champion_ring",
-            "champion_border": "champion_ring",
-        }
-
-    @classmethod
-    def normalize_profile_border_key(cls, key: str) -> str:
-        value = (key or "").strip()
-        return cls._profile_border_alias_map().get(value, value)
-
-    def nickname_color_options(self) -> list[dict]:
-        owned = {
-            self.normalize_nickname_color_key(item) for item in (self.owned_nickname_colors or [])
-        }
-        current = self.normalize_nickname_color_key(self.nickname_color or "")
-        if current:
-            owned.add(current)
-        options = []
-        for item in self.nickname_color_catalog():
-            options.append(
-                {
-                    **item,
-                    "owned": item["cost"] == 0 or item["key"] in owned,
-                }
-            )
-        return options
-
-    def profile_border_options(self) -> list[dict]:
-        owned = {
-            self.normalize_profile_border_key(item) for item in (self.owned_profile_borders or [])
-        }
-        current = self.normalize_profile_border_key(self.profile_border or "")
-        if current:
-            owned.add(current)
-        options = []
-        for item in self.profile_border_catalog():
-            options.append(
-                {
-                    **item,
-                    "owned": item["cost"] == 0 or item["key"] in owned,
-                }
-            )
-        return options
-
-    @property
-    def selected_board_skin_class(self):
-        return getattr(self.selected_board_skin, "css_class", "skin-board-classic")
-
-    @property
-    def selected_piece_skin_class(self):
-        return getattr(self.selected_piece_skin, "css_class", "skin-piece-classic")
+        AccountModelIntegrityService.validate_user_stats(self)

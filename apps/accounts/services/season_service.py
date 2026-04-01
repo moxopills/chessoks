@@ -14,6 +14,8 @@ from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import Season, SeasonReward, SeasonStat, UserSeasonReward, UserStats
 from apps.accounts.services.achievement_service import AchievementService
+from apps.accounts.services.season_stat_service import SeasonStatService
+from apps.accounts.services.user_stats_service import UserStatsService
 from apps.chess.models import Game
 from apps.chess.services.rating_service import RatingService
 from apps.notifications.services import NotificationService
@@ -39,6 +41,12 @@ class SeasonService:
     HISTORY_CACHE_TTL = 60 * 10
     MAX_PAGE_SIZE = 100
     CACHE_VERSION_KEY = "season_leaderboard_version"
+    FRAME_LABELS = {
+        "season_champion_frame": "시즌 챔피언 프레임",
+        "season_runnerup_frame": "시즌 준우승 프레임",
+        "season_third_frame": "시즌 3위 프레임",
+        "season_top10_frame": "시즌 TOP 10 프레임",
+    }
 
     DEFAULT_REWARDS = (
         (1, 1, SeasonReward.TYPE_TITLE, "{season} 1위"),
@@ -83,8 +91,19 @@ class SeasonService:
             cache.set(cls.CACHE_VERSION_KEY, 1, None)
 
     @classmethod
-    @transaction.atomic
-    def get_or_create_current_season(cls, today: date | None = None) -> Season:
+    def _finalize_ended_seasons_locked(cls, today: date) -> int:
+        ended = (
+            Season.objects.select_for_update()
+            .filter(is_active=True, is_finalized=False, end_date__lt=today)
+            .order_by("start_date")
+        )
+        finalized_count = 0
+        for season in ended:
+            finalized_count += cls.finalize_season(season)
+        return finalized_count
+
+    @classmethod
+    def _get_or_create_current_season_locked(cls, today: date) -> Season:
         today = today or timezone.localdate()
         active_list = list(
             Season.objects.select_for_update()
@@ -123,6 +142,13 @@ class SeasonService:
         return season
 
     @classmethod
+    @transaction.atomic
+    def get_or_create_current_season(cls, today: date | None = None) -> Season:
+        today = today or timezone.localdate()
+        cls._finalize_ended_seasons_locked(today)
+        return cls._get_or_create_current_season_locked(today)
+
+    @classmethod
     def _ensure_default_rewards(cls, season: Season) -> None:
         if season.rewards.exists():
             return
@@ -145,6 +171,10 @@ class SeasonService:
         if "{season}" in value:
             return value.replace("{season}", season.name)
         return value
+
+    @classmethod
+    def get_reward_raw_value(cls, *, season: Season, reward: SeasonReward) -> str:
+        return cls._resolve_reward_value(season, reward)
 
     @staticmethod
     def _append_unique(items: list[str], value: str) -> list[str]:
@@ -186,6 +216,30 @@ class SeasonService:
             return f"프레임 {value}"
 
         return None
+
+    @classmethod
+    def get_reward_display_value(cls, *, season: Season, reward: SeasonReward) -> str:
+        value = cls._resolve_reward_value(season, reward)
+        if reward.reward_type == SeasonReward.TYPE_POINTS:
+            try:
+                return f"{int(value):,}P"
+            except (TypeError, ValueError):
+                return str(value)
+        if reward.reward_type == SeasonReward.TYPE_BORDER:
+            return cls.FRAME_LABELS.get(value, value)
+        return value
+
+    @classmethod
+    def get_reward_summary_payload(cls, *, season: Season, reward: SeasonReward) -> dict:
+        return {
+            "id": reward.id,
+            "rank_min": reward.rank_min,
+            "rank_max": reward.rank_max,
+            "reward_type": reward.reward_type,
+            "reward_type_label": reward.get_reward_type_display(),
+            "reward_value": cls.get_reward_display_value(season=season, reward=reward),
+            "reward_key": cls._resolve_reward_value(season, reward),
+        }
 
     @classmethod
     def _result_tuple(cls, game_result: str) -> tuple[str, str, float, float]:
@@ -309,16 +363,14 @@ class SeasonService:
                     "user_id": row.user_id,
                     "nickname": row.user.nickname,
                     "avatar_url": row.user.avatar_url,
-                    "rank_tier": (
-                        row.user.stats.rank_tier if hasattr(row.user, "stats") else "Beginner"
-                    ),
+                    "rank_tier": UserStatsService.get_rank_tier(getattr(row.user, "stats", None)),
                     "rating": row.rating,
                     "peak_rating": row.peak_rating,
                     "games_played": row.games_played,
                     "wins": row.wins,
                     "losses": row.losses,
                     "draws": row.draws,
-                    "win_rate": row.win_rate,
+                    "win_rate": SeasonStatService.get_win_rate(row),
                 }
             )
         payload = SeasonPage(
@@ -374,7 +426,7 @@ class SeasonService:
             "wins": my.wins,
             "losses": my.losses,
             "draws": my.draws,
-            "win_rate": my.win_rate,
+            "win_rate": SeasonStatService.get_win_rate(my),
             "season_stat_id": my.id,
         }
         cache.set(cache_key, payload, cls.MY_RANK_CACHE_TTL)
@@ -431,20 +483,33 @@ class SeasonService:
                         reward_lines.append(line)
             if user_stats is not None and matching:
                 changed_stats.append(user_stats)
-            notification_rows.append(
-                {
-                    "user": stat.user,
-                    "type": "season_end",
-                    "title": f"{season.name} 종료",
-                    "message": (
-                        f"최종 순위 {stat.final_rank}위가 확정되었습니다. "
-                        f"{' / '.join(reward_lines)}"
-                        if reward_lines
-                        else f"최종 순위 {stat.final_rank}위가 확정되었습니다."
-                    ),
-                    "payload": {"season_id": season.id, "rank": stat.final_rank},
-                }
-            )
+            if reward_lines:
+                notification_rows.append(
+                    {
+                        "user": stat.user,
+                        "type": "season_reward",
+                        "title": f"{season.name} 보상 자동 지급",
+                        "message": (
+                            f"지난 시즌 {stat.final_rank}위 보상이 자동 지급되었습니다. "
+                            f"{' / '.join(reward_lines)}"
+                        ),
+                        "payload": {
+                            "season_id": season.id,
+                            "rank": stat.final_rank,
+                            "auto_granted": True,
+                        },
+                    }
+                )
+            else:
+                notification_rows.append(
+                    {
+                        "user": stat.user,
+                        "type": "season_end",
+                        "title": f"{season.name} 종료",
+                        "message": f"최종 순위 {stat.final_rank}위가 확정되었습니다.",
+                        "payload": {"season_id": season.id, "rank": stat.final_rank},
+                    }
+                )
         if claim_rows:
             UserSeasonReward.objects.bulk_create(claim_rows, ignore_conflicts=True)
         if changed_stats:
@@ -460,6 +525,11 @@ class SeasonService:
             )
         if notification_rows:
             NotificationService.bulk_create_notifications(notification_rows, push=True)
+        if changed_stats:
+            changed_user_ids = [item.user_id for item in changed_stats]
+            transaction.on_commit(
+                lambda: AchievementService.sync_rewards_for_users(changed_user_ids)
+            )
 
         season.is_active = False
         season.is_finalized = True
@@ -471,21 +541,73 @@ class SeasonService:
     @transaction.atomic
     def check_transition(cls, today: date | None = None) -> dict:
         today = today or timezone.localdate()
-        ended = (
-            Season.objects.select_for_update()
-            .filter(is_active=True, is_finalized=False, end_date__lt=today)
-            .order_by("start_date")
-        )
-        finalized_count = 0
-        for season in ended:
-            finalized_count += cls.finalize_season(season)
-
-        current = cls.get_or_create_current_season(today=today)
+        finalized_count = cls._finalize_ended_seasons_locked(today)
+        current = cls._get_or_create_current_season_locked(today)
         return {
             "date": str(today),
             "active_season_id": current.id,
             "finalized_users": finalized_count,
         }
+
+    @classmethod
+    def get_history_with_rewards(cls, *, limit: int = 12, user_id: int | None = None) -> list[dict]:
+        seasons = cls.list_history(limit=limit)
+        if not user_id or not seasons:
+            return [
+                {
+                    "id": season.id,
+                    "name": season.name,
+                    "start_date": season.start_date,
+                    "end_date": season.end_date,
+                }
+                for season in seasons
+            ]
+
+        season_ids = [season.id for season in seasons]
+        stats_by_season = {
+            stat.season_id: stat
+            for stat in SeasonStat.objects.filter(season_id__in=season_ids, user_id=user_id)
+        }
+        grouped_claims: dict[int, list[UserSeasonReward]] = defaultdict(list)
+        for claim in (
+            UserSeasonReward.objects.select_related("reward", "season")
+            .filter(user_id=user_id, season_id__in=season_ids)
+            .order_by("season_id", "reward__rank_min", "reward_id")
+        ):
+            grouped_claims[claim.season_id].append(claim)
+
+        payload = []
+        for season in seasons:
+            stat = stats_by_season.get(season.id)
+            claims = grouped_claims.get(season.id, [])
+            reward_rows = [
+                {
+                    **cls.get_reward_summary_payload(season=season, reward=claim.reward),
+                    "claimed": claim.claimed_at is not None,
+                    "claimed_at": claim.claimed_at,
+                }
+                for claim in claims
+            ]
+            payload.append(
+                {
+                    "id": season.id,
+                    "name": season.name,
+                    "start_date": season.start_date,
+                    "end_date": season.end_date,
+                    "my_final_rank": stat.final_rank if stat else None,
+                    "my_rating": stat.rating if stat else None,
+                    "my_games_played": stat.games_played if stat else 0,
+                    "my_rewards": reward_rows,
+                    "has_pending_rewards": any(not row["claimed"] for row in reward_rows),
+                    "auto_rewarded": bool(reward_rows)
+                    and not any(not row["claimed"] for row in reward_rows),
+                    "rewarded_at": max(
+                        (row["claimed_at"] for row in reward_rows if row["claimed_at"]),
+                        default=None,
+                    ),
+                }
+            )
+        return payload
 
     @classmethod
     def list_history(cls, *, limit: int = 12):

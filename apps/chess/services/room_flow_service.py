@@ -3,7 +3,9 @@ from django.utils import timezone
 
 from rest_framework.exceptions import NotFound, ValidationError
 
+from apps.accounts.services.user_state_service import UserStateService
 from apps.chess.models import Game, Room
+from apps.chess.services.room_security_service import RoomSecurityService
 from apps.chess.utils import (
     assign_colors,
     broadcast_room_removed,
@@ -28,7 +30,7 @@ class RoomFlowService:
 
     @staticmethod
     def _ensure_available(user) -> None:
-        if user.is_suspended:
+        if UserStateService.is_suspended(user):
             raise ValidationError("정지된 계정입니다.")
 
     @staticmethod
@@ -130,7 +132,7 @@ class RoomFlowService:
             raise ValidationError("이미 인원이 가득 찼습니다.")
 
         if room.is_private:
-            if not password or not room.check_password(password):
+            if not password or not RoomSecurityService.verify_password(room.password, password):
                 raise ValidationError({"password": ["비밀번호가 올바르지 않습니다."]})
 
         room.guest = user

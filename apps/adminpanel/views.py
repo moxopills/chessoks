@@ -26,7 +26,7 @@ from apps.adminpanel.serializers import (
     ReportSerializer,
     SuspendSerializer,
 )
-from apps.adminpanel.services import AdminPanelService
+from apps.adminpanel.services import AdminPanelService, ReportResolutionService
 from apps.core.ops import collect_health_snapshot, collect_runtime_metrics, summarize_health
 from apps.core.throttling import ReportActionThrottle
 from apps.notifications.services import NotificationService
@@ -337,7 +337,8 @@ class AdminReportResolveView(APIView):
         serializer = ReportResolveSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         report = Report.objects.select_related("target", "reporter").get(pk=report_id)
-        report.mark_resolved(
+        ReportResolutionService.mark_resolved(
+            report,
             request.user,
             serializer.validated_data["status"],
             serializer.validated_data.get("resolution_note", ""),

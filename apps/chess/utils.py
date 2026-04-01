@@ -10,6 +10,8 @@ from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from korcen import korcen
 
+from apps.accounts.services.user_stats_service import UserStatsService
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,7 +48,7 @@ def _serialize_player_summary(user):
         "nickname": user.nickname,
         "avatar_url": avatar_url,
         "rating": getattr(stats, "rating", 1200),
-        "rank_tier": getattr(stats, "rank_tier", "Junior"),
+        "rank_tier": UserStatsService.get_rank_tier(stats),
         "nickname_color": getattr(stats, "nickname_color", ""),
         "profile_border": getattr(stats, "profile_border", ""),
     }

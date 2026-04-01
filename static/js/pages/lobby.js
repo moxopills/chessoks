@@ -103,7 +103,8 @@
     let notificationEventBound = false;
     let notificationEventHandler = null;
     let hasShownLobbyOnboarding = false;
-    let isMobileRoomPreviewOpen = Utils.Storage.get('lobby_mobile_room_preview_open', false);
+    const MOBILE_ROOM_PREVIEW_STORAGE_KEY = 'lobby_mobile_room_preview_open_v2';
+    let isMobileRoomPreviewOpen = Utils.Storage.get(MOBILE_ROOM_PREVIEW_STORAGE_KEY, false);
 
     // 초기화
     init();
@@ -159,7 +160,7 @@
 
         if (typeof forceState === 'boolean') {
             isMobileRoomPreviewOpen = forceState;
-            Utils.Storage.set('lobby_mobile_room_preview_open', isMobileRoomPreviewOpen);
+            Utils.Storage.set(MOBILE_ROOM_PREVIEW_STORAGE_KEY, isMobileRoomPreviewOpen);
         }
 
         const isOpen = Boolean(isMobileRoomPreviewOpen);
