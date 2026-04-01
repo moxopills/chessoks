@@ -10,7 +10,7 @@ from django.core.cache import cache
 import chess
 import chess.engine
 from apps.accounts.models import User
-from apps.chess.models import AiDifficultySetting
+from apps.chess.services.ai_setting_service import AiSettingService
 
 
 @dataclass(frozen=True)
@@ -202,7 +202,7 @@ class AiService:
         cached = cache.get(cls.CACHE_KEY)
         if cached:
             return cached.get(level, cls.LEVEL_CONFIG["easy"])
-        db_config = AiDifficultySetting.get_config()
+        db_config = AiSettingService.get_config()
         merged = dict(cls.LEVEL_CONFIG)
         for key, value in db_config.items():
             if key in merged:

@@ -5,6 +5,7 @@ from rest_framework.test import APIClient
 
 from apps.accounts.tests.test_auth import User
 from apps.chess.models import Room
+from apps.chess.services.room_security_service import RoomSecurityService
 
 
 class RoomJoinLeaveApiTestCase(TestCase):
@@ -21,7 +22,7 @@ class RoomJoinLeaveApiTestCase(TestCase):
         )
         self.room = Room.objects.create(host=self.host, room_type="custom")
         self.private_room = Room.objects.create(host=self.host, room_type="custom", is_private=True)
-        self.private_room.set_password("secret123")
+        self.private_room.password = RoomSecurityService.hash_password("secret123")
         self.private_room.save(update_fields=["password"])
 
     def test_join_public_room(self):

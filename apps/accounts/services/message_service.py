@@ -4,6 +4,7 @@ from django.db.models import OuterRef, Q, Subquery
 from rest_framework.exceptions import NotFound, ValidationError
 
 from apps.accounts.models import DirectMessage, DirectMessageThread, GuestbookEntry, User
+from apps.accounts.services.user_state_service import UserStateService
 from apps.notifications.services import NotificationService
 
 
@@ -172,9 +173,9 @@ class MessageService:
         other = User.objects.only("id").filter(pk=other_id).first()
         if not other:
             raise NotFound("유저 정보를 찾을 수 없습니다.")
-        if user.is_suspended:
+        if UserStateService.is_suspended(user):
             raise ValidationError("정지된 계정입니다.")
-        if user.is_muted:
+        if UserStateService.is_muted(user):
             raise ValidationError("채팅이 제한된 계정입니다.")
         if not message.strip():
             raise ValidationError({"message": "메시지를 입력해주세요."})

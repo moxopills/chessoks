@@ -1,28 +1,8 @@
-"""인증 토큰 통합 모델"""
-
-import secrets
-
 from django.conf import settings
 from django.db import models
-from django.utils import timezone
 
 
-class AuthTokenManager(models.Manager):
-    """인증 토큰 매니저"""
-
-    def delete_expired(self, token_type: str | None = None):
-        """만료된 토큰 삭제 (만료 시간이 지났거나 사용된 토큰)
-
-        Args:
-            token_type: 특정 타입만 삭제하려면 지정 (None이면 전체)
-        """
-        now = timezone.now()
-        queryset = self.filter(models.Q(expires_at__lt=now) | models.Q(is_used=True))
-        if token_type:
-            queryset = queryset.filter(token_type=token_type)
-        deleted_count, _ = queryset.delete()
-        return deleted_count
-
+class AuthTokenQuerySet(models.QuerySet):
     def email_verification(self):
         """이메일 인증 토큰만 필터링"""
         return self.filter(token_type=AuthToken.TokenType.EMAIL_VERIFICATION)
@@ -39,7 +19,7 @@ class AuthToken(models.Model):
         EMAIL_VERIFICATION = "email_verification", "이메일 인증"
         PASSWORD_RESET = "password_reset", "비밀번호 재설정"
 
-    objects = AuthTokenManager()
+    objects = AuthTokenQuerySet.as_manager()
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -86,15 +66,3 @@ class AuthToken(models.Model):
 
     def __str__(self):
         return f"[{self.get_token_type_display()}] {self.user.email} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
-
-    @property
-    def is_expired(self):
-        return timezone.now() > self.expires_at
-
-    @property
-    def is_valid(self):
-        return not self.is_used and not self.is_expired
-
-    @classmethod
-    def generate_token(cls):
-        return secrets.token_urlsafe(48)

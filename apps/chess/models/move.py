@@ -1,7 +1,8 @@
 import re
 
-from django.core.exceptions import ValidationError
 from django.db import models
+
+from apps.chess.services.model_integrity_service import ChessModelIntegrityService
 
 from .game import Game
 
@@ -149,27 +150,4 @@ class Move(models.Model):
     def clean(self):
         """모델 검증"""
         super().clean()
-
-        # 체스 좌표 검증 (a1-h8) - 모듈 레벨에서 컴파일된 정규식 사용
-        if not SQUARE_PATTERN.match(self.from_square):
-            raise ValidationError(f"잘못된 출발 좌표: {self.from_square}")
-        if not SQUARE_PATTERN.match(self.to_square):
-            raise ValidationError(f"잘못된 도착 좌표: {self.to_square}")
-
-        # 체크와 체크메이트는 동시에 불가
-        if self.is_check and self.is_checkmate:
-            raise ValidationError("체크와 체크메이트는 동시에 참일 수 없습니다")
-
-        # 착수 번호 양수 검증
-        if self.move_number <= 0:
-            raise ValidationError("착수 번호는 1 이상이어야 합니다")
-
-    @property
-    def full_move_notation(self):
-        """완전한 착수 표기 (체크, 체크메이트 표시 포함)"""
-        notation = self.san
-        if self.is_checkmate:
-            notation += "#"
-        elif self.is_check:
-            notation += "+"
-        return notation
+        ChessModelIntegrityService.validate_move(self)

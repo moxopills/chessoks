@@ -11,7 +11,7 @@
     const bodyEl = document.getElementById("season-leaderboard-body");
     const paginationEl = document.getElementById("season-pagination");
     const refreshBtn = document.getElementById("season-refresh-btn");
-    const claimBtn = document.getElementById("claim-reward-btn");
+    const autoNoteEl = document.getElementById("season-auto-note");
 
     let currentSeasonId = null;
     let currentPage = 1;
@@ -39,9 +39,16 @@
                 loadLeaderboard(currentPage),
                 loadMySeason(),
                 loadRewards(),
+                loadHistory(),
             ]).finally(() => setRefreshLoading(false));
         });
-        claimBtn?.addEventListener("click", claimRewards);
+        historyBoxEl?.addEventListener("click", (event) => {
+            const claimButton = event.target.closest("[data-claim-season-id]");
+            if (!claimButton) return;
+            const seasonId = parseInt(claimButton.dataset.claimSeasonId || "0", 10);
+            if (!seasonId) return;
+            claimHistoricalRewards(seasonId, claimButton);
+        });
     }
 
     function setRefreshLoading(isLoading) {
@@ -214,6 +221,9 @@
                 `;
             }).join("");
             rewardPreviewRows = rows.slice(0, 3);
+            if (autoNoteEl) {
+                autoNoteEl.textContent = "시즌 종료 직후 순위에 맞는 보상이 자동 지급됩니다.";
+            }
             renderGoalSection();
         } catch (error) {
             rewardBoxEl.textContent = error.message || "보상 정보를 불러오지 못했습니다.";
@@ -283,25 +293,6 @@
         `;
     }
 
-    async function claimRewards() {
-        if (!currentUserId) {
-            Toast.error("로그인 후 보상을 수령할 수 있습니다.");
-            return;
-        }
-        if (!currentSeasonId) return;
-        try {
-            const data = await API.post(`/seasons/${currentSeasonId}/rewards/claim/`, {});
-            if ((data.claimed_count || 0) === 0) {
-                Toast.info(data.message || "이미 시즌 보상이 자동 지급되었습니다.");
-            } else {
-                Toast.success(`보상 ${data.claimed_count}개를 수령했습니다.`);
-            }
-            await loadRewards();
-        } catch (error) {
-            Toast.error(error.message || "보상 수령에 실패했습니다.");
-        }
-    }
-
     async function loadHistory() {
         try {
             const data = await API.get("/seasons/history/", { limit: 6 });
@@ -310,14 +301,73 @@
                 historyBoxEl.textContent = "아직 종료된 시즌이 없습니다.";
                 return;
             }
-            historyBoxEl.innerHTML = rows.map((row) => `
-                <div class="season-history-item">
-                    <span>${Utils.escapeHtml(row.name)}</span>
-                    <span>${row.start_date} ~ ${row.end_date}</span>
-                </div>
-            `).join("");
+            historyBoxEl.innerHTML = rows.map(renderHistoryItem).join("");
         } catch (error) {
             historyBoxEl.textContent = error.message || "시즌 히스토리를 불러오지 못했습니다.";
+        }
+    }
+
+    function renderHistoryItem(row) {
+        const rewards = Array.isArray(row.my_rewards) ? row.my_rewards : [];
+        const rewardRows = rewards.length
+            ? `<div class="season-history-rewards">${rewards.map((reward) => {
+                const typeClass = reward.reward_type === "title"
+                    ? "reward-chip-title"
+                    : (reward.reward_type === "border" ? "reward-chip-frame" : "reward-chip-points");
+                return `
+                    <div class="season-history-reward">
+                        <span class="reward-chip ${typeClass}">${Utils.escapeHtml(reward.reward_type_label)}</span>
+                        <strong>${Utils.escapeHtml(reward.reward_value)}</strong>
+                    </div>
+                `;
+            }).join("")}</div>`
+            : '<div class="text-muted">획득한 보상이 없습니다.</div>';
+
+        const rankCopy = row.my_final_rank
+            ? `최종 순위 ${row.my_final_rank}위 · ${row.my_games_played || 0}판`
+            : '참가 기록이 없습니다.';
+        const stateCopy = row.auto_rewarded
+            ? '자동 지급 완료'
+            : (row.has_pending_rewards ? '보상 수령 필요' : '시즌 종료 기록');
+        const actionButton = row.has_pending_rewards
+            ? `<button class="btn btn-primary btn-sm" type="button" data-claim-season-id="${row.id}">지난 시즌 보상 받기</button>`
+            : '';
+
+        return `
+            <article class="season-history-card">
+                <div class="season-history-head">
+                    <div class="season-history-title-wrap">
+                        <strong>${Utils.escapeHtml(row.name)}</strong>
+                        <span>${row.start_date} ~ ${row.end_date}</span>
+                    </div>
+                    <span class="season-history-state${row.auto_rewarded ? ' is-success' : ''}${row.has_pending_rewards ? ' is-warning' : ''}">${Utils.escapeHtml(stateCopy)}</span>
+                </div>
+                <div class="season-history-rank">${Utils.escapeHtml(rankCopy)}</div>
+                ${rewardRows}
+                ${actionButton ? `<div class="season-history-actions">${actionButton}</div>` : ''}
+            </article>
+        `;
+    }
+
+    async function claimHistoricalRewards(seasonId, buttonEl) {
+        if (!currentUserId) {
+            Toast.error("로그인 후 보상을 수령할 수 있습니다.");
+            return;
+        }
+        const button = buttonEl || null;
+        if (button) button.disabled = true;
+        try {
+            const data = await API.post(`/seasons/${seasonId}/rewards/claim/`, {});
+            if ((data.claimed_count || 0) === 0) {
+                Toast.info(data.message || "이미 시즌 보상이 자동 지급되었습니다.");
+            } else {
+                Toast.success(`지난 시즌 보상 ${data.claimed_count}개를 수령했습니다.`);
+            }
+            await Promise.all([loadHistory(), loadCurrentUser()]);
+        } catch (error) {
+            Toast.error(error.message || "지난 시즌 보상 수령에 실패했습니다.");
+        } finally {
+            if (button) button.disabled = false;
         }
     }
 })();

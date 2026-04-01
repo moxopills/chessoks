@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.accounts.models import User, UserStats
+from apps.accounts.services.user_stats_service import UserStatsService
 from apps.adminpanel.models import Report
 from apps.chess.models import AiDifficultySetting
 
@@ -22,7 +23,7 @@ class AdminUserSerializer(serializers.Serializer):
         data = super().to_representation(instance)
         stats: UserStats | None = getattr(instance, "stats", None)
         data["rating"] = stats.rating if stats else 1200
-        data["rank_tier"] = stats.rank_tier if stats else "Junior"
+        data["rank_tier"] = UserStatsService.get_rank_tier(stats)
         return data
 
 

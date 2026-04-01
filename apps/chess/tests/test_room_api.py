@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.chess.models import Room
+from apps.chess.services.room_security_service import RoomSecurityService
 
 User = get_user_model()
 
@@ -146,7 +147,7 @@ class RoomCreateApiTestCase(TestCase):
 
         # DB에서 확인
         room = Room.objects.get(pk=response.data["id"])
-        self.assertTrue(room.check_password("secret123"))
+        self.assertTrue(RoomSecurityService.verify_password(room.password, "secret123"))
 
     def test_create_room_default_values(self):
         """기본값으로 방 생성"""

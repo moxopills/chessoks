@@ -3,6 +3,8 @@
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 
+from apps.accounts.services.guest_session_service import GuestSessionService
+
 
 class GuestTokenMiddleware(BaseMiddleware):
     """WebSocket 연결에서 게스트 토큰을 처리하는 미들웨어"""
@@ -41,14 +43,13 @@ class GuestTokenMiddleware(BaseMiddleware):
 
         try:
             guest = GuestSession.objects.select_related("user").get(token=token)
-            if not guest.is_expired:
+            if not GuestSessionService.is_expired(guest):
                 guest_data = {
                     "token": guest.token,
                     "nickname": guest.nickname,
                     "display_name": guest.display_name,
                 }
-                # 게스트 User가 없으면 생성
-                guest_user = guest.get_or_create_user()
+                guest_user = GuestSessionService.get_or_create_user(guest)
                 return guest_data, guest_user
         except GuestSession.DoesNotExist:
             pass

@@ -16,6 +16,7 @@ from apps.accounts.models import AuthToken, SkinPointLog, User, UserStats
 from apps.accounts.services.achievement_service import AchievementService
 from apps.accounts.services.base_service import ServiceResult, _ok, _validate_serializer
 from apps.accounts.services.session_service import AccountService, PasswordService
+from apps.accounts.services.user_stats_service import UserStatsService
 from apps.accounts.utils import (
     check_passwords_match,
     create_signup_email_token,
@@ -383,31 +384,37 @@ class UserProfileService:
 
         nickname_color = serializer.validated_data.pop("nickname_color", None)
         profile_border = serializer.validated_data.pop("profile_border", None)
+        season_title = serializer.validated_data.pop("season_title", None)
+        profile_card_frame = serializer.validated_data.pop("profile_card_frame", None)
         stats = getattr(user, "stats", None)
 
         old_nickname = user.nickname
         customization_reward_dirty = False
         with transaction.atomic():
-            if stats and (nickname_color is not None or profile_border is not None):
+            if stats and (
+                nickname_color is not None
+                or profile_border is not None
+                or season_title is not None
+                or profile_card_frame is not None
+            ):
                 stats = UserStats.objects.select_for_update().get(pk=stats.pk)
                 purchase_updates: dict[str, object] = {}
                 stats_updates: list[str] = []
 
                 if nickname_color is not None:
-                    nickname_color = UserStats.normalize_nickname_color_key(nickname_color)
-                    catalog = {item["key"]: item for item in stats.nickname_color_catalog()}
-                    selected = catalog.get(nickname_color)
+                    nickname_color = UserStatsService.normalize_nickname_color_key(nickname_color)
+                    selected = UserStatsService.get_nickname_color_item(nickname_color)
                     if not selected:
                         raise ValidationError(
                             {"nickname_color": ["존재하지 않는 닉네임 색상입니다."]}
                         )
                     owned_nickname_colors = {
-                        UserStats.normalize_nickname_color_key(item)
+                        UserStatsService.normalize_nickname_color_key(item)
                         for item in (stats.owned_nickname_colors or [])
                     }
                     if stats.nickname_color:
                         owned_nickname_colors.add(
-                            UserStats.normalize_nickname_color_key(stats.nickname_color)
+                            UserStatsService.normalize_nickname_color_key(stats.nickname_color)
                         )
                     if selected["cost"] > 0 and nickname_color not in owned_nickname_colors:
                         if stats.style_points < selected["cost"]:
@@ -419,7 +426,7 @@ class UserProfileService:
                         stats.save(update_fields=["style_points"])
                         stats.refresh_from_db(fields=["style_points"])
                         owned = [
-                            UserStats.normalize_nickname_color_key(item)
+                            UserStatsService.normalize_nickname_color_key(item)
                             for item in (stats.owned_nickname_colors or [])
                         ]
                         if nickname_color not in owned:
@@ -438,20 +445,19 @@ class UserProfileService:
                     stats_updates.append("nickname_color")
 
                 if profile_border is not None:
-                    profile_border = UserStats.normalize_profile_border_key(profile_border)
-                    catalog = {item["key"]: item for item in stats.profile_border_catalog()}
-                    selected = catalog.get(profile_border)
+                    profile_border = UserStatsService.normalize_profile_border_key(profile_border)
+                    selected = UserStatsService.get_profile_border_item(profile_border)
                     if not selected:
                         raise ValidationError(
                             {"profile_border": ["존재하지 않는 프로필 테두리입니다."]}
                         )
                     owned_profile_borders = {
-                        UserStats.normalize_profile_border_key(item)
+                        UserStatsService.normalize_profile_border_key(item)
                         for item in (stats.owned_profile_borders or [])
                     }
                     if stats.profile_border:
                         owned_profile_borders.add(
-                            UserStats.normalize_profile_border_key(stats.profile_border)
+                            UserStatsService.normalize_profile_border_key(stats.profile_border)
                         )
                     if selected["cost"] > 0 and profile_border not in owned_profile_borders:
                         if stats.style_points < selected["cost"]:
@@ -463,7 +469,7 @@ class UserProfileService:
                         stats.save(update_fields=["style_points"])
                         stats.refresh_from_db(fields=["style_points"])
                         owned = [
-                            UserStats.normalize_profile_border_key(item)
+                            UserStatsService.normalize_profile_border_key(item)
                             for item in (stats.owned_profile_borders or [])
                         ]
                         if profile_border not in owned:
@@ -480,6 +486,30 @@ class UserProfileService:
                         )
                     stats.profile_border = profile_border
                     stats_updates.append("profile_border")
+
+                if season_title is not None:
+                    available_titles = {
+                        str(item.get("key") or ""): item
+                        for item in UserStatsService.get_available_season_titles(stats)
+                    }
+                    selected_title = str(season_title or "")
+                    if selected_title not in available_titles:
+                        raise ValidationError({"season_title": ["보유하지 않은 시즌 칭호입니다."]})
+                    stats.season_title = selected_title
+                    stats_updates.append("season_title")
+
+                if profile_card_frame is not None:
+                    available_frames = {
+                        str(item.get("key") or ""): item
+                        for item in UserStatsService.get_available_profile_card_frames(stats)
+                    }
+                    selected_frame = str(profile_card_frame or "")
+                    if selected_frame not in available_frames:
+                        raise ValidationError(
+                            {"profile_card_frame": ["보유하지 않은 프로필 카드 프레임입니다."]}
+                        )
+                    stats.profile_card_frame = selected_frame
+                    stats_updates.append("profile_card_frame")
 
                 if purchase_updates:
                     for field, value in purchase_updates.items():

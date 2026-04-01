@@ -2,6 +2,8 @@
 
 from rest_framework.permissions import BasePermission
 
+from apps.accounts.services.guest_session_service import GuestSessionService
+
 
 class IsAuthenticatedOrGuest(BasePermission):
     """인증된 사용자 또는 게스트 세션이 있는 경우 허용
@@ -16,9 +18,8 @@ class IsAuthenticatedOrGuest(BasePermission):
 
         # 게스트 세션 확인
         guest = getattr(request, "guest", None)
-        if guest and not guest.is_expired:
-            # 임시 User 생성/가져오기
-            guest_user = guest.get_or_create_user()
+        if guest and not GuestSessionService.is_expired(guest):
+            guest_user = GuestSessionService.get_or_create_user(guest)
             # request.user에 설정
             request.user = guest_user
             request._guest_session = guest

@@ -23,14 +23,3 @@ class AiDifficultySetting(models.Model):
 
     def __str__(self):
         return f"{self.level} (depth={self.depth}, randomness={self.randomness}, delay_ms={self.delay_ms})"
-
-    @staticmethod
-    def get_config() -> dict[str, dict[str, int]]:
-        config: dict[str, dict[str, int]] = {}
-        for item in AiDifficultySetting.objects.all():
-            config[item.level] = {
-                "depth": item.depth,
-                "randomness": item.randomness,
-                "delay_ms": item.delay_ms,
-            }
-        return config

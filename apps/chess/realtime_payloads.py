@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from apps.accounts.services.achievement_service import AchievementService
 from apps.accounts.services.presence_service import PresenceService
+from apps.accounts.services.user_stats_service import UserStatsService
 
 REACTION_EMOJIS: tuple[str, ...] = ("👍", "👏")
 
@@ -49,7 +50,7 @@ def build_lobby_user_payload(user, *, presence: dict | None = None) -> dict:
         "id": user.id,
         "nickname": user.nickname,
         "avatar_url": user.avatar_url,
-        "rank_tier": getattr(stats, "rank_tier", "Junior"),
+        "rank_tier": UserStatsService.get_rank_tier(stats),
         "nickname_color": getattr(stats, "nickname_color", ""),
         "profile_border": getattr(stats, "profile_border", ""),
         "status": status.get("status", PresenceService.STATUS_ONLINE),

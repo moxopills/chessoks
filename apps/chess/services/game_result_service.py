@@ -9,6 +9,7 @@ from django.utils import timezone
 from apps.accounts.models import UserStats
 from apps.accounts.models.skin import SkinPointLog
 from apps.accounts.services.ranking_service import RankingService
+from apps.accounts.services.user_stats_service import UserStatsService
 from apps.chess.models import Game
 from apps.chess.services.rating_service import RatingService
 from apps.notifications.services import NotificationService
@@ -189,8 +190,8 @@ class GameResultService:
 
         white_before = white_stats.rating
         black_before = black_stats.rating
-        white_tier_before = white_stats.rank_tier
-        black_tier_before = black_stats.rank_tier
+        white_tier_before = UserStatsService.get_rank_tier(white_stats)
+        black_tier_before = UserStatsService.get_rank_tier(black_stats)
 
         RatingService.update_ratings_and_stats(white_stats, black_stats, game.result)
         white_delta, black_delta = GameResultService._apply_style_points(
@@ -217,13 +218,13 @@ class GameResultService:
                 "before": white_before,
                 "after": white_stats.rating,
                 "tier_before": white_tier_before,
-                "tier_after": white_stats.rank_tier,
+                "tier_after": UserStatsService.get_rank_tier(white_stats),
             },
             "black": {
                 "before": black_before,
                 "after": black_stats.rating,
                 "tier_before": black_tier_before,
-                "tier_after": black_stats.rank_tier,
+                "tier_after": UserStatsService.get_rank_tier(black_stats),
             },
         }
 
