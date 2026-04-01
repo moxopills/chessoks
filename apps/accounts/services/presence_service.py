@@ -7,6 +7,7 @@ from django.core.cache import cache
 from apps.accounts.models import User
 from apps.accounts.services.achievement_service import AchievementService
 from apps.accounts.services.online_status_service import OnlineStatusService
+from apps.accounts.services.user_stats_service import UserStatsService
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,11 @@ class PresenceService:
         "stats__rating",
         "stats__featured_achievement_key",
     )
+    DEFAULT_OFFLINE_PAYLOAD = {
+        "online": False,
+        "status": STATUS_OFFLINE,
+        "status_label": "오프라인",
+    }
 
     @staticmethod
     def _list_key(user_id: int) -> str:
@@ -255,12 +261,26 @@ class PresenceService:
     def get_presence(user_id: int) -> dict:
         return PresenceService.bulk_presence([user_id]).get(
             user_id,
-            {
-                "online": False,
-                "status": PresenceService.STATUS_OFFLINE,
-                "status_label": "오프라인",
-            },
+            PresenceService.DEFAULT_OFFLINE_PAYLOAD,
         )
+
+    @staticmethod
+    def _build_online_user_payload(user: User, presence: dict) -> dict:
+        stats = getattr(user, "stats", None)
+        return {
+            "id": user.id,
+            "nickname": user.nickname,
+            "avatar_url": user.avatar_url,
+            "rank_tier": UserStatsService.get_rank_tier(stats),
+            "nickname_color": getattr(stats, "nickname_color", ""),
+            "profile_border": getattr(stats, "profile_border", ""),
+            "online": presence.get("online", True),
+            "status": presence.get("status", PresenceService.STATUS_ONLINE),
+            "status_label": presence.get("status_label", "온라인"),
+            "room_id": presence.get("room_id"),
+            "game_id": presence.get("game_id"),
+            "featured_achievement": AchievementService.get_featured_achievement_for_stats(stats),
+        }
 
     @staticmethod
     def list_online_users(*, exclude_user_id: int | None = None) -> list[dict]:
@@ -277,31 +297,13 @@ class PresenceService:
             .filter(id__in=online_ids, is_guest=False)
         )
         user_map = {user.id: user for user in queryset}
-        payloads = []
-        for user_id in online_ids:
-            user = user_map.get(user_id)
-            if user is None:
-                continue
-            presence = presence_map.get(user_id, {})
-            stats = getattr(user, "stats", None)
-            payloads.append(
-                {
-                    "id": user.id,
-                    "nickname": user.nickname,
-                    "avatar_url": user.avatar_url,
-                    "rank_tier": getattr(stats, "rank_tier", "Junior"),
-                    "nickname_color": getattr(stats, "nickname_color", ""),
-                    "profile_border": getattr(stats, "profile_border", ""),
-                    "online": presence.get("online", True),
-                    "status": presence.get("status", PresenceService.STATUS_ONLINE),
-                    "status_label": presence.get("status_label", "온라인"),
-                    "room_id": presence.get("room_id"),
-                    "game_id": presence.get("game_id"),
-                    "featured_achievement": AchievementService.get_featured_achievement_for_stats(
-                        stats
-                    ),
-                }
+        payloads = [
+            PresenceService._build_online_user_payload(
+                user_map[user_id], presence_map.get(user_id, {})
             )
+            for user_id in online_ids
+            if user_id in user_map
+        ]
 
         payloads.sort(
             key=lambda item: (

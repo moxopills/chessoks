@@ -454,6 +454,42 @@
     box-shadow: var(--choice-ring);
 }
 
+.customize-choice-preview--title {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 56px;
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: var(--color-accent-primary);
+    background:
+        linear-gradient(135deg, rgba(255, 241, 246, 0.95), rgba(255, 230, 239, 0.82)),
+        radial-gradient(circle at top right, rgba(226, 91, 125, 0.18), transparent 50%);
+    border-color: rgba(226, 91, 125, 0.18);
+}
+
+.customize-choice-preview--frame {
+    width: 100%;
+    min-height: 56px;
+    position: relative;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(247, 240, 231, 0.92)),
+        linear-gradient(135deg, rgba(235, 229, 218, 0.76), rgba(255, 255, 255, 0.52));
+}
+
+.customize-choice-preview--frame::after {
+    content: 'CARD';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: rgba(122, 111, 95, 0.56);
+}
+
 .customize-choice-name {
     font-size: 0.94rem;
     font-weight: 800;
@@ -560,6 +596,12 @@
         0 14px 28px rgba(43, 42, 39, 0.08);
 }
 
+.customize-preview-copy {
+    min-width: 0;
+    display: grid;
+    gap: 6px;
+}
+
 .customize-avatar {
     width: 70px;
     height: 70px;
@@ -582,6 +624,30 @@
 .customize-nickname {
     font-size: 1.35rem;
     font-weight: 700;
+    word-break: break-word;
+}
+
+.customize-season-title {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(226, 91, 125, 0.18);
+    background: linear-gradient(135deg, rgba(255, 241, 246, 0.95), rgba(255, 230, 239, 0.78));
+    color: #c44a68;
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.customize-season-title.is-empty {
+    border-color: var(--color-border-light);
+    background: color-mix(in srgb, var(--color-bg-secondary) 88%, white);
+    color: var(--color-text-secondary);
 }
 
 .customize-skin-preview-title {

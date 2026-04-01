@@ -8,6 +8,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.accounts.models import GuestSession, User
+from apps.accounts.services.guest_session_service import GuestSessionService
 
 
 class GuestSessionModelTest(TestCase):
@@ -15,41 +16,35 @@ class GuestSessionModelTest(TestCase):
 
     def test_create_guest_session(self):
         """게스트 세션 생성 테스트"""
-        guest = GuestSession.objects.create(
-            nickname="테스트유저",
-            ip_address="127.0.0.1",
-        )
+        guest = GuestSessionService.create_session(nickname="테스트유저", ip_address="127.0.0.1")
 
         self.assertIsNotNone(guest.token)
         self.assertEqual(len(guest.token), 43)  # base64 encoded 32 bytes
         self.assertEqual(guest.display_name, "[게스트] 테스트유저")
         self.assertIsNotNone(guest.expires_at)
-        self.assertFalse(guest.is_expired)
+        self.assertFalse(GuestSessionService.is_expired(guest))
 
     def test_is_expired(self):
         """만료 확인 테스트"""
-        guest = GuestSession.objects.create(
-            nickname="만료테스트",
-            expires_at=timezone.now() - timedelta(hours=1),
-        )
+        guest = GuestSessionService.create_session(nickname="만료테스트")
+        guest.expires_at = timezone.now() - timedelta(hours=1)
+        guest.save(update_fields=["expires_at"])
 
-        self.assertTrue(guest.is_expired)
+        self.assertTrue(GuestSessionService.is_expired(guest))
 
     def test_cleanup_expired(self):
         """만료된 세션 정리 테스트"""
         # 만료된 세션 생성
-        GuestSession.objects.create(
-            nickname="만료1",
-            expires_at=timezone.now() - timedelta(hours=1),
-        )
-        GuestSession.objects.create(
-            nickname="만료2",
-            expires_at=timezone.now() - timedelta(hours=2),
-        )
+        expired_one = GuestSessionService.create_session(nickname="만료1")
+        expired_two = GuestSessionService.create_session(nickname="만료2")
+        expired_one.expires_at = timezone.now() - timedelta(hours=1)
+        expired_two.expires_at = timezone.now() - timedelta(hours=2)
+        expired_one.save(update_fields=["expires_at"])
+        expired_two.save(update_fields=["expires_at"])
         # 유효한 세션
-        valid = GuestSession.objects.create(nickname="유효")
+        valid = GuestSessionService.create_session(nickname="유효")
 
-        deleted = GuestSession.cleanup_expired()
+        deleted = GuestSessionService.cleanup_expired()
 
         self.assertEqual(deleted, 2)
         self.assertEqual(GuestSession.objects.count(), 1)

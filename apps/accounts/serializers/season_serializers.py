@@ -3,6 +3,8 @@ from __future__ import annotations
 from rest_framework import serializers
 
 from apps.accounts.models import Season, SeasonReward, SeasonStat
+from apps.accounts.services.season_stat_service import SeasonStatService
+from apps.accounts.services.user_stats_service import UserStatsService
 
 
 class SeasonSerializer(serializers.ModelSerializer):
@@ -33,8 +35,8 @@ class SeasonLeaderboardEntrySerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(source="user.id", read_only=True)
     nickname = serializers.CharField(source="user.nickname", read_only=True)
     avatar_url = serializers.CharField(source="user.avatar_url", read_only=True)
-    rank_tier = serializers.CharField(source="user.stats.rank_tier", read_only=True)
-    win_rate = serializers.FloatField(read_only=True)
+    rank_tier = serializers.SerializerMethodField()
+    win_rate = serializers.SerializerMethodField()
     rank = serializers.IntegerField(read_only=True)
 
     class Meta:
@@ -53,6 +55,12 @@ class SeasonLeaderboardEntrySerializer(serializers.ModelSerializer):
             "draws",
             "win_rate",
         ]
+
+    def get_rank_tier(self, obj):
+        return UserStatsService.get_rank_tier(getattr(getattr(obj, "user", None), "stats", None))
+
+    def get_win_rate(self, obj):
+        return SeasonStatService.get_win_rate(obj)
 
 
 class SeasonRewardSerializer(serializers.ModelSerializer):

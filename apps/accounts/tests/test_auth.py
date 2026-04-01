@@ -17,6 +17,9 @@ from apps.accounts.models import AuthToken, SignupEmailToken
 from apps.accounts.serializers import ProfileUpdateSerializer, UserSignUpSerializer
 from apps.accounts.services import UserProfileService
 from apps.accounts.services.session_service import AuthService
+from apps.accounts.services.token_service import TokenService
+from apps.accounts.services.user_query_service import UserQueryService
+from apps.accounts.services.user_stats_service import UserStatsService
 from apps.accounts.utils import hash_signup_code_for_test
 
 User = get_user_model()
@@ -598,12 +601,12 @@ class UserModelTest(BaseTestCase):
         user.stats.games_played = 10
         user.stats.games_won = 7
         user.stats.save()
-        self.assertEqual(user.stats.win_rate, 70.0)
+        self.assertEqual(UserStatsService.get_win_rate(user.stats), 70.0)
 
     def test_win_rate_no_games(self):
         """게임 기록이 없을 때 승률 0"""
         user = self.create_user()
-        self.assertEqual(user.stats.win_rate, 0.0)
+        self.assertEqual(UserStatsService.get_win_rate(user.stats), 0.0)
 
     def test_clean_invalid_rating(self):
         """레이팅 범위 초과 검증"""
@@ -633,7 +636,7 @@ class UserModelTest(BaseTestCase):
         UserStats.objects.filter(user=u2).update(rating=1800)
         UserStats.objects.filter(user=u3).update(rating=1300)
 
-        top_players = User.objects.top_players(limit=2)
+        top_players = UserQueryService.top_players(limit=2)
         self.assertEqual(len(top_players), 2)
         self.assertEqual(top_players[0].stats.rating, 1800)
         self.assertEqual(top_players[1].stats.rating, 1500)
@@ -645,7 +648,7 @@ class UserModelTest(BaseTestCase):
         inactive.is_active = False
         inactive.save()
 
-        players = User.objects.active_players()
+        players = UserQueryService.active_players()
         self.assertIn(active, players)
         self.assertNotIn(inactive, players)
 
@@ -666,31 +669,31 @@ class UserModelTest(BaseTestCase):
 
         user.stats.rating = 500
         user.stats.save(update_fields=["rating"])
-        self.assertEqual(user.stats.rank_tier, "Beginner")
+        self.assertEqual(UserStatsService.get_rank_tier(user.stats), "Beginner")
 
         user.stats.rating = 1200
         user.stats.save(update_fields=["rating"])
-        self.assertEqual(user.stats.rank_tier, "Junior")
+        self.assertEqual(UserStatsService.get_rank_tier(user.stats), "Junior")
 
         user.stats.rating = 1700
         user.stats.save(update_fields=["rating"])
-        self.assertEqual(user.stats.rank_tier, "Intermediate")
+        self.assertEqual(UserStatsService.get_rank_tier(user.stats), "Intermediate")
 
         user.stats.rating = 2200
         user.stats.save(update_fields=["rating"])
-        self.assertEqual(user.stats.rank_tier, "Advanced")
+        self.assertEqual(UserStatsService.get_rank_tier(user.stats), "Advanced")
 
         user.stats.rating = 2700
         user.stats.save(update_fields=["rating"])
-        self.assertEqual(user.stats.rank_tier, "Expert")
+        self.assertEqual(UserStatsService.get_rank_tier(user.stats), "Expert")
 
         user.stats.rating = 3200
         user.stats.save(update_fields=["rating"])
-        self.assertEqual(user.stats.rank_tier, "Expert")
+        self.assertEqual(UserStatsService.get_rank_tier(user.stats), "Expert")
 
         user.stats.rating = 3600
         user.stats.save(update_fields=["rating"])
-        self.assertEqual(user.stats.rank_tier, "Master")
+        self.assertEqual(UserStatsService.get_rank_tier(user.stats), "Master")
 
 
 class PasswordResetE2ETest(BaseAPITestCase):
@@ -749,7 +752,7 @@ class PasswordResetE2ETest(BaseAPITestCase):
         expired_token = AuthToken.objects.create(
             user=self.user,
             token_type=AuthToken.TokenType.PASSWORD_RESET,
-            token=AuthToken.generate_token(),
+            token=TokenService.generate_token(),
             expires_at=timezone.now() - timedelta(hours=1),
         )
         expired_code = "654321"
@@ -1046,7 +1049,7 @@ class EmailVerificationTestCase(BaseAPITestCase):
         token = AuthToken.objects.create(
             user=self.user,
             token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
-            token=AuthToken.generate_token(),
+            token=TokenService.generate_token(),
             expires_at=timezone.now() + timedelta(hours=24),
         )
 
@@ -1078,7 +1081,7 @@ class EmailVerificationTestCase(BaseAPITestCase):
         token = AuthToken.objects.create(
             user=self.user,
             token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
-            token=AuthToken.generate_token(),
+            token=TokenService.generate_token(),
             expires_at=timezone.now() - timedelta(hours=1),
         )
 
@@ -1139,7 +1142,7 @@ class AuthTokenModelTest(BaseTestCase):
         defaults = {
             "user": self.user,
             "token_type": AuthToken.TokenType.EMAIL_VERIFICATION,
-            "token": AuthToken.generate_token(),
+            "token": TokenService.generate_token(),
             "expires_at": timezone.now() + timedelta(hours=1),
         }
         defaults.update(kwargs)
@@ -1150,26 +1153,26 @@ class AuthTokenModelTest(BaseTestCase):
         token = self._create_token()
         self.assertIn(self.user.email, str(token))
 
-    def test_token_is_expired_property(self):
-        """토큰 만료 확인 프로퍼티"""
+    def test_token_is_expired_service(self):
+        """토큰 만료 확인 서비스"""
         # 만료된 토큰
         expired = self._create_token(expires_at=timezone.now() - timedelta(hours=1))
-        self.assertTrue(expired.is_expired)
+        self.assertTrue(TokenService.is_expired(expired))
 
         # 유효한 토큰
         valid = self._create_token()
-        self.assertFalse(valid.is_expired)
+        self.assertFalse(TokenService.is_expired(valid))
 
-    def test_token_is_valid_property(self):
-        """토큰 유효성 확인 프로퍼티"""
+    def test_token_is_valid_service(self):
+        """토큰 유효성 확인 서비스"""
         # 유효한 토큰
         valid = self._create_token()
-        self.assertTrue(valid.is_valid)
+        self.assertTrue(TokenService.is_valid(valid))
 
         # 사용된 토큰
         valid.is_used = True
         valid.save()
-        self.assertFalse(valid.is_valid)
+        self.assertFalse(TokenService.is_valid(valid))
 
     def test_cleanup_expired(self):
         """만료된 토큰 정리"""
@@ -1183,7 +1186,7 @@ class AuthTokenModelTest(BaseTestCase):
         valid_token = self._create_token()
 
         # 정리 실행
-        deleted_count = AuthToken.objects.delete_expired()
+        deleted_count = TokenService.delete_expired_auth_tokens()
 
         self.assertEqual(deleted_count, 2)
         self.assertTrue(AuthToken.objects.filter(id=valid_token.id).exists())
@@ -1677,7 +1680,7 @@ class EmailChangeTestCase(BaseAPITestCase):
         token = AuthToken.objects.create(
             user=self.user,
             token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
-            token=AuthToken.generate_token(),
+            token=TokenService.generate_token(),
             expires_at=timezone.now() + timedelta(hours=24),
             new_email="changed@test.com",
         )
@@ -1704,7 +1707,7 @@ class EmailChangeTestCase(BaseAPITestCase):
         token = AuthToken.objects.create(
             user=self.user,
             token_type=AuthToken.TokenType.EMAIL_VERIFICATION,
-            token=AuthToken.generate_token(),
+            token=TokenService.generate_token(),
             expires_at=timezone.now() + timedelta(hours=24),
             new_email=None,
         )

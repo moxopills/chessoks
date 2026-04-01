@@ -1,25 +1,9 @@
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils import timezone
+
+from apps.chess.services.model_integrity_service import ChessModelIntegrityService
 
 from .room import Room
-
-
-class GameManager(models.Manager):
-    """Game 커스텀 매니저"""
-
-    def ongoing_games(self):
-        """진행 중인 게임"""
-        return self.filter(result=self.model.Status.PLAYING)
-
-    def finished_games(self):
-        """종료된 게임"""
-        return self.exclude(result=self.model.Status.PLAYING)
-
-    def user_games(self, user):
-        """유저가 참여한 게임"""
-        return self.filter(models.Q(white_player=user) | models.Q(black_player=user))
 
 
 class Game(models.Model):
@@ -130,8 +114,6 @@ class Game(models.Model):
     finished_at = models.DateTimeField(null=True, blank=True)
     turn_started_at = models.DateTimeField(null=True, blank=True, help_text="현재 턴 시작 시간")
 
-    objects = GameManager()
-
     class Meta:
         db_table = "games"
         verbose_name = "게임"
@@ -170,43 +152,9 @@ class Game(models.Model):
     def clean(self):
         """모델 검증"""
         super().clean()
-        if self.white_player == self.black_player:
-            raise ValidationError("백과 흑 플레이어가 동일할 수 없습니다")
-        if self.move_count < 0:
-            raise ValidationError("수 카운트는 음수가 될 수 없습니다")
+        ChessModelIntegrityService.validate_game(self)
 
     def save(self, *args, **kwargs):
         """게임 저장 시 초기 시간 설정"""
-        if not self.pk:  # 새로 생성되는 경우
-            time_limit_seconds = self.room.time_limit * 60
-            self.white_time_remaining = time_limit_seconds
-            self.black_time_remaining = time_limit_seconds
-            if not self.turn_started_at:
-                self.turn_started_at = timezone.now()
+        ChessModelIntegrityService.apply_initial_game_state(self)
         super().save(*args, **kwargs)
-
-    @property
-    def is_finished(self):
-        """게임 종료 여부 (읽기 전용 property)"""
-        return self.result != self.Status.PLAYING
-
-    @property
-    def winner(self):
-        """승자 반환 (읽기 전용 property)"""
-        white_wins = [
-            self.Status.WHITE_WIN,
-            self.Status.CHECKMATE_WHITE,
-            self.Status.TIMEOUT_BLACK,
-            self.Status.RESIGNATION_BLACK,
-        ]
-        black_wins = [
-            self.Status.BLACK_WIN,
-            self.Status.CHECKMATE_BLACK,
-            self.Status.TIMEOUT_WHITE,
-            self.Status.RESIGNATION_WHITE,
-        ]
-        if self.result in white_wins:
-            return self.white_player
-        elif self.result in black_wins:
-            return self.black_player
-        return None

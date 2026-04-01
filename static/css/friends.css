@@ -148,7 +148,7 @@
     padding: var(--space-sm);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    background: var(--color-bg-secondary);
+    background: color-mix(in srgb, var(--color-bg-secondary) 92%, white);
     font-family: var(--font-body);
     font-size: 0.875rem;
     transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
@@ -159,7 +159,7 @@
 .search-item:hover {
     transform: translateY(-1px);
     border-color: color-mix(in srgb, var(--color-accent-secondary) 38%, var(--color-border));
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 8px 18px rgba(74, 46, 24, 0.05);
 }
 
 .friend-meta {

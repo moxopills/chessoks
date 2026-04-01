@@ -34,16 +34,6 @@ class UserManager(BaseUserManager):
 
         return self.create_user(email, nickname, password, **extra_fields)
 
-    def top_players(self, limit=10):
-        """상위 레이팅 플레이어 (UserStats의 rating 기준)"""
-        return (
-            self.filter(is_active=True).select_related("stats").order_by("-stats__rating")[:limit]
-        )
-
-    def active_players(self):
-        """활성 플레이어"""
-        return self.filter(is_active=True)
-
 
 class User(AbstractBaseUser, PermissionsMixin):
     """커스텀 유저 모델 - 이메일 로그인 + 닉네임 기반
@@ -114,11 +104,3 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.nickname} ({self.email})"
-
-    @property
-    def is_suspended(self) -> bool:
-        return bool(self.suspended_until and timezone.now() < self.suspended_until)
-
-    @property
-    def is_muted(self) -> bool:
-        return bool(self.muted_until and timezone.now() < self.muted_until)

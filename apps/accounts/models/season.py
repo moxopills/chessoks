@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from django.db import models
+
+from apps.accounts.services.model_integrity_service import AccountModelIntegrityService
 
 
 class Season(models.Model):
@@ -38,8 +39,7 @@ class Season(models.Model):
 
     def clean(self):
         super().clean()
-        if self.end_date < self.start_date:
-            raise ValidationError("시즌 종료일은 시작일보다 빠를 수 없습니다.")
+        AccountModelIntegrityService.validate_season(self)
 
 
 class SeasonStat(models.Model):
@@ -86,12 +86,6 @@ class SeasonStat(models.Model):
 
     def __str__(self) -> str:
         return f"{self.season_id}:{self.user_id} ({self.rating})"
-
-    @property
-    def win_rate(self) -> float:
-        if self.games_played <= 0:
-            return 0.0
-        return round((self.wins / self.games_played) * 100, 1)
 
 
 class SeasonReward(models.Model):

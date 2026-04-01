@@ -90,8 +90,11 @@ class SeasonHistoryView(APIView):
     def get(self, request):
         query = SeasonHistoryQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
-        items = SeasonService.list_history(limit=query.validated_data["limit"])
-        return Response({"count": len(items), "results": SeasonSerializer(items, many=True).data})
+        items = SeasonService.get_history_with_rewards(
+            limit=query.validated_data["limit"],
+            user_id=request.user.id if request.user.is_authenticated else None,
+        )
+        return Response({"count": len(items), "results": items})
 
 
 class SeasonDetailView(APIView):
@@ -119,11 +122,15 @@ class SeasonRewardListView(APIView):
                     claimed_at__isnull=False,
                 ).values_list("reward_id", flat=True)
             )
-        payload = SeasonRewardSerializer(rewards, many=True).data
-        for row in payload:
-            if isinstance(row.get("reward_value"), str):
-                row["reward_value"] = row["reward_value"].replace("{season}", season.name)
-            row["claimed"] = row["id"] in claimed_reward_ids
+        payload = []
+        for reward in rewards:
+            row = SeasonRewardSerializer(reward).data
+            row["reward_value"] = SeasonService.get_reward_display_value(
+                season=season, reward=reward
+            )
+            row["reward_key"] = SeasonService.get_reward_raw_value(season=season, reward=reward)
+            row["claimed"] = reward.id in claimed_reward_ids
+            payload.append(row)
         return Response({"season": SeasonSerializer(season).data, "results": payload})
 
 

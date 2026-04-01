@@ -17,6 +17,13 @@ __all__ = [
     "PresenceService",
     "FriendService",
     "MessageService",
+    "UserStateService",
+    "UserStatsService",
+    "GuestSessionService",
+    "SeasonStatService",
+    "TokenService",
+    "UserQueryService",
+    "AccountModelIntegrityService",
 ]
 
 _EXPORTS = {
@@ -39,6 +46,16 @@ _EXPORTS = {
     "PresenceService": ("apps.accounts.services.presence_service", "PresenceService"),
     "FriendService": ("apps.accounts.services.friend_service", "FriendService"),
     "MessageService": ("apps.accounts.services.message_service", "MessageService"),
+    "UserStateService": ("apps.accounts.services.user_state_service", "UserStateService"),
+    "UserStatsService": ("apps.accounts.services.user_stats_service", "UserStatsService"),
+    "GuestSessionService": ("apps.accounts.services.guest_session_service", "GuestSessionService"),
+    "SeasonStatService": ("apps.accounts.services.season_stat_service", "SeasonStatService"),
+    "TokenService": ("apps.accounts.services.token_service", "TokenService"),
+    "UserQueryService": ("apps.accounts.services.user_query_service", "UserQueryService"),
+    "AccountModelIntegrityService": (
+        "apps.accounts.services.model_integrity_service",
+        "AccountModelIntegrityService",
+    ),
 }
 
 

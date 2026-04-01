@@ -6,6 +6,7 @@ from django.db.models.expressions import Window
 from django.db.models.functions import Rank
 
 from apps.accounts.models import User
+from apps.accounts.services.user_stats_service import UserStatsService
 
 LEADERBOARD_VERSION_KEY = "leaderboard_version"
 
@@ -94,7 +95,7 @@ class RankingService:
             "games_won": user.stats.games_won,
             "games_draw": user.stats.games_draw,
             "games_lost": user.stats.games_lost,
-            "rank_tier": user.stats.rank_tier,
+            "rank_tier": UserStatsService.get_rank_tier(user.stats),
             "nickname_color": user.stats.nickname_color,
             "profile_border": user.stats.profile_border,
             "rank": user.rank,

@@ -65,3 +65,15 @@ class AdminPanelService:
             qs = qs.filter(status=status)
         total = qs.count()
         return total, list(qs[offset : offset + limit])
+
+
+class ReportResolutionService:
+    """신고 처리 상태 변경 서비스."""
+
+    @staticmethod
+    def mark_resolved(report, admin_user, status: str, note: str = "") -> None:
+        report.status = status
+        report.resolution_note = note
+        report.resolved_by = admin_user
+        report.resolved_at = timezone.now()
+        report.save(update_fields=["status", "resolution_note", "resolved_by", "resolved_at"])

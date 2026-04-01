@@ -62,12 +62,23 @@
     margin-top: 12px;
 }
 
+.season-actions--note {
+    display: flex;
+    align-items: center;
+}
+
+.season-auto-note {
+    font-size: 0.84rem;
+    color: var(--color-text-secondary);
+}
+
 .season-reward-item {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    background: var(--color-bg-secondary);
+    background: color-mix(in srgb, var(--color-bg-secondary) 92%, white);
     padding: 10px 12px;
     margin-bottom: 8px;
+    box-shadow: 0 8px 18px rgba(74, 46, 24, 0.04);
 }
 
 .season-reward-item:last-child {
@@ -167,6 +178,7 @@
 .season-table tbody tr:hover {
     background: color-mix(in srgb, var(--color-accent-secondary) 6%, transparent);
     transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(74, 46, 24, 0.04);
 }
 
 .season-table tbody tr.is-me {
@@ -201,17 +213,86 @@
     align-items: center;
 }
 
-.season-history-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 10px 0;
+.season-history-card {
+    display: grid;
+    gap: 10px;
+    padding: 14px 0;
     border-bottom: 1px solid var(--color-border);
 }
 
-.season-history-item:last-child {
+.season-history-card:first-child {
+    padding-top: 0;
+}
+
+.season-history-card:last-child {
     border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.season-history-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.season-history-title-wrap {
+    display: grid;
+    gap: 4px;
+}
+
+.season-history-title-wrap strong {
+    font-size: 0.98rem;
+}
+
+.season-history-title-wrap span,
+.season-history-rank {
+    color: var(--color-text-secondary);
+    font-size: 0.84rem;
+}
+
+.season-history-state {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-text-secondary);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+}
+
+.season-history-state.is-success {
+    color: #16a34a;
+    background: color-mix(in srgb, #16a34a 10%, var(--color-bg-secondary));
+}
+
+.season-history-state.is-warning {
+    color: #d97706;
+    background: color-mix(in srgb, #d97706 12%, var(--color-bg-secondary));
+}
+
+.season-history-rewards {
+    display: grid;
+    gap: 8px;
+}
+
+.season-history-reward {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-secondary);
+}
+
+.season-history-actions {
+    display: flex;
+    justify-content: flex-end;
 }
 
 .season-goal-stack {
@@ -288,5 +369,15 @@
 
     .season-goal-grid {
         grid-template-columns: 1fr;
+    }
+
+    .season-history-head,
+    .season-history-reward {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .season-history-actions {
+        justify-content: flex-start;
     }
 }

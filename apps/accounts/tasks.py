@@ -47,11 +47,13 @@ def cleanup_expired_tokens() -> int:
     Returns:
         삭제된 토큰 수
     """
-    from apps.accounts.models import AuthToken
+    from apps.accounts.services.token_service import TokenService
 
-    deleted_count = AuthToken.objects.delete_expired()
-    logger.info(f"만료된 토큰 {deleted_count}개 삭제 완료")
-    return deleted_count
+    deleted_count = TokenService.delete_expired_auth_tokens()
+    signup_deleted_count = TokenService.delete_expired_signup_tokens()
+    total = deleted_count + signup_deleted_count
+    logger.info(f"만료된 토큰 {total}개 삭제 완료")
+    return total
 
 
 @shared_task
@@ -125,9 +127,9 @@ def cleanup_expired_guest_sessions() -> int:
     Returns:
         삭제된 세션 수
     """
-    from apps.accounts.models import GuestSession
+    from apps.accounts.services.guest_session_service import GuestSessionService
 
-    deleted_count = GuestSession.cleanup_expired()
+    deleted_count = GuestSessionService.cleanup_expired()
     logger.info(f"만료된 게스트 세션 {deleted_count}개 삭제 완료")
     return deleted_count
 

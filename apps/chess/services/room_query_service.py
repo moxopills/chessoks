@@ -3,7 +3,9 @@ from django.db.models import Count, OuterRef, Subquery
 
 from rest_framework.exceptions import NotFound, ValidationError
 
+from apps.accounts.services.user_state_service import UserStateService
 from apps.chess.models import Game, Room
+from apps.chess.services.room_security_service import RoomSecurityService
 
 
 class RoomQueryService:
@@ -177,7 +179,7 @@ class RoomQueryService:
         allow_spectators: bool = True,
     ) -> Room:
         """방 생성"""
-        if user.is_suspended:
+        if UserStateService.is_suspended(user):
             raise ValidationError("정지된 계정입니다.")
         room = Room(
             host=user,
@@ -190,7 +192,7 @@ class RoomQueryService:
         )
 
         if password:
-            room.set_password(password)
+            room.password = RoomSecurityService.hash_password(password)
 
         room.save()
         from apps.chess.utils import broadcast_room_update

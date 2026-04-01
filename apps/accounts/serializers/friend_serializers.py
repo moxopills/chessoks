@@ -1,13 +1,17 @@
 from rest_framework import serializers
 
 from apps.accounts.models import Friend, FriendRequest
+from apps.accounts.services.user_stats_service import UserStatsService
 from apps.chess.serializers import PlayerSerializer
 
 
 class FriendUserSerializer(PlayerSerializer):
     """친구 정보 (PlayerSerializer + win_rate)"""
 
-    win_rate = serializers.FloatField(source="stats.win_rate", read_only=True)
+    win_rate = serializers.SerializerMethodField()
+
+    def get_win_rate(self, obj):
+        return UserStatsService.get_win_rate(getattr(obj, "stats", None))
 
 
 class FriendSerializer(serializers.ModelSerializer):

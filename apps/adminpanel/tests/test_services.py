@@ -2,7 +2,7 @@ from django.core.cache import cache
 
 from apps.accounts.tests.test_auth import BaseTestCase
 from apps.adminpanel.models import Report
-from apps.adminpanel.services import AdminPanelService
+from apps.adminpanel.services import AdminPanelService, ReportResolutionService
 
 
 class AdminPanelServiceTestCase(BaseTestCase):
@@ -38,7 +38,7 @@ class AdminPanelServiceTestCase(BaseTestCase):
         report_b = Report.objects.create(
             reporter=self.user, target=self.other, category="spam", description="테스트"
         )
-        report_b.mark_resolved(self.user, "resolved", "완료")
+        ReportResolutionService.mark_resolved(report_b, self.user, "resolved", "완료")
 
         total, pending = AdminPanelService.list_reports(status="pending", limit=10, offset=0)
         self.assertEqual(total, 1)

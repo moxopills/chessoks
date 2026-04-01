@@ -8,6 +8,9 @@ from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.utils import timezone
 
+from apps.accounts.services.guest_session_service import GuestSessionService
+from apps.accounts.services.user_state_service import UserStateService
+
 
 def _suspension_remaining_text(suspended_until) -> str:
     if not suspended_until:
@@ -29,7 +32,7 @@ class SuspendedUserLogoutMiddleware:
 
     def __call__(self, request):
         user = getattr(request, "user", None)
-        if user and user.is_authenticated and user.is_suspended:
+        if user and user.is_authenticated and UserStateService.is_suspended(user):
             remaining = _suspension_remaining_text(user.suspended_until)
             message = "정지된 계정입니다."
             if remaining:
@@ -71,7 +74,7 @@ class GuestSessionMiddleware:
 
             try:
                 guest = GuestSession.objects.get(token=token)
-                if not guest.is_expired:
+                if not GuestSessionService.is_expired(guest):
                     request.guest = guest
                     # 활동 시간 업데이트
                     guest.save(update_fields=["last_activity"])

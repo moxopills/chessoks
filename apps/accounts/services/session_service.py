@@ -19,6 +19,7 @@ from rest_framework.exceptions import (
 
 from apps.accounts.models import User
 from apps.accounts.services.base_service import ServiceResult, _ok, _validate_serializer
+from apps.accounts.services.user_state_service import UserStateService
 
 # 상수 정의
 MAX_LOGIN_ATTEMPTS = 5
@@ -271,7 +272,7 @@ class AccountSessionService:
                 raise Throttled(detail=error_msg)
             raise AuthenticationFailed(detail=error_msg)
 
-        if user.is_suspended:
+        if UserStateService.is_suspended(user):
             remaining = ""
             if user.suspended_until:
                 delta = user.suspended_until - timezone.now()
