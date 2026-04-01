@@ -11,6 +11,9 @@
     const quickMatchBtn = document.getElementById('quick-match-btn');
     const randomMatchBtn = document.getElementById('random-match-btn');
     const aiMatchBtn = document.getElementById('ai-match-btn');
+    const roomPreview = document.querySelector('.hero-room-preview');
+    const roomPreviewBody = document.getElementById('hero-room-preview-body');
+    const mobileRoomToggle = document.getElementById('mobile-room-toggle');
     const roomList = document.getElementById('room-list');
     const roomMoreWrap = document.getElementById('room-more-wrap');
     const chatMessages = document.getElementById('chat-messages');
@@ -100,6 +103,7 @@
     let notificationEventBound = false;
     let notificationEventHandler = null;
     let hasShownLobbyOnboarding = false;
+    let isMobileRoomPreviewOpen = Utils.Storage.get('lobby_mobile_room_preview_open', false);
 
     // 초기화
     init();
@@ -133,8 +137,50 @@
         setupUserContextMenu();
         setupUserSearch();
         setupGuestMode();
+        setupMobileRoomPreview();
         showLobbyOnboardingTip();
         warmupNextViews();
+    }
+
+    function isMobileViewport() {
+        return window.innerWidth <= 768;
+    }
+
+    function syncMobileRoomPreview(forceState = null) {
+        if (!roomPreview || !roomPreviewBody || !mobileRoomToggle) return;
+
+        if (!isMobileViewport()) {
+            roomPreview.classList.remove('is-collapsed');
+            roomPreviewBody.hidden = false;
+            mobileRoomToggle.setAttribute('aria-expanded', 'true');
+            mobileRoomToggle.textContent = '펼치기';
+            return;
+        }
+
+        if (typeof forceState === 'boolean') {
+            isMobileRoomPreviewOpen = forceState;
+            Utils.Storage.set('lobby_mobile_room_preview_open', isMobileRoomPreviewOpen);
+        }
+
+        const isOpen = Boolean(isMobileRoomPreviewOpen);
+        roomPreview.classList.toggle('is-collapsed', !isOpen);
+        roomPreviewBody.hidden = !isOpen;
+        mobileRoomToggle.setAttribute('aria-expanded', String(isOpen));
+        mobileRoomToggle.textContent = isOpen ? '접기' : '펼치기';
+    }
+
+    function setupMobileRoomPreview() {
+        if (!mobileRoomToggle) return;
+
+        syncMobileRoomPreview();
+
+        mobileRoomToggle.addEventListener('click', () => {
+            syncMobileRoomPreview(!isMobileRoomPreviewOpen);
+        });
+
+        window.addEventListener('resize', () => {
+            syncMobileRoomPreview();
+        });
     }
 
     function showStatus(message, type = 'info', duration = 1800) {
