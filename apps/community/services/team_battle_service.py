@@ -184,11 +184,13 @@ class TeamBattleService:
             .select_related(
                 "host_participant",
                 "guest_participant",
-                "game",
             )
             .get(pk=round_id, match=match, status=TeamBattleRound.Status.LIVE)
         )
-        if round_obj.game_id and round_obj.game and round_obj.game.result == Game.Status.PLAYING:
+        linked_game = None
+        if round_obj.game_id:
+            linked_game = Game.objects.only("id", "result").filter(pk=round_obj.game_id).first()
+        if linked_game and linked_game.result == Game.Status.PLAYING:
             raise ValidationError(
                 {
                     "detail": [
