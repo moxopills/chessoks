@@ -34,6 +34,7 @@ urlpatterns = [
     path("api/seasons/", include("apps.accounts.urls.season_urls")),
     path("api/notifications/", include("apps.notifications.urls")),
     path("api/admin/", include("apps.adminpanel.urls")),
+    path("api/community/", include("apps.community.urls")),
     path("api/reports/", include("apps.adminpanel.public_urls")),
     path("api/", include("apps.core.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
@@ -89,6 +90,14 @@ urlpatterns = [
         name="season-ladder",
     ),
     path("friends/", TemplateView.as_view(template_name="social/friends.html"), name="friends"),
+    path("guilds/", TemplateView.as_view(template_name="community/guilds.html"), name="guilds"),
+    path("parties/", TemplateView.as_view(template_name="community/parties.html"), name="parties"),
+    path("board/", TemplateView.as_view(template_name="community/board.html"), name="board"),
+    path(
+        "tournaments/",
+        TemplateView.as_view(template_name="community/tournaments.html"),
+        name="tournaments",
+    ),
     path(
         "messages/",
         TemplateView.as_view(template_name="social/message_threads.html"),

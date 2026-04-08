@@ -126,6 +126,7 @@ class GameResultService:
         room.finished_at = game.finished_at or timezone.now()
         room.save(update_fields=["status", "finished_at"])
         broadcast_room_update(room)
+        GameResultService._sync_team_battle_round(game)
 
     @staticmethod
     def result_outcome(result: str, player_color: str) -> str:
@@ -340,3 +341,15 @@ class GameResultService:
     @staticmethod
     def _tier_rank(tier: str) -> int:
         return GameResultService.TIER_ORDER.get(tier, 0)
+
+    @staticmethod
+    def _sync_team_battle_round(game: Game) -> None:
+        try:
+            from apps.community.services import TeamBattleService
+
+            TeamBattleService.resolve_game_result(game)
+        except Exception:
+            GameResultService.logger.exception(
+                "Team battle result sync failed for game=%s",
+                game.id,
+            )
