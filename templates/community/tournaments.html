@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}토너먼트 - ChessOK{% endblock %}
+
+{% block content %}
+<div class="community-page" id="tournament-page">
+    <section class="community-hero">
+        <h1>토너먼트</h1>
+        <p>정해진 시간에 열리는 소규모 컵전과 현재 단체전/길드전 대기 상태를 확인합니다.</p>
+    </section>
+    <div class="community-grid community-grid--two">
+        <section class="community-card">
+            <div class="community-card-head">
+                <h2>컵전 목록</h2>
+                <p>참가 조건과 시작 시간을 확인하고 바로 등록할 수 있습니다.</p>
+            </div>
+            <div class="community-list" id="tournament-list"></div>
+        </section>
+        <section class="community-card">
+            <div class="community-card-head">
+                <h2>대회/팀전 운영</h2>
+                <p>운영자는 컵전을 만들 수 있고, 아래에서 현재 팀전 대기 상태도 확인할 수 있습니다.</p>
+            </div>
+            <form id="tournament-create-form" class="community-form">
+                <input class="form-input" id="tournament-title" placeholder="컵전 제목" maxlength="80">
+                <textarea class="form-input" id="tournament-description" placeholder="대회 설명" rows="4"></textarea>
+                <input class="form-input" id="tournament-max-participants" type="number" min="4" max="64" value="8" placeholder="정원">
+                <input class="form-input" id="tournament-min-rating" type="number" min="0" max="4000" value="0" placeholder="최소 레이팅">
+                <input class="form-input" id="tournament-max-rating" type="number" min="0" max="4000" value="4000" placeholder="최대 레이팅">
+                <input class="form-input" id="tournament-start-at" type="datetime-local">
+                <button class="btn btn-primary" type="submit">컵전 생성</button>
+            </form>
+            <div class="community-divider"></div>
+            <h3>현재 팀전 대기</h3>
+            <div class="community-list" id="team-battle-list"></div>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/community.css">
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/pages/tournaments.js"></script>
+{% endblock %}

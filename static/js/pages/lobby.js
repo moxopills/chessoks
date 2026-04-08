@@ -33,6 +33,7 @@
     const activeGameCard = document.getElementById('active-game-card');
     const activeGameInfo = document.getElementById('active-game-info');
     const activeGameEnter = document.getElementById('active-game-enter');
+    const lobbyBoardList = document.getElementById('lobby-board-list');
     const tierToggle = document.getElementById('tier-toggle');
     const tierPanel = document.getElementById('tier-panel');
     const modeToggle = document.getElementById('mode-toggle');
@@ -126,6 +127,7 @@
         await loadRooms();
         await loadWaitingRoom();
         await loadActiveGame();
+        await loadBoardPreview();
         await checkAuthAndSetupChat();
         startRoomAutoRefresh();
         setupMobileTabs();
@@ -350,6 +352,54 @@
         } catch (error) {
             activeGameCard.classList.add('hidden');
         }
+    }
+
+    async function loadBoardPreview() {
+        if (!lobbyBoardList) return;
+        try {
+            const data = await API.get('/community/boards/posts/', { limit: 5 });
+            const posts = Array.isArray(data?.results) ? data.results : [];
+            renderBoardPreview(posts);
+        } catch (error) {
+            lobbyBoardList.innerHTML = '<div class="board-preview-empty">게시글을 불러오지 못했습니다.</div>';
+        }
+    }
+
+    function renderBoardPreview(posts) {
+        if (!lobbyBoardList) return;
+        if (!posts.length) {
+            lobbyBoardList.innerHTML = '<div class="board-preview-empty">표시할 게시글이 없습니다.</div>';
+            return;
+        }
+        lobbyBoardList.innerHTML = posts.map((post) => {
+            const categoryCode = post.category?.code || '';
+            const categoryTitle = post.category?.title || '게시글';
+            const author = post.author?.nickname || '익명';
+            const previewText = (post.content || '').trim().slice(0, 72);
+            const isRecruit = categoryCode === 'recruit';
+            const recruitMeta = isRecruit
+                ? [
+                    post.guild_name ? `<span class="board-preview-pill is-emphasis">${Utils.escapeHtml(post.guild_name)}</span>` : '',
+                    post.recruitment_slots ? `<span class="board-preview-pill">모집 ${Number(post.recruitment_slots)}명</span>` : '',
+                ].filter(Boolean).join('')
+                : '';
+            return `
+                <a class="board-preview-item" href="/board/?post=${post.id}">
+                    <div class="board-preview-meta">
+                        <span class="board-category-badge" data-board-category="${Utils.escapeHtml(categoryCode)}">${Utils.escapeHtml(categoryTitle)}</span>
+                        <span class="board-preview-scope">${Utils.escapeHtml(author)}</span>
+                    </div>
+                    <div class="board-preview-title">${Utils.escapeHtml(post.title || '제목 없음')}</div>
+                    <div class="board-preview-stats">
+                        <span class="board-preview-pill">💬 ${Number(post.comment_count || 0)}</span>
+                        <span class="board-preview-pill">👁 ${Number(post.view_count || 0)}</span>
+                        <span class="board-preview-pill">${Utils.escapeHtml(Utils.formatRelativeTime(post.created_at))}</span>
+                    </div>
+                    ${recruitMeta ? `<div class="board-preview-stats">${recruitMeta}</div>` : ''}
+                    <div class="board-preview-copy">${Utils.escapeHtml(previewText || '본문 미리보기가 없습니다.')}</div>
+                </a>
+            `;
+        }).join('');
     }
 
     /**

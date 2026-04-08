@@ -101,6 +101,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.core",  # GCP 이미지 업로드
     "apps.adminpanel",
+    "apps.community",
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,98 @@
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.community.serializers import (
+    BoardCategorySerializer,
+    BoardCommentCreateSerializer,
+    BoardCommentSerializer,
+    BoardPostCreateSerializer,
+    BoardPostSerializer,
+    BoardPostSummarySerializer,
+    BoardReportCreateSerializer,
+)
+from apps.community.services import BoardService
+
+
+class BoardCategoryListView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        categories = BoardService.list_categories()
+        return Response(
+            {
+                "count": categories.count(),
+                "results": BoardCategorySerializer(categories, many=True).data,
+            }
+        )
+
+
+class BoardListCreateView(APIView):
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method == "GET" else [IsAuthenticated()]
+
+    def get(self, request):
+        category_code = request.query_params.get("category")
+        try:
+            limit = int(request.query_params.get("limit", "0") or 0)
+        except ValueError:
+            limit = 0
+        limit = max(0, min(limit, 20))
+        posts = BoardService.list_posts(category_code=category_code, limit=limit or None)
+        if limit:
+            results = list(posts)
+            count = len(results)
+        else:
+            count = posts.count()
+            results = posts
+        return Response(
+            {
+                "count": count,
+                "results": BoardPostSummarySerializer(results, many=True).data,
+            }
+        )
+
+    def post(self, request):
+        serializer = BoardPostCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        post = BoardService.create_post(
+            request.user,
+            category_code=data["category_code"],
+            title=data["title"],
+            content=data["content"],
+            extra=data,
+        )
+        return Response(BoardPostSerializer(post).data, status=201)
+
+
+class BoardDetailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, post_id: int):
+        post = BoardService.get_post(post_id, increment_view=True)
+        return Response(BoardPostSerializer(post).data)
+
+
+class BoardCommentCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, post_id: int):
+        serializer = BoardCommentCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        comment = BoardService.create_comment(
+            request.user,
+            post_id,
+            content=serializer.validated_data["content"],
+        )
+        return Response(BoardCommentSerializer(comment).data, status=201)
+
+
+class BoardReportCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = BoardReportCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        report = BoardService.create_report(request.user, **serializer.validated_data)
+        return Response({"id": report.id, "status": report.status}, status=201)
