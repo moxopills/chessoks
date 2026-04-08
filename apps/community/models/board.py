@@ -45,9 +45,7 @@ class BoardPost(models.Model):
         db_table = "board_posts"
         ordering = ["-is_pinned", "-created_at"]
         indexes = [
-            models.Index(
-                fields=["category", "-created_at"], name="board_post_category_created_idx"
-            ),
+            models.Index(fields=["category", "-created_at"], name="board_post_cat_created_ix"),
             models.Index(fields=["category", "-view_count"], name="board_post_category_views_idx"),
             models.Index(fields=["author", "-created_at"], name="board_post_author_created_idx"),
         ]
@@ -109,5 +107,5 @@ class BoardReport(models.Model):
     class Meta:
         db_table = "board_reports"
         indexes = [
-            models.Index(fields=["status", "-created_at"], name="board_report_status_created_idx"),
+            models.Index(fields=["status", "-created_at"], name="board_report_stat_created_ix"),
         ]

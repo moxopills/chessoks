@@ -684,7 +684,7 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="boardpost",
             index=models.Index(
-                fields=["category", "-created_at"], name="board_post_category_created_idx"
+                fields=["category", "-created_at"], name="board_post_cat_created_ix"
             ),
         ),
         migrations.AddIndex(
@@ -708,7 +708,7 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="boardreport",
             index=models.Index(
-                fields=["status", "-created_at"], name="board_report_status_created_idx"
+                fields=["status", "-created_at"], name="board_report_stat_created_ix"
             ),
         ),
         migrations.AddIndex(
@@ -828,7 +828,7 @@ class Migration(migrations.Migration):
         migrations.AddIndex(
             model_name="tournamententry",
             index=models.Index(
-                fields=["tournament", "status", "seed"], name="tournament_entry_status_seed_idx"
+                fields=["tournament", "status", "seed"], name="tour_entry_status_seed_ix"
             ),
         ),
         migrations.AddConstraint(
