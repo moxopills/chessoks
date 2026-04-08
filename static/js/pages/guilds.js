@@ -1,0 +1,408 @@
+(function () {
+    let me = null;
+    let selectedGuildId = null;
+    let selectedGuild = null;
+    let selectedMemberId = null;
+
+    const guildListEl = document.getElementById('guild-list');
+    const detailEmptyEl = document.getElementById('guild-detail-empty');
+    const detailPanelEl = document.getElementById('guild-detail-panel');
+    const guildSummaryEl = document.getElementById('guild-summary');
+    const guildMembersEl = document.getElementById('guild-members');
+    const guildChatLogEl = document.getElementById('guild-chat-log');
+    const guildRequestsEl = document.getElementById('guild-requests');
+    const guildAuditLogEl = document.getElementById('guild-audit-log');
+    const guildJoinBtn = document.getElementById('guild-join-btn');
+    const guildLeaveBtn = document.getElementById('guild-leave-btn');
+    const guildBattleBtn = document.getElementById('guild-battle-btn');
+    const guildNoticeInput = document.getElementById('guild-notice-input');
+    const memberSelectionEl = document.getElementById('guild-member-selection');
+
+    const ACHIEVEMENT_LABELS = {
+        first_win: '첫 승',
+        regular_player: '단골',
+        win_streak: '연승',
+        ranked_rookie: '배치 완료',
+        puzzle_starter: '퍼즐 입문',
+        puzzle_focus: '퍼즐 집중',
+        social_knight: '친구 기사',
+        style_collector: '수집가',
+        season_reward: '시즌 수상',
+    };
+
+    function myMembership() {
+        if (!selectedGuild || !me) return null;
+        return (selectedGuild.members || []).find((member) => member.user.id === me.id) || null;
+    }
+
+    function isManager() {
+        const membership = myMembership();
+        return Boolean(membership && ['leader', 'vice', 'manager'].includes(membership.role));
+    }
+
+    function isLeader() {
+        const membership = myMembership();
+        return Boolean(membership && membership.role === 'leader');
+    }
+
+    function getSelectedMember() {
+        return (selectedGuild?.members || []).find((member) => member.user.id === selectedMemberId) || null;
+    }
+
+    function achievementLabel(key) {
+        return ACHIEVEMENT_LABELS[key] || '';
+    }
+
+    function renderMemberSelection() {
+        if (!memberSelectionEl) return;
+        const member = getSelectedMember();
+        if (!member) {
+            memberSelectionEl.classList.remove('is-selected');
+            memberSelectionEl.textContent = '멤버 카드에서 관리 대상을 선택하세요.';
+            return;
+        }
+        memberSelectionEl.classList.add('is-selected');
+        memberSelectionEl.textContent = `${member.user.nickname} · ${member.role} · ID ${member.user.id}`;
+        const roleSelect = document.getElementById('guild-member-role');
+        if (roleSelect) {
+            roleSelect.value = member.role === 'leader' ? 'vice' : member.role;
+        }
+    }
+
+    function renderAvatar(url, nickname) {
+        const safeUrl = Utils.sanitizeUrl ? Utils.sanitizeUrl(url || '', '') : '';
+        if (safeUrl) {
+            return `<div class="community-member-avatar"><img src="${Utils.escapeHtml(safeUrl)}" alt="${Utils.escapeHtml(nickname)}"></div>`;
+        }
+        return `<div class="community-member-avatar">${Utils.escapeHtml((nickname || '?').trim().slice(0, 1) || '?')}</div>`;
+    }
+
+    async function loadMe() {
+        try {
+            me = await API.get('/accounts/me/');
+        } catch {
+            me = null;
+        }
+    }
+
+    function renderGuildList(items) {
+        guildListEl.innerHTML = '';
+        if (!items.length) {
+            guildListEl.innerHTML = '<div class="community-empty">아직 생성된 길드가 없습니다.</div>';
+            return;
+        }
+        items.forEach((guild) => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = `community-item${guild.id === selectedGuildId ? ' is-active' : ''}`;
+            item.innerHTML = `
+                <span class="community-item-title">${Utils.escapeHtml(guild.name)}</span>
+                <span class="community-item-meta">${Utils.escapeHtml(guild.join_policy === 'open' ? '자유 가입' : '승인제')} · 팀 레이팅 ${guild.team_rating} · 요청 ${guild.pending_requests || 0}</span>
+                <span class="community-item-copy">${Utils.escapeHtml(guild.description || '길드 설명이 아직 없습니다.')}</span>
+            `;
+            item.addEventListener('click', () => loadGuildDetail(guild.id));
+            guildListEl.appendChild(item);
+        });
+    }
+
+    function renderGuildSummary(guild) {
+        selectedGuild = guild;
+        if (selectedMemberId && !(guild.members || []).some((member) => member.user.id === selectedMemberId)) {
+            selectedMemberId = null;
+        }
+        const membership = myMembership();
+        guildSummaryEl.innerHTML = `
+            <div class="community-item">
+                <span class="community-item-title">${Utils.escapeHtml(guild.name)}</span>
+                <span class="community-item-meta">길드장 ${Utils.escapeHtml(guild.owner.nickname)} · 팀 레이팅 ${guild.team_rating} · 멤버 ${guild.member_count}명</span>
+                <span class="community-item-copy">${Utils.escapeHtml(guild.description || '길드 설명이 아직 없습니다.')}</span>
+                <span class="community-item-copy">공지: ${Utils.escapeHtml(guild.notice || '아직 공지가 없습니다.')}</span>
+                <div class="community-row-meta">
+                    <span class="community-badge">${Utils.escapeHtml(guild.join_policy === 'open' ? '자유 가입' : '승인제')}</span>
+                    ${membership ? `<span class="community-badge is-ready">내 역할 · ${Utils.escapeHtml(membership.role)}</span>` : ''}
+                </div>
+            </div>
+        `;
+        guildNoticeInput.value = guild.notice || '';
+        if (guildJoinBtn) {
+            guildJoinBtn.disabled = Boolean(membership);
+            guildJoinBtn.textContent = membership ? '가입 중' : '가입 신청';
+        }
+        if (guildLeaveBtn) {
+            guildLeaveBtn.disabled = !membership;
+        }
+        if (guildBattleBtn) {
+            guildBattleBtn.disabled = !isManager();
+        }
+        document.getElementById('guild-member-role')?.toggleAttribute('disabled', !isManager());
+        document.querySelector('#guild-notice-form button[type="submit"]')?.toggleAttribute('disabled', !isManager());
+        document.querySelector('#guild-role-form button[type="submit"]')?.toggleAttribute('disabled', !isManager());
+        document.getElementById('guild-transfer-btn')?.toggleAttribute('disabled', !isLeader());
+        document.getElementById('guild-kick-btn')?.toggleAttribute('disabled', !isManager());
+        guildNoticeInput?.toggleAttribute('disabled', !isManager());
+        renderMemberSelection();
+    }
+
+    function renderMembers(guild) {
+        if (!(guild.members || []).length) {
+            guildMembersEl.innerHTML = '<div class="community-empty">멤버가 없습니다.</div>';
+            return;
+        }
+        guildMembersEl.innerHTML = (guild.members || []).map((member) => {
+            const featuredAchievement = achievementLabel(member.user.featured_achievement_key);
+            const isSelf = me && member.user.id === me.id;
+            const isSelected = member.user.id === selectedMemberId;
+            return `
+                <button class="community-item community-member-card${isSelected ? ' is-selected' : ''}" type="button" data-member-id="${member.user.id}">
+                    <div class="community-member-main">
+                        ${renderAvatar(member.user.avatar_url, member.user.nickname)}
+                        <div class="community-block">
+                            <div class="community-member-title">
+                                <span class="community-item-title">${Utils.escapeHtml(member.user.nickname)}</span>
+                                <span class="community-badge">${Utils.escapeHtml(member.role)}</span>
+                                ${featuredAchievement ? `<span class="community-badge is-link">${Utils.escapeHtml(featuredAchievement)}</span>` : ''}
+                            </div>
+                            <div class="community-member-meta">
+                                <span class="community-item-meta">레이팅 ${member.user.rating ?? 1200}</span>
+                                <span class="community-item-meta">ID ${member.user.id}</span>
+                                ${isSelf ? '<span class="community-badge is-ready">나</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                </button>
+            `;
+        }).join('');
+        guildMembersEl.querySelectorAll('[data-member-id]').forEach((button) => {
+            button.addEventListener('click', () => {
+                selectedMemberId = Number(button.dataset.memberId);
+                renderMembers(selectedGuild);
+                renderMemberSelection();
+            });
+        });
+    }
+
+    function renderChat(items) {
+        guildChatLogEl.innerHTML = '';
+        if (!items.length) {
+            guildChatLogEl.innerHTML = '<div class="community-empty">아직 채팅이 없습니다.</div>';
+            return;
+        }
+        items.slice().reverse().forEach((message) => {
+            const item = document.createElement('div');
+            item.className = 'community-chat-message';
+            item.innerHTML = `
+                <span class="community-chat-user">${Utils.escapeHtml(message.user.nickname)}</span>
+                <span class="community-chat-body">${Utils.escapeHtml(message.content)}</span>
+                <span class="community-chat-time">${Utils.formatDateTime ? Utils.formatDateTime(message.created_at) : message.created_at}</span>
+            `;
+            guildChatLogEl.appendChild(item);
+        });
+    }
+
+    function renderRequests(items) {
+        guildRequestsEl.innerHTML = '';
+        if (!isManager()) {
+            guildRequestsEl.innerHTML = '<div class="community-empty">운영진만 가입 요청을 확인할 수 있습니다.</div>';
+            return;
+        }
+        if (!items.length) {
+            guildRequestsEl.innerHTML = '<div class="community-empty">대기 중인 가입 요청이 없습니다.</div>';
+            return;
+        }
+        items.forEach((requestItem) => {
+            const item = document.createElement('div');
+            item.className = 'community-item';
+            item.innerHTML = `
+                <div class="community-row">
+                    <span class="community-item-title">${Utils.escapeHtml(requestItem.user.nickname)}</span>
+                    <div class="community-row-meta">
+                        <span class="community-badge">ID ${requestItem.user.id}</span>
+                    </div>
+                </div>
+                <span class="community-item-copy">${Utils.escapeHtml(requestItem.message || '가입 메시지가 없습니다.')}</span>
+                <div class="community-actions">
+                    <button class="btn btn-secondary btn-sm" data-action="approve" data-id="${requestItem.id}" type="button">승인</button>
+                    <button class="btn btn-danger btn-sm" data-action="reject" data-id="${requestItem.id}" type="button">거절</button>
+                </div>
+            `;
+            guildRequestsEl.appendChild(item);
+        });
+        guildRequestsEl.querySelectorAll('button[data-action]').forEach((button) => {
+            button.addEventListener('click', async () => {
+                try {
+                    await API.post(`/community/guilds/requests/${button.dataset.id}/review/`, {
+                        approve: button.dataset.action === 'approve',
+                    });
+                    Toast.success(button.dataset.action === 'approve' ? '가입 요청을 승인했습니다.' : '가입 요청을 거절했습니다.');
+                    await loadGuildDetail(selectedGuildId);
+                } catch (error) {
+                    Toast.error(error.data?.message || error.message);
+                }
+            });
+        });
+    }
+
+    function renderAuditLogs(items) {
+        guildAuditLogEl.innerHTML = '';
+        if (!isManager()) {
+            guildAuditLogEl.innerHTML = '<div class="community-empty">운영진만 운영 로그를 확인할 수 있습니다.</div>';
+            return;
+        }
+        if (!items.length) {
+            guildAuditLogEl.innerHTML = '<div class="community-empty">기록된 운영 로그가 없습니다.</div>';
+            return;
+        }
+        items.forEach((log) => {
+            const item = document.createElement('div');
+            item.className = 'community-item';
+            item.innerHTML = `
+                <span class="community-item-title">${Utils.escapeHtml(log.action)}</span>
+                <span class="community-item-meta">${Utils.escapeHtml(log.actor?.nickname || '시스템')} → ${Utils.escapeHtml(log.target_user?.nickname || '-')}</span>
+                <span class="community-item-copy">${Utils.escapeHtml(log.detail || '')}</span>
+            `;
+            guildAuditLogEl.appendChild(item);
+        });
+    }
+
+    async function loadGuilds() {
+        const data = await API.get('/community/guilds/');
+        renderGuildList(data.results || []);
+        if (!selectedGuildId && data.results?.length) {
+            await loadGuildDetail(data.results[0].id);
+        }
+    }
+
+    async function loadGuildDetail(guildId) {
+        selectedGuildId = guildId;
+        const [guild, guildList, chat, requests, auditLogs] = await Promise.all([
+            API.get(`/community/guilds/${guildId}/`),
+            API.get('/community/guilds/'),
+            API.get(`/community/guilds/${guildId}/chat/`).catch(() => ({ results: [] })),
+            API.get(`/community/guilds/${guildId}/join/`).catch(() => ({ results: [] })),
+            API.get(`/community/guilds/${guildId}/audit/`).catch(() => ({ results: [] })),
+        ]);
+        detailEmptyEl.classList.add('hidden');
+        detailPanelEl.classList.remove('hidden');
+        renderGuildSummary(guild);
+        renderMembers(guild);
+        renderChat(chat.results || []);
+        renderRequests(requests.results || []);
+        renderAuditLogs(auditLogs.results || []);
+        renderGuildList(guildList.results || []);
+    }
+
+    async function submitCreate(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        payload.min_rating = Number(payload.min_rating || 0);
+        const guild = await API.post('/community/guilds/', payload);
+        Toast.success('길드를 생성했습니다.');
+        form.reset();
+        await loadGuilds();
+        await loadGuildDetail(guild.id);
+    }
+
+    async function joinGuild() {
+        if (!selectedGuildId) return;
+        await API.post(`/community/guilds/${selectedGuildId}/join/`, { message: '함께 활동하고 싶습니다.' });
+        Toast.success('길드 가입 요청을 보냈습니다.');
+        await loadGuildDetail(selectedGuildId);
+    }
+
+    async function leaveGuild() {
+        if (!selectedGuildId) return;
+        await API.post(`/community/guilds/${selectedGuildId}/leave/`, {});
+        Toast.info('길드에서 탈퇴했습니다.');
+        selectedGuildId = null;
+        selectedGuild = null;
+        detailPanelEl.classList.add('hidden');
+        detailEmptyEl.classList.remove('hidden');
+        await loadGuilds();
+    }
+
+    async function createGuildBattle() {
+        if (!selectedGuildId) return;
+        await API.post('/community/team-battles/', { battle_type: 'guild', guild_id: selectedGuildId });
+        Toast.success('길드전 매칭 대기를 생성했습니다.');
+    }
+
+    async function saveNotice(event) {
+        event.preventDefault();
+        if (!selectedGuildId) return;
+        await API.post(`/community/guilds/${selectedGuildId}/notice/`, { notice: guildNoticeInput.value.trim() });
+        Toast.success('길드 공지를 저장했습니다.');
+        await loadGuildDetail(selectedGuildId);
+    }
+
+    function selectedMemberUserId() {
+        return Number(selectedMemberId || 0);
+    }
+
+    async function updateRole(event) {
+        event.preventDefault();
+        if (!selectedGuildId) return;
+        const userId = selectedMemberUserId();
+        const role = document.getElementById('guild-member-role')?.value;
+        if (!userId || !role) {
+            Toast.error('관리할 멤버를 먼저 선택하세요.');
+            return;
+        }
+        await API.post(`/community/guilds/${selectedGuildId}/members/${userId}/role/`, { role });
+        Toast.success('길드 멤버 역할을 변경했습니다.');
+        await loadGuildDetail(selectedGuildId);
+    }
+
+    async function transferLeadership() {
+        if (!selectedGuildId) return;
+        const userId = selectedMemberUserId();
+        if (!userId) {
+            Toast.error('위임할 멤버를 먼저 선택하세요.');
+            return;
+        }
+        await API.post(`/community/guilds/${selectedGuildId}/transfer/${userId}/`, {});
+        Toast.success('길드장을 위임했습니다.');
+        await loadGuildDetail(selectedGuildId);
+    }
+
+    async function kickMember() {
+        if (!selectedGuildId) return;
+        const userId = selectedMemberUserId();
+        if (!userId) {
+            Toast.error('추방할 멤버를 먼저 선택하세요.');
+            return;
+        }
+        await API.post(`/community/guilds/${selectedGuildId}/members/${userId}/kick/`, {});
+        Toast.success('길드 멤버를 추방했습니다.');
+        await loadGuildDetail(selectedGuildId);
+    }
+
+    async function sendChat(event) {
+        event.preventDefault();
+        if (!selectedGuildId) return;
+        const input = document.getElementById('guild-chat-input');
+        const content = input.value.trim();
+        if (!content) return;
+        await API.post(`/community/guilds/${selectedGuildId}/chat/`, { content });
+        input.value = '';
+        await loadGuildDetail(selectedGuildId);
+    }
+
+    async function init() {
+        await loadMe();
+        await loadGuilds();
+        document.getElementById('guild-create-form')?.addEventListener('submit', (event) => submitCreate(event).catch((error) => Toast.error(error.data?.message || error.message)));
+        guildJoinBtn?.addEventListener('click', () => joinGuild().catch((error) => Toast.error(error.data?.message || error.message)));
+        guildLeaveBtn?.addEventListener('click', () => leaveGuild().catch((error) => Toast.error(error.data?.message || error.message)));
+        guildBattleBtn?.addEventListener('click', () => createGuildBattle().catch((error) => Toast.error(error.data?.message || error.message)));
+        document.getElementById('guild-chat-form')?.addEventListener('submit', (event) => sendChat(event).catch((error) => Toast.error(error.data?.message || error.message)));
+        document.getElementById('guild-notice-form')?.addEventListener('submit', (event) => saveNotice(event).catch((error) => Toast.error(error.data?.message || error.message)));
+        document.getElementById('guild-role-form')?.addEventListener('submit', (event) => updateRole(event).catch((error) => Toast.error(error.data?.message || error.message)));
+        document.getElementById('guild-transfer-btn')?.addEventListener('click', () => transferLeadership().catch((error) => Toast.error(error.data?.message || error.message)));
+        document.getElementById('guild-kick-btn')?.addEventListener('click', () => kickMember().catch((error) => Toast.error(error.data?.message || error.message)));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        init().catch((error) => Toast.error(error.data?.message || error.message || '길드 화면을 불러오지 못했습니다.'));
+    });
+})();

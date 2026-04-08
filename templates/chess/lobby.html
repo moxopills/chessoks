@@ -196,6 +196,16 @@
                         <span class="game-start-card-title">AI 대전</span>
                         <span class="game-start-card-copy">난이도를 고르고 바로 시작</span>
                     </button>
+                    <a class="btn btn-secondary btn-arcade btn-lg game-start-card" href="/parties/">
+                        <span class="game-start-card-icon">👥</span>
+                        <span class="game-start-card-title">단체전</span>
+                        <span class="game-start-card-copy">3:3 연승제 파티 대기실</span>
+                    </a>
+                    <a class="btn btn-secondary btn-arcade btn-lg game-start-card" href="/guilds/">
+                        <span class="game-start-card-icon">🛡️</span>
+                        <span class="game-start-card-title">길드전</span>
+                        <span class="game-start-card-copy">길드 관리와 길드전 준비</span>
+                    </a>
                     <a class="btn btn-secondary btn-arcade btn-lg game-start-card" href="/puzzle/">
                         <span class="game-start-card-icon">🧩</span>
                         <span class="game-start-card-title">일일 퍼즐</span>
@@ -230,6 +240,20 @@
         <div class="waiting-room-body">
             <div class="waiting-room-info" id="active-game-info">로딩 중...</div>
             <button class="btn btn-secondary btn-sm" id="active-game-enter">게임으로 복귀</button>
+        </div>
+    </section>
+    <section class="lobby-section lobby-board-section" id="lobby-board-card">
+        <div class="section-header">
+            <div class="section-title-wrap">
+                <h2 class="section-title">📝 게시판</h2>
+                <p class="section-copy">최근 게시글 5개를 빠르게 확인하고 전체 게시판으로 이동할 수 있습니다.</p>
+            </div>
+            <a href="/board/" class="section-link">더보기</a>
+        </div>
+        <div class="board-preview-list" id="lobby-board-list">
+            <div class="skeleton-card skeleton lobby-board-skeleton"></div>
+            <div class="skeleton-card skeleton lobby-board-skeleton"></div>
+            <div class="skeleton-card skeleton lobby-board-skeleton"></div>
         </div>
     </section>
     </div>
@@ -361,7 +385,7 @@
 <style>
 /* Lobby Styles */
 .lobby-container {
-    max-width: 1460px;
+    max-width: 1660px;
     margin: 0 auto;
     overflow-x: hidden;
 }
@@ -423,10 +447,10 @@
 .hero-controls {
     display: grid;
     gap: var(--space-md);
-    grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(340px, 1fr));
+    grid-template-columns: minmax(0, 1.38fr) repeat(2, minmax(400px, 1.08fr));
     grid-template-areas: "match users chat";
     margin-bottom: var(--space-md);
-    align-items: stretch;
+    align-items: start;
 }
 
 .hero-control-group {
@@ -448,14 +472,14 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
-    padding: clamp(0.9rem, 2vw, 1.15rem);
+    padding: clamp(1.1rem, 2vw, 1.4rem);
     border: 1px solid var(--color-border);
     border-radius: calc(var(--radius-lg) + 2px);
     background:
         linear-gradient(180deg, color-mix(in srgb, var(--color-bg-card) 92%, white) 0%, var(--color-bg-card) 100%);
     box-shadow: 0 8px 18px rgba(74, 46, 24, 0.045);
     text-align: left;
-    min-height: 100%;
+    min-height: auto;
 }
 
 .hero-control-card--match {
@@ -478,14 +502,18 @@
 
 .hero-control-card--users,
 .hero-control-card--chat {
-    min-height: clamp(340px, 40vh, 420px);
+    min-height: auto;
+}
+
+.hero-control-card--match {
+    min-height: clamp(500px, 50vh, 590px);
 }
 
 .hero-card-head {
     display: grid;
     gap: 6px;
     justify-items: start;
-    min-height: 74px;
+    min-height: 82px;
 }
 
 .hero-card-title {
@@ -681,13 +709,19 @@
 /* Content Grid */
 .lobby-content {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-lg);
     align-items: stretch;
 }
 
 .lobby-content > .lobby-section {
     min-width: 0;
+}
+
+.lobby-board-section {
+    display: grid;
+    gap: 0.7rem;
+    align-content: start;
 }
 
 @media (max-width: 1024px) {
@@ -821,6 +855,131 @@
     color: var(--color-text-secondary);
 }
 
+.board-preview-list {
+    display: grid;
+    gap: 0.58rem;
+}
+
+.board-preview-item {
+    display: grid;
+    gap: 0.34rem;
+    padding: 0.78rem 0.88rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-bg-card) 95%, white);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.board-preview-item:hover {
+    border-color: color-mix(in srgb, var(--color-accent-secondary) 55%, var(--color-border));
+    box-shadow: 0 8px 16px rgba(74, 46, 24, 0.05);
+    transform: translateY(-1px);
+}
+
+.board-preview-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
+.lobby-board-section .section-header {
+    min-height: 60px;
+    align-content: start;
+}
+
+.board-preview-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.36rem;
+    flex-wrap: wrap;
+}
+
+.board-preview-title {
+    font-weight: 700;
+    font-size: 0.89rem;
+    line-height: 1.38;
+    color: var(--color-text-primary);
+}
+
+.board-preview-copy {
+    color: var(--color-text-secondary);
+    font-size: 0.78rem;
+    line-height: 1.42;
+}
+
+.board-preview-scope {
+    font-size: 0.74rem;
+    color: var(--color-text-muted);
+}
+
+.board-preview-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    border: 1px solid color-mix(in srgb, var(--color-border) 90%, white);
+    border-radius: 999px;
+    padding: 0.14rem 0.46rem;
+    background: color-mix(in srgb, var(--color-bg-secondary) 96%, white);
+    color: var(--color-text-secondary);
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.board-preview-pill.is-emphasis {
+    color: #24735f;
+    border-color: color-mix(in srgb, #24735f 30%, var(--color-border));
+    background: color-mix(in srgb, #ecfaf4 75%, white);
+}
+
+.board-preview-empty {
+    text-align: center;
+    color: var(--color-text-muted);
+    padding: 1rem 0.6rem;
+}
+
+.board-category-badge {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--color-bg-secondary) 92%, white);
+    color: var(--color-text-secondary);
+}
+
+.board-category-badge[data-board-category="recruit"] {
+    color: #24735f;
+    border-color: color-mix(in srgb, #24735f 30%, var(--color-border));
+    background: color-mix(in srgb, #ecfaf4 74%, white);
+}
+
+.board-category-badge[data-board-category="free"] {
+    color: #8a5a21;
+    border-color: color-mix(in srgb, #8a5a21 28%, var(--color-border));
+    background: color-mix(in srgb, #fff6ea 76%, white);
+}
+
+.board-category-badge[data-board-category="puzzle-guide"] {
+    color: #6a50a8;
+    border-color: color-mix(in srgb, #6a50a8 28%, var(--color-border));
+    background: color-mix(in srgb, #f3efff 74%, white);
+}
+
+.board-category-badge[data-board-category="knowledge"] {
+    color: #3f6588;
+    border-color: color-mix(in srgb, #3f6588 28%, var(--color-border));
+    background: color-mix(in srgb, #edf6ff 74%, white);
+}
+
+.lobby-board-skeleton {
+    height: 88px;
+    border-radius: var(--radius-md);
+}
+
 @media (max-width: 768px) {
     .waiting-room-body {
         flex-direction: column;
@@ -865,11 +1024,11 @@
 
 /* Room List */
 .room-list {
-    min-height: 140px;
+    min-height: 104px;
 }
 
 .room-list--embedded {
-    min-height: 120px;
+    min-height: 92px;
 }
 
 .lobby-room-skeleton {
@@ -1045,12 +1204,12 @@
 
 .lobby-chat-card .chat-container {
     flex: 1;
-    min-height: 260px;
+    min-height: 160px;
 }
 
 .lobby-chat-card .section-header,
 .lobby-users-section .section-header {
-    min-height: 78px;
+    min-height: 60px;
     align-content: start;
 }
 
@@ -1072,7 +1231,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 240px;
+    min-height: 146px;
 }
 
 .chat-messages {
@@ -1083,8 +1242,8 @@
     background-color: var(--color-bg-secondary);
     border-radius: var(--radius-md);
     margin-bottom: var(--space-md);
-    min-height: 180px;
-    max-height: 280px;
+    min-height: 108px;
+    max-height: 168px;
     display: flex;
     flex-direction: column;
 }
@@ -1337,8 +1496,8 @@
 .users-list {
     flex: 1;
     overflow-y: auto;
-    min-height: 120px;
-    max-height: 240px;
+    min-height: 0;
+    max-height: 148px;
 }
 
 .user-item-skeleton {
@@ -1364,22 +1523,22 @@
 
 @media (min-width: 769px) {
     .room-list {
-        min-height: 180px;
+        min-height: 116px;
     }
 
     .hero-control-card--users,
     .hero-control-card--chat {
-        min-height: 380px;
+        min-height: auto;
     }
 
     .hero-control-card--users .section-header,
     .hero-control-card--chat .section-header {
-        min-height: 84px;
+        min-height: 62px;
         align-content: start;
     }
 
     .hero-control-card--users .users-search {
-        min-height: 50px;
+        min-height: 42px;
     }
 
     .hero-control-card--users .users-list,
@@ -1389,17 +1548,17 @@
     }
 
     .chat-container {
-        min-height: 260px;
+        min-height: 164px;
     }
 
     .chat-messages {
-        min-height: 180px;
-        max-height: 280px;
+        min-height: 110px;
+        max-height: 172px;
     }
 
     .users-list {
-        min-height: 120px;
-        max-height: 240px;
+        min-height: 0;
+        max-height: 146px;
     }
 
     .lobby-content {
