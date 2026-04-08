@@ -65,7 +65,5 @@ class TournamentEntry(models.Model):
             models.UniqueConstraint(fields=["tournament", "user"], name="uniq_tournament_entry"),
         ]
         indexes = [
-            models.Index(
-                fields=["tournament", "status", "seed"], name="tournament_entry_status_seed_idx"
-            ),
+            models.Index(fields=["tournament", "status", "seed"], name="tour_entry_status_seed_ix"),
         ]
