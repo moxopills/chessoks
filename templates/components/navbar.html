@@ -180,6 +180,7 @@
     text-decoration: none;
     color: var(--color-text-primary);
     justify-self: start;
+    margin-left: -10px;
 }
 
 .logo-icon {
@@ -206,7 +207,7 @@
     scrollbar-width: none;
     white-space: nowrap;
     justify-content: flex-start;
-    padding-left: 10px;
+    padding-left: 18px;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
 }
@@ -546,6 +547,7 @@
         padding: var(--space-md);
         overflow: visible;
         white-space: normal;
+        padding-left: var(--space-md);
     }
 
     .navbar-menu.active {
@@ -570,6 +572,10 @@
         gap: 6px;
         min-width: 0;
         flex-shrink: 0;
+    }
+
+    .navbar-logo {
+        margin-left: 0;
     }
 
     .navbar-user {
