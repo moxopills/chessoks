@@ -10,6 +10,25 @@ from apps.core.access import AccessGuard
 
 
 class PartyService:
+    ACTIVE_STATUSES = (
+        Party.Status.OPEN,
+        Party.Status.READY,
+        Party.Status.QUEUED,
+        Party.Status.BATTLING,
+    )
+
+    @staticmethod
+    def _ensure_registered_user(user) -> None:
+        if getattr(user, "is_guest", False):
+            raise ValidationError({"detail": ["게스트는 파티 참가만 가능합니다."]})
+
+    @staticmethod
+    def _active_memberships_for_user(user):
+        return PartyMember.objects.filter(
+            user=user,
+            party__status__in=PartyService.ACTIVE_STATUSES,
+        )
+
     @staticmethod
     def list_parties():
         return Party.objects.select_related("leader", "leader__stats").prefetch_related(
@@ -47,23 +66,46 @@ class PartyService:
     @staticmethod
     @transaction.atomic
     def create_party(user, *, title: str, description: str) -> Party:
-        if PartyMember.objects.filter(
-            user=user,
-            party__status__in=[
-                Party.Status.OPEN,
-                Party.Status.READY,
-                Party.Status.QUEUED,
-                Party.Status.BATTLING,
-            ],
-        ).exists():
+        PartyService._ensure_registered_user(user)
+        if PartyService._active_memberships_for_user(user).exists():
             raise ValidationError({"detail": ["이미 활성 파티에 속해 있습니다."]})
         party = Party.objects.create(leader=user, title=title, description=description)
         PartyMember.objects.create(party=party, user=user, slot=1, is_ready=True)
         return party
 
     @staticmethod
+    def get_active_party_summary(user):
+        membership = (
+            PartyService._active_memberships_for_user(user)
+            .select_related("party", "party__leader")
+            .order_by("-party__updated_at", "-joined_at")
+            .first()
+        )
+        if not membership:
+            return None
+        party = membership.party
+        is_guest = bool(getattr(user, "is_guest", False))
+        is_leader = party.leader_id == user.id
+        can_invite = is_leader and not is_guest
+        message = ""
+        if is_guest:
+            message = "게스트는 파티 초대를 보낼 수 없습니다."
+        elif not is_leader:
+            message = "파티장만 초대를 보낼 수 있습니다."
+        return {
+            "party_id": party.id,
+            "title": party.title,
+            "status": party.status,
+            "leader_id": party.leader_id,
+            "is_leader": is_leader,
+            "can_invite": can_invite,
+            "message": message,
+        }
+
+    @staticmethod
     @transaction.atomic
     def invite_member(actor, party_id: int, *, to_user_id: int) -> PartyInvite:
+        PartyService._ensure_registered_user(actor)
         party = Party.objects.select_for_update().get(pk=party_id)
         PartyService._require_leader(actor.id, party)
         AccessGuard.require_other_user(
@@ -75,15 +117,7 @@ class PartyService:
         if PartyMember.objects.filter(party=party).count() >= party.max_members:
             raise ValidationError({"detail": ["파티 정원이 가득 찼습니다."]})
         target = get_object_or_404(User, pk=to_user_id)
-        if PartyMember.objects.filter(
-            user=target,
-            party__status__in=[
-                Party.Status.OPEN,
-                Party.Status.READY,
-                Party.Status.QUEUED,
-                Party.Status.BATTLING,
-            ],
-        ).exists():
+        if PartyService._active_memberships_for_user(target).exists():
             raise ValidationError({"detail": ["상대가 이미 다른 활성 파티에 속해 있습니다."]})
         return PartyInvite.objects.create(party=party, from_user=actor, to_user=target)
 
@@ -96,15 +130,7 @@ class PartyService:
             .get(pk=invite_id, to_user=user, status=PartyInvite.Status.PENDING)
         )
         if accept:
-            if PartyMember.objects.filter(
-                user=user,
-                party__status__in=[
-                    Party.Status.OPEN,
-                    Party.Status.READY,
-                    Party.Status.QUEUED,
-                    Party.Status.BATTLING,
-                ],
-            ).exists():
+            if PartyService._active_memberships_for_user(user).exists():
                 raise ValidationError({"detail": ["이미 다른 활성 파티에 속해 있습니다."]})
             if PartyMember.objects.filter(party=invite.party).count() >= invite.party.max_members:
                 raise ValidationError({"detail": ["파티 정원이 가득 찼습니다."]})
@@ -119,9 +145,12 @@ class PartyService:
     @staticmethod
     @transaction.atomic
     def transfer_leader(actor, party_id: int, *, user_id: int) -> Party:
+        PartyService._ensure_registered_user(actor)
         party = Party.objects.select_for_update().get(pk=party_id)
         PartyService._require_leader(actor.id, party)
-        PartyMember.objects.get(party=party, user_id=user_id)
+        target_member = PartyMember.objects.select_related("user").get(party=party, user_id=user_id)
+        if getattr(target_member.user, "is_guest", False):
+            raise ValidationError({"detail": ["게스트에게는 파티장을 위임할 수 없습니다."]})
         party.leader_id = user_id
         party.save(update_fields=["leader", "updated_at"])
         return party
@@ -129,6 +158,7 @@ class PartyService:
     @staticmethod
     @transaction.atomic
     def remove_member(actor, party_id: int, *, user_id: int) -> None:
+        PartyService._ensure_registered_user(actor)
         party = Party.objects.select_for_update().get(pk=party_id)
         PartyService._require_leader(actor.id, party)
         if user_id == party.leader_id:
@@ -174,6 +204,7 @@ class PartyService:
     @staticmethod
     @transaction.atomic
     def assign_slot(actor, party_id: int, *, user_id: int, slot: int) -> PartyMember:
+        PartyService._ensure_registered_user(actor)
         party = Party.objects.select_for_update().get(pk=party_id)
         PartyService._require_leader(actor.id, party)
         if party.lineup_locked:
@@ -189,6 +220,7 @@ class PartyService:
     @staticmethod
     @transaction.atomic
     def lock_lineup(actor, party_id: int) -> Party:
+        PartyService._ensure_registered_user(actor)
         party = Party.objects.select_for_update().get(pk=party_id)
         PartyService._require_leader(actor.id, party)
         member_count = PartyMember.objects.filter(party=party).count()
@@ -205,6 +237,7 @@ class PartyService:
     @staticmethod
     @transaction.atomic
     def unlock_lineup(actor, party_id: int) -> Party:
+        PartyService._ensure_registered_user(actor)
         party = Party.objects.select_for_update().get(pk=party_id)
         PartyService._require_leader(actor.id, party)
         if party.status in {Party.Status.QUEUED, Party.Status.BATTLING}:

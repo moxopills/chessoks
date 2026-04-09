@@ -1,3 +1,6 @@
+import logging
+import uuid
+
 from django.db import transaction
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
@@ -12,6 +15,38 @@ from apps.community.models import (
     GuildJoinRequest,
     GuildMember,
 )
+from apps.core.gcp.constants import FileType, GCPConstants
+from apps.core.gcp.uploader import gcp_uploader
+from apps.core.gcp.validators import GCPImageValidator
+
+logger = logging.getLogger(__name__)
+
+
+def _validate_guild_avatar_file(file):
+    file_name = file.name
+    GCPImageValidator.validate_file_name(file_name)
+    ext = file_name.rsplit(".", 1)[-1].lower()
+    GCPImageValidator.validate_extension(file_name, ext)
+    GCPImageValidator.validate_mime_type(ext, file.content_type)
+    GCPImageValidator.validate_file_size(file.size)
+    return GCPImageValidator.normalize_image(file)
+
+
+def _extract_old_avatar_key(guild: Guild) -> str | None:
+    if not guild.avatar_url:
+        return None
+    return gcp_uploader.extract_key_from_url(guild.avatar_url)
+
+
+def _upload_new_avatar(normalized_image) -> str:
+    prefix = GCPConstants.PATH_MAPPING[FileType.GUILD_AVATAR]
+    key = f"{prefix}/{uuid.uuid4()}.{normalized_image.extension}"
+    gcp_uploader.upload_fileobj(
+        normalized_image.content,
+        key,
+        content_type=normalized_image.content_type,
+    )
+    return f"{gcp_uploader.get_base_url()}{key}"
 
 
 class GuildService:
@@ -44,6 +79,7 @@ class GuildService:
         user,
         *,
         name: str,
+        avatar=None,
         description: str,
         join_policy: str,
         min_rating: int,
@@ -52,9 +88,14 @@ class GuildService:
     ) -> Guild:
         if GuildMember.objects.filter(user=user).exists():
             raise ValidationError({"detail": ["이미 길드에 가입해 있습니다."]})
+        avatar_url = None
+        if avatar:
+            avatar_url = _upload_new_avatar(_validate_guild_avatar_file(avatar))
+
         guild = Guild.objects.create(
             owner=user,
             name=name,
+            avatar_url=avatar_url,
             description=description,
             join_policy=join_policy,
             min_rating=min_rating,
@@ -156,6 +197,25 @@ class GuildService:
         guild.notice = notice
         guild.save(update_fields=["notice", "updated_at"])
         GuildService._log(guild, actor=actor, action="update_notice", detail=notice[:120])
+        return guild
+
+    @staticmethod
+    @transaction.atomic
+    def update_avatar(actor, guild_id: int, *, file) -> Guild:
+        GuildService._require_manager(actor.id, guild_id)
+        guild = Guild.objects.select_for_update().get(pk=guild_id, is_active=True)
+        normalized_image = _validate_guild_avatar_file(file)
+        old_avatar_key = _extract_old_avatar_key(guild)
+        guild.avatar_url = _upload_new_avatar(normalized_image)
+        guild.save(update_fields=["avatar_url", "updated_at"])
+        if old_avatar_key:
+            try:
+                gcp_uploader.delete_file(old_avatar_key)
+            except Exception as exc:  # pragma: no cover - external cleanup best effort
+                logger.warning("길드 아바타 삭제 실패: %s error=%s", old_avatar_key, exc)
+        GuildService._log(
+            guild, actor=actor, action="update_avatar", detail="길드 프로필 사진 변경"
+        )
         return guild
 
     @staticmethod

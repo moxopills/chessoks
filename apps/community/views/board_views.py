@@ -63,15 +63,22 @@ class BoardListCreateView(APIView):
             content=data["content"],
             extra=data,
         )
-        return Response(BoardPostSerializer(post).data, status=201)
+        post = BoardService.get_post(post.id, viewer=request.user)
+        return Response(BoardPostSerializer(post, context={"request": request}).data, status=201)
 
 
 class BoardDetailView(APIView):
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method == "GET" else [IsAuthenticated()]
 
     def get(self, request, post_id: int):
-        post = BoardService.get_post(post_id, increment_view=True)
-        return Response(BoardPostSerializer(post).data)
+        increment_view = request.query_params.get("no_view") != "1"
+        post = BoardService.get_post(post_id, increment_view=increment_view, viewer=request.user)
+        return Response(BoardPostSerializer(post, context={"request": request}).data)
+
+    def delete(self, request, post_id: int):
+        BoardService.delete_post(request.user, post_id=post_id)
+        return Response(status=204)
 
 
 class BoardCommentCreateView(APIView):
@@ -85,7 +92,24 @@ class BoardCommentCreateView(APIView):
             post_id,
             content=serializer.validated_data["content"],
         )
-        return Response(BoardCommentSerializer(comment).data, status=201)
+        return Response(
+            BoardCommentSerializer(comment, context={"request": request}).data,
+            status=201,
+        )
+
+
+class BoardCommentLikeToggleView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, comment_id: int):
+        comment, liked = BoardService.toggle_comment_like(request.user, comment_id=comment_id)
+        return Response(
+            {
+                "comment_id": comment.id,
+                "liked": liked,
+                "like_count": comment.like_count,
+            }
+        )
 
 
 class BoardReportCreateView(APIView):

@@ -106,6 +106,8 @@
     let hasShownLobbyOnboarding = false;
     const MOBILE_ROOM_PREVIEW_STORAGE_KEY = 'lobby_mobile_room_preview_open_v2';
     let isMobileRoomPreviewOpen = Utils.Storage.get(MOBILE_ROOM_PREVIEW_STORAGE_KEY, false);
+    let boardPreviewPoller = null;
+    let mobilePreviewResizeTimer = null;
 
     // 초기화
     init();
@@ -124,12 +126,6 @@
                 isChatOpen = true;
             }
         }
-        await loadRooms();
-        await loadWaitingRoom();
-        await loadActiveGame();
-        await loadBoardPreview();
-        await checkAuthAndSetupChat();
-        startRoomAutoRefresh();
         setupMobileTabs();
         setupChatToggle();
         setupTierToggle();
@@ -143,6 +139,13 @@
         setupMobileRoomPreview();
         showLobbyOnboardingTip();
         warmupNextViews();
+        await Promise.allSettled([
+            loadRooms(),
+            checkAuthAndSetupChat(),
+        ]);
+        scheduleSecondaryLoads();
+        startRoomAutoRefresh();
+        startBoardPreviewRefresh();
     }
 
     function isMobileViewport() {
@@ -182,7 +185,35 @@
         });
 
         window.addEventListener('resize', () => {
-            syncMobileRoomPreview();
+            clearTimeout(mobilePreviewResizeTimer);
+            mobilePreviewResizeTimer = setTimeout(() => syncMobileRoomPreview(), 120);
+        });
+    }
+
+    function afterFirstPaint(callback) {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(callback);
+        });
+    }
+
+    function scheduleSecondaryLoads() {
+        const run = async () => {
+            await Promise.allSettled([
+                loadWaitingRoom(),
+                loadActiveGame(),
+                loadBoardPreview(),
+            ]);
+        };
+        afterFirstPaint(() => {
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(() => {
+                    run().catch(() => {});
+                }, { timeout: 1200 });
+                return;
+            }
+            setTimeout(() => {
+                run().catch(() => {});
+            }, 220);
         });
     }
 
@@ -462,6 +493,26 @@
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) return;
             roomRefreshPoller?.trigger?.();
+        });
+    }
+
+    function startBoardPreviewRefresh() {
+        if (!lobbyBoardList) return;
+        boardPreviewPoller?.stop?.();
+        boardPreviewPoller = Utils.createAdaptivePoller({
+            callback: async () => {
+                if (document.hidden) return;
+                await loadBoardPreview();
+            },
+            activeInterval: 45000,
+            hiddenInterval: 120000,
+            enabled: () => true,
+            immediate: false,
+        });
+        boardPreviewPoller.start();
+
+        window.addEventListener('beforeunload', () => {
+            boardPreviewPoller?.stop?.();
         });
     }
 
@@ -1426,6 +1477,7 @@
             currentUserId,
             targetUserId: userId,
             isFriend: isFriendUser(userId),
+            showPartyInvite: !document.body.dataset.guest,
         });
         ContextMenu.show(event, userId, items, handleUserContextAction);
     }
@@ -1433,6 +1485,7 @@
     function handleUserContextAction(action, targetId) {
         if (action === 'profile') window.location.href = `/users/${targetId}/`;
         else if (action === 'invite') Notifications.sendGameInvite(targetId);
+        else if (action === 'party') window.PartyInvites?.sendInvite(targetId).catch((error) => Toast.error(error.data?.message || error.message));
         else if (action === 'friend') sendFriendRequest(targetId);
         else if (action === 'chat') {
             const globalDmFab = document.getElementById('global-dm-fab');

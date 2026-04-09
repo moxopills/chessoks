@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}게시글 작성 - ChessOK{% endblock %}
+
+{% block content %}
+<div class="community-page" id="board-write-page">
+    <section class="community-hero community-hero--split">
+        <div>
+            <h1>게시글 작성</h1>
+            <p>카테고리를 고르고 새 게시글을 작성합니다. 모집 글은 추가 모집 정보를 함께 입력할 수 있습니다.</p>
+        </div>
+        <div class="community-hero-actions">
+            <a href="/board/" class="btn btn-secondary">게시판으로 돌아가기</a>
+        </div>
+    </section>
+    <div class="community-grid community-grid--write">
+        <section class="community-card community-card--detail">
+            <div class="community-card-head">
+                <h2>새 글 작성</h2>
+                <p>글 작성 후 자동으로 게시글 상세 페이지로 이동합니다.</p>
+            </div>
+            <form id="board-post-form" class="community-form">
+                <select class="form-input" id="board-category" required></select>
+                <input class="form-input" id="board-title" placeholder="제목" maxlength="120" required>
+                <textarea class="form-input" id="board-content" placeholder="내용" rows="8" required></textarea>
+                <div class="community-form-group" id="board-recruit-fields">
+                    <input class="form-input" id="board-guild-name" placeholder="길드명">
+                    <input class="form-input" id="board-recruitment-slots" type="number" min="1" max="99" placeholder="모집 인원">
+                    <input class="form-input" id="board-minimum-rating" type="number" min="0" max="4000" placeholder="최소 레이팅">
+                    <input class="form-input" id="board-active-time-band" placeholder="활동 시간대">
+                    <input class="form-input" id="board-join-policy-text" placeholder="가입 방식">
+                    <input class="form-input" id="board-contact-method" placeholder="연락 수단">
+                </div>
+                <div class="community-actions">
+                    <button class="btn btn-primary" type="submit">게시글 작성</button>
+                </div>
+            </form>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/community.css">
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/pages/board_write.js"></script>
+{% endblock %}

@@ -20,6 +20,7 @@
     const vsDraws = document.getElementById('vs-draws');
     const recentList = document.getElementById('recent-list');
     const friendBtn = document.getElementById('friend-request-btn');
+    const partyInviteBtn = document.getElementById('party-invite-btn');
     const directMessageBtn = document.getElementById('direct-message-btn');
     const reportBtn = document.getElementById('report-btn');
     const guestbookList = document.getElementById('guestbook-list');
@@ -155,6 +156,13 @@
             window.location.href = `/messages/${userId}/`;
         });
 
+        partyInviteBtn?.addEventListener('click', () => {
+            if (!userId || !window.PartyInvites) return;
+            window.PartyInvites.sendInvite(parseInt(userId, 10)).catch((error) => {
+                Toast.error(error.data?.message || error.message);
+            });
+        });
+
         guestbookSubmit?.addEventListener('click', submitGuestbook);
 
         reportBtn?.addEventListener('click', () => {
@@ -172,6 +180,11 @@
 
     function updateFriendButtonState(status) {
         if (!friendBtn) return;
+        const canPartyInvite = Boolean(currentUserId) && parseInt(userId, 10) !== currentUserId && document.body.dataset.guest !== 'true';
+        partyInviteBtn?.classList.toggle('hidden', !canPartyInvite);
+        if (partyInviteBtn) {
+            partyInviteBtn.disabled = !canPartyInvite;
+        }
         if (!currentUserId) {
             friendBtn.disabled = true;
             friendBtn.textContent = '로그인 시 가능합니다.';

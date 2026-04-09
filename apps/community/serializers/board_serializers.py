@@ -29,16 +29,36 @@ class BoardPostCreateSerializer(serializers.Serializer):
 
 class BoardCommentSerializer(serializers.ModelSerializer):
     author = PlainUserSerializer(read_only=True)
+    liked_by_me = serializers.SerializerMethodField()
 
     class Meta:
         model = BoardComment
-        fields = ["id", "content", "is_blinded", "created_at", "author"]
+        fields = [
+            "id",
+            "content",
+            "is_blinded",
+            "created_at",
+            "author",
+            "like_count",
+            "liked_by_me",
+        ]
+
+    def get_liked_by_me(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return False
+        viewer_likes = getattr(obj, "viewer_likes", None)
+        if viewer_likes is not None:
+            return bool(viewer_likes)
+        return obj.likes.filter(user=user).exists()
 
 
 class BoardPostSerializer(serializers.ModelSerializer):
     author = PlainUserSerializer(read_only=True)
     category = BoardCategorySerializer(read_only=True)
-    comments = BoardCommentSerializer(many=True, read_only=True)
+    comments = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
 
     class Meta:
         model = BoardPost
@@ -61,7 +81,22 @@ class BoardPostSerializer(serializers.ModelSerializer):
             "author",
             "category",
             "comments",
+            "can_delete",
         ]
+
+    def get_comments(self, obj):
+        return BoardCommentSerializer(
+            obj.comments.all(),
+            many=True,
+            context=self.context,
+        ).data
+
+    def get_can_delete(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return False
+        return obj.author_id == user.id or getattr(user, "is_staff", False)
 
 
 class BoardPostSummarySerializer(serializers.ModelSerializer):

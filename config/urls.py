@@ -94,6 +94,11 @@ urlpatterns = [
     path("parties/", TemplateView.as_view(template_name="community/parties.html"), name="parties"),
     path("board/", TemplateView.as_view(template_name="community/board.html"), name="board"),
     path(
+        "board/write/",
+        TemplateView.as_view(template_name="community/board_write.html"),
+        name="board-write",
+    ),
+    path(
         "tournaments/",
         TemplateView.as_view(template_name="community/tournaments.html"),
         name="tournaments",

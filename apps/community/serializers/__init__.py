@@ -9,6 +9,7 @@ from .board_serializers import (
 )
 from .guild_serializers import (
     GuildAuditLogSerializer,
+    GuildAvatarUpdateSerializer,
     GuildChatCreateSerializer,
     GuildChatMessageSerializer,
     GuildCreateSerializer,
@@ -58,6 +59,7 @@ __all__ = (
     "BoardPostSummarySerializer",
     "BoardReportCreateSerializer",
     "GuildAuditLogSerializer",
+    "GuildAvatarUpdateSerializer",
     "GuildChatCreateSerializer",
     "GuildChatMessageSerializer",
     "GuildCreateSerializer",
