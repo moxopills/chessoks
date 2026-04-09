@@ -10,6 +10,7 @@ class FileType(str, Enum):
     """이미지 파일 타입"""
 
     USER_AVATAR = "user_avatar"  # 유저 프로필 이미지
+    GUILD_AVATAR = "guild_avatar"  # 길드 프로필 이미지
 
 
 class GCPConstants:
@@ -37,6 +38,7 @@ class GCPConstants:
     # 업로드 경로 매핑
     PATH_MAPPING: ClassVar[dict[FileType, str]] = {
         FileType.USER_AVATAR: "avatars",
+        FileType.GUILD_AVATAR: "guild_avatars",
     }
 
     @classmethod

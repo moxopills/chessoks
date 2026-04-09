@@ -447,7 +447,7 @@
 .hero-controls {
     display: grid;
     gap: var(--space-md);
-    grid-template-columns: minmax(0, 1.38fr) repeat(2, minmax(400px, 1.08fr));
+    grid-template-columns: minmax(0, 1.34fr) repeat(2, minmax(360px, 1fr));
     grid-template-areas: "match users chat";
     margin-bottom: var(--space-md);
     align-items: start;
@@ -709,19 +709,33 @@
 /* Content Grid */
 .lobby-content {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(250px, 0.84fr) minmax(250px, 0.84fr) minmax(0, 1.42fr);
     gap: var(--space-lg);
     align-items: stretch;
 }
 
 .lobby-content > .lobby-section {
     min-width: 0;
+    content-visibility: auto;
+    contain-intrinsic-size: 320px;
 }
 
 .lobby-board-section {
     display: grid;
     gap: 0.7rem;
     align-content: start;
+    grid-column: 3;
+    grid-row: 1 / span 2;
+}
+
+#waiting-room-card {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+#active-game-card {
+    grid-column: 2;
+    grid-row: 1;
 }
 
 @media (max-width: 1024px) {
@@ -734,6 +748,21 @@
 
     .hero-control-card--match {
         grid-column: 1 / -1;
+    }
+
+    .lobby-content {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .lobby-board-section {
+        grid-column: 1 / -1;
+        grid-row: auto;
+    }
+
+    #waiting-room-card,
+    #active-game-card {
+        grid-column: auto;
+        grid-row: auto;
     }
 }
 
@@ -815,6 +844,11 @@
     .users-list {
         max-height: none;
     }
+
+    .board-preview-list {
+        max-height: none;
+        overflow: visible;
+    }
 }
 
 @media (max-width: 520px) {
@@ -855,9 +889,17 @@
     color: var(--color-text-secondary);
 }
 
+.waiting-room-info {
+    display: grid;
+    gap: 0.22rem;
+}
+
 .board-preview-list {
     display: grid;
     gap: 0.58rem;
+    max-height: 418px;
+    overflow: auto;
+    padding-right: 2px;
 }
 
 .board-preview-item {
@@ -900,12 +942,20 @@
     font-size: 0.89rem;
     line-height: 1.38;
     color: var(--color-text-primary);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
 }
 
 .board-preview-copy {
     color: var(--color-text-secondary);
     font-size: 0.78rem;
     line-height: 1.42;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
 }
 
 .board-preview-scope {
@@ -1007,7 +1057,7 @@
 .section-copy {
     margin: 0;
     color: var(--color-text-secondary);
-    font-size: 0.76rem;
+    font-size: 0.74rem;
     line-height: 1.45;
 }
 
@@ -1204,7 +1254,7 @@
 
 .lobby-chat-card .chat-container {
     flex: 1;
-    min-height: 160px;
+    min-height: 280px;
 }
 
 .lobby-chat-card .section-header,
@@ -1231,7 +1281,7 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    min-height: 146px;
+    min-height: 260px;
 }
 
 .chat-messages {
@@ -1242,8 +1292,8 @@
     background-color: var(--color-bg-secondary);
     border-radius: var(--radius-md);
     margin-bottom: var(--space-md);
-    min-height: 108px;
-    max-height: 168px;
+    min-height: 210px;
+    max-height: 320px;
     display: flex;
     flex-direction: column;
 }
@@ -1497,7 +1547,7 @@
     flex: 1;
     overflow-y: auto;
     min-height: 0;
-    max-height: 148px;
+    max-height: 292px;
 }
 
 .user-item-skeleton {
@@ -1523,7 +1573,7 @@
 
 @media (min-width: 769px) {
     .room-list {
-        min-height: 116px;
+        min-height: 180px;
     }
 
     .hero-control-card--users,
@@ -1548,21 +1598,21 @@
     }
 
     .chat-container {
-        min-height: 164px;
+        min-height: 308px;
     }
 
     .chat-messages {
-        min-height: 110px;
-        max-height: 172px;
+        min-height: 248px;
+        max-height: 360px;
     }
 
     .users-list {
         min-height: 0;
-        max-height: 146px;
+        max-height: 310px;
     }
 
     .lobby-content {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: minmax(250px, 0.84fr) minmax(250px, 0.84fr) minmax(0, 1.42fr);
     }
 }
 

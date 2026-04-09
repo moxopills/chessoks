@@ -15,6 +15,10 @@
                 <p>자유 가입 또는 승인제로 길드를 열 수 있습니다.</p>
             </div>
             <form id="guild-create-form" class="community-form">
+                <label class="community-file-field">
+                    <span class="community-file-label">길드 프로필 사진</span>
+                    <input class="form-input" name="avatar" type="file" accept="image/*">
+                </label>
                 <input class="form-input" name="name" placeholder="길드명" maxlength="40" required>
                 <textarea class="form-input" name="description" placeholder="길드 설명" rows="4"></textarea>
                 <select class="form-input" name="join_policy">
@@ -46,6 +50,13 @@
                     <button class="btn btn-secondary" id="guild-join-btn" type="button">가입 신청</button>
                     <button class="btn btn-secondary" id="guild-battle-btn" type="button">길드전 매칭 생성</button>
                     <button class="btn btn-secondary" id="guild-leave-btn" type="button">길드 탈퇴</button>
+                </div>
+                <div class="community-item community-card-slim">
+                    <span class="community-item-title">길드 프로필 사진</span>
+                    <form id="guild-avatar-form" class="community-inline-form community-inline-form--stack">
+                        <input class="form-input" id="guild-avatar-input" type="file" accept="image/*">
+                        <button class="btn btn-secondary btn-sm" type="submit">사진 변경</button>
+                    </form>
                 </div>
                 <div class="community-manager-grid">
                     <div class="community-item community-card-slim">

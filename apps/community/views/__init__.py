@@ -1,12 +1,14 @@
 from .board_views import (
     BoardCategoryListView,
     BoardCommentCreateView,
+    BoardCommentLikeToggleView,
     BoardDetailView,
     BoardListCreateView,
     BoardReportCreateView,
 )
 from .guild_views import (
     GuildAuditLogView,
+    GuildAvatarUpdateView,
     GuildChatView,
     GuildDetailView,
     GuildJoinRequestReviewView,
@@ -19,6 +21,7 @@ from .guild_views import (
     GuildTransferLeaderView,
 )
 from .party_views import (
+    MyActivePartyView,
     PartyChatView,
     PartyDetailView,
     PartyInviteListView,
@@ -47,10 +50,12 @@ from .tournament_views import (
 __all__ = (
     "BoardCategoryListView",
     "BoardCommentCreateView",
+    "BoardCommentLikeToggleView",
     "BoardDetailView",
     "BoardListCreateView",
     "BoardReportCreateView",
     "GuildAuditLogView",
+    "GuildAvatarUpdateView",
     "GuildChatView",
     "GuildDetailView",
     "GuildJoinRequestReviewView",
@@ -61,6 +66,7 @@ __all__ = (
     "GuildMemberRoleUpdateView",
     "GuildNoticeUpdateView",
     "GuildTransferLeaderView",
+    "MyActivePartyView",
     "PartyChatView",
     "PartyDetailView",
     "PartyInviteListView",

@@ -1,4 +1,4 @@
-from .board import BoardCategory, BoardComment, BoardPost, BoardReport
+from .board import BoardCategory, BoardComment, BoardCommentLike, BoardPost, BoardReport
 from .guild import Guild, GuildAuditLog, GuildChatMessage, GuildJoinRequest, GuildMember
 from .party import (
     Party,
@@ -14,6 +14,7 @@ from .tournament import Tournament, TournamentEntry
 __all__ = [
     "BoardCategory",
     "BoardComment",
+    "BoardCommentLike",
     "BoardPost",
     "BoardReport",
     "Guild",

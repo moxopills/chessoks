@@ -100,11 +100,14 @@ const ContextMenu = (function() {
      * @param {boolean} options.showRemove - 친구 삭제 옵션 표시 여부
      * @returns {Array<{action: string, label: string}>}
      */
-    function buildUserMenuItems({ currentUserId, targetUserId, isFriend = false, isPending = false, showRemove = false }) {
+    function buildUserMenuItems({ currentUserId, targetUserId, isFriend = false, isPending = false, showRemove = false, showPartyInvite = true }) {
         const items = [{ action: 'profile', label: '프로필 보기' }];
         if (!currentUserId || targetUserId === currentUserId) return items;
 
         items.push({ action: 'invite', label: '게임 초대' });
+        if (showPartyInvite) {
+            items.push({ action: 'party', label: '파티 초대' });
+        }
         if (!isFriend && !isPending) {
             items.push({ action: 'friend', label: '친구 추가' });
         }
