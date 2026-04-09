@@ -48,7 +48,7 @@
 }
 
 .community-grid--board {
-    grid-template-columns: minmax(320px, 0.88fr) minmax(0, 1.58fr);
+    grid-template-columns: minmax(340px, 0.86fr) minmax(0, 1.74fr);
 }
 
 .community-grid--write {
@@ -102,6 +102,13 @@
 .community-form-group {
     display: grid;
     gap: 0.5rem;
+}
+
+.community-sublist--compact {
+    gap: 0.55rem;
+    max-height: 240px;
+    overflow: auto;
+    padding-right: 2px;
 }
 
 .community-list {
@@ -177,6 +184,20 @@
     flex-wrap: wrap;
 }
 
+#board-post-list .community-item-copy {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.community-comment-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+}
+
 .community-post-stat,
 .community-post-pill {
     display: inline-flex;
@@ -249,6 +270,43 @@
     background: color-mix(in srgb, var(--color-bg-secondary) 90%, #f5fffc);
 }
 
+.community-picker-grid {
+    display: grid;
+    gap: 0.6rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.community-picker-item {
+    display: grid;
+    gap: 0.45rem;
+    padding: 0.72rem 0.82rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--color-bg-secondary) 95%, white);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform 0.14s ease;
+}
+
+.community-picker-item:hover,
+.community-picker-item.is-selected {
+    border-color: color-mix(in srgb, var(--color-accent-secondary) 40%, var(--color-border));
+    box-shadow: 0 8px 16px rgba(74, 46, 24, 0.05);
+    transform: translateY(-1px);
+}
+
+.community-picker-main {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.65rem;
+    align-items: center;
+}
+
+.community-picker-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
 .community-actions {
     display: flex;
     gap: 0.5rem;
@@ -259,6 +317,10 @@
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+}
+
+.community-inline-form--end {
+    justify-content: flex-end;
 }
 
 .community-manager-grid {

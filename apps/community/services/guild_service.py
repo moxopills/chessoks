@@ -61,6 +61,7 @@ class GuildService:
                     filter=Q(join_requests__status=GuildJoinRequest.Status.PENDING),
                 )
             )
+            .order_by("-updated_at", "-created_at", "-id")
         )
 
     @staticmethod

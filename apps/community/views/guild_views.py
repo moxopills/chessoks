@@ -1,3 +1,4 @@
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,6 +20,8 @@ from apps.community.services import GuildService
 
 
 class GuildListCreateView(APIView):
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
     def get_permissions(self):
         return [AllowAny()] if self.request.method == "GET" else [IsAuthenticated()]
 
@@ -92,6 +95,7 @@ class GuildNoticeUpdateView(APIView):
 
 class GuildAvatarUpdateView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     def patch(self, request, guild_id: int):
         serializer = GuildAvatarUpdateSerializer(data=request.data)

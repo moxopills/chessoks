@@ -3,6 +3,7 @@ from django.urls import path
 from apps.community.views import (
     BoardCategoryListView,
     BoardCommentCreateView,
+    BoardCommentDetailView,
     BoardCommentLikeToggleView,
     BoardDetailView,
     BoardListCreateView,
@@ -109,6 +110,11 @@ urlpatterns = [
         "boards/comments/<int:comment_id>/like/",
         BoardCommentLikeToggleView.as_view(),
         name="board-comment-like",
+    ),
+    path(
+        "boards/comments/<int:comment_id>/",
+        BoardCommentDetailView.as_view(),
+        name="board-comment-detail",
     ),
     path("boards/reports/", BoardReportCreateView.as_view(), name="board-report"),
     path("tournaments/", TournamentListCreateView.as_view(), name="tournament-list"),
