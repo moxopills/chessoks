@@ -162,13 +162,13 @@
 }
 
 .navbar-container {
-    max-width: var(--content-max-width);
+    max-width: 1680px;
     height: 100%;
     margin: 0 auto;
     padding: 0 var(--space-lg);
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
     gap: 12px;
 }
 
@@ -179,6 +179,7 @@
     gap: var(--space-sm);
     text-decoration: none;
     color: var(--color-text-primary);
+    justify-self: start;
 }
 
 .logo-icon {
@@ -204,7 +205,8 @@
     overflow-y: hidden;
     scrollbar-width: none;
     white-space: nowrap;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-left: 10px;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
 }
@@ -217,11 +219,11 @@
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
-    padding: 0.45rem 0.55rem;
+    padding: 0.42rem 0.48rem;
     color: var(--color-text-secondary);
     text-decoration: none;
     font-family: var(--font-body);
-    font-size: 0.76rem;
+    font-size: 0.73rem;
     border-radius: var(--radius-md);
     transition: all var(--transition-fast);
     flex: 0 0 auto;
@@ -252,6 +254,8 @@
     align-items: center;
     gap: 8px; /* 기존 var(--space-md)에서 축소 */
     flex: 0 0 auto;
+    justify-self: end;
+    min-width: 0;
 }
 
 .theme-toggle {
@@ -413,7 +417,7 @@
 /* User Menu */
 .navbar-user {
     position: relative;
-    min-width: 176px;
+    min-width: 164px;
 }
 
 .user-btn {
@@ -428,7 +432,7 @@
     cursor: pointer;
     color: var(--color-text-primary);
     transition: border-color var(--transition-fast);
-    min-width: 176px;
+    min-width: 164px;
     min-height: 40px;
 }
 
@@ -527,6 +531,7 @@
     .navbar-container {
         padding: 0 var(--space-sm);
         gap: 8px;
+        grid-template-columns: auto 1fr auto;
     }
 
     .navbar-menu {

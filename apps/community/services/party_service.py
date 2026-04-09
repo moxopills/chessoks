@@ -31,8 +31,10 @@ class PartyService:
 
     @staticmethod
     def list_parties():
-        return Party.objects.select_related("leader", "leader__stats").prefetch_related(
-            "members__user__stats"
+        return (
+            Party.objects.select_related("leader", "leader__stats")
+            .prefetch_related("members__user__stats")
+            .order_by("-updated_at", "-created_at", "-id")
         )
 
     @staticmethod

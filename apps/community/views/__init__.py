@@ -1,6 +1,7 @@
 from .board_views import (
     BoardCategoryListView,
     BoardCommentCreateView,
+    BoardCommentDetailView,
     BoardCommentLikeToggleView,
     BoardDetailView,
     BoardListCreateView,
@@ -49,6 +50,7 @@ from .tournament_views import (
 
 __all__ = (
     "BoardCategoryListView",
+    "BoardCommentDetailView",
     "BoardCommentCreateView",
     "BoardCommentLikeToggleView",
     "BoardDetailView",

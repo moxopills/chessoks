@@ -5,6 +5,9 @@
     let currentPartyReady = false;
     let selectedMemberId = null;
     let isGuestUser = false;
+    let selectedInviteUserId = null;
+    let onlineInviteUsers = [];
+    let inviteSearchResults = [];
 
     const partyListEl = document.getElementById('party-list');
     const detailEmptyEl = document.getElementById('party-detail-empty');
@@ -16,6 +19,10 @@
     const readyBtn = document.getElementById('party-ready-btn');
     const lineupBtn = document.getElementById('party-lineup-btn');
     const memberSelectionEl = document.getElementById('party-member-selection');
+    const inviteSelectionEl = document.getElementById('party-invite-selection');
+    const inviteResultsEl = document.getElementById('party-invite-results');
+    const onlineSuggestionsEl = document.getElementById('party-online-suggestions');
+    const inviteQueryInput = document.getElementById('party-invite-query');
 
     const ACHIEVEMENT_LABELS = {
         first_win: '첫 승',
@@ -70,6 +77,128 @@
         memberSelectionEl.textContent = `${member.user.nickname} · 슬롯 ${member.slot ?? '-'} · ${member.is_ready ? '준비 완료' : '준비 전'} · ID ${member.user.id}`;
     }
 
+    function getInviteBlockedIds() {
+        const ids = new Set((selectedParty?.members || []).map((member) => member.user.id));
+        if (me?.id) ids.add(me.id);
+        return ids;
+    }
+
+    function getInvitePresenceClass(user) {
+        if (!user?.online) return '';
+        if (['playing', 'competitive', 'quick'].includes(user.status)) return 'is-live';
+        if (['room_waiting', 'lobby'].includes(user.status)) return 'is-ready';
+        return 'is-info';
+    }
+
+    function renderInviteSelection() {
+        if (!inviteSelectionEl) return;
+        const selected =
+            [...onlineInviteUsers, ...inviteSearchResults].find((user) => user.id === selectedInviteUserId) || null;
+        if (!selected) {
+            inviteSelectionEl.classList.remove('is-selected');
+            inviteSelectionEl.textContent = '초대할 유저를 검색하거나 아래 목록에서 선택하세요.';
+            return;
+        }
+        inviteSelectionEl.classList.add('is-selected');
+        const statusLabel = selected.status_label || (selected.online ? '온라인' : '오프라인');
+        inviteSelectionEl.textContent = `${selected.nickname} · ${statusLabel} · 레이팅 ${selected.stats?.rating ?? selected.rating ?? '-'} · ID ${selected.id}`;
+    }
+
+    function renderInviteCandidates(container, users, emptyText) {
+        if (!container) return;
+        if (!users.length) {
+            container.innerHTML = `<div class="community-empty">${emptyText}</div>`;
+            return;
+        }
+        container.innerHTML = users.map((user) => {
+            const featuredAchievement = achievementLabel(user.featured_achievement?.key || user.featured_achievement_key);
+            const statusClass = getInvitePresenceClass(user);
+            const statusLabel = user.status_label || (user.online ? '온라인' : '오프라인');
+            const isSelected = user.id === selectedInviteUserId;
+            return `
+                <button class="community-picker-item${isSelected ? ' is-selected' : ''}" type="button" data-invite-user-id="${user.id}">
+                    <div class="community-picker-main">
+                        ${renderAvatar(user.avatar_url, user.nickname)}
+                        <div class="community-block">
+                            <span class="community-item-title">${Utils.escapeHtml(user.nickname)}</span>
+                            <div class="community-picker-meta">
+                                <span class="community-badge ${statusClass}">${Utils.escapeHtml(statusLabel)}</span>
+                                <span class="community-item-meta">레이팅 ${user.stats?.rating ?? user.rating ?? '-'}</span>
+                                ${featuredAchievement ? `<span class="community-badge is-link">${Utils.escapeHtml(featuredAchievement)}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </button>
+            `;
+        }).join('');
+        container.querySelectorAll('[data-invite-user-id]').forEach((button) => {
+            button.addEventListener('click', () => {
+                selectedInviteUserId = Number(button.dataset.inviteUserId);
+                renderInviteSelection();
+                renderInviteCandidates(onlineSuggestionsEl, onlineInviteUsers, '현재 바로 초대할 수 있는 접속자가 없습니다.');
+                renderInviteCandidates(inviteResultsEl, inviteSearchResults, '검색 결과가 없습니다.');
+            });
+        });
+    }
+
+    async function loadOnlineInviteSuggestions() {
+        if (!canManageParty()) {
+            onlineInviteUsers = [];
+            renderInviteCandidates(onlineSuggestionsEl, [], '파티장만 접속자 초대를 보낼 수 있습니다.');
+            renderInviteSelection();
+            return;
+        }
+        const blockedIds = getInviteBlockedIds();
+        const data = await API.get('/accounts/online-users/');
+        onlineInviteUsers = (data.results || [])
+            .filter((user) => !blockedIds.has(user.id))
+            .slice(0, 8);
+        if (selectedInviteUserId && blockedIds.has(selectedInviteUserId)) {
+            selectedInviteUserId = null;
+        }
+        renderInviteCandidates(onlineSuggestionsEl, onlineInviteUsers, '현재 바로 초대할 수 있는 접속자가 없습니다.');
+        renderInviteSelection();
+    }
+
+    async function searchInviteUsers(event) {
+        event?.preventDefault?.();
+        if (!canManageParty()) {
+            Toast.error('파티장만 유저를 초대할 수 있습니다.');
+            return;
+        }
+        const query = inviteQueryInput?.value?.trim() || '';
+        if (!query) {
+            inviteSearchResults = [];
+            renderInviteCandidates(inviteResultsEl, [], '닉네임으로 검색하면 결과가 표시됩니다.');
+            renderInviteSelection();
+            return;
+        }
+        const blockedIds = getInviteBlockedIds();
+        const data = await API.get('/accounts/users/search/', { q: query });
+        const onlineMap = new Map(onlineInviteUsers.map((user) => [user.id, user]));
+        inviteSearchResults = (data.results || [])
+            .filter((user) => !blockedIds.has(user.id))
+            .map((user) => {
+                const onlineEntry = onlineMap.get(user.id);
+                return {
+                    ...user,
+                    online: Boolean(onlineEntry?.online),
+                    status: onlineEntry?.status || '',
+                    status_label: onlineEntry?.status_label || '오프라인',
+                };
+            });
+        renderInviteCandidates(inviteResultsEl, inviteSearchResults, '검색 결과가 없습니다.');
+        renderInviteSelection();
+    }
+
+    function resetInvitePicker() {
+        selectedInviteUserId = null;
+        inviteSearchResults = [];
+        if (inviteQueryInput) inviteQueryInput.value = '';
+        renderInviteCandidates(inviteResultsEl, [], '닉네임으로 검색하면 결과가 표시됩니다.');
+        renderInviteSelection();
+    }
+
     async function loadMe() {
         try {
             me = await API.get('/accounts/me/');
@@ -118,7 +247,6 @@
         document.getElementById('party-transfer-btn')?.toggleAttribute('disabled', !canManageParty());
         document.getElementById('party-kick-btn')?.toggleAttribute('disabled', !canManageParty());
         document.getElementById('party-battle-btn')?.toggleAttribute('disabled', !canManageParty() || !party.lineup_locked);
-        document.getElementById('party-invite-user-id')?.toggleAttribute('disabled', !canManageParty());
         document.getElementById('party-slot-value')?.toggleAttribute('disabled', !canManageParty());
         partySummaryEl.innerHTML = `
             <div class="community-item">
@@ -165,6 +293,10 @@
             });
         }
         renderMemberSelection();
+        renderInviteSelection();
+        loadOnlineInviteSuggestions().catch(() => {
+            renderInviteCandidates(onlineSuggestionsEl, [], '접속자 목록을 불러오지 못했습니다.');
+        });
     }
 
     function renderChat(items) {
@@ -231,9 +363,13 @@
 
     async function loadParties() {
         const data = await API.get('/community/parties/');
-        renderPartyList(data.results || []);
-        if (!selectedPartyId && data.results?.length) {
-            await loadPartyDetail(data.results[0].id);
+        const items = data.results || [];
+        renderPartyList(items);
+        if (selectedPartyId && !items.some((party) => party.id === selectedPartyId)) {
+            selectedPartyId = null;
+        }
+        if (!selectedPartyId && items.length) {
+            await loadPartyDetail(items[0].id);
         }
     }
 
@@ -258,9 +394,17 @@
         const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
         const party = await API.post('/community/parties/', payload);
         window.PartyInvites?.invalidate();
+        selectedPartyId = party.id;
+        selectedParty = party;
+        selectedMemberId = null;
+        selectedInviteUserId = null;
+        inviteSearchResults = [];
+        detailEmptyEl.classList.add('hidden');
+        detailPanelEl.classList.remove('hidden');
+        renderPartyDetail(party);
+        renderChat([]);
         Toast.success('파티를 생성했습니다.');
         event.currentTarget.reset();
-        await loadParties();
         await loadPartyDetail(party.id);
     }
 
@@ -297,11 +441,12 @@
             return;
         }
         if (!selectedPartyId) return;
-        const userId = Number(document.getElementById('party-invite-user-id').value);
-        if (!userId) return Toast.error('초대할 유저 ID를 입력하세요.');
+        const userId = Number(selectedInviteUserId || 0);
+        if (!userId) return Toast.error('초대할 유저를 먼저 선택하세요.');
         await API.post(`/community/parties/${selectedPartyId}/invite/`, { user_id: userId });
         Toast.success('파티 초대를 보냈습니다.');
-        event.currentTarget.reset();
+        resetInvitePicker();
+        await loadOnlineInviteSuggestions();
     }
 
     async function assignSlot(event) {
@@ -382,6 +527,8 @@
         lineupBtn?.addEventListener('click', () => toggleLineupLock().catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('party-leave-btn')?.addEventListener('click', () => leaveParty().catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('party-invite-form')?.addEventListener('submit', (event) => inviteUser(event).catch((error) => Toast.error(error.data?.message || error.message)));
+        document.getElementById('party-invite-search-form')?.addEventListener('submit', (event) => searchInviteUsers(event).catch((error) => Toast.error(error.data?.message || error.message)));
+        document.getElementById('party-invite-reset')?.addEventListener('click', () => resetInvitePicker());
         document.getElementById('party-slot-form')?.addEventListener('submit', (event) => assignSlot(event).catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('party-transfer-btn')?.addEventListener('click', () => transferLeader().catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('party-kick-btn')?.addEventListener('click', () => kickMember().catch((error) => Toast.error(error.data?.message || error.message)));

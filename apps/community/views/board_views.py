@@ -33,12 +33,21 @@ class BoardListCreateView(APIView):
 
     def get(self, request):
         category_code = request.query_params.get("category")
+        mine_only = request.query_params.get("mine") == "1"
         try:
             limit = int(request.query_params.get("limit", "0") or 0)
         except ValueError:
             limit = 0
         limit = max(0, min(limit, 20))
-        posts = BoardService.list_posts(category_code=category_code, limit=limit or None)
+        posts = BoardService.list_posts(
+            category_code=category_code,
+            limit=limit or None,
+            author=(
+                request.user
+                if mine_only and getattr(request.user, "is_authenticated", False)
+                else None
+            ),
+        )
         if limit:
             results = list(posts)
             count = len(results)
@@ -110,6 +119,14 @@ class BoardCommentLikeToggleView(APIView):
                 "like_count": comment.like_count,
             }
         )
+
+
+class BoardCommentDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, comment_id: int):
+        BoardService.delete_comment(request.user, comment_id=comment_id)
+        return Response(status=204)
 
 
 class BoardReportCreateView(APIView):

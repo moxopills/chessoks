@@ -3,6 +3,7 @@
     let activeCategory = null;
     let activePostId = null;
     let currentUserId = null;
+    let mineOnly = new URLSearchParams(window.location.search).get('mine') === '1';
     const initialPostId = Number(new URLSearchParams(window.location.search).get('post') || 0);
 
     const tabsEl = document.getElementById('board-tabs');
@@ -15,6 +16,9 @@
     const commentInputEl = document.getElementById('board-comment-input');
     const deleteBtn = document.getElementById('board-delete-btn');
     const detailActionsEl = document.getElementById('board-detail-actions');
+    const mineToggleBtn = document.getElementById('board-mine-toggle');
+    const scopeAllBtn = document.getElementById('board-scope-all');
+    const scopeMineBtn = document.getElementById('board-scope-mine');
 
     function formatPostTime(value) {
         if (!value) return '-';
@@ -97,6 +101,9 @@
         const author = comment.author?.nickname || '익명';
         const likedClass = comment.liked_by_me ? ' active' : '';
         const likedLabel = comment.liked_by_me ? '좋아요 취소' : '좋아요';
+        const deleteButton = comment.can_delete
+            ? `<button class="btn btn-secondary btn-xs" type="button" data-comment-delete="${comment.id}">삭제</button>`
+            : '';
         return `
             <div class="community-item community-comment-item" data-comment-id="${comment.id}">
                 <span class="community-item-head">
@@ -109,9 +116,22 @@
                         <span>👍</span>
                         <span class="community-comment-like-count">${Number(comment.like_count || 0)}</span>
                     </button>
+                    ${deleteButton}
                 </div>
             </div>
         `;
+    }
+
+    function updateScopeButtons() {
+        const canUseMine = Boolean(currentUserId);
+        mineToggleBtn?.classList.toggle('hidden', !canUseMine);
+        scopeMineBtn?.classList.toggle('hidden', !canUseMine);
+        mineToggleBtn?.classList.toggle('btn-primary', mineOnly);
+        mineToggleBtn?.classList.toggle('btn-secondary', !mineOnly);
+        scopeAllBtn?.classList.toggle('btn-primary', !mineOnly);
+        scopeAllBtn?.classList.toggle('btn-secondary', mineOnly);
+        scopeMineBtn?.classList.toggle('btn-primary', mineOnly);
+        scopeMineBtn?.classList.toggle('btn-secondary', !mineOnly);
     }
 
     async function loadCurrentUser() {
@@ -187,8 +207,12 @@
 
     async function loadPosts() {
         const params = activeCategory ? { category: activeCategory } : {};
+        if (mineOnly && currentUserId) {
+            params.mine = '1';
+        }
         const data = await API.get('/community/boards/posts/', params);
         renderPosts(data.results || []);
+        updateScopeButtons();
     }
 
     async function loadPost(postId, { incrementView = true } = {}) {
@@ -224,6 +248,16 @@
         }
     }
 
+    async function deleteComment(commentId) {
+        if (!commentId) return;
+        if (!window.confirm('이 댓글을 삭제할까요?')) return;
+        await API.delete(`/community/boards/comments/${commentId}/`);
+        Toast.success('댓글을 삭제했습니다.');
+        if (activePostId) {
+            await loadPost(activePostId, { incrementView: false });
+        }
+    }
+
     async function deleteActivePost() {
         if (!activePostId) return;
         if (!window.confirm('이 게시글을 삭제할까요?')) return;
@@ -239,7 +273,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        Promise.all([loadCurrentUser(), loadCategories(), loadPosts()])
+        loadCurrentUser()
+            .then(() => Promise.all([loadCategories(), loadPosts()]))
             .then(async () => {
                 if (initialPostId) {
                     await loadPost(initialPostId);
@@ -255,6 +290,13 @@
         });
 
         commentsEl?.addEventListener('click', (event) => {
+            const deleteButton = event.target.closest('[data-comment-delete]');
+            if (deleteButton) {
+                const commentId = Number(deleteButton.dataset.commentDelete || 0);
+                if (!commentId) return;
+                deleteComment(commentId).catch((error) => Toast.error(error.data?.message || error.message));
+                return;
+            }
             const button = event.target.closest('[data-comment-like]');
             if (!button) return;
             const commentId = Number(button.dataset.commentLike || 0);
@@ -265,5 +307,22 @@
         deleteBtn?.addEventListener('click', () => {
             deleteActivePost().catch((error) => Toast.error(error.data?.message || error.message));
         });
+
+        const switchScope = (nextMineOnly) => {
+            if (nextMineOnly && !currentUserId) {
+                Toast.info('로그인 후 내 글 모아보기를 사용할 수 있습니다.');
+                return;
+            }
+            mineOnly = nextMineOnly;
+            const url = new URL(window.location.href);
+            if (mineOnly) url.searchParams.set('mine', '1');
+            else url.searchParams.delete('mine');
+            window.history.replaceState({}, '', url);
+            loadPosts().catch((error) => Toast.error(error.data?.message || error.message));
+        };
+
+        mineToggleBtn?.addEventListener('click', () => switchScope(!mineOnly));
+        scopeAllBtn?.addEventListener('click', () => switchScope(false));
+        scopeMineBtn?.addEventListener('click', () => switchScope(true));
     });
 })();

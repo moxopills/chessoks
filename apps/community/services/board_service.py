@@ -77,12 +77,14 @@ class BoardService:
         return BoardCategory.objects.filter(is_enabled=True).order_by("sort_order", "id")
 
     @staticmethod
-    def list_posts(*, category_code: str | None, limit: int | None = None):
+    def list_posts(*, category_code: str | None, limit: int | None = None, author=None):
         queryset = BoardPost.objects.select_related("author", "author__stats", "category").filter(
             category__is_enabled=True, is_blinded=False
         )
         if category_code:
             queryset = queryset.filter(category__code=category_code)
+        if author is not None:
+            queryset = queryset.filter(author=author)
         if limit:
             return queryset[:limit]
         return queryset
@@ -113,6 +115,7 @@ class BoardService:
         comments_queryset = BoardComment.objects.select_related(
             "author",
             "author__stats",
+            "post",
         )
         if viewer and getattr(viewer, "is_authenticated", False):
             comments_queryset = comments_queryset.prefetch_related(
@@ -139,6 +142,26 @@ class BoardService:
             last_commented_at=timezone.now(),
         )
         return comment
+
+    @staticmethod
+    @transaction.atomic
+    def delete_comment(actor, *, comment_id: int) -> None:
+        comment = (
+            BoardComment.objects.select_for_update()
+            .select_related("author", "post")
+            .get(pk=comment_id)
+        )
+        if (
+            comment.author_id != actor.id
+            and comment.post.author_id != actor.id
+            and not getattr(actor, "is_staff", False)
+        ):
+            raise ValidationError({"detail": ["삭제 권한이 없습니다."]})
+        post_id = comment.post_id
+        comment.delete()
+        BoardPost.objects.filter(pk=post_id, comment_count__gt=0).update(
+            comment_count=F("comment_count") - 1
+        )
 
     @staticmethod
     @transaction.atomic
