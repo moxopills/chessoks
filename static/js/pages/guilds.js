@@ -289,9 +289,13 @@
 
     async function loadGuilds() {
         const data = await API.get('/community/guilds/');
-        renderGuildList(data.results || []);
-        if (!selectedGuildId && data.results?.length) {
-            await loadGuildDetail(data.results[0].id);
+        const items = data.results || [];
+        renderGuildList(items);
+        if (selectedGuildId && !items.some((guild) => guild.id === selectedGuildId)) {
+            selectedGuildId = null;
+        }
+        if (!selectedGuildId && items.length) {
+            await loadGuildDetail(items[0].id);
         }
     }
 
@@ -317,12 +321,30 @@
     async function submitCreate(event) {
         event.preventDefault();
         const form = event.currentTarget;
-        const formData = new FormData(form);
-        formData.set('min_rating', String(Number(formData.get('min_rating') || 0)));
+        const formData = new FormData();
+        formData.set('name', form.elements.name.value.trim());
+        formData.set('description', form.elements.description.value.trim());
+        formData.set('join_policy', form.elements.join_policy.value);
+        formData.set('min_rating', String(Number(form.elements.min_rating.value || 0)));
+        formData.set('active_hours', form.elements.active_hours.value.trim());
+        formData.set('contact_channel', form.elements.contact_channel.value.trim());
+        const avatarFile = form.elements.avatar?.files?.[0];
+        if (avatarFile instanceof File && avatarFile.name) {
+            formData.set('avatar', avatarFile, avatarFile.name);
+        }
         const guild = await API.post('/community/guilds/', formData, true);
+        selectedGuildId = guild.id;
+        selectedGuild = guild;
+        selectedMemberId = null;
+        detailEmptyEl.classList.add('hidden');
+        detailPanelEl.classList.remove('hidden');
+        renderGuildSummary(guild);
+        renderMembers(guild);
+        renderChat([]);
+        renderRequests([]);
+        renderAuditLogs([]);
         Toast.success('길드를 생성했습니다.');
         form.reset();
-        await loadGuilds();
         await loadGuildDetail(guild.id);
     }
 

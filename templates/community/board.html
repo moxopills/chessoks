@@ -10,6 +10,7 @@
             <p>모집, 자유, 퍼즐공략, 지식 게시판을 한 곳에서 관리합니다.</p>
         </div>
         <div class="community-hero-actions">
+            <button class="btn btn-secondary" id="board-mine-toggle" type="button">내 글만 보기</button>
             <a href="/board/write/" class="btn btn-primary">글 작성</a>
         </div>
     </section>
@@ -18,6 +19,10 @@
             <div class="community-card-head">
                 <h2>게시글 목록</h2>
                 <p>최신 글을 빠르게 확인하고 카테고리별로 탐색할 수 있습니다.</p>
+            </div>
+            <div class="community-actions community-actions--wrap">
+                <button class="btn btn-secondary btn-sm" id="board-scope-all" type="button">전체 글</button>
+                <button class="btn btn-secondary btn-sm" id="board-scope-mine" type="button">내 글</button>
             </div>
             <div class="community-tab-list" id="board-tabs"></div>
             <div class="community-list" id="board-post-list"></div>

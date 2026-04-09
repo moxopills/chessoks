@@ -30,6 +30,7 @@ class BoardPostCreateSerializer(serializers.Serializer):
 class BoardCommentSerializer(serializers.ModelSerializer):
     author = PlainUserSerializer(read_only=True)
     liked_by_me = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
 
     class Meta:
         model = BoardComment
@@ -41,6 +42,7 @@ class BoardCommentSerializer(serializers.ModelSerializer):
             "author",
             "like_count",
             "liked_by_me",
+            "can_delete",
         ]
 
     def get_liked_by_me(self, obj):
@@ -52,6 +54,17 @@ class BoardCommentSerializer(serializers.ModelSerializer):
         if viewer_likes is not None:
             return bool(viewer_likes)
         return obj.likes.filter(user=user).exists()
+
+    def get_can_delete(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return False
+        return (
+            obj.author_id == user.id
+            or obj.post.author_id == user.id
+            or getattr(user, "is_staff", False)
+        )
 
 
 class BoardPostSerializer(serializers.ModelSerializer):

@@ -48,10 +48,29 @@
                     <button class="btn btn-secondary" id="party-battle-btn" type="button">단체전 매칭 생성</button>
                     <button class="btn btn-secondary" id="party-leave-btn" type="button">파티 나가기</button>
                 </div>
-                <form id="party-invite-form" class="community-inline-form">
-                    <input class="form-input" id="party-invite-user-id" type="number" min="1" placeholder="초대할 유저 ID">
-                    <button class="btn btn-secondary btn-sm" type="submit">초대</button>
-                </form>
+                <div class="community-item community-card-slim">
+                    <span class="community-item-title">파티 초대</span>
+                    <p class="community-note">닉네임으로 검색하거나 현재 접속자 중에서 선택해 초대하세요.</p>
+                    <div class="community-selection-bar" id="party-invite-selection">
+                        초대할 유저를 검색하거나 아래 목록에서 선택하세요.
+                    </div>
+                    <form id="party-invite-search-form" class="community-inline-form">
+                        <input class="form-input" id="party-invite-query" placeholder="닉네임으로 검색">
+                        <button class="btn btn-secondary btn-sm" type="submit">검색</button>
+                        <button class="btn btn-secondary btn-sm" id="party-invite-reset" type="button">초기화</button>
+                    </form>
+                    <div>
+                        <h3>현재 접속자</h3>
+                        <div class="community-picker-grid" id="party-online-suggestions"></div>
+                    </div>
+                    <div>
+                        <h3>검색 결과</h3>
+                        <div class="community-sublist community-sublist--compact" id="party-invite-results"></div>
+                    </div>
+                    <form id="party-invite-form" class="community-inline-form community-inline-form--end">
+                        <button class="btn btn-secondary btn-sm" type="submit">선택한 유저 초대</button>
+                    </form>
+                </div>
                 <div class="community-selection-bar" id="party-member-selection">
                     멤버 카드를 선택하면 슬롯 지정과 파티장 위임/추방이 가능합니다.
                 </div>
