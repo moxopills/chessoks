@@ -15,6 +15,7 @@ class Guild(models.Model):
     )
     name = models.CharField(max_length=40, unique=True)
     slug = models.SlugField(max_length=48, unique=True, blank=True)
+    avatar_url = models.URLField(max_length=500, blank=True, null=True)
     description = models.TextField(blank=True)
     notice = models.CharField(max_length=200, blank=True, default="")
     join_policy = models.CharField(

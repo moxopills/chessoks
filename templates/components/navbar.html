@@ -169,6 +169,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
 }
 
 /* Logo */
@@ -196,20 +197,37 @@
 .navbar-menu {
     display: flex;
     align-items: center;
-    gap: var(--space-xs);
+    gap: 0.2rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    white-space: nowrap;
+    justify-content: center;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+}
+
+.navbar-menu::-webkit-scrollbar {
+    display: none;
 }
 
 .navbar-link {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
-    padding: var(--space-sm) var(--space-md);
+    padding: 0.45rem 0.55rem;
     color: var(--color-text-secondary);
     text-decoration: none;
     font-family: var(--font-body);
-    font-size: 0.875rem;
+    font-size: 0.76rem;
     border-radius: var(--radius-md);
     transition: all var(--transition-fast);
+    flex: 0 0 auto;
+    white-space: nowrap;
+    line-height: 1;
+    scroll-snap-align: center;
 }
 
 .navbar-link:hover {
@@ -224,7 +242,8 @@
 }
 
 .navbar-link-icon {
-    font-size: 1rem;
+    font-size: 0.9rem;
+    line-height: 1;
 }
 
 /* Right Section */
@@ -232,6 +251,7 @@
     display: flex;
     align-items: center;
     gap: 8px; /* 기존 var(--space-md)에서 축소 */
+    flex: 0 0 auto;
 }
 
 .theme-toggle {
@@ -519,6 +539,8 @@
         background-color: var(--color-bg-secondary);
         border-bottom: 2px solid var(--color-border);
         padding: var(--space-md);
+        overflow: visible;
+        white-space: normal;
     }
 
     .navbar-menu.active {

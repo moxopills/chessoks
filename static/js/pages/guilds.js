@@ -17,6 +17,7 @@
     const guildBattleBtn = document.getElementById('guild-battle-btn');
     const guildNoticeInput = document.getElementById('guild-notice-input');
     const memberSelectionEl = document.getElementById('guild-member-selection');
+    const guildAvatarInput = document.getElementById('guild-avatar-input');
 
     const ACHIEVEMENT_LABELS = {
         first_win: '첫 승',
@@ -77,6 +78,16 @@
         return `<div class="community-member-avatar">${Utils.escapeHtml((nickname || '?').trim().slice(0, 1) || '?')}</div>`;
     }
 
+    function renderGuildAvatar(url, name, compact = false) {
+        const safeUrl = Utils.sanitizeUrl ? Utils.sanitizeUrl(url || '', '') : '';
+        const className = compact ? 'community-guild-avatar is-compact' : 'community-guild-avatar';
+        if (safeUrl) {
+            return `<div class="${className}"><img src="${Utils.escapeHtml(safeUrl)}" alt="${Utils.escapeHtml(name)}"></div>`;
+        }
+        const fallback = Utils.escapeHtml((name || '?').trim().slice(0, 1) || '?');
+        return `<div class="${className}">${fallback}</div>`;
+    }
+
     async function loadMe() {
         try {
             me = await API.get('/accounts/me/');
@@ -96,9 +107,14 @@
             item.type = 'button';
             item.className = `community-item${guild.id === selectedGuildId ? ' is-active' : ''}`;
             item.innerHTML = `
-                <span class="community-item-title">${Utils.escapeHtml(guild.name)}</span>
-                <span class="community-item-meta">${Utils.escapeHtml(guild.join_policy === 'open' ? '자유 가입' : '승인제')} · 팀 레이팅 ${guild.team_rating} · 요청 ${guild.pending_requests || 0}</span>
-                <span class="community-item-copy">${Utils.escapeHtml(guild.description || '길드 설명이 아직 없습니다.')}</span>
+                <div class="community-guild-row">
+                    ${renderGuildAvatar(guild.avatar_url, guild.name, true)}
+                    <div class="community-block">
+                        <span class="community-item-title">${Utils.escapeHtml(guild.name)}</span>
+                        <span class="community-item-meta">${Utils.escapeHtml(guild.join_policy === 'open' ? '자유 가입' : '승인제')} · 팀 레이팅 ${guild.team_rating} · 요청 ${guild.pending_requests || 0}</span>
+                        <span class="community-item-copy">${Utils.escapeHtml(guild.description || '길드 설명이 아직 없습니다.')}</span>
+                    </div>
+                </div>
             `;
             item.addEventListener('click', () => loadGuildDetail(guild.id));
             guildListEl.appendChild(item);
@@ -113,10 +129,15 @@
         const membership = myMembership();
         guildSummaryEl.innerHTML = `
             <div class="community-item">
-                <span class="community-item-title">${Utils.escapeHtml(guild.name)}</span>
-                <span class="community-item-meta">길드장 ${Utils.escapeHtml(guild.owner.nickname)} · 팀 레이팅 ${guild.team_rating} · 멤버 ${guild.member_count}명</span>
-                <span class="community-item-copy">${Utils.escapeHtml(guild.description || '길드 설명이 아직 없습니다.')}</span>
-                <span class="community-item-copy">공지: ${Utils.escapeHtml(guild.notice || '아직 공지가 없습니다.')}</span>
+                <div class="community-guild-row community-guild-row--summary">
+                    ${renderGuildAvatar(guild.avatar_url, guild.name)}
+                    <div class="community-block">
+                        <span class="community-item-title">${Utils.escapeHtml(guild.name)}</span>
+                        <span class="community-item-meta">길드장 ${Utils.escapeHtml(guild.owner.nickname)} · 팀 레이팅 ${guild.team_rating} · 멤버 ${guild.member_count}명</span>
+                        <span class="community-item-copy">${Utils.escapeHtml(guild.description || '길드 설명이 아직 없습니다.')}</span>
+                        <span class="community-item-copy">공지: ${Utils.escapeHtml(guild.notice || '아직 공지가 없습니다.')}</span>
+                    </div>
+                </div>
                 <div class="community-row-meta">
                     <span class="community-badge">${Utils.escapeHtml(guild.join_policy === 'open' ? '자유 가입' : '승인제')}</span>
                     ${membership ? `<span class="community-badge is-ready">내 역할 · ${Utils.escapeHtml(membership.role)}</span>` : ''}
@@ -134,6 +155,8 @@
         if (guildBattleBtn) {
             guildBattleBtn.disabled = !isManager();
         }
+        guildAvatarInput?.toggleAttribute('disabled', !isManager());
+        document.querySelector('#guild-avatar-form button[type="submit"]')?.toggleAttribute('disabled', !isManager());
         document.getElementById('guild-member-role')?.toggleAttribute('disabled', !isManager());
         document.querySelector('#guild-notice-form button[type="submit"]')?.toggleAttribute('disabled', !isManager());
         document.querySelector('#guild-role-form button[type="submit"]')?.toggleAttribute('disabled', !isManager());
@@ -294,9 +317,9 @@
     async function submitCreate(event) {
         event.preventDefault();
         const form = event.currentTarget;
-        const payload = Object.fromEntries(new FormData(form).entries());
-        payload.min_rating = Number(payload.min_rating || 0);
-        const guild = await API.post('/community/guilds/', payload);
+        const formData = new FormData(form);
+        formData.set('min_rating', String(Number(formData.get('min_rating') || 0)));
+        const guild = await API.post('/community/guilds/', formData, true);
         Toast.success('길드를 생성했습니다.');
         form.reset();
         await loadGuilds();
@@ -388,6 +411,22 @@
         await loadGuildDetail(selectedGuildId);
     }
 
+    async function updateAvatar(event) {
+        event.preventDefault();
+        if (!selectedGuildId) return;
+        const file = guildAvatarInput?.files?.[0];
+        if (!file) {
+            Toast.error('업로드할 이미지를 먼저 선택하세요.');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('avatar', file);
+        await API.patch(`/community/guilds/${selectedGuildId}/avatar/`, formData, true);
+        guildAvatarInput.value = '';
+        Toast.success('길드 프로필 사진을 업데이트했습니다.');
+        await loadGuildDetail(selectedGuildId);
+    }
+
     async function init() {
         await loadMe();
         await loadGuilds();
@@ -396,6 +435,7 @@
         guildLeaveBtn?.addEventListener('click', () => leaveGuild().catch((error) => Toast.error(error.data?.message || error.message)));
         guildBattleBtn?.addEventListener('click', () => createGuildBattle().catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('guild-chat-form')?.addEventListener('submit', (event) => sendChat(event).catch((error) => Toast.error(error.data?.message || error.message)));
+        document.getElementById('guild-avatar-form')?.addEventListener('submit', (event) => updateAvatar(event).catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('guild-notice-form')?.addEventListener('submit', (event) => saveNotice(event).catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('guild-role-form')?.addEventListener('submit', (event) => updateRole(event).catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('guild-transfer-btn')?.addEventListener('click', () => transferLeadership().catch((error) => Toast.error(error.data?.message || error.message)));

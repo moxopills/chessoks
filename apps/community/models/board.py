@@ -60,6 +60,7 @@ class BoardComment(models.Model):
     )
     content = models.CharField(max_length=500)
     is_blinded = models.BooleanField(default=False)
+    like_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -68,6 +69,29 @@ class BoardComment(models.Model):
         ordering = ["created_at"]
         indexes = [
             models.Index(fields=["post", "created_at"], name="board_comment_post_created_idx"),
+        ]
+
+
+class BoardCommentLike(models.Model):
+    comment = models.ForeignKey(
+        BoardComment,
+        on_delete=models.CASCADE,
+        related_name="likes",
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="board_comment_likes",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "board_comment_likes"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["comment", "user"],
+                name="uniq_board_comment_like",
+            ),
         ]
 
 

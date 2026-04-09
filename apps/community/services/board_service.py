@@ -1,11 +1,17 @@
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
 from rest_framework.exceptions import ValidationError
 
-from apps.community.models import BoardCategory, BoardComment, BoardPost, BoardReport
+from apps.community.models import (
+    BoardCategory,
+    BoardComment,
+    BoardCommentLike,
+    BoardPost,
+    BoardReport,
+)
 
 
 class BoardService:
@@ -101,13 +107,25 @@ class BoardService:
         )
 
     @staticmethod
-    def get_post(post_id: int, *, increment_view: bool = False) -> BoardPost:
+    def get_post(post_id: int, *, increment_view: bool = False, viewer=None) -> BoardPost:
         if increment_view:
             BoardPost.objects.filter(pk=post_id).update(view_count=F("view_count") + 1)
+        comments_queryset = BoardComment.objects.select_related(
+            "author",
+            "author__stats",
+        )
+        if viewer and getattr(viewer, "is_authenticated", False):
+            comments_queryset = comments_queryset.prefetch_related(
+                Prefetch(
+                    "likes",
+                    queryset=BoardCommentLike.objects.filter(user=viewer).only("id", "comment_id"),
+                    to_attr="viewer_likes",
+                )
+            )
         return get_object_or_404(
             BoardPost.objects.select_related(
                 "author", "author__stats", "category"
-            ).prefetch_related("comments__author__stats"),
+            ).prefetch_related(Prefetch("comments", queryset=comments_queryset)),
             pk=post_id,
         )
 
@@ -121,6 +139,30 @@ class BoardService:
             last_commented_at=timezone.now(),
         )
         return comment
+
+    @staticmethod
+    @transaction.atomic
+    def delete_post(actor, *, post_id: int) -> None:
+        post = BoardPost.objects.select_for_update().select_related("author").get(pk=post_id)
+        if post.author_id != actor.id and not getattr(actor, "is_staff", False):
+            raise ValidationError({"detail": ["본인이 작성한 게시글만 삭제할 수 있습니다."]})
+        post.delete()
+
+    @staticmethod
+    @transaction.atomic
+    def toggle_comment_like(actor, *, comment_id: int) -> tuple[BoardComment, bool]:
+        comment = BoardComment.objects.select_for_update().get(pk=comment_id)
+        like = BoardCommentLike.objects.filter(comment=comment, user=actor).first()
+        if like:
+            like.delete()
+            BoardComment.objects.filter(pk=comment_id).update(like_count=F("like_count") - 1)
+            liked = False
+        else:
+            BoardCommentLike.objects.create(comment=comment, user=actor)
+            BoardComment.objects.filter(pk=comment_id).update(like_count=F("like_count") + 1)
+            liked = True
+        comment.refresh_from_db(fields=["id", "like_count", "post_id"])
+        return comment, liked
 
     @staticmethod
     @transaction.atomic

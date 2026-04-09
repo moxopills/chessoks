@@ -13,6 +13,7 @@ from .common import PlainUserSerializer
 
 class GuildCreateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=40)
+    avatar = serializers.ImageField(required=False, allow_null=True)
     description = serializers.CharField(required=False, allow_blank=True)
     join_policy = serializers.ChoiceField(choices=Guild.JoinPolicy.choices)
     min_rating = serializers.IntegerField(min_value=0, max_value=4000, required=False, default=0)
@@ -41,6 +42,7 @@ class GuildSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "slug",
+            "avatar_url",
             "description",
             "notice",
             "join_policy",
@@ -79,6 +81,10 @@ class GuildJoinRequestSerializer(serializers.ModelSerializer):
 
 class GuildMemberRoleSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=GuildMember.Role.choices)
+
+
+class GuildAvatarUpdateSerializer(serializers.Serializer):
+    avatar = serializers.ImageField(required=True)
 
 
 class GuildChatCreateSerializer(serializers.Serializer):

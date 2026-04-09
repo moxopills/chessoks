@@ -4,6 +4,7 @@
     let selectedParty = null;
     let currentPartyReady = false;
     let selectedMemberId = null;
+    let isGuestUser = false;
 
     const partyListEl = document.getElementById('party-list');
     const detailEmptyEl = document.getElementById('party-detail-empty');
@@ -35,6 +36,10 @@
 
     function isLeader() {
         return Boolean(selectedParty && me && selectedParty.leader.id === me.id);
+    }
+
+    function canManageParty() {
+        return isLeader() && !isGuestUser;
     }
 
     function getSelectedMember() {
@@ -69,8 +74,10 @@
         try {
             me = await API.get('/accounts/me/');
             window.__partyMeId = me.id;
+            isGuestUser = Boolean(me.is_guest);
         } catch {
             me = null;
+            isGuestUser = false;
         }
     }
 
@@ -105,17 +112,20 @@
         readyBtn.textContent = currentPartyReady ? '준비 해제' : '준비 완료';
         lineupBtn.textContent = party.lineup_locked ? '라인업 해제' : '라인업 고정';
         readyBtn.disabled = !myMembership();
-        lineupBtn.disabled = !isLeader();
-        document.querySelector('#party-invite-form button[type="submit"]')?.toggleAttribute('disabled', !isLeader());
-        document.querySelector('#party-slot-form button[type="submit"]')?.toggleAttribute('disabled', !isLeader());
-        document.getElementById('party-transfer-btn')?.toggleAttribute('disabled', !isLeader());
-        document.getElementById('party-kick-btn')?.toggleAttribute('disabled', !isLeader());
-        document.getElementById('party-battle-btn')?.toggleAttribute('disabled', !isLeader() || !party.lineup_locked);
+        lineupBtn.disabled = !canManageParty();
+        document.querySelector('#party-invite-form button[type="submit"]')?.toggleAttribute('disabled', !canManageParty());
+        document.querySelector('#party-slot-form button[type="submit"]')?.toggleAttribute('disabled', !canManageParty());
+        document.getElementById('party-transfer-btn')?.toggleAttribute('disabled', !canManageParty());
+        document.getElementById('party-kick-btn')?.toggleAttribute('disabled', !canManageParty());
+        document.getElementById('party-battle-btn')?.toggleAttribute('disabled', !canManageParty() || !party.lineup_locked);
+        document.getElementById('party-invite-user-id')?.toggleAttribute('disabled', !canManageParty());
+        document.getElementById('party-slot-value')?.toggleAttribute('disabled', !canManageParty());
         partySummaryEl.innerHTML = `
             <div class="community-item">
                 <span class="community-item-title">${Utils.escapeHtml(party.title)}</span>
                 <span class="community-item-meta">파티장 ${Utils.escapeHtml(party.leader.nickname)} · 상태 ${Utils.escapeHtml(party.status)} · 라인업 ${party.lineup_locked ? '고정됨' : '편집 가능'}</span>
                 <span class="community-item-copy">${Utils.escapeHtml(party.description || '파티 설명이 아직 없습니다.')}</span>
+                ${isGuestUser ? '<span class="community-badge is-info">게스트 참가 모드</span>' : ''}
             </div>
         `;
         if (!(party.members || []).length) {
@@ -200,6 +210,7 @@
                     await API.post(`/community/parties/invites/${button.dataset.id}/respond/`, {
                         accept: button.dataset.action === 'accept',
                     });
+                    window.PartyInvites?.invalidate();
                     Toast.success(button.dataset.action === 'accept' ? '파티 초대를 수락했습니다.' : '파티 초대를 거절했습니다.');
                     await Promise.all([loadPendingInvites(), loadParties()]);
                 } catch (error) {
@@ -240,8 +251,13 @@
 
     async function createParty(event) {
         event.preventDefault();
+        if (isGuestUser) {
+            Toast.error('게스트는 파티 생성이 불가능합니다. 초대를 받아 참가만 할 수 있습니다.');
+            return;
+        }
         const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
         const party = await API.post('/community/parties/', payload);
+        window.PartyInvites?.invalidate();
         Toast.success('파티를 생성했습니다.');
         event.currentTarget.reset();
         await loadParties();
@@ -265,6 +281,7 @@
     async function leaveParty() {
         if (!selectedPartyId) return;
         await API.post(`/community/parties/${selectedPartyId}/leave/`, {});
+        window.PartyInvites?.invalidate();
         Toast.info('파티에서 나갔습니다.');
         selectedPartyId = null;
         selectedParty = null;
@@ -275,6 +292,10 @@
 
     async function inviteUser(event) {
         event.preventDefault();
+        if (isGuestUser) {
+            Toast.error('게스트는 파티에 초대만 받을 수 있습니다.');
+            return;
+        }
         if (!selectedPartyId) return;
         const userId = Number(document.getElementById('party-invite-user-id').value);
         if (!userId) return Toast.error('초대할 유저 ID를 입력하세요.');
@@ -285,6 +306,10 @@
 
     async function assignSlot(event) {
         event.preventDefault();
+        if (isGuestUser) {
+            Toast.error('게스트는 라인업을 관리할 수 없습니다.');
+            return;
+        }
         if (!selectedPartyId) return;
         const userId = Number(selectedMemberId || 0);
         const slot = Number(document.getElementById('party-slot-value').value);
@@ -300,6 +325,10 @@
     }
 
     async function transferLeader() {
+        if (isGuestUser) {
+            Toast.error('게스트는 파티장을 맡을 수 없습니다.');
+            return;
+        }
         if (!selectedPartyId) return;
         const userId = partyMemberUserId();
         if (!userId) return Toast.error('위임할 멤버를 선택하세요.');
@@ -309,6 +338,10 @@
     }
 
     async function kickMember() {
+        if (isGuestUser) {
+            Toast.error('게스트는 멤버를 관리할 수 없습니다.');
+            return;
+        }
         if (!selectedPartyId) return;
         const userId = partyMemberUserId();
         if (!userId) return Toast.error('추방할 멤버를 선택하세요.');
@@ -318,6 +351,10 @@
     }
 
     async function createPartyBattle() {
+        if (isGuestUser) {
+            Toast.error('게스트는 단체전 매칭을 생성할 수 없습니다.');
+            return;
+        }
         if (!selectedPartyId) return;
         await API.post('/community/team-battles/', { battle_type: 'party', party_id: selectedPartyId });
         Toast.success('단체전 매칭 대기를 생성했습니다.');
@@ -337,6 +374,8 @@
 
     async function init() {
         await loadMe();
+        document.getElementById('party-create-form')?.classList.toggle('hidden', isGuestUser);
+        document.getElementById('party-guest-note')?.classList.toggle('hidden', !isGuestUser);
         await Promise.all([loadPendingInvites(), loadParties()]);
         document.getElementById('party-create-form')?.addEventListener('submit', (event) => createParty(event).catch((error) => Toast.error(error.data?.message || error.message)));
         readyBtn?.addEventListener('click', () => toggleReady().catch((error) => Toast.error(error.data?.message || error.message)));

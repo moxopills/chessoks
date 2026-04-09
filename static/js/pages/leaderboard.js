@@ -27,6 +27,7 @@
     const vsDraws = document.getElementById('vs-draws');
     const recentList = document.getElementById('profile-recent-list');
     const friendBtn = document.getElementById('profile-friend-btn');
+    const partyBtn = document.getElementById('profile-party-btn');
     const reportToggle = document.getElementById('profile-report-toggle');
     const chatBtn = document.getElementById('profile-chat-btn');
     const guestbookList = document.getElementById('guestbook-list');
@@ -77,6 +78,12 @@
                 return;
             }
             Utils.ReportModal.open(selectedUserId);
+        });
+        partyBtn?.addEventListener('click', () => {
+            if (!selectedUserId || !window.PartyInvites) return;
+            window.PartyInvites.sendInvite(selectedUserId).catch((error) => {
+                Toast.error(error.data?.message || error.message);
+            });
         });
         friendBtn?.addEventListener('click', sendFriendRequest);
         chatBtn?.addEventListener('click', () => openDirectMessage(selectedUserId));
@@ -338,6 +345,7 @@
             currentUserId,
             targetUserId: userId,
             isFriend: isFriendUser(userId),
+            showPartyInvite: !document.body.dataset.guest,
         });
         ContextMenu.show(event, userId, items, handleContextAction);
     }
@@ -345,6 +353,7 @@
     function handleContextAction(action, targetId) {
         if (action === 'profile') openProfileDrawer(targetId);
         else if (action === 'invite') Notifications.sendGameInvite(targetId);
+        else if (action === 'party') window.PartyInvites?.sendInvite(targetId).catch((error) => Toast.error(error.data?.message || error.message));
         else if (action === 'friend') sendFriendRequestTo(targetId);
         else if (action === 'chat') openDirectMessage(targetId);
         else if (action === 'report') Utils.ReportModal.open(targetId);
@@ -352,6 +361,11 @@
 
     function updateFriendButtonState(userId, status = null) {
         if (!friendBtn) return;
+        const canPartyInvite = Boolean(currentUserId) && userId !== currentUserId && document.body.dataset.guest !== 'true';
+        partyBtn?.classList.toggle('hidden', !canPartyInvite);
+        if (partyBtn) {
+            partyBtn.disabled = !canPartyInvite;
+        }
         if (!currentUserId) {
             friendBtn.disabled = true;
             friendBtn.textContent = '로그인 시 가능합니다.';

@@ -4,43 +4,33 @@
 
 {% block content %}
 <div class="community-page" id="board-page">
-    <section class="community-hero">
-        <h1>게시판</h1>
-        <p>모집, 자유, 퍼즐공략, 지식 게시판을 한 곳에서 관리합니다.</p>
+    <section class="community-hero community-hero--split">
+        <div>
+            <h1>게시판</h1>
+            <p>모집, 자유, 퍼즐공략, 지식 게시판을 한 곳에서 관리합니다.</p>
+        </div>
+        <div class="community-hero-actions">
+            <a href="/board/write/" class="btn btn-primary">글 작성</a>
+        </div>
     </section>
-    <div class="community-grid community-grid--three">
-        <section class="community-card">
-            <div class="community-card-head">
-                <h2>글 작성</h2>
-                <p>모집 글은 추가 모집 필드를 함께 입력할 수 있습니다.</p>
-            </div>
-            <form id="board-post-form" class="community-form">
-                <select class="form-input" id="board-category" required></select>
-                <input class="form-input" id="board-title" placeholder="제목" maxlength="120" required>
-                <textarea class="form-input" id="board-content" placeholder="내용" rows="6" required></textarea>
-                <div class="community-form-group" id="board-recruit-fields">
-                    <input class="form-input" id="board-guild-name" placeholder="길드명">
-                    <input class="form-input" id="board-recruitment-slots" type="number" min="1" max="99" placeholder="모집 인원">
-                    <input class="form-input" id="board-minimum-rating" type="number" min="0" max="4000" placeholder="최소 레이팅">
-                    <input class="form-input" id="board-active-time-band" placeholder="활동 시간대">
-                    <input class="form-input" id="board-join-policy-text" placeholder="가입 방식">
-                    <input class="form-input" id="board-contact-method" placeholder="연락 수단">
-                </div>
-                <button class="btn btn-primary" type="submit">게시글 작성</button>
-            </form>
-        </section>
+    <div class="community-grid community-grid--board">
         <section class="community-card community-card--list">
             <div class="community-card-head">
                 <h2>게시글 목록</h2>
-                <p>카테고리를 바꿔가며 최신 글을 확인할 수 있습니다.</p>
+                <p>최신 글을 빠르게 확인하고 카테고리별로 탐색할 수 있습니다.</p>
             </div>
             <div class="community-tab-list" id="board-tabs"></div>
             <div class="community-list" id="board-post-list"></div>
         </section>
-        <section class="community-card community-card--detail">
+        <section class="community-card community-card--detail community-card--board-detail">
             <div class="community-card-head">
-                <h2>게시글 상세</h2>
-                <p>게시글을 선택하면 본문과 댓글이 표시됩니다.</p>
+                <div>
+                    <h2>게시글 상세</h2>
+                    <p>게시글을 선택하면 본문과 댓글, 좋아요 반응이 표시됩니다.</p>
+                </div>
+                <div class="community-actions community-actions--wrap hidden" id="board-detail-actions">
+                    <button class="btn btn-danger btn-sm" id="board-delete-btn" type="button">게시글 삭제</button>
+                </div>
             </div>
             <div id="board-detail-empty" class="community-empty">아직 선택한 게시글이 없습니다.</div>
             <div id="board-detail-panel" class="community-detail hidden">

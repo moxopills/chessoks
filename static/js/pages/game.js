@@ -162,6 +162,10 @@
     let notificationEventHandler = null;
     let selectedBoardSkinClass = 'skin-board-classic';
     let selectedPieceSkinClass = 'skin-piece-classic';
+    let lastParsedFen = null;
+    let lastParsedPosition = null;
+    let lastMoveListSignature = null;
+    const pieceSvgMarkupCache = new Map();
 
     function showStatus(message, type = 'info', duration = 1800) {
         if (window.StatusBadge) {
@@ -440,13 +444,18 @@
             renderPlayerBars();
             renderBoard({ animatePieceChanges: false });
             renderMoveList();
-            await loadCapturedPieces();
-            renderCapturedPieces();
-            await refreshSpectatorList();
             updateTurn();
             startTimer();
+            const initialTasks = [
+                loadCapturedPieces(),
+                refreshSpectatorList(),
+            ];
             if (game.move_count > 0) {
-                await loadLastMove();
+                initialTasks.push(loadLastMove());
+            }
+            await Promise.allSettled(initialTasks);
+            renderCapturedPieces();
+            if (game.move_count > 0) {
                 renderBoard({ animatePieceChanges: false });
                 updateTurn();
             }
@@ -576,9 +585,14 @@
         renderPlayerBars();
         renderBoard({ animatePieceChanges: false });
         renderMoveList();
-        renderCapturedPieces();
         updateTurn();
         startTimer();
+        Promise.allSettled([
+            loadCapturedPieces(),
+            refreshSpectatorList(),
+        ]).then(() => {
+            renderCapturedPieces();
+        });
         connectWebSocket();
     }
 
@@ -1222,6 +1236,9 @@
      * FEN 파싱
      */
     function parseFEN(fen) {
+        if (fen === lastParsedFen && lastParsedPosition) {
+            return lastParsedPosition;
+        }
         const position = [];
         const rows = fen.split(' ')[0].split('/');
 
@@ -1239,6 +1256,8 @@
             position.push(rank);
         }
 
+        lastParsedFen = fen;
+        lastParsedPosition = position;
         return position;
     }
 
@@ -1246,8 +1265,13 @@
      * 기보 렌더링
      */
     function renderMoveList() {
+        if (!moveList) return;
+        const emptySignature = `empty:${movePage}`;
         if (!game || !game.pgn || game.pgn.trim() === '') {
-            moveList.innerHTML = '<div class="move-list-empty">아직 착수가 없습니다.</div>';
+            if (lastMoveListSignature !== emptySignature) {
+                moveList.innerHTML = '<div class="move-list-empty">아직 착수가 없습니다.</div>';
+                lastMoveListSignature = emptySignature;
+            }
             if (movePageLabel) movePageLabel.textContent = '1';
             movePrevBtn && (movePrevBtn.disabled = true);
             moveNextBtn && (moveNextBtn.disabled = true);
@@ -1259,11 +1283,15 @@
         movePage = Math.min(movePage, totalPages);
         const startIndex = (movePage - 1) * movePageSize;
         const pageMoves = moves.slice(startIndex, startIndex + movePageSize);
-        moveList.innerHTML = GameReplayUI.buildMovePage({
-            pageMoves,
-            startIndex,
-            emptyMessage: '아직 착수가 없습니다.',
-        });
+        const signature = `${game.pgn}|${movePage}|${startIndex}|${totalPages}`;
+        if (lastMoveListSignature !== signature) {
+            moveList.innerHTML = GameReplayUI.buildMovePage({
+                pageMoves,
+                startIndex,
+                emptyMessage: '아직 착수가 없습니다.',
+            });
+            lastMoveListSignature = signature;
+        }
         GameReplayUI.bindPager({
             labelEl: movePageLabel,
             prevBtn: movePrevBtn,
@@ -3144,6 +3172,11 @@
 
     function getPieceSvgMarkup(piece) {
         const variant = getPieceSkinVariant();
+        const cacheKey = `${variant}:${piece}`;
+        const cachedMarkup = pieceSvgMarkupCache.get(cacheKey);
+        if (cachedMarkup) {
+            return cachedMarkup;
+        }
         const type = String(piece || '').toLowerCase();
         const isWhite = piece === piece.toUpperCase();
         const whiteGlyphMap = { p: '♙', r: '♖', n: '♘', b: '♗', q: '♕', k: '♔' };
@@ -3155,13 +3188,15 @@
         const accentLayer = variant === 'glass'
             ? `<g class="piece-accent"><ellipse cx="32" cy="23" rx="11" ry="5.8"></ellipse><path d="M20 34h24"></path></g>`
             : '';
-        return `
+        const markup = `
             <svg class="piece-svg variant-${variant}" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
                 ${shadowLayer}
                 <text class="piece-glyph" x="32" y="45.5">${glyph}</text>
                 ${accentLayer}
             </svg>
         `;
+        pieceSvgMarkupCache.set(cacheKey, markup);
+        return markup;
     }
 
     function ensureReactionUIForExistingMessages() {

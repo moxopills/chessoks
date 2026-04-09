@@ -2,6 +2,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.permissions import IsAuthenticatedOrGuest
 from apps.community.serializers import (
     PartyChatCreateSerializer,
     PartyChatMessageSerializer,
@@ -43,6 +44,27 @@ class PartyDetailView(APIView):
         return Response(PartyDetailSerializer(party).data)
 
 
+class MyActivePartyView(APIView):
+    permission_classes = [IsAuthenticatedOrGuest]
+
+    def get(self, request):
+        summary = PartyService.get_active_party_summary(request.user)
+        if not summary:
+            return Response(
+                {
+                    "party_id": None,
+                    "title": "",
+                    "status": "",
+                    "leader_id": None,
+                    "is_leader": False,
+                    "can_invite": False,
+                    "message": "참가 중인 활성 파티가 없습니다.",
+                },
+                status=404,
+            )
+        return Response(summary)
+
+
 class PartyInviteView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -58,7 +80,7 @@ class PartyInviteView(APIView):
 
 
 class PartyInviteRespondView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     def post(self, request, invite_id: int):
         serializer = PartyInviteRespondSerializer(data=request.data)
@@ -70,7 +92,7 @@ class PartyInviteRespondView(APIView):
 
 
 class PartyInviteListView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     def get(self, request):
         invites = PartyService.list_pending_invites(request.user)
@@ -88,7 +110,7 @@ class PartyTransferLeaderView(APIView):
 
 
 class PartyLeaveView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     def post(self, request, party_id: int):
         party = PartyService.leave_party(request.user, party_id)
@@ -96,7 +118,7 @@ class PartyLeaveView(APIView):
 
 
 class PartyReadyView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     def post(self, request, party_id: int):
         serializer = PartyMemberReadySerializer(data=request.data)
@@ -140,7 +162,7 @@ class PartySlotView(APIView):
 
 
 class PartyChatView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrGuest]
 
     def get(self, request, party_id: int):
         messages = PartyService.list_chat_messages(request.user, party_id)

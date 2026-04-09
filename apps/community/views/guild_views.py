@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 
 from apps.community.serializers import (
     GuildAuditLogSerializer,
+    GuildAvatarUpdateSerializer,
     GuildChatCreateSerializer,
     GuildChatMessageSerializer,
     GuildCreateSerializer,
@@ -87,6 +88,20 @@ class GuildNoticeUpdateView(APIView):
             notice=request.data.get("notice", ""),
         )
         return Response({"notice": guild.notice})
+
+
+class GuildAvatarUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, guild_id: int):
+        serializer = GuildAvatarUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        guild = GuildService.update_avatar(
+            request.user,
+            guild_id,
+            file=serializer.validated_data["avatar"],
+        )
+        return Response({"avatar_url": guild.avatar_url})
 
 
 class GuildMemberRoleUpdateView(APIView):
