@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -17,6 +18,46 @@ class PartyService:
         Party.Status.BATTLING,
     )
 
+    PARTY_LIST_ONLY_FIELDS = (
+        "id",
+        "title",
+        "description",
+        "status",
+        "max_members",
+        "lineup_locked",
+        "created_at",
+        "updated_at",
+        "leader_id",
+        "leader__id",
+        "leader__nickname",
+        "leader__avatar_url",
+        "leader__stats__rating",
+        "leader__stats__featured_achievement_key",
+    )
+
+    PARTY_MEMBER_ONLY_FIELDS = (
+        "id",
+        "party_id",
+        "user_id",
+        "slot",
+        "is_ready",
+        "joined_at",
+        "user__id",
+        "user__nickname",
+        "user__avatar_url",
+        "user__stats__rating",
+        "user__stats__featured_achievement_key",
+    )
+
+    @staticmethod
+    def _member_prefetch():
+        return Prefetch(
+            "members",
+            queryset=PartyMember.objects.select_related("user", "user__stats").only(
+                *PartyService.PARTY_MEMBER_ONLY_FIELDS
+            ),
+        )
+
     @staticmethod
     def _ensure_registered_user(user) -> None:
         if getattr(user, "is_guest", False):
@@ -34,16 +75,16 @@ class PartyService:
         return (
             Party.objects.filter(status__in=PartyService.ACTIVE_STATUSES)
             .select_related("leader", "leader__stats")
-            .prefetch_related("members__user__stats")
+            .only(*PartyService.PARTY_LIST_ONLY_FIELDS)
             .order_by("-updated_at", "-created_at", "-id")
         )
 
     @staticmethod
     def get_party(party_id: int) -> Party:
         return get_object_or_404(
-            Party.objects.select_related("leader", "leader__stats").prefetch_related(
-                "members__user__stats"
-            ),
+            Party.objects.select_related("leader", "leader__stats")
+            .only(*PartyService.PARTY_LIST_ONLY_FIELDS)
+            .prefetch_related(PartyService._member_prefetch()),
             pk=party_id,
         )
 
@@ -63,6 +104,33 @@ class PartyService:
                 "to_user",
                 "to_user__stats",
             )
+            .only(
+                "id",
+                "party_id",
+                "from_user_id",
+                "to_user_id",
+                "status",
+                "created_at",
+                "responded_at",
+                "party__id",
+                "party__title",
+                "party__leader_id",
+                "party__leader__id",
+                "party__leader__nickname",
+                "party__leader__avatar_url",
+                "party__leader__stats__rating",
+                "party__leader__stats__featured_achievement_key",
+                "from_user__id",
+                "from_user__nickname",
+                "from_user__avatar_url",
+                "from_user__stats__rating",
+                "from_user__stats__featured_achievement_key",
+                "to_user__id",
+                "to_user__nickname",
+                "to_user__avatar_url",
+                "to_user__stats__rating",
+                "to_user__stats__featured_achievement_key",
+            )
             .order_by("-created_at")
         )
 
@@ -81,6 +149,16 @@ class PartyService:
         membership = (
             PartyService._active_memberships_for_user(user)
             .select_related("party", "party__leader")
+            .only(
+                "id",
+                "party_id",
+                "joined_at",
+                "party__id",
+                "party__title",
+                "party__status",
+                "party__leader_id",
+                "party__leader__id",
+            )
             .order_by("-party__updated_at", "-joined_at")
             .first()
         )

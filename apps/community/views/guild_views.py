@@ -4,7 +4,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.community.serializers import (
-    GuildAuditLogSerializer,
     GuildAvatarUpdateSerializer,
     GuildChatCreateSerializer,
     GuildChatMessageSerializer,
@@ -14,6 +13,7 @@ from apps.community.serializers import (
     GuildJoinRequestReviewSerializer,
     GuildJoinRequestSerializer,
     GuildMemberRoleSerializer,
+    GuildNoticeSerializer,
     GuildSerializer,
 )
 from apps.community.services import GuildService
@@ -96,8 +96,18 @@ class GuildJoinRequestReviewView(APIView):
         return Response({"id": join_request.id, "status": join_request.status})
 
 
-class GuildNoticeUpdateView(APIView):
+class GuildNoticeListCreateView(APIView):
     permission_classes = [IsAuthenticated]
+
+    def get(self, request, guild_id: int):
+        notices = GuildService.list_notices(request.user, guild_id)
+        return Response(
+            {
+                "count": len(notices),
+                "current_notice": GuildService.get_guild(guild_id).notice,
+                "results": GuildNoticeSerializer(notices, many=True).data,
+            }
+        )
 
     def post(self, request, guild_id: int):
         guild = GuildService.update_notice(
@@ -105,7 +115,13 @@ class GuildNoticeUpdateView(APIView):
             guild_id,
             notice=request.data.get("notice", ""),
         )
-        return Response({"notice": guild.notice})
+        notices = GuildService.list_notices(request.user, guild_id)
+        return Response(
+            {
+                "notice": guild.notice,
+                "results": GuildNoticeSerializer(notices, many=True).data,
+            }
+        )
 
 
 class GuildAvatarUpdateView(APIView):
@@ -160,16 +176,6 @@ class GuildMemberKickView(APIView):
     def post(self, request, guild_id: int, user_id: int):
         GuildService.remove_member(request.user, guild_id, member_user_id=user_id)
         return Response({"status": "removed", "user_id": user_id})
-
-
-class GuildAuditLogView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, guild_id: int):
-        logs = GuildService.list_audit_logs(request.user, guild_id)
-        return Response(
-            {"count": len(logs), "results": GuildAuditLogSerializer(logs, many=True).data}
-        )
 
 
 class GuildChatView(APIView):

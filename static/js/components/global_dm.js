@@ -32,7 +32,9 @@
     
     const closeBtn = document.getElementById('global-dm-close');
     const lobbyCloseBtn = document.getElementById('global-dm-lobby-close');
+    const guildBackBtn = document.getElementById('global-dm-guild-back');
     const guildCloseBtn = document.getElementById('global-dm-guild-close');
+    const partyBackBtn = document.getElementById('global-dm-party-back');
     const partyCloseBtn = document.getElementById('global-dm-party-close');
     const roomCloseBtn = document.getElementById('global-dm-room-close');
     const backBtn = document.getElementById('global-dm-back');
@@ -179,6 +181,14 @@
 
         backBtn.addEventListener('click', () => {
             stopRoomPolling();
+            showThreadsView();
+        });
+        guildBackBtn?.addEventListener('click', () => {
+            stopGroupPolling();
+            showThreadsView();
+        });
+        partyBackBtn?.addEventListener('click', () => {
+            stopGroupPolling();
             showThreadsView();
         });
         tabLobby?.addEventListener('click', showLobbyView);

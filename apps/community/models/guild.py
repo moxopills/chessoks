@@ -139,6 +139,26 @@ class GuildChatMessage(models.Model):
         ]
 
 
+class GuildNotice(models.Model):
+    guild = models.ForeignKey(Guild, on_delete=models.CASCADE, related_name="notice_history")
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="guild_notices_authored",
+    )
+    content = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "guild_notices"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["guild", "-created_at"], name="guild_notice_created_idx"),
+        ]
+
+
 class GuildAuditLog(models.Model):
     guild = models.ForeignKey(Guild, on_delete=models.CASCADE, related_name="audit_logs")
     actor = models.ForeignKey(

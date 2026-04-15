@@ -2,10 +2,10 @@ from rest_framework import serializers
 
 from apps.community.models import (
     Guild,
-    GuildAuditLog,
     GuildChatMessage,
     GuildJoinRequest,
     GuildMember,
+    GuildNotice,
 )
 
 from .common import PlainUserSerializer
@@ -100,10 +100,9 @@ class GuildChatMessageSerializer(serializers.ModelSerializer):
         fields = ["id", "content", "created_at", "user"]
 
 
-class GuildAuditLogSerializer(serializers.ModelSerializer):
-    actor = PlainUserSerializer(read_only=True)
-    target_user = PlainUserSerializer(read_only=True)
+class GuildNoticeSerializer(serializers.ModelSerializer):
+    author = PlainUserSerializer(read_only=True)
 
     class Meta:
-        model = GuildAuditLog
-        fields = ["id", "action", "detail", "created_at", "actor", "target_user"]
+        model = GuildNotice
+        fields = ["id", "content", "created_at", "author"]
