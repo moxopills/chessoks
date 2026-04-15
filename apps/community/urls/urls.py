@@ -8,6 +8,7 @@ from apps.community.views import (
     BoardDetailView,
     BoardListCreateView,
     BoardReportCreateView,
+    CurrentGuildView,
     GuildAuditLogView,
     GuildAvatarUpdateView,
     GuildChatView,
@@ -22,6 +23,7 @@ from apps.community.views import (
     GuildTransferLeaderView,
     MyActivePartyView,
     PartyChatView,
+    PartyCloseView,
     PartyDetailView,
     PartyInviteListView,
     PartyInviteRespondView,
@@ -46,6 +48,7 @@ app_name = "community"
 
 urlpatterns = [
     path("guilds/", GuildListCreateView.as_view(), name="guild-list"),
+    path("guilds/me/current/", CurrentGuildView.as_view(), name="guild-current"),
     path("guilds/<int:guild_id>/", GuildDetailView.as_view(), name="guild-detail"),
     path("guilds/<int:guild_id>/join/", GuildJoinRequestView.as_view(), name="guild-join"),
     path(
@@ -84,6 +87,7 @@ urlpatterns = [
         name="party-invite-respond",
     ),
     path("parties/<int:party_id>/leave/", PartyLeaveView.as_view(), name="party-leave"),
+    path("parties/<int:party_id>/close/", PartyCloseView.as_view(), name="party-close"),
     path(
         "parties/<int:party_id>/transfer/<int:user_id>/",
         PartyTransferLeaderView.as_view(),
