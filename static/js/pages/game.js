@@ -65,6 +65,7 @@
     const chatSection = document.getElementById('game-chat-section');
     const chatCloseBtn = document.getElementById('chat-close-btn');
     const sidePanel = document.querySelector('.game-side-panel');
+    const sidePanelTabs = Array.from(document.querySelectorAll('.side-panel-tab'));
     const mobileTabbar = document.getElementById('mobile-tabbar');
     const chatBadge = document.getElementById('chat-badge');
     const chatFabBadge = document.getElementById('chat-fab-badge');
@@ -165,6 +166,7 @@
     let lastParsedFen = null;
     let lastParsedPosition = null;
     let lastMoveListSignature = null;
+    let activeSidePanelSectionId = 'game-moves-section';
     const pieceSvgMarkupCache = new Map();
 
     function showStatus(message, type = 'info', duration = 1800) {
@@ -250,6 +252,7 @@
         setupReport();
         setupChatToggle();
         setupSidePanelAccordion();
+        setupSidePanelNav();
         setupExitGuard();
         setupKeyboardShortcuts();
         setupGuestExpiryHandler();
@@ -625,6 +628,7 @@
             syncGameChatFabVisibility();
             // 채팅 열 때 배지 리셋
             if (willOpen) {
+                setActiveSidePanelTab('game-chat-section');
                 resetChatBadge();
             }
         });
@@ -632,7 +636,45 @@
             chatSection.classList.add('is-collapsed');
             chatSection.classList.remove('is-floating');
             chatFab.classList.remove('is-active');
+            setActiveSidePanelTab('game-moves-section');
             syncGameChatFabVisibility();
+        });
+    }
+
+    function setActiveSidePanelTab(sectionId) {
+        activeSidePanelSectionId = sectionId || activeSidePanelSectionId;
+        sidePanelTabs.forEach((button) => {
+            const isActive = button.dataset.panelTarget === activeSidePanelSectionId;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+    }
+
+    function focusSidePanelSection(sectionId) {
+        if (!sidePanel || !sectionId) return;
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+        const header = section.querySelector('.panel-header');
+        if (header && section.classList.contains('is-collapsed')) {
+            header.click();
+        } else {
+            setActiveSidePanelTab(sectionId);
+        }
+        requestAnimationFrame(() => {
+            section.scrollIntoView({
+                behavior: 'smooth',
+                block: window.innerWidth <= 1360 ? 'start' : 'nearest',
+            });
+        });
+    }
+
+    function setupSidePanelNav() {
+        if (!sidePanelTabs.length) return;
+        setActiveSidePanelTab(activeSidePanelSectionId);
+        sidePanelTabs.forEach((button) => {
+            button.addEventListener('click', () => {
+                focusSidePanelSection(button.dataset.panelTarget);
+            });
         });
     }
 
@@ -705,6 +747,9 @@
                 states[section.id] = nextCollapsed;
                 setCollapsed(section, nextCollapsed);
                 saveStates(states);
+                if (!nextCollapsed) {
+                    setActiveSidePanelTab(section.id);
+                }
                 syncGameChatFabVisibility();
             });
         });

@@ -46,6 +46,13 @@
     </div>
     <!-- Right: Side Panel -->
     <div class="game-side-panel">
+        <div class="side-panel-nav" id="side-panel-nav" aria-label="우측 패널 빠른 탐색">
+            <button class="side-panel-tab" type="button" data-panel-target="game-actions">메뉴</button>
+            <button class="side-panel-tab is-active" type="button" data-panel-target="game-moves-section">기보</button>
+            <button class="side-panel-tab" type="button" data-panel-target="captured-section">기물</button>
+            <button class="side-panel-tab" type="button" data-panel-target="spectator-section">관전자</button>
+            <button class="side-panel-tab" type="button" data-panel-target="game-chat-section">채팅</button>
+        </div>
         <!-- Game Actions -->
         <div class="panel-section game-actions-panel" id="game-actions">
             <div class="panel-header">
@@ -1601,6 +1608,42 @@ html[data-theme="dark"] .piece.white {
     top: calc(var(--navbar-height) + var(--space-sm));
 }
 
+.side-panel-nav {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    padding: 0.35rem;
+    border: 1px solid var(--color-border);
+    border-radius: calc(var(--radius-lg) + 2px);
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--color-bg-card) 96%, white), color-mix(in srgb, var(--color-bg-secondary) 94%, white));
+    box-shadow: 0 8px 16px rgba(74, 46, 24, 0.05);
+}
+
+.side-panel-tab {
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: 999px;
+    padding: 0.46rem 0.52rem;
+    color: var(--color-text-secondary);
+    font-size: 0.73rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), transform 0.14s ease;
+}
+
+.side-panel-tab:hover {
+    border-color: color-mix(in srgb, var(--color-accent-secondary) 22%, var(--color-border));
+    color: var(--color-text-primary);
+    transform: translateY(-1px);
+}
+
+.side-panel-tab.is-active {
+    border-color: color-mix(in srgb, var(--color-accent-primary) 35%, var(--color-border));
+    color: var(--color-accent-primary);
+    background: color-mix(in srgb, var(--color-accent-primary) 10%, white);
+}
+
 .panel-section {
     background-color: var(--color-bg-card);
     border: 1px solid var(--color-border);
@@ -1888,6 +1931,10 @@ html[data-theme="dark"] .piece.white {
         left: 12px;
         width: auto;
         bottom: calc(88px + var(--safe-bottom));
+    }
+
+    .side-panel-nav {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 

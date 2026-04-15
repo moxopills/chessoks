@@ -61,6 +61,27 @@
         partyChatToggleBtn.textContent = expanded ? '채팅 접기' : '채팅 펼치기';
     }
 
+    function setupManageTabs() {
+        const tabs = Array.from(document.querySelectorAll('[data-manage-target]'));
+        const panes = Array.from(document.querySelectorAll('[data-manage-pane]'));
+        if (pageMode !== 'manage' || !tabs.length || !panes.length) return;
+
+        const activate = (target) => {
+            tabs.forEach((tab) => {
+                tab.classList.toggle('is-active', tab.dataset.manageTarget === target);
+            });
+            panes.forEach((pane) => {
+                pane.classList.toggle('is-active', pane.dataset.managePane === target);
+            });
+        };
+
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => activate(tab.dataset.manageTarget));
+        });
+
+        activate(tabs[0].dataset.manageTarget);
+    }
+
     function getSelectedMember() {
         return (selectedParty?.members || []).find((member) => member.user.id === selectedMemberId) || null;
     }
@@ -574,6 +595,7 @@
 
     async function init() {
         await loadMe();
+        setupManageTabs();
         document.getElementById('party-create-form')?.classList.toggle('hidden', isGuestUser);
         document.getElementById('party-guest-note')?.classList.toggle('hidden', !isGuestUser);
         await loadPendingInvites();

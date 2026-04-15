@@ -141,7 +141,7 @@
             return;
         }
         try {
-            const me = await API.get('/accounts/profile/');
+            const me = await API.get('/accounts/me/');
             currentUserId = me?.id || null;
         } catch {
             currentUserId = null;

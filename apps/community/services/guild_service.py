@@ -2,7 +2,7 @@ import logging
 import uuid
 
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -10,14 +10,15 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.community.models import (
     Guild,
-    GuildAuditLog,
     GuildChatMessage,
     GuildJoinRequest,
     GuildMember,
+    GuildNotice,
 )
 from apps.core.gcp.constants import FileType, GCPConstants
 from apps.core.gcp.uploader import gcp_uploader
 from apps.core.gcp.validators import GCPImageValidator
+from apps.notifications.services import NotificationService
 
 logger = logging.getLogger(__name__)
 
@@ -50,11 +51,57 @@ def _upload_new_avatar(normalized_image) -> str:
 
 
 class GuildService:
+    GUILD_LIST_ONLY_FIELDS = (
+        "id",
+        "name",
+        "slug",
+        "avatar_url",
+        "description",
+        "notice",
+        "join_policy",
+        "min_rating",
+        "active_hours",
+        "contact_channel",
+        "team_rating",
+        "member_count",
+        "created_at",
+        "updated_at",
+        "owner_id",
+        "owner__id",
+        "owner__nickname",
+        "owner__avatar_url",
+        "owner__stats__rating",
+        "owner__stats__featured_achievement_key",
+    )
+
+    GUILD_MEMBER_ONLY_FIELDS = (
+        "id",
+        "guild_id",
+        "user_id",
+        "role",
+        "joined_at",
+        "user__id",
+        "user__nickname",
+        "user__avatar_url",
+        "user__stats__rating",
+        "user__stats__featured_achievement_key",
+    )
+
+    @staticmethod
+    def _member_prefetch():
+        return Prefetch(
+            "members",
+            queryset=GuildMember.objects.select_related("user", "user__stats").only(
+                *GuildService.GUILD_MEMBER_ONLY_FIELDS
+            ),
+        )
+
     @staticmethod
     def list_guilds():
         return (
             Guild.objects.filter(is_active=True)
             .select_related("owner", "owner__stats")
+            .only(*GuildService.GUILD_LIST_ONLY_FIELDS)
             .annotate(
                 pending_requests=Count(
                     "join_requests",
@@ -67,9 +114,9 @@ class GuildService:
     @staticmethod
     def get_guild(guild_id: int) -> Guild:
         return get_object_or_404(
-            Guild.objects.select_related("owner", "owner__stats").prefetch_related(
-                "members__user__stats"
-            ),
+            Guild.objects.select_related("owner", "owner__stats")
+            .only(*GuildService.GUILD_LIST_ONLY_FIELDS)
+            .prefetch_related(GuildService._member_prefetch()),
             pk=guild_id,
             is_active=True,
         )
@@ -116,7 +163,6 @@ class GuildService:
             contact_channel=contact_channel,
         )
         GuildMember.objects.create(guild=guild, user=user, role=GuildMember.Role.LEADER)
-        GuildService._log(guild, actor=user, target_user=user, action="create", detail="길드 생성")
         return guild
 
     @staticmethod
@@ -131,13 +177,6 @@ class GuildService:
             GuildMember.objects.create(guild=guild, user=user, role=GuildMember.Role.MEMBER)
             guild.member_count = GuildMember.objects.filter(guild=guild).count()
             guild.save(update_fields=["member_count", "updated_at"])
-            GuildService._log(
-                guild,
-                actor=user,
-                target_user=user,
-                action="join_open",
-                detail="자유 가입 승인",
-            )
             return GuildJoinRequest.objects.create(
                 guild=guild,
                 user=user,
@@ -156,6 +195,20 @@ class GuildService:
                 status=GuildJoinRequest.Status.PENDING,
             )
             .select_related("user", "user__stats")
+            .only(
+                "id",
+                "guild_id",
+                "user_id",
+                "status",
+                "message",
+                "created_at",
+                "reviewed_at",
+                "user__id",
+                "user__nickname",
+                "user__avatar_url",
+                "user__stats__rating",
+                "user__stats__featured_achievement_key",
+            )
             .order_by("-created_at")
         )
 
@@ -183,22 +236,8 @@ class GuildService:
                 guild=join_request.guild
             ).count()
             join_request.guild.save(update_fields=["member_count", "updated_at"])
-            GuildService._log(
-                join_request.guild,
-                actor=actor,
-                target_user=join_request.user,
-                action="approve_join",
-                detail="가입 신청 승인",
-            )
         else:
             join_request.status = GuildJoinRequest.Status.REJECTED
-            GuildService._log(
-                join_request.guild,
-                actor=actor,
-                target_user=join_request.user,
-                action="reject_join",
-                detail="가입 신청 거절",
-            )
         join_request.save(update_fields=["status", "reviewed_by", "reviewed_at"])
         return join_request
 
@@ -207,10 +246,63 @@ class GuildService:
     def update_notice(actor, guild_id: int, *, notice: str) -> Guild:
         GuildService._require_manager(actor.id, guild_id)
         guild = Guild.objects.select_for_update().get(pk=guild_id)
-        guild.notice = notice
+        notice_text = notice.strip()
+        guild.notice = notice_text
         guild.save(update_fields=["notice", "updated_at"])
-        GuildService._log(guild, actor=actor, action="update_notice", detail=notice[:120])
+        notice_entry = None
+        if notice_text:
+            notice_entry = GuildNotice.objects.create(
+                guild=guild,
+                author=actor,
+                content=notice_text,
+            )
+            recipients = list(
+                GuildMember.objects.filter(guild=guild)
+                .exclude(user_id=actor.id)
+                .select_related("user")
+                .only("user_id", "user__id")
+            )
+            if recipients:
+                rows = [
+                    {
+                        "user": membership.user,
+                        "type": "admin_notice",
+                        "title": f"{guild.name} 공지",
+                        "message": f"{actor.nickname}: {notice_text[:100]}",
+                        "payload": {
+                            "guild_id": guild.id,
+                            "notice_id": notice_entry.id,
+                            "url": "/guilds/manage/",
+                        },
+                    }
+                    for membership in recipients
+                ]
+                transaction.on_commit(
+                    lambda rows=rows: NotificationService.bulk_create_notifications(
+                        rows,
+                        push=True,
+                    )
+                )
         return guild
+
+    @staticmethod
+    def list_notices(actor, guild_id: int):
+        GuildService._require_member(actor.id, guild_id)
+        return (
+            GuildNotice.objects.filter(guild_id=guild_id)
+            .select_related("author", "author__stats")
+            .only(
+                "id",
+                "guild_id",
+                "content",
+                "created_at",
+                "author__id",
+                "author__nickname",
+                "author__avatar_url",
+                "author__stats__rating",
+                "author__stats__featured_achievement_key",
+            )[:30]
+        )
 
     @staticmethod
     @transaction.atomic
@@ -226,9 +318,6 @@ class GuildService:
                 gcp_uploader.delete_file(old_avatar_key)
             except Exception as exc:  # pragma: no cover - external cleanup best effort
                 logger.warning("길드 아바타 삭제 실패: %s error=%s", old_avatar_key, exc)
-        GuildService._log(
-            guild, actor=actor, action="update_avatar", detail="길드 프로필 사진 변경"
-        )
         return guild
 
     @staticmethod
@@ -239,16 +328,8 @@ class GuildService:
         member = GuildMember.objects.select_for_update().get(guild=guild, user_id=member_user_id)
         if member.role == GuildMember.Role.LEADER:
             raise ValidationError({"detail": ["길드장 역할은 이 화면에서 변경할 수 없습니다."]})
-        previous_role = member.role
         member.role = role
         member.save(update_fields=["role"])
-        GuildService._log(
-            guild,
-            actor=actor,
-            target_user=member.user,
-            action="update_role",
-            detail=f"{previous_role}->{role}",
-        )
         return member
 
     @staticmethod
@@ -271,13 +352,6 @@ class GuildService:
         new_leader.save(update_fields=["role"])
         guild.owner_id = member_user_id
         guild.save(update_fields=["owner", "updated_at"])
-        GuildService._log(
-            guild,
-            actor=actor,
-            target_user=new_leader.user,
-            action="transfer_leader",
-            detail="길드장 위임",
-        )
         return guild
 
     @staticmethod
@@ -288,17 +362,9 @@ class GuildService:
         member = GuildMember.objects.select_for_update().get(guild=guild, user_id=member_user_id)
         if member.role == GuildMember.Role.LEADER:
             raise ValidationError({"detail": ["길드장은 추방할 수 없습니다."]})
-        target_user = member.user
         member.delete()
         guild.member_count = GuildMember.objects.filter(guild=guild).count()
         guild.save(update_fields=["member_count", "updated_at"])
-        GuildService._log(
-            guild,
-            actor=actor,
-            target_user=target_user,
-            action="kick",
-            detail="멤버 추방",
-        )
 
     @staticmethod
     @transaction.atomic
@@ -310,7 +376,6 @@ class GuildService:
         member.delete()
         guild.member_count = GuildMember.objects.filter(guild=guild).count()
         guild.save(update_fields=["member_count", "updated_at"])
-        GuildService._log(guild, actor=user, target_user=user, action="leave", detail="길드 탈퇴")
 
     @staticmethod
     def list_chat_messages(actor, guild_id: int):
@@ -337,15 +402,6 @@ class GuildService:
         return GuildChatMessage.objects.create(guild=guild, user=actor, content=content.strip())
 
     @staticmethod
-    def list_audit_logs(actor, guild_id: int):
-        GuildService._require_manager(actor.id, guild_id)
-        return (
-            GuildAuditLog.objects.filter(guild_id=guild_id)
-            .select_related("actor", "target_user")
-            .order_by("-created_at")[:50]
-        )
-
-    @staticmethod
     def _require_member(user_id: int, guild_id: int) -> GuildMember:
         membership = GuildMember.objects.filter(guild_id=guild_id, user_id=user_id).first()
         if not membership:
@@ -369,13 +425,3 @@ class GuildService:
         if membership.role != GuildMember.Role.LEADER:
             raise PermissionDenied("길드장 권한이 필요합니다.")
         return membership
-
-    @staticmethod
-    def _log(guild, *, actor=None, target_user=None, action: str, detail: str = "") -> None:
-        GuildAuditLog.objects.create(
-            guild=guild,
-            actor=actor,
-            target_user=target_user,
-            action=action,
-            detail=detail,
-        )

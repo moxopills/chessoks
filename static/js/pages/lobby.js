@@ -108,6 +108,9 @@
     let isMobileRoomPreviewOpen = Utils.Storage.get(MOBILE_ROOM_PREVIEW_STORAGE_KEY, false);
     let boardPreviewPoller = null;
     let mobilePreviewResizeTimer = null;
+    let lastBoardPreviewSignature = null;
+    let userSearchDebounceTimer = null;
+    let userSearchRequestId = 0;
 
     // 초기화
     init();
@@ -390,6 +393,11 @@
         try {
             const data = await API.get('/community/boards/posts/', { limit: 5 });
             const posts = Array.isArray(data?.results) ? data.results : [];
+            const signature = posts
+                .map((post) => `${post.id}:${post.comment_count || 0}:${post.view_count || 0}:${post.created_at || ''}`)
+                .join('|');
+            if (signature === lastBoardPreviewSignature) return;
+            lastBoardPreviewSignature = signature;
             renderBoardPreview(posts);
         } catch (error) {
             lobbyBoardList.innerHTML = '<div class="board-preview-empty">게시글을 불러오지 못했습니다.</div>';
@@ -1707,6 +1715,17 @@
         userSearchInput.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') runUserSearch();
         });
+        userSearchInput.addEventListener('input', () => {
+            clearTimeout(userSearchDebounceTimer);
+            userSearchDebounceTimer = setTimeout(() => {
+                const query = userSearchInput.value.trim();
+                if (!query) {
+                    resetUserSearch();
+                    return;
+                }
+                runUserSearch();
+            }, 220);
+        });
         userSearchReset.addEventListener('click', () => resetUserSearch());
     }
 
@@ -1717,7 +1736,9 @@
             return;
         }
         try {
+            const requestId = ++userSearchRequestId;
             const data = await API.get('/accounts/users/search/', { q: query });
+            if (requestId !== userSearchRequestId) return;
             const results = data.results || [];
             isUserSearchMode = true;
             userCount.textContent = results.length;
@@ -1726,6 +1747,7 @@
                 return;
             }
             const statusMap = await fetchOnlineStatusMap(results.map(user => user.id));
+            if (requestId !== userSearchRequestId) return;
             usersList.textContent = '';
             const fragment = document.createDocumentFragment();
             results.forEach((user) => {
@@ -1815,6 +1837,7 @@
     }
 
     function resetUserSearch() {
+        userSearchRequestId += 1;
         isUserSearchMode = false;
         if (userSearchInput) userSearchInput.value = '';
         renderUsers();

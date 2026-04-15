@@ -15,6 +15,56 @@ from apps.community.models import (
 
 
 class BoardService:
+    BOARD_SUMMARY_ONLY_FIELDS = (
+        "id",
+        "title",
+        "content",
+        "is_pinned",
+        "is_blinded",
+        "view_count",
+        "comment_count",
+        "guild_name",
+        "created_at",
+        "author_id",
+        "category_id",
+        "author__id",
+        "author__nickname",
+        "author__avatar_url",
+        "author__stats__rating",
+        "author__stats__featured_achievement_key",
+        "category__id",
+        "category__code",
+        "category__title",
+        "category__description",
+        "category__sort_order",
+        "category__is_recruitment",
+    )
+
+    BOARD_DETAIL_ONLY_FIELDS = BOARD_SUMMARY_ONLY_FIELDS + (
+        "updated_at",
+        "recruitment_slots",
+        "minimum_rating",
+        "active_time_band",
+        "join_policy_text",
+        "contact_method",
+    )
+
+    BOARD_COMMENT_ONLY_FIELDS = (
+        "id",
+        "post_id",
+        "author_id",
+        "content",
+        "is_blinded",
+        "created_at",
+        "like_count",
+        "author__id",
+        "author__nickname",
+        "author__avatar_url",
+        "author__stats__rating",
+        "author__stats__featured_achievement_key",
+        "post__author_id",
+    )
+
     @staticmethod
     def ensure_default_categories() -> None:
         categories = [
@@ -78,8 +128,10 @@ class BoardService:
 
     @staticmethod
     def list_posts(*, category_code: str | None, limit: int | None = None, author=None):
-        queryset = BoardPost.objects.select_related("author", "author__stats", "category").filter(
-            category__is_enabled=True, is_blinded=False
+        queryset = (
+            BoardPost.objects.select_related("author", "author__stats", "category")
+            .only(*BoardService.BOARD_SUMMARY_ONLY_FIELDS)
+            .filter(category__is_enabled=True, is_blinded=False)
         )
         if category_code:
             queryset = queryset.filter(category__code=category_code)
@@ -116,7 +168,7 @@ class BoardService:
             "author",
             "author__stats",
             "post",
-        )
+        ).only(*BoardService.BOARD_COMMENT_ONLY_FIELDS)
         if viewer and getattr(viewer, "is_authenticated", False):
             comments_queryset = comments_queryset.prefetch_related(
                 Prefetch(
@@ -126,9 +178,9 @@ class BoardService:
                 )
             )
         return get_object_or_404(
-            BoardPost.objects.select_related(
-                "author", "author__stats", "category"
-            ).prefetch_related(Prefetch("comments", queryset=comments_queryset)),
+            BoardPost.objects.select_related("author", "author__stats", "category")
+            .only(*BoardService.BOARD_DETAIL_ONLY_FIELDS)
+            .prefetch_related(Prefetch("comments", queryset=comments_queryset)),
             pk=post_id,
         )
 

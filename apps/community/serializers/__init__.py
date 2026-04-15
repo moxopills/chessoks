@@ -8,7 +8,6 @@ from .board_serializers import (
     BoardReportCreateSerializer,
 )
 from .guild_serializers import (
-    GuildAuditLogSerializer,
     GuildAvatarUpdateSerializer,
     GuildChatCreateSerializer,
     GuildChatMessageSerializer,
@@ -19,6 +18,7 @@ from .guild_serializers import (
     GuildJoinRequestSerializer,
     GuildMemberRoleSerializer,
     GuildMemberSerializer,
+    GuildNoticeSerializer,
     GuildSerializer,
 )
 from .party_serializers import (
@@ -58,7 +58,6 @@ __all__ = (
     "BoardPostSerializer",
     "BoardPostSummarySerializer",
     "BoardReportCreateSerializer",
-    "GuildAuditLogSerializer",
     "GuildAvatarUpdateSerializer",
     "GuildChatCreateSerializer",
     "GuildChatMessageSerializer",
@@ -69,6 +68,7 @@ __all__ = (
     "GuildJoinRequestSerializer",
     "GuildMemberRoleSerializer",
     "GuildMemberSerializer",
+    "GuildNoticeSerializer",
     "GuildSerializer",
     "PartyChatCreateSerializer",
     "PartyChatMessageSerializer",

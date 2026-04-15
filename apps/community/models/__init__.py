@@ -1,5 +1,12 @@
 from .board import BoardCategory, BoardComment, BoardCommentLike, BoardPost, BoardReport
-from .guild import Guild, GuildAuditLog, GuildChatMessage, GuildJoinRequest, GuildMember
+from .guild import (
+    Guild,
+    GuildAuditLog,
+    GuildChatMessage,
+    GuildJoinRequest,
+    GuildMember,
+    GuildNotice,
+)
 from .party import (
     Party,
     PartyChatMessage,
@@ -22,6 +29,7 @@ __all__ = [
     "GuildChatMessage",
     "GuildJoinRequest",
     "GuildMember",
+    "GuildNotice",
     "Party",
     "PartyChatMessage",
     "PartyInvite",

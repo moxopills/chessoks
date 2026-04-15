@@ -17,7 +17,7 @@
         <section class="community-card community-card--sidebar">
             <div class="community-card-head">
                 <h2>관리 안내</h2>
-                <p>길드장 또는 운영진이면 공지, 멤버 역할, 가입 요청과 운영 로그를 확인할 수 있습니다.</p>
+                <p>길드장 또는 운영진이면 브랜딩, 공지 작성, 멤버 역할, 가입 요청을 한곳에서 관리할 수 있습니다.</p>
             </div>
             <div class="community-stack">
                 <div class="community-note">길드에 가입하지 않았다면 길드 둘러보기에서 원하는 길드를 찾을 수 있습니다.</div>
@@ -37,46 +37,67 @@
                     <button class="btn btn-secondary" id="guild-battle-btn" type="button">길드전 매칭 생성</button>
                     <button class="btn btn-secondary" id="guild-leave-btn" type="button">길드 탈퇴</button>
                 </div>
-                <div class="community-item community-card-slim">
-                    <span class="community-item-title">길드 프로필 사진</span>
-                    <form id="guild-avatar-form" class="community-inline-form community-inline-form--stack">
-                        <input class="form-input" id="guild-avatar-input" type="file" accept="image/*">
-                        <button class="btn btn-secondary btn-sm" type="submit">사진 변경</button>
-                    </form>
+                <div class="community-tab-list community-manage-tabs" id="guild-manage-tabs">
+                    <button class="community-tab is-active" type="button" data-manage-target="guild-brand">브랜딩</button>
+                    <button class="community-tab" type="button" data-manage-target="guild-notice">공지</button>
+                    <button class="community-tab" type="button" data-manage-target="guild-members">멤버 관리</button>
+                    <button class="community-tab" type="button" data-manage-target="guild-chat">길드 채팅</button>
+                    <button class="community-tab" type="button" data-manage-target="guild-requests">가입 요청</button>
                 </div>
-                <div class="community-manager-grid">
+                <div class="community-manage-pane is-active" data-manage-pane="guild-brand">
                     <div class="community-item community-card-slim">
-                        <span class="community-item-title">공지 수정</span>
-                        <form id="guild-notice-form" class="community-form">
-                            <textarea class="form-input" id="guild-notice-input" rows="3" maxlength="200" placeholder="길드 공지 입력"></textarea>
-                            <button class="btn btn-secondary btn-sm" type="submit">공지 저장</button>
+                        <span class="community-item-title">길드 프로필 사진</span>
+                        <form id="guild-avatar-form" class="community-inline-form community-inline-form--stack">
+                            <input class="form-input" id="guild-avatar-input" type="file" accept="image/*">
+                            <button class="btn btn-secondary btn-sm" type="submit">사진 변경</button>
                         </form>
                     </div>
-                    <div class="community-item community-card-slim">
-                        <span class="community-item-title">멤버 관리</span>
-                        <div class="community-selection-bar" id="guild-member-selection">
-                            멤버 카드에서 관리 대상을 선택하세요.
+                </div>
+                <div class="community-manage-pane" data-manage-pane="guild-notice">
+                    <div class="community-manager-grid">
+                        <div class="community-item community-card-slim">
+                            <span class="community-item-title">공지 작성</span>
+                            <p class="community-note">공지 저장 시 길드원에게 알림이 전송됩니다.</p>
+                            <form id="guild-notice-form" class="community-form">
+                                <textarea class="form-input" id="guild-notice-input" rows="4" maxlength="200" placeholder="길드 공지 입력"></textarea>
+                                <button class="btn btn-secondary btn-sm" type="submit">공지 작성 완료</button>
+                            </form>
                         </div>
-                        <form id="guild-role-form" class="community-form community-form-compact">
-                            <select class="form-input" id="guild-member-role">
-                                <option value="member">일반</option>
-                                <option value="manager">운영진</option>
-                                <option value="vice">부길드장</option>
-                            </select>
-                            <div class="community-actions community-actions--wrap">
-                                <button class="btn btn-secondary btn-sm" type="submit">역할 변경</button>
-                                <button class="btn btn-secondary btn-sm" id="guild-transfer-btn" type="button">길드장 위임</button>
-                                <button class="btn btn-danger btn-sm" id="guild-kick-btn" type="button">추방</button>
-                            </div>
-                        </form>
+                        <div>
+                            <h3>공지 이력</h3>
+                            <p class="community-note">그동안 작성한 길드 공지를 최신순으로 확인할 수 있습니다.</p>
+                            <div class="community-sublist" id="guild-notice-history"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="community-split">
-                    <div>
-                        <h3>멤버</h3>
-                        <p class="community-note">멤버 카드를 선택하면 관리 대상이 즉시 연결됩니다.</p>
-                        <div class="community-sublist" id="guild-members"></div>
+                <div class="community-manage-pane" data-manage-pane="guild-members">
+                    <div class="community-manager-grid">
+                        <div class="community-item community-card-slim">
+                            <span class="community-item-title">멤버 관리</span>
+                            <div class="community-selection-bar" id="guild-member-selection">
+                                멤버 카드에서 관리 대상을 선택하세요.
+                            </div>
+                            <form id="guild-role-form" class="community-form community-form-compact">
+                                <select class="form-input" id="guild-member-role">
+                                    <option value="member">일반</option>
+                                    <option value="manager">운영진</option>
+                                    <option value="vice">부길드장</option>
+                                </select>
+                                <div class="community-actions community-actions--wrap">
+                                    <button class="btn btn-secondary btn-sm" type="submit">역할 변경</button>
+                                    <button class="btn btn-secondary btn-sm" id="guild-transfer-btn" type="button">길드장 위임</button>
+                                    <button class="btn btn-danger btn-sm" id="guild-kick-btn" type="button">추방</button>
+                                </div>
+                            </form>
+                        </div>
+                        <div>
+                            <h3>멤버</h3>
+                            <p class="community-note">멤버 카드를 선택하면 관리 대상이 즉시 연결됩니다.</p>
+                            <div class="community-sublist" id="guild-members"></div>
+                        </div>
                     </div>
+                </div>
+                <div class="community-manage-pane" data-manage-pane="guild-chat">
                     <div>
                         <div class="community-row">
                             <h3>길드 채팅</h3>
@@ -91,14 +112,11 @@
                         </div>
                     </div>
                 </div>
-                <div class="community-split">
+                <div class="community-manage-pane" data-manage-pane="guild-requests">
                     <div>
                         <h3>가입 요청</h3>
+                        <p class="community-note">운영진은 여기서 대기 중인 가입 요청을 승인하거나 거절할 수 있습니다.</p>
                         <div class="community-sublist" id="guild-requests"></div>
-                    </div>
-                    <div>
-                        <h3>운영 로그</h3>
-                        <div class="community-sublist" id="guild-audit-log"></div>
                     </div>
                 </div>
             </div>
