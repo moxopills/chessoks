@@ -117,6 +117,14 @@ class PartyLeaveView(APIView):
         return Response({"party_id": party.id if party else None, "closed": party is None})
 
 
+class PartyCloseView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, party_id: int):
+        PartyService.close_party(request.user, party_id)
+        return Response({"party_id": party_id, "closed": True})
+
+
 class PartyReadyView(APIView):
     permission_classes = [IsAuthenticatedOrGuest]
 

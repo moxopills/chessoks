@@ -32,7 +32,8 @@ class PartyService:
     @staticmethod
     def list_parties():
         return (
-            Party.objects.select_related("leader", "leader__stats")
+            Party.objects.filter(status__in=PartyService.ACTIVE_STATUSES)
+            .select_related("leader", "leader__stats")
             .prefetch_related("members__user__stats")
             .order_by("-updated_at", "-created_at", "-id")
         )
@@ -179,17 +180,47 @@ class PartyService:
     @transaction.atomic
     def leave_party(user, party_id: int) -> Party | None:
         party = Party.objects.select_for_update().get(pk=party_id)
-        PartyMember.objects.get(party=party, user=user)
-        PartyMember.objects.filter(party=party, user=user).delete()
+        membership = PartyMember.objects.filter(party=party, user=user).first()
+        if not membership:
+            raise ValidationError({"detail": ["이미 파티에서 나왔거나 접근 권한이 없습니다."]})
+        membership.delete()
         remaining = list(PartyMember.objects.filter(party=party).order_by("joined_at"))
         if not remaining:
             party.status = Party.Status.CLOSED
-            party.save(update_fields=["status", "updated_at"])
+            party.lineup_locked = False
+            party.save(update_fields=["status", "lineup_locked", "updated_at"])
+            PartyInvite.objects.filter(
+                party=party,
+                status=PartyInvite.Status.PENDING,
+            ).update(
+                status=PartyInvite.Status.EXPIRED,
+                responded_at=timezone.now(),
+            )
             return None
         if party.leader_id == user.id:
             party.leader_id = remaining[0].user_id
             party.save(update_fields=["leader", "updated_at"])
         return party
+
+    @staticmethod
+    @transaction.atomic
+    def close_party(actor, party_id: int) -> None:
+        PartyService._ensure_registered_user(actor)
+        party = Party.objects.select_for_update().get(pk=party_id)
+        PartyService._require_leader(actor.id, party)
+        if party.status in {Party.Status.QUEUED, Party.Status.BATTLING}:
+            raise ValidationError({"detail": ["매칭 대기/대전 중인 파티는 삭제할 수 없습니다."]})
+        party.status = Party.Status.CLOSED
+        party.lineup_locked = False
+        party.save(update_fields=["status", "lineup_locked", "updated_at"])
+        PartyInvite.objects.filter(
+            party=party,
+            status=PartyInvite.Status.PENDING,
+        ).update(
+            status=PartyInvite.Status.EXPIRED,
+            responded_at=timezone.now(),
+        )
+        PartyMember.objects.filter(party=party).delete()
 
     @staticmethod
     @transaction.atomic

@@ -46,6 +46,16 @@ class GuildDetailView(APIView):
         return Response(GuildDetailSerializer(guild).data)
 
 
+class CurrentGuildView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        guild = GuildService.get_current_guild(request.user)
+        if not guild:
+            return Response({"detail": "가입 중인 길드가 없습니다."}, status=404)
+        return Response(GuildDetailSerializer(guild).data)
+
+
 class GuildJoinRequestView(APIView):
     permission_classes = [IsAuthenticated]
 

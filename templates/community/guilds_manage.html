@@ -1,57 +1,38 @@
 {% extends 'base.html' %}
 
-{% block title %}길드 - ChessOK{% endblock %}
+{% block title %}내 길드 관리 - ChessOK{% endblock %}
 
 {% block content %}
-<div class="community-page" id="guild-page" data-view="browse">
+<div class="community-page" id="guild-page" data-view="manage">
     <section class="community-hero community-hero--split">
         <div>
-            <h1>길드</h1>
-            <p>길드를 만들고, 가입을 신청하고, 길드전 준비와 길드 채팅을 관리합니다.</p>
+            <h1>내 길드 관리</h1>
+            <p>내가 가입한 길드의 공지, 멤버, 채팅, 가입 요청을 한 화면에서 관리합니다.</p>
         </div>
         <div class="community-hero-actions">
-            <a class="btn btn-secondary btn-sm" href="/guilds/manage/">내 길드 관리</a>
+            <a class="btn btn-secondary btn-sm" href="/guilds/">길드 둘러보기</a>
         </div>
     </section>
-    <div class="community-grid community-grid--three">
-        <section class="community-card">
+    <div class="community-grid community-grid--manage">
+        <section class="community-card community-card--sidebar">
             <div class="community-card-head">
-                <h2>길드 생성</h2>
-                <p>자유 가입 또는 승인제로 길드를 열 수 있습니다.</p>
+                <h2>관리 안내</h2>
+                <p>길드장 또는 운영진이면 공지, 멤버 역할, 가입 요청과 운영 로그를 확인할 수 있습니다.</p>
             </div>
-            <form id="guild-create-form" class="community-form" enctype="multipart/form-data">
-                <label class="community-file-field">
-                    <span class="community-file-label">길드 프로필 사진</span>
-                    <input class="form-input" name="avatar" type="file" accept="image/*">
-                </label>
-                <input class="form-input" name="name" placeholder="길드명" maxlength="40" required>
-                <textarea class="form-input" name="description" placeholder="길드 설명" rows="4"></textarea>
-                <select class="form-input" name="join_policy">
-                    <option value="approval">승인제</option>
-                    <option value="open">자유 가입</option>
-                </select>
-                <input class="form-input" name="min_rating" type="number" min="0" max="4000" value="1200" placeholder="최소 레이팅">
-                <input class="form-input" name="active_hours" placeholder="활동 시간대 예: 평일 저녁">
-                <input class="form-input" name="contact_channel" placeholder="연락 수단 예: 오픈채팅">
-                <button class="btn btn-primary" type="submit">길드 생성</button>
-            </form>
-        </section>
-        <section class="community-card community-card--list">
-            <div class="community-card-head">
-                <h2>길드 목록</h2>
-                <p>현재 모집 중인 길드를 확인합니다.</p>
+            <div class="community-stack">
+                <div class="community-note">길드에 가입하지 않았다면 길드 둘러보기에서 원하는 길드를 찾을 수 있습니다.</div>
+                <a class="btn btn-secondary btn-sm" href="/guilds/">길드 목록으로 이동</a>
             </div>
-            <div class="community-list" id="guild-list"></div>
         </section>
-        <section class="community-card community-card--detail">
+        <section class="community-card community-card--detail community-card--manage-detail">
             <div class="community-card-head">
                 <h2>길드 상세</h2>
-                <p id="guild-detail-subtitle">길드를 선택하면 멤버와 길드 채팅이 표시됩니다.</p>
+                <p id="guild-detail-subtitle">가입 중인 길드가 있으면 멤버와 길드 채팅, 운영 기능을 바로 표시합니다.</p>
             </div>
-            <div id="guild-detail-empty" class="community-empty">아직 선택한 길드가 없습니다.</div>
+            <div id="guild-detail-empty" class="community-empty">아직 가입한 길드가 없습니다.</div>
             <div id="guild-detail-panel" class="community-detail hidden">
                 <div class="community-stack" id="guild-summary"></div>
-                <div class="community-actions">
+                <div class="community-actions community-actions--wrap">
                     <button class="btn btn-secondary" id="guild-join-btn" type="button">가입 신청</button>
                     <button class="btn btn-secondary" id="guild-battle-btn" type="button">길드전 매칭 생성</button>
                     <button class="btn btn-secondary" id="guild-leave-btn" type="button">길드 탈퇴</button>
@@ -93,7 +74,7 @@
                 <div class="community-split">
                     <div>
                         <h3>멤버</h3>
-                        <p class="community-note">멤버 카드를 선택하면 오른쪽 관리 영역과 즉시 연결됩니다.</p>
+                        <p class="community-note">멤버 카드를 선택하면 관리 대상이 즉시 연결됩니다.</p>
                         <div class="community-sublist" id="guild-members"></div>
                     </div>
                     <div>

@@ -91,7 +91,17 @@ urlpatterns = [
     ),
     path("friends/", TemplateView.as_view(template_name="social/friends.html"), name="friends"),
     path("guilds/", TemplateView.as_view(template_name="community/guilds.html"), name="guilds"),
+    path(
+        "guilds/manage/",
+        TemplateView.as_view(template_name="community/guilds_manage.html"),
+        name="guilds-manage",
+    ),
     path("parties/", TemplateView.as_view(template_name="community/parties.html"), name="parties"),
+    path(
+        "parties/manage/",
+        TemplateView.as_view(template_name="community/parties_manage.html"),
+        name="parties-manage",
+    ),
     path("board/", TemplateView.as_view(template_name="community/board.html"), name="board"),
     path(
         "board/write/",
