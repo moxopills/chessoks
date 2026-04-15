@@ -11,7 +11,10 @@
 
     let currentUser = null;
     let roomPoller = null;
+    let groupPoller = null;
     let currentRoomUserId = null;
+    let currentGuildId = null;
+    let currentPartyId = null;
     let lastMessageCount = 0;
     let threadPoller = null;
     let lobbyChatMoved = false;
@@ -23,10 +26,14 @@
     
     const threadsView = document.getElementById('global-dm-threads-view');
     const lobbyView = document.getElementById('global-dm-lobby-view');
+    const guildView = document.getElementById('global-dm-guild-view');
+    const partyView = document.getElementById('global-dm-party-view');
     const roomView = document.getElementById('global-dm-room-view');
     
     const closeBtn = document.getElementById('global-dm-close');
     const lobbyCloseBtn = document.getElementById('global-dm-lobby-close');
+    const guildCloseBtn = document.getElementById('global-dm-guild-close');
+    const partyCloseBtn = document.getElementById('global-dm-party-close');
     const roomCloseBtn = document.getElementById('global-dm-room-close');
     const backBtn = document.getElementById('global-dm-back');
     
@@ -36,14 +43,28 @@
     const tabsMirror = document.getElementById('global-dm-tabs-mirror');
     const tabLobby = document.getElementById('global-dm-tab-lobby');
     const tabDirect = document.getElementById('global-dm-tab-direct');
+    const tabGuild = document.getElementById('global-dm-tab-guild');
+    const tabParty = document.getElementById('global-dm-tab-party');
     const tabLobbyMirror = document.getElementById('global-dm-tab-lobby-mirror');
     const tabDirectMirror = document.getElementById('global-dm-tab-direct-mirror');
+    const tabGuildMirror = document.getElementById('global-dm-tab-guild-mirror');
+    const tabPartyMirror = document.getElementById('global-dm-tab-party-mirror');
     
     const messagesEl = document.getElementById('global-dm-messages');
     const formEl = document.getElementById('global-dm-form');
     const inputEl = document.getElementById('global-dm-input');
     const roomTitle = document.getElementById('global-dm-room-title');
     const roomSubtitle = document.getElementById('global-dm-room-subtitle');
+    const guildTitle = document.getElementById('global-dm-guild-title');
+    const guildSubtitle = document.getElementById('global-dm-guild-subtitle');
+    const guildMessagesEl = document.getElementById('global-dm-guild-messages');
+    const guildFormEl = document.getElementById('global-dm-guild-form');
+    const guildInputEl = document.getElementById('global-dm-guild-input');
+    const partyTitle = document.getElementById('global-dm-party-title');
+    const partySubtitle = document.getElementById('global-dm-party-subtitle');
+    const partyMessagesEl = document.getElementById('global-dm-party-messages');
+    const partyFormEl = document.getElementById('global-dm-party-form');
+    const partyInputEl = document.getElementById('global-dm-party-input');
     const lobbyChatContainer = document.getElementById('lobby-chat');
     const lobbyChatSection = document.querySelector('.lobby-chat-section');
 
@@ -152,6 +173,8 @@
 
         closeBtn.addEventListener('click', closePanel);
         lobbyCloseBtn?.addEventListener('click', closePanel);
+        guildCloseBtn?.addEventListener('click', closePanel);
+        partyCloseBtn?.addEventListener('click', closePanel);
         roomCloseBtn.addEventListener('click', closePanel);
 
         backBtn.addEventListener('click', () => {
@@ -160,8 +183,12 @@
         });
         tabLobby?.addEventListener('click', showLobbyView);
         tabDirect?.addEventListener('click', showThreadsView);
+        tabGuild?.addEventListener('click', showGuildView);
+        tabParty?.addEventListener('click', showPartyView);
         tabLobbyMirror?.addEventListener('click', showLobbyView);
         tabDirectMirror?.addEventListener('click', showThreadsView);
+        tabGuildMirror?.addEventListener('click', showGuildView);
+        tabPartyMirror?.addEventListener('click', showPartyView);
 
         formEl.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -182,6 +209,34 @@
         });
 
         ChatUI?.bindEmojiButtons(panel, inputEl);
+        ChatUI?.bindEmojiButtons(document.getElementById('global-dm-guild-emojis'), guildInputEl);
+        ChatUI?.bindEmojiButtons(document.getElementById('global-dm-party-emojis'), partyInputEl);
+
+        guildFormEl?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const content = guildInputEl?.value?.trim() || '';
+            if (!content || !currentGuildId) return;
+            try {
+                await API.post(`/community/guilds/${currentGuildId}/chat/`, { content });
+                guildInputEl.value = '';
+                await loadGuildMessages(true);
+            } catch (error) {
+                Toast.error(error.data?.detail || error.data?.message || '길드 채팅 전송에 실패했습니다.');
+            }
+        });
+
+        partyFormEl?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const content = partyInputEl?.value?.trim() || '';
+            if (!content || !currentPartyId) return;
+            try {
+                await API.post(`/community/parties/${currentPartyId}/chat/`, { content });
+                partyInputEl.value = '';
+                await loadPartyMessages(true);
+            } catch (error) {
+                Toast.error(error.data?.detail || error.data?.message || '파티 채팅 전송에 실패했습니다.');
+            }
+        });
     }
 
     function openPanel() {
@@ -208,28 +263,61 @@
         panel.classList.add('hidden');
         fabBtn.classList.remove('is-active');
         fabBtn.classList.remove('is-panel-open');
+        stopGroupPolling();
     }
 
     function showThreadsView() {
         threadsView.classList.remove('hidden');
         lobbyView?.classList.add('hidden');
+        guildView?.classList.add('hidden');
+        partyView?.classList.add('hidden');
         roomView.classList.add('hidden');
         currentRoomUserId = null;
+        stopGroupPolling();
         setTabActive('direct');
         loadThreads();
     }
 
     function showLobbyView() {
-        if (!isMobileLobbyPage() || !lobbyChatContainer || !lobbySlot || !lobbyView) {
+        if (!lobbyChatContainer || !lobbySlot || !lobbyView) {
             showThreadsView();
             return;
         }
         moveLobbyChatContainer();
         threadsView.classList.add('hidden');
+        guildView?.classList.add('hidden');
+        partyView?.classList.add('hidden');
         roomView.classList.add('hidden');
         lobbyView.classList.remove('hidden');
         currentRoomUserId = null;
+        stopGroupPolling();
         setTabActive('lobby');
+    }
+
+    async function showGuildView() {
+        threadsView.classList.add('hidden');
+        lobbyView?.classList.add('hidden');
+        partyView?.classList.add('hidden');
+        roomView.classList.add('hidden');
+        guildView?.classList.remove('hidden');
+        currentRoomUserId = null;
+        setTabActive('guild');
+        stopRoomPolling();
+        await loadGuildMessages(true);
+        startGroupPolling(() => loadGuildMessages(), () => Boolean(currentUser?.id && currentGuildId));
+    }
+
+    async function showPartyView() {
+        threadsView.classList.add('hidden');
+        lobbyView?.classList.add('hidden');
+        guildView?.classList.add('hidden');
+        roomView.classList.add('hidden');
+        partyView?.classList.remove('hidden');
+        currentRoomUserId = null;
+        setTabActive('party');
+        stopRoomPolling();
+        await loadPartyMessages(true);
+        startGroupPolling(() => loadPartyMessages(), () => Boolean(currentUser?.id && currentPartyId));
     }
 
     async function showRoomView(userId, nickname = '상대') {
@@ -238,8 +326,11 @@
         }
         threadsView.classList.add('hidden');
         lobbyView?.classList.add('hidden');
+        guildView?.classList.add('hidden');
+        partyView?.classList.add('hidden');
         roomView.classList.remove('hidden');
         currentRoomUserId = userId;
+        stopGroupPolling();
         setTabActive('direct');
         roomTitle.textContent = nickname;
         roomSubtitle.textContent = '';
@@ -250,25 +341,39 @@
     }
 
     function syncLobbyTabsVisibility() {
-        const enabled = isMobileLobbyPage() && !!lobbyChatContainer && !!lobbySlot;
+        const enabled = Boolean(currentUser?.id);
         tabs?.classList.toggle('hidden', !enabled);
         tabsMirror?.classList.toggle('hidden', !enabled);
-        if (!enabled) {
+        const lobbyAvailable = !!lobbyChatContainer && !!lobbySlot;
+        [tabLobby, tabLobbyMirror].forEach((button) => {
+            if (!button) return;
+            button.disabled = !lobbyAvailable;
+            button.classList.toggle('is-disabled', !lobbyAvailable);
+        });
+        if (!lobbyAvailable) {
             restoreLobbyChatContainer();
-            setTabActive('direct');
         }
     }
 
     function setTabActive(type) {
-        const lobbyActive = type === 'lobby';
-        tabLobby?.classList.toggle('is-active', lobbyActive);
-        tabLobbyMirror?.classList.toggle('is-active', lobbyActive);
-        tabDirect?.classList.toggle('is-active', !lobbyActive);
-        tabDirectMirror?.classList.toggle('is-active', !lobbyActive);
-        tabLobby?.setAttribute('aria-selected', String(lobbyActive));
-        tabLobbyMirror?.setAttribute('aria-selected', String(lobbyActive));
-        tabDirect?.setAttribute('aria-selected', String(!lobbyActive));
-        tabDirectMirror?.setAttribute('aria-selected', String(!lobbyActive));
+        const states = {
+            lobby: type === 'lobby',
+            direct: type === 'direct',
+            guild: type === 'guild',
+            party: type === 'party',
+        };
+        const pairs = [
+            [tabLobby, tabLobbyMirror, states.lobby],
+            [tabDirect, tabDirectMirror, states.direct],
+            [tabGuild, tabGuildMirror, states.guild],
+            [tabParty, tabPartyMirror, states.party],
+        ];
+        pairs.forEach(([a, b, active]) => {
+            a?.classList.toggle('is-active', active);
+            b?.classList.toggle('is-active', active);
+            a?.setAttribute('aria-selected', String(active));
+            b?.setAttribute('aria-selected', String(active));
+        });
     }
 
     function moveLobbyChatContainer() {
@@ -342,6 +447,68 @@
         }
     }
 
+    function setChannelEmpty(messagesRoot, titleRoot, subtitleRoot, inputRoot, text, title) {
+        if (titleRoot) titleRoot.textContent = title;
+        if (subtitleRoot) subtitleRoot.textContent = text;
+        if (messagesRoot) {
+            const empty = document.createElement('div');
+            empty.className = 'global-dm-empty';
+            empty.textContent = text;
+            messagesRoot.replaceChildren(empty);
+        }
+        if (inputRoot) {
+            inputRoot.value = '';
+            inputRoot.disabled = true;
+            inputRoot.placeholder = text;
+        }
+        const form = inputRoot?.closest('form');
+        form?.querySelector('button[type="submit"]')?.toggleAttribute('disabled', true);
+    }
+
+    function setChannelReady(inputRoot, placeholder) {
+        if (!inputRoot) return;
+        inputRoot.disabled = false;
+        inputRoot.placeholder = placeholder;
+        const form = inputRoot.closest('form');
+        form?.querySelector('button[type="submit"]')?.toggleAttribute('disabled', false);
+    }
+
+    function renderGroupMessageItem(item) {
+        const isMe = currentUser && item.user?.id === currentUser.id;
+        const time = formatTimeOnly(item.created_at);
+        const messageText = item.content || '';
+        const emojiOnlyClass = isEmojiOnly(messageText) ? ' emoji-only' : '';
+        const row = document.createElement('div');
+        row.className = `global-dm-message ${isMe ? 'me' : 'other'}`;
+
+        if (!isMe) {
+            const avatarWrap = document.createElement('div');
+            avatarWrap.className = 'global-dm-message-avatar';
+            Utils.setAvatar(avatarWrap, {
+                url: item.user?.avatar_url || '',
+                alt: item.user?.nickname || '',
+                placeholder: '?',
+                placeholderClass: 'avatar-placeholder',
+            });
+            row.appendChild(avatarWrap);
+        }
+
+        const content = document.createElement('div');
+        content.className = 'global-dm-message-content';
+
+        const text = document.createElement('div');
+        text.className = `global-dm-message-text${emojiOnlyClass}`;
+        text.textContent = messageText;
+
+        const timeEl = document.createElement('div');
+        timeEl.className = 'global-dm-message-time';
+        timeEl.textContent = `${item.user?.nickname || ''} · ${time}`.trim();
+
+        content.append(text, timeEl);
+        row.appendChild(content);
+        return row;
+    }
+
     function renderThreadItem(thread, unreadMap) {
         const user = thread.other_user || {};
         const nickname = user.nickname || '알 수 없음';
@@ -405,6 +572,52 @@
         }
     }
 
+    async function loadGuildMessages(forceScroll = false) {
+        if (!currentUser) await ensureCurrentUser();
+        const summary = await API.get('/community/guilds/me/current/');
+        if (!summary?.id) {
+            currentGuildId = null;
+            setChannelEmpty(
+                guildMessagesEl,
+                guildTitle,
+                guildSubtitle,
+                guildInputEl,
+                summary?.message || '가입 중인 길드가 없습니다.',
+                '길드 채팅'
+            );
+            return;
+        }
+        currentGuildId = summary.id;
+        guildTitle.textContent = summary.name || '길드 채팅';
+        guildSubtitle.textContent = `길드장 ${summary.owner?.nickname || '-'} · 멤버 ${summary.member_count || 0}명`;
+        setChannelReady(guildInputEl, '길드 채팅 입력...');
+        const data = await API.get(`/community/guilds/${currentGuildId}/chat/`).catch(() => ({ results: [] }));
+        renderGroupMessages(guildMessagesEl, data.results || [], forceScroll);
+    }
+
+    async function loadPartyMessages(forceScroll = false) {
+        if (!currentUser) await ensureCurrentUser();
+        const summary = await API.get('/community/parties/me/active/');
+        if (!summary?.party_id) {
+            currentPartyId = null;
+            setChannelEmpty(
+                partyMessagesEl,
+                partyTitle,
+                partySubtitle,
+                partyInputEl,
+                summary?.message || '참가 중인 파티가 없습니다.',
+                '파티 채팅'
+            );
+            return;
+        }
+        currentPartyId = summary.party_id;
+        partyTitle.textContent = summary.title || '파티 채팅';
+        partySubtitle.textContent = `상태 ${summary.status || '-'} · ${summary.is_leader ? '파티장' : '참가자'}`;
+        setChannelReady(partyInputEl, '파티 채팅 입력...');
+        const data = await API.get(`/community/parties/${currentPartyId}/chat/`).catch(() => ({ results: [] }));
+        renderGroupMessages(partyMessagesEl, data.results || [], forceScroll);
+    }
+
     async function loadMessages(forceScroll = false) {
         if (!currentRoomUserId) return;
         if (!currentUser) await ensureCurrentUser();
@@ -447,6 +660,24 @@
         } catch (e) {
             console.error('Failed to load messages:', e);
             setMessagesEmpty('메시지를 불러오지 못했습니다.');
+        }
+    }
+
+    function renderGroupMessages(root, items, forceScroll = false) {
+        if (!root) return;
+        if (!items.length) {
+            const empty = document.createElement('div');
+            empty.className = 'global-dm-empty';
+            empty.textContent = '아직 채팅이 없습니다.';
+            root.replaceChildren(empty);
+            return;
+        }
+        const shouldScroll = forceScroll || (root.scrollTop + root.clientHeight >= root.scrollHeight - 50);
+        const fragment = document.createDocumentFragment();
+        items.slice().reverse().forEach((item) => fragment.appendChild(renderGroupMessageItem(item)));
+        root.replaceChildren(fragment);
+        if (shouldScroll) {
+            ChatUI?.scrollToBottom(root);
         }
     }
 
@@ -544,15 +775,33 @@
         roomPoller.start();
     }
 
+    function startGroupPolling(callback, enabled) {
+        groupPoller?.stop?.();
+        groupPoller = Utils.createAdaptivePoller({
+            callback,
+            activeInterval: 4000,
+            hiddenInterval: 12000,
+            enabled,
+            immediate: false,
+        });
+        groupPoller.start();
+    }
+
     function stopRoomPolling() {
         roomPoller?.stop?.();
         roomPoller = null;
+    }
+
+    function stopGroupPolling() {
+        groupPoller?.stop?.();
+        groupPoller = null;
     }
 
     function stopPolling() {
         threadPoller?.stop?.();
         threadPoller = null;
         stopRoomPolling();
+        stopGroupPolling();
     }
 
     // Formatters
@@ -584,7 +833,7 @@
     window.addEventListener('beforeunload', stopPolling);
     window.addEventListener('resize', () => {
         syncLobbyTabsVisibility();
-        if (!isMobileLobbyPage()) {
+        if (!lobbyChatContainer || !lobbySlot) {
             restoreLobbyChatContainer();
             if (!panel.classList.contains('hidden') && lobbyView && !lobbyView.classList.contains('hidden')) {
                 showThreadsView();
@@ -595,6 +844,7 @@
         if (!document.hidden && currentUser) {
             threadPoller?.trigger?.();
             if (currentRoomUserId) roomPoller?.trigger?.();
+            groupPoller?.trigger?.();
         }
     });
 

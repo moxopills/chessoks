@@ -318,32 +318,28 @@
     }
 
     async function loadCurrentGuildDetail() {
-        try {
-            const guild = await API.get('/community/guilds/me/current/');
-            selectedGuildId = guild.id;
-            const [chat, requests, auditLogs] = await Promise.all([
-                API.get(`/community/guilds/${guild.id}/chat/`).catch(() => ({ results: [] })),
-                API.get(`/community/guilds/${guild.id}/join/`).catch(() => ({ results: [] })),
-                API.get(`/community/guilds/${guild.id}/audit/`).catch(() => ({ results: [] })),
-            ]);
-            detailEmptyEl?.classList.add('hidden');
-            detailPanelEl?.classList.remove('hidden');
-            renderGuildSummary(guild);
-            renderMembers(guild);
-            renderChat(chat.results || []);
-            renderRequests(requests.results || []);
-            renderAuditLogs(auditLogs.results || []);
-        } catch (error) {
-            if (error.status === 404) {
-                detailPanelEl?.classList.add('hidden');
-                detailEmptyEl?.classList.remove('hidden');
-                if (detailEmptyEl) {
-                    detailEmptyEl.innerHTML = '아직 가입한 길드가 없습니다. <a class="section-link" href="/guilds/">길드 둘러보기로 이동</a>';
-                }
-                return;
+        const guild = await API.get('/community/guilds/me/current/');
+        if (!guild?.id) {
+            detailPanelEl?.classList.add('hidden');
+            detailEmptyEl?.classList.remove('hidden');
+            if (detailEmptyEl) {
+                detailEmptyEl.innerHTML = '아직 가입한 길드가 없습니다. <a class="section-link" href="/guilds/">길드 둘러보기로 이동</a>';
             }
-            throw error;
+            return;
         }
+        selectedGuildId = guild.id;
+        const [chat, requests, auditLogs] = await Promise.all([
+            API.get(`/community/guilds/${guild.id}/chat/`).catch(() => ({ results: [] })),
+            API.get(`/community/guilds/${guild.id}/join/`).catch(() => ({ results: [] })),
+            API.get(`/community/guilds/${guild.id}/audit/`).catch(() => ({ results: [] })),
+        ]);
+        detailEmptyEl?.classList.add('hidden');
+        detailPanelEl?.classList.remove('hidden');
+        renderGuildSummary(guild);
+        renderMembers(guild);
+        renderChat(chat.results || []);
+        renderRequests(requests.results || []);
+        renderAuditLogs(auditLogs.results || []);
     }
 
     async function loadGuildDetail(guildId) {

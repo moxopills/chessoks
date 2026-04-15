@@ -13,6 +13,8 @@
                 <div class="global-dm-tabs hidden" id="global-dm-tabs">
                     <button type="button" class="global-dm-tab is-active" id="global-dm-tab-lobby" aria-selected="true">로비</button>
                     <button type="button" class="global-dm-tab" id="global-dm-tab-direct" aria-selected="false">1:1</button>
+                    <button type="button" class="global-dm-tab" id="global-dm-tab-guild" aria-selected="false">길드</button>
+                    <button type="button" class="global-dm-tab" id="global-dm-tab-party" aria-selected="false">파티</button>
                 </div>
             </div>
             <button class="global-dm-close" id="global-dm-close" aria-label="닫기">&times;</button>
@@ -30,11 +32,59 @@
                 <div class="global-dm-tabs hidden" id="global-dm-tabs-mirror">
                     <button type="button" class="global-dm-tab is-active" id="global-dm-tab-lobby-mirror" aria-selected="true">로비</button>
                     <button type="button" class="global-dm-tab" id="global-dm-tab-direct-mirror" aria-selected="false">1:1</button>
+                    <button type="button" class="global-dm-tab" id="global-dm-tab-guild-mirror" aria-selected="false">길드</button>
+                    <button type="button" class="global-dm-tab" id="global-dm-tab-party-mirror" aria-selected="false">파티</button>
                 </div>
             </div>
             <button class="global-dm-close" id="global-dm-lobby-close" aria-label="닫기">&times;</button>
         </div>
         <div class="global-dm-body global-dm-lobby-body" id="global-dm-lobby-slot"></div>
+    </div>
+
+    <div class="global-dm-view hidden" id="global-dm-guild-view">
+        <div class="global-dm-header">
+            <div class="global-dm-title-wrap">
+                <h3 class="global-dm-title" id="global-dm-guild-title">길드 채팅</h3>
+                <span class="global-dm-subtitle" id="global-dm-guild-subtitle">현재 길드 채팅을 확인합니다.</span>
+            </div>
+            <button class="global-dm-close" id="global-dm-guild-close" aria-label="닫기">&times;</button>
+        </div>
+        <div class="global-dm-messages" id="global-dm-guild-messages"></div>
+        <div class="global-dm-emojis" id="global-dm-guild-emojis" role="toolbar" aria-label="길드 채팅 이모지 빠른 입력">
+            <button type="button" class="emoji-btn" data-emoji="😊">😊</button>
+            <button type="button" class="emoji-btn" data-emoji="😂">😂</button>
+            <button type="button" class="emoji-btn" data-emoji="👍">👍</button>
+            <button type="button" class="emoji-btn" data-emoji="🔥">🔥</button>
+            <button type="button" class="emoji-btn" data-emoji="👏">👏</button>
+            <button type="button" class="emoji-btn" data-emoji="🤝">🤝</button>
+        </div>
+        <form class="global-dm-form" id="global-dm-guild-form">
+            <input type="text" class="global-dm-input" id="global-dm-guild-input" placeholder="길드 채팅 입력..." autocomplete="off" maxlength="500">
+            <button type="submit" class="btn btn-primary btn-sm">전송</button>
+        </form>
+    </div>
+
+    <div class="global-dm-view hidden" id="global-dm-party-view">
+        <div class="global-dm-header">
+            <div class="global-dm-title-wrap">
+                <h3 class="global-dm-title" id="global-dm-party-title">파티 채팅</h3>
+                <span class="global-dm-subtitle" id="global-dm-party-subtitle">현재 파티 채팅을 확인합니다.</span>
+            </div>
+            <button class="global-dm-close" id="global-dm-party-close" aria-label="닫기">&times;</button>
+        </div>
+        <div class="global-dm-messages" id="global-dm-party-messages"></div>
+        <div class="global-dm-emojis" id="global-dm-party-emojis" role="toolbar" aria-label="파티 채팅 이모지 빠른 입력">
+            <button type="button" class="emoji-btn" data-emoji="😊">😊</button>
+            <button type="button" class="emoji-btn" data-emoji="😂">😂</button>
+            <button type="button" class="emoji-btn" data-emoji="👍">👍</button>
+            <button type="button" class="emoji-btn" data-emoji="🔥">🔥</button>
+            <button type="button" class="emoji-btn" data-emoji="👏">👏</button>
+            <button type="button" class="emoji-btn" data-emoji="⚔️">⚔️</button>
+        </div>
+        <form class="global-dm-form" id="global-dm-party-form">
+            <input type="text" class="global-dm-input" id="global-dm-party-input" placeholder="파티 채팅 입력..." autocomplete="off" maxlength="500">
+            <button type="submit" class="btn btn-primary btn-sm">전송</button>
+        </form>
     </div>
 
     <!-- Chat Room View -->
