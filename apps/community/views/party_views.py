@@ -59,8 +59,7 @@ class MyActivePartyView(APIView):
                     "is_leader": False,
                     "can_invite": False,
                     "message": "참가 중인 활성 파티가 없습니다.",
-                },
-                status=404,
+                }
             )
         return Response(summary)
 

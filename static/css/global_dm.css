@@ -108,6 +108,11 @@
     cursor: pointer;
 }
 
+.global-dm-tab.is-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
 .global-dm-tab.is-active {
     background: var(--color-accent-primary);
     border-color: var(--color-accent-primary);

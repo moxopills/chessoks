@@ -397,23 +397,16 @@
     }
 
     async function loadCurrentPartyDetail() {
-        try {
-            const summary = await API.get('/community/parties/me/active/');
-            if (!summary?.party_id) {
-                throw Object.assign(new Error('참가 중인 활성 파티가 없습니다.'), { status: 404 });
+        const summary = await API.get('/community/parties/me/active/');
+        if (!summary?.party_id) {
+            detailPanelEl?.classList.add('hidden');
+            detailEmptyEl?.classList.remove('hidden');
+            if (detailEmptyEl) {
+                detailEmptyEl.innerHTML = '아직 참가 중인 파티가 없습니다. <a class="section-link" href="/parties/">파티 둘러보기로 이동</a>';
             }
-            await loadPartyDetail(summary.party_id);
-        } catch (error) {
-            if (error.status === 404) {
-                detailPanelEl?.classList.add('hidden');
-                detailEmptyEl?.classList.remove('hidden');
-                if (detailEmptyEl) {
-                    detailEmptyEl.innerHTML = '아직 참가 중인 파티가 없습니다. <a class="section-link" href="/parties/">파티 둘러보기로 이동</a>';
-                }
-                return;
-            }
-            throw error;
+            return;
         }
+        await loadPartyDetail(summary.party_id);
     }
 
     async function loadPartyDetail(partyId) {

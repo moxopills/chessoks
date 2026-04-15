@@ -533,8 +533,8 @@
 }
 
 .customize-preview-card-shell {
-    width: min(100%, 360px);
-    margin: 0 auto;
+    width: min(100%, 420px);
+    margin: 0;
     padding: 18px;
     border-radius: 20px;
     border: 1px solid var(--color-border);
@@ -577,21 +577,21 @@
 
 .customize-preview-showroom {
     display: grid;
-    grid-template-columns: minmax(210px, 270px) minmax(320px, 1fr);
-    gap: 18px;
+    grid-template-columns: 1fr;
+    gap: 20px;
     align-items: start;
 }
 
 .customize-preview {
     display: grid;
-    grid-template-columns: 78px minmax(0, 1fr);
+    grid-template-columns: 88px minmax(0, 1fr);
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     border: 1px solid var(--line-color, #d8d0c2);
     border-radius: 20px;
     padding: 16px;
-    min-height: 138px;
-    aspect-ratio: 1.8 / 1;
+    min-height: 154px;
+    aspect-ratio: auto;
     background:
         linear-gradient(140deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.28)),
         radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-accent-primary) 8%, transparent), transparent 45%);
@@ -605,11 +605,12 @@
     display: grid;
     gap: 8px;
     align-content: center;
+    padding-right: 6px;
 }
 
 .customize-avatar {
-    width: 78px;
-    height: 78px;
+    width: 88px;
+    height: 88px;
     border-radius: 50%;
     overflow: hidden;
     display: flex;
@@ -627,16 +628,17 @@
 }
 
 .customize-nickname {
-    font-size: 1.2rem;
+    font-size: 1.24rem;
     font-weight: 700;
     line-height: 1.2;
     word-break: keep-all;
+    overflow-wrap: anywhere;
 }
 
 .customize-season-title {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     width: fit-content;
     max-width: 100%;
     margin-top: 8px;
@@ -648,9 +650,8 @@
     font-size: 0.76rem;
     font-weight: 800;
     line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .customize-season-title.is-empty {
@@ -659,14 +660,20 @@
     color: var(--color-text-secondary);
 }
 
+.customize-skin-preview-panel {
+    display: grid;
+    gap: 14px;
+    justify-items: start;
+}
+
 .customize-skin-preview-title {
     font-size: 0.88rem;
-    margin-bottom: 10px;
+    margin-bottom: 0;
     color: var(--color-text-secondary);
 }
 
 .customize-skin-preview-board {
-    width: min(100%, 340px);
+    width: min(100%, 360px);
     aspect-ratio: 1;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -960,6 +967,10 @@
 
     .customize-preview-showroom {
         grid-template-columns: 1fr;
+    }
+
+    .customize-preview-card-shell {
+        width: 100%;
     }
 }
 
