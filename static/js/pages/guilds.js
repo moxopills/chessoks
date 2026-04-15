@@ -15,7 +15,7 @@
     const guildChatPanelEl = document.getElementById('guild-chat-panel');
     const guildChatToggleBtn = document.getElementById('guild-chat-toggle');
     const guildRequestsEl = document.getElementById('guild-requests');
-    const guildAuditLogEl = document.getElementById('guild-audit-log');
+    const guildNoticeHistoryEl = document.getElementById('guild-notice-history');
     const guildJoinBtn = document.getElementById('guild-join-btn');
     const guildLeaveBtn = document.getElementById('guild-leave-btn');
     const guildBattleBtn = document.getElementById('guild-battle-btn');
@@ -63,6 +63,27 @@
         guildChatPanelEl.classList.toggle('hidden', !expanded);
         guildChatToggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
         guildChatToggleBtn.textContent = expanded ? '채팅 접기' : '채팅 펼치기';
+    }
+
+    function setupManageTabs() {
+        const tabs = Array.from(document.querySelectorAll('[data-manage-target]'));
+        const panes = Array.from(document.querySelectorAll('[data-manage-pane]'));
+        if (pageMode !== 'manage' || !tabs.length || !panes.length) return;
+
+        const activate = (target) => {
+            tabs.forEach((tab) => {
+                tab.classList.toggle('is-active', tab.dataset.manageTarget === target);
+            });
+            panes.forEach((pane) => {
+                pane.classList.toggle('is-active', pane.dataset.managePane === target);
+            });
+        };
+
+        tabs.forEach((tab) => {
+            tab.addEventListener('click', () => activate(tab.dataset.manageTarget));
+        });
+
+        activate(tabs[0].dataset.manageTarget);
     }
 
     function renderMemberSelection() {
@@ -156,7 +177,9 @@
                 </div>
             </div>
         `;
-        guildNoticeInput.value = guild.notice || '';
+        if (guildNoticeInput) {
+            guildNoticeInput.value = guild.notice || '';
+        }
         if (guildJoinBtn) {
             guildJoinBtn.disabled = Boolean(membership);
             guildJoinBtn.textContent = membership ? '가입 중' : '가입 신청';
@@ -281,26 +304,24 @@
         });
     }
 
-    function renderAuditLogs(items) {
-        if (!guildAuditLogEl) return;
-        guildAuditLogEl.innerHTML = '';
-        if (!isManager()) {
-            guildAuditLogEl.innerHTML = '<div class="community-empty">운영진만 운영 로그를 확인할 수 있습니다.</div>';
-            return;
-        }
+    function renderNoticeHistory(items) {
+        if (!guildNoticeHistoryEl) return;
+        guildNoticeHistoryEl.innerHTML = '';
         if (!items.length) {
-            guildAuditLogEl.innerHTML = '<div class="community-empty">기록된 운영 로그가 없습니다.</div>';
+            guildNoticeHistoryEl.innerHTML = '<div class="community-empty">아직 작성된 길드 공지가 없습니다.</div>';
             return;
         }
-        items.forEach((log) => {
+        items.forEach((notice) => {
             const item = document.createElement('div');
-            item.className = 'community-item';
+            item.className = 'community-item community-item--detail';
             item.innerHTML = `
-                <span class="community-item-title">${Utils.escapeHtml(log.action)}</span>
-                <span class="community-item-meta">${Utils.escapeHtml(log.actor?.nickname || '시스템')} → ${Utils.escapeHtml(log.target_user?.nickname || '-')}</span>
-                <span class="community-item-copy">${Utils.escapeHtml(log.detail || '')}</span>
+                <div class="community-row">
+                    <span class="community-item-title">${Utils.escapeHtml(notice.author?.nickname || '시스템 공지')}</span>
+                    <span class="community-item-meta">${Utils.formatDateTime ? Utils.formatDateTime(notice.created_at) : notice.created_at}</span>
+                </div>
+                <span class="community-item-copy community-item-copy--detail">${Utils.escapeHtml(notice.content || '')}</span>
             `;
-            guildAuditLogEl.appendChild(item);
+            guildNoticeHistoryEl.appendChild(item);
         });
     }
 
@@ -328,36 +349,42 @@
             return;
         }
         selectedGuildId = guild.id;
-        const [chat, requests, auditLogs] = await Promise.all([
-            API.get(`/community/guilds/${guild.id}/chat/`).catch(() => ({ results: [] })),
-            API.get(`/community/guilds/${guild.id}/join/`).catch(() => ({ results: [] })),
-            API.get(`/community/guilds/${guild.id}/audit/`).catch(() => ({ results: [] })),
-        ]);
         detailEmptyEl?.classList.add('hidden');
         detailPanelEl?.classList.remove('hidden');
         renderGuildSummary(guild);
         renderMembers(guild);
-        renderChat(chat.results || []);
-        renderRequests(requests.results || []);
-        renderAuditLogs(auditLogs.results || []);
+        if (pageMode === 'manage') {
+            const [chat, requests, noticeHistory] = await Promise.all([
+                API.get(`/community/guilds/${guild.id}/chat/`).catch(() => ({ results: [] })),
+                API.get(`/community/guilds/${guild.id}/join/`).catch(() => ({ results: [] })),
+                API.get(`/community/guilds/${guild.id}/notice/`).catch(() => ({ results: [] })),
+            ]);
+            renderChat(chat.results || []);
+            renderRequests(requests.results || []);
+            renderNoticeHistory(noticeHistory.results || []);
+        }
     }
 
     async function loadGuildDetail(guildId) {
         selectedGuildId = guildId;
-        const [guild, guildList, chat, requests, auditLogs] = await Promise.all([
+        const [guild, guildList] = await Promise.all([
             API.get(`/community/guilds/${guildId}/`),
             API.get('/community/guilds/'),
-            API.get(`/community/guilds/${guildId}/chat/`).catch(() => ({ results: [] })),
-            API.get(`/community/guilds/${guildId}/join/`).catch(() => ({ results: [] })),
-            API.get(`/community/guilds/${guildId}/audit/`).catch(() => ({ results: [] })),
         ]);
         detailEmptyEl.classList.add('hidden');
         detailPanelEl.classList.remove('hidden');
         renderGuildSummary(guild);
         renderMembers(guild);
-        renderChat(chat.results || []);
-        renderRequests(requests.results || []);
-        renderAuditLogs(auditLogs.results || []);
+        if (pageMode === 'manage') {
+            const [chat, requests, noticeHistory] = await Promise.all([
+                API.get(`/community/guilds/${guildId}/chat/`).catch(() => ({ results: [] })),
+                API.get(`/community/guilds/${guildId}/join/`).catch(() => ({ results: [] })),
+                API.get(`/community/guilds/${guildId}/notice/`).catch(() => ({ results: [] })),
+            ]);
+            renderChat(chat.results || []);
+            renderRequests(requests.results || []);
+            renderNoticeHistory(noticeHistory.results || []);
+        }
         renderGuildList(guildList.results || []);
     }
 
@@ -489,6 +516,7 @@
 
     async function init() {
         await loadMe();
+        setupManageTabs();
         if (pageMode === 'manage') {
             await loadCurrentGuildDetail();
         } else {

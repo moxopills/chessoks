@@ -9,7 +9,6 @@ from .board_views import (
 )
 from .guild_views import (
     CurrentGuildView,
-    GuildAuditLogView,
     GuildAvatarUpdateView,
     GuildChatView,
     GuildDetailView,
@@ -19,7 +18,7 @@ from .guild_views import (
     GuildListCreateView,
     GuildMemberKickView,
     GuildMemberRoleUpdateView,
-    GuildNoticeUpdateView,
+    GuildNoticeListCreateView,
     GuildTransferLeaderView,
 )
 from .party_views import (
@@ -59,7 +58,6 @@ __all__ = (
     "BoardListCreateView",
     "BoardReportCreateView",
     "CurrentGuildView",
-    "GuildAuditLogView",
     "GuildAvatarUpdateView",
     "GuildChatView",
     "GuildDetailView",
@@ -69,7 +67,7 @@ __all__ = (
     "GuildListCreateView",
     "GuildMemberKickView",
     "GuildMemberRoleUpdateView",
-    "GuildNoticeUpdateView",
+    "GuildNoticeListCreateView",
     "GuildTransferLeaderView",
     "MyActivePartyView",
     "PartyChatView",

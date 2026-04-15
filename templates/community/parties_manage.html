@@ -42,46 +42,55 @@
                     <button class="btn btn-secondary" id="party-leave-btn" type="button">파티 나가기</button>
                     <button class="btn btn-danger" id="party-close-btn" type="button">파티 삭제</button>
                 </div>
-                <div class="community-item community-card-slim">
-                    <span class="community-item-title">파티 초대</span>
-                    <p class="community-note">닉네임으로 검색하거나 현재 접속자 중에서 선택해 초대하세요.</p>
-                    <div class="community-selection-bar" id="party-invite-selection">
-                        초대할 유저를 검색하거나 아래 목록에서 선택하세요.
-                    </div>
-                    <form id="party-invite-search-form" class="community-inline-form">
-                        <input class="form-input" id="party-invite-query" placeholder="닉네임으로 검색">
-                        <button class="btn btn-secondary btn-sm" type="submit">검색</button>
-                        <button class="btn btn-secondary btn-sm" id="party-invite-reset" type="button">초기화</button>
-                    </form>
-                    <div>
-                        <h3>현재 접속자</h3>
-                        <div class="community-picker-grid" id="party-online-suggestions"></div>
-                    </div>
-                    <div>
-                        <h3>검색 결과</h3>
-                        <div class="community-sublist community-sublist--compact" id="party-invite-results"></div>
-                    </div>
-                    <form id="party-invite-form" class="community-inline-form community-inline-form--end">
-                        <button class="btn btn-secondary btn-sm" type="submit">선택한 유저 초대</button>
-                    </form>
+                <div class="community-tab-list community-manage-tabs" id="party-manage-tabs">
+                    <button class="community-tab is-active" type="button" data-manage-target="party-invite-pane">초대</button>
+                    <button class="community-tab" type="button" data-manage-target="party-lineup-pane">라인업</button>
+                    <button class="community-tab" type="button" data-manage-target="party-chat-pane">채팅</button>
                 </div>
-                <div class="community-selection-bar" id="party-member-selection">
-                    멤버 카드를 선택하면 슬롯 지정과 파티장 위임/추방이 가능합니다.
+                <div class="community-manage-pane is-active" data-manage-pane="party-invite-pane">
+                    <div class="community-item community-card-slim">
+                        <span class="community-item-title">파티 초대</span>
+                        <p class="community-note">닉네임으로 검색하거나 현재 접속자 중에서 선택해 초대하세요.</p>
+                        <div class="community-selection-bar" id="party-invite-selection">
+                            초대할 유저를 검색하거나 아래 목록에서 선택하세요.
+                        </div>
+                        <form id="party-invite-search-form" class="community-inline-form">
+                            <input class="form-input" id="party-invite-query" placeholder="닉네임으로 검색">
+                            <button class="btn btn-secondary btn-sm" type="submit">검색</button>
+                            <button class="btn btn-secondary btn-sm" id="party-invite-reset" type="button">초기화</button>
+                        </form>
+                        <div>
+                            <h3>현재 접속자</h3>
+                            <div class="community-picker-grid" id="party-online-suggestions"></div>
+                        </div>
+                        <div>
+                            <h3>검색 결과</h3>
+                            <div class="community-sublist community-sublist--compact" id="party-invite-results"></div>
+                        </div>
+                        <form id="party-invite-form" class="community-inline-form community-inline-form--end">
+                            <button class="btn btn-secondary btn-sm" type="submit">선택한 유저 초대</button>
+                        </form>
+                    </div>
                 </div>
-                <form id="party-slot-form" class="community-inline-form community-form-compact">
-                    <input class="form-input" id="party-slot-value" type="number" min="1" max="3" placeholder="슬롯">
-                    <button class="btn btn-secondary btn-sm" type="submit">라인업 지정</button>
-                </form>
-                <form id="party-member-form" class="community-inline-form community-form-compact">
-                    <button class="btn btn-secondary btn-sm" id="party-transfer-btn" type="button">파티장 위임</button>
-                    <button class="btn btn-danger btn-sm" id="party-kick-btn" type="button">추방</button>
-                </form>
-                <div class="community-split">
+                <div class="community-manage-pane" data-manage-pane="party-lineup-pane">
+                    <div class="community-selection-bar" id="party-member-selection">
+                        멤버 카드를 선택하면 슬롯 지정과 파티장 위임/추방이 가능합니다.
+                    </div>
+                    <form id="party-slot-form" class="community-inline-form community-form-compact">
+                        <input class="form-input" id="party-slot-value" type="number" min="1" max="3" placeholder="슬롯">
+                        <button class="btn btn-secondary btn-sm" type="submit">라인업 지정</button>
+                    </form>
+                    <form id="party-member-form" class="community-inline-form community-form-compact">
+                        <button class="btn btn-secondary btn-sm" id="party-transfer-btn" type="button">파티장 위임</button>
+                        <button class="btn btn-danger btn-sm" id="party-kick-btn" type="button">추방</button>
+                    </form>
                     <div>
                         <h3>멤버</h3>
                         <p class="community-note">라인업 관리할 멤버를 먼저 선택하세요.</p>
                         <div class="community-sublist" id="party-members"></div>
                     </div>
+                </div>
+                <div class="community-manage-pane" data-manage-pane="party-chat-pane">
                     <div>
                         <div class="community-row">
                             <h3>파티 채팅</h3>

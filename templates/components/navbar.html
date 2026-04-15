@@ -30,19 +30,43 @@
                 <span class="navbar-link-icon">🤝</span>
                 <span>친구</span>
             </a>
-            <a href="/guilds/" class="navbar-link{% if request.path|slice:':8' == '/guilds/' %} active{% endif %}">
+            <div class="navbar-cluster navbar-desktop-only{% if request.path|slice:':8' == '/guilds/' or request.path|slice:':9' == '/parties/' or request.path|slice:':7' == '/board/' or request.path|slice:':13' == '/tournaments/' %} is-active{% endif %}">
+                <button class="navbar-link navbar-link--button navbar-cluster-toggle" type="button" aria-haspopup="true">
+                    <span class="navbar-link-icon">🧩</span>
+                    <span>커뮤니티</span>
+                </button>
+                <div class="navbar-cluster-menu">
+                    <a href="/guilds/" class="navbar-cluster-item{% if request.path|slice:':8' == '/guilds/' %} active{% endif %}">
+                        <span class="navbar-link-icon">🛡️</span>
+                        <span>길드</span>
+                    </a>
+                    <a href="/parties/" class="navbar-cluster-item{% if request.path|slice:':9' == '/parties/' %} active{% endif %}">
+                        <span class="navbar-link-icon">👥</span>
+                        <span>파티</span>
+                    </a>
+                    <a href="/board/" class="navbar-cluster-item{% if request.path|slice:':7' == '/board/' %} active{% endif %}">
+                        <span class="navbar-link-icon">📝</span>
+                        <span>게시판</span>
+                    </a>
+                    <a href="/tournaments/" class="navbar-cluster-item{% if request.path|slice:':13' == '/tournaments/' %} active{% endif %}">
+                        <span class="navbar-link-icon">🏆</span>
+                        <span>컵전</span>
+                    </a>
+                </div>
+            </div>
+            <a href="/guilds/" class="navbar-link navbar-mobile-only{% if request.path|slice:':8' == '/guilds/' %} active{% endif %}">
                 <span class="navbar-link-icon">🛡️</span>
                 <span>길드</span>
             </a>
-            <a href="/parties/" class="navbar-link{% if request.path|slice:':9' == '/parties/' %} active{% endif %}">
+            <a href="/parties/" class="navbar-link navbar-mobile-only{% if request.path|slice:':9' == '/parties/' %} active{% endif %}">
                 <span class="navbar-link-icon">👥</span>
                 <span>파티</span>
             </a>
-            <a href="/board/" class="navbar-link{% if request.path|slice:':7' == '/board/' %} active{% endif %}">
+            <a href="/board/" class="navbar-link navbar-mobile-only{% if request.path|slice:':7' == '/board/' %} active{% endif %}">
                 <span class="navbar-link-icon">📝</span>
                 <span>게시판</span>
             </a>
-            <a href="/tournaments/" class="navbar-link{% if request.path|slice:':13' == '/tournaments/' %} active{% endif %}">
+            <a href="/tournaments/" class="navbar-link navbar-mobile-only{% if request.path|slice:':13' == '/tournaments/' %} active{% endif %}">
                 <span class="navbar-link-icon">🏆</span>
                 <span>컵전</span>
             </a>
@@ -199,17 +223,14 @@
 .navbar-menu {
     display: flex;
     align-items: center;
-    gap: 0.2rem;
+    gap: 0.24rem;
     flex: 1 1 auto;
     min-width: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow: visible;
     scrollbar-width: none;
     white-space: nowrap;
     justify-content: flex-start;
     padding-left: 18px;
-    scroll-snap-type: x proximity;
-    -webkit-overflow-scrolling: touch;
 }
 
 .navbar-menu::-webkit-scrollbar {
@@ -233,6 +254,13 @@
     scroll-snap-align: center;
 }
 
+.navbar-link--button {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font: inherit;
+}
+
 .navbar-link:hover {
     color: var(--color-text-primary);
     background-color: var(--color-bg-tertiary);
@@ -247,6 +275,64 @@
 .navbar-link-icon {
     font-size: 0.9rem;
     line-height: 1;
+}
+
+.navbar-desktop-only {
+    display: inline-flex;
+}
+
+.navbar-mobile-only {
+    display: none;
+}
+
+.navbar-cluster {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.navbar-cluster.is-active .navbar-cluster-toggle {
+    color: var(--color-accent-primary);
+    background: color-mix(in srgb, var(--color-accent-primary) 10%, transparent);
+    box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--color-accent-primary) 65%, transparent);
+}
+
+.navbar-cluster-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    min-width: 198px;
+    padding: 0.45rem;
+    border: 1px solid var(--color-border);
+    border-radius: calc(var(--radius-md) + 2px);
+    background: color-mix(in srgb, var(--color-bg-card) 96%, white);
+    box-shadow: var(--shadow-md);
+    display: none;
+    grid-template-columns: 1fr;
+    gap: 0.22rem;
+    z-index: 120;
+}
+
+.navbar-cluster:hover .navbar-cluster-menu,
+.navbar-cluster:focus-within .navbar-cluster-menu {
+    display: grid;
+}
+
+.navbar-cluster-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.56rem 0.72rem;
+    border-radius: var(--radius-md);
+    color: var(--color-text-secondary);
+    font-size: 0.78rem;
+    text-decoration: none;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.navbar-cluster-item:hover,
+.navbar-cluster-item.active {
+    background: color-mix(in srgb, var(--color-bg-secondary) 88%, white);
+    color: var(--color-text-primary);
 }
 
 /* Right Section */
@@ -552,6 +638,14 @@
 
     .navbar-menu.active {
         display: flex;
+    }
+
+    .navbar-desktop-only {
+        display: none;
+    }
+
+    .navbar-mobile-only {
+        display: inline-flex;
     }
 
     .navbar-link {
