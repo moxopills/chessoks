@@ -8,6 +8,8 @@
     let selectedInviteUserId = null;
     let onlineInviteUsers = [];
     let inviteSearchResults = [];
+    const pageEl = document.getElementById('party-page');
+    const pageMode = pageEl?.dataset.view || 'browse';
 
     const partyListEl = document.getElementById('party-list');
     const detailEmptyEl = document.getElementById('party-detail-empty');
@@ -18,6 +20,9 @@
     const partyInviteListEl = document.getElementById('party-invite-list');
     const readyBtn = document.getElementById('party-ready-btn');
     const lineupBtn = document.getElementById('party-lineup-btn');
+    const closeBtn = document.getElementById('party-close-btn');
+    const partyChatPanelEl = document.getElementById('party-chat-panel');
+    const partyChatToggleBtn = document.getElementById('party-chat-toggle');
     const memberSelectionEl = document.getElementById('party-member-selection');
     const inviteSelectionEl = document.getElementById('party-invite-selection');
     const inviteResultsEl = document.getElementById('party-invite-results');
@@ -47,6 +52,13 @@
 
     function canManageParty() {
         return isLeader() && !isGuestUser;
+    }
+
+    function setChatPanelExpanded(expanded) {
+        if (!partyChatPanelEl || !partyChatToggleBtn) return;
+        partyChatPanelEl.classList.toggle('hidden', !expanded);
+        partyChatToggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        partyChatToggleBtn.textContent = expanded ? '채팅 접기' : '채팅 펼치기';
     }
 
     function getSelectedMember() {
@@ -211,6 +223,7 @@
     }
 
     function renderPartyList(items) {
+        if (!partyListEl) return;
         partyListEl.innerHTML = '';
         if (!items.length) {
             partyListEl.innerHTML = '<div class="community-empty">활성 파티가 없습니다.</div>';
@@ -242,6 +255,7 @@
         lineupBtn.textContent = party.lineup_locked ? '라인업 해제' : '라인업 고정';
         readyBtn.disabled = !myMembership();
         lineupBtn.disabled = !canManageParty();
+        closeBtn?.toggleAttribute('disabled', !canManageParty());
         document.querySelector('#party-invite-form button[type="submit"]')?.toggleAttribute('disabled', !canManageParty());
         document.querySelector('#party-slot-form button[type="submit"]')?.toggleAttribute('disabled', !canManageParty());
         document.getElementById('party-transfer-btn')?.toggleAttribute('disabled', !canManageParty());
@@ -297,6 +311,7 @@
         loadOnlineInviteSuggestions().catch(() => {
             renderInviteCandidates(onlineSuggestionsEl, [], '접속자 목록을 불러오지 못했습니다.');
         });
+        setChatPanelExpanded(true);
     }
 
     function renderChat(items) {
@@ -318,6 +333,7 @@
     }
 
     function renderInvites(items) {
+        if (!partyInviteListEl) return;
         partyInviteListEl.innerHTML = '';
         if (!items.length) {
             partyInviteListEl.innerHTML = '<div class="community-empty">대기 중인 파티 초대가 없습니다.</div>';
@@ -344,7 +360,12 @@
                     });
                     window.PartyInvites?.invalidate();
                     Toast.success(button.dataset.action === 'accept' ? '파티 초대를 수락했습니다.' : '파티 초대를 거절했습니다.');
-                    await Promise.all([loadPendingInvites(), loadParties()]);
+                    await loadPendingInvites();
+                    if (pageMode === 'manage') {
+                        await loadCurrentPartyDetail();
+                    } else {
+                        await loadParties();
+                    }
                 } catch (error) {
                     Toast.error(error.data?.message || error.message);
                 }
@@ -353,6 +374,7 @@
     }
 
     async function loadPendingInvites() {
+        if (!partyInviteListEl) return;
         if (!me) {
             renderInvites([]);
             return;
@@ -362,6 +384,7 @@
     }
 
     async function loadParties() {
+        if (!partyListEl) return;
         const data = await API.get('/community/parties/');
         const items = data.results || [];
         renderPartyList(items);
@@ -373,16 +396,41 @@
         }
     }
 
+    async function loadCurrentPartyDetail() {
+        try {
+            const summary = await API.get('/community/parties/me/active/');
+            if (!summary?.party_id) {
+                throw Object.assign(new Error('참가 중인 활성 파티가 없습니다.'), { status: 404 });
+            }
+            await loadPartyDetail(summary.party_id);
+        } catch (error) {
+            if (error.status === 404) {
+                detailPanelEl?.classList.add('hidden');
+                detailEmptyEl?.classList.remove('hidden');
+                if (detailEmptyEl) {
+                    detailEmptyEl.innerHTML = '아직 참가 중인 파티가 없습니다. <a class="section-link" href="/parties/">파티 둘러보기로 이동</a>';
+                }
+                return;
+            }
+            throw error;
+        }
+    }
+
     async function loadPartyDetail(partyId) {
         selectedPartyId = partyId;
-        const [party, parties, chat] = await Promise.all([
-            API.get(`/community/parties/${partyId}/`),
-            API.get('/community/parties/'),
-            API.get(`/community/parties/${partyId}/chat/`).catch(() => ({ results: [] })),
-        ]);
+        const party = await API.get(`/community/parties/${partyId}/`);
         renderPartyDetail(party);
-        renderPartyList(parties.results || []);
-        renderChat(chat.results || []);
+        if (partyListEl) {
+            const parties = await API.get('/community/parties/');
+            renderPartyList(parties.results || []);
+        }
+        const isMember = Boolean((party.members || []).some((member) => member.user.id === me?.id));
+        if (isMember && party.status !== 'closed') {
+            const chat = await API.get(`/community/parties/${partyId}/chat/`).catch(() => ({ results: [] }));
+            renderChat(chat.results || []);
+        } else {
+            renderChat([]);
+        }
     }
 
     async function createParty(event) {
@@ -392,20 +440,11 @@
             return;
         }
         const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
-        const party = await API.post('/community/parties/', payload);
+        await API.post('/community/parties/', payload);
         window.PartyInvites?.invalidate();
-        selectedPartyId = party.id;
-        selectedParty = party;
-        selectedMemberId = null;
-        selectedInviteUserId = null;
-        inviteSearchResults = [];
-        detailEmptyEl.classList.add('hidden');
-        detailPanelEl.classList.remove('hidden');
-        renderPartyDetail(party);
-        renderChat([]);
         Toast.success('파티를 생성했습니다.');
         event.currentTarget.reset();
-        await loadPartyDetail(party.id);
+        window.location.href = '/parties/manage/';
     }
 
     async function toggleReady() {
@@ -431,6 +470,28 @@
         selectedParty = null;
         detailPanelEl.classList.add('hidden');
         detailEmptyEl.classList.remove('hidden');
+        if (pageMode === 'manage') {
+            window.location.href = '/parties/';
+            return;
+        }
+        await Promise.all([loadParties(), loadPendingInvites()]);
+    }
+
+    async function closeParty() {
+        if (!selectedPartyId) return;
+        await API.post(`/community/parties/${selectedPartyId}/close/`, {});
+        window.PartyInvites?.invalidate();
+        Toast.info('파티를 삭제했습니다.');
+        selectedPartyId = null;
+        selectedParty = null;
+        selectedMemberId = null;
+        selectedInviteUserId = null;
+        detailPanelEl.classList.add('hidden');
+        detailEmptyEl.classList.remove('hidden');
+        if (pageMode === 'manage') {
+            window.location.href = '/parties/';
+            return;
+        }
         await Promise.all([loadParties(), loadPendingInvites()]);
     }
 
@@ -509,6 +570,7 @@
     async function sendChat(event) {
         event.preventDefault();
         if (!selectedPartyId) return;
+        if (!myMembership()) return Toast.error('파티 멤버만 채팅할 수 있습니다.');
         const input = document.getElementById('party-chat-input');
         const content = input.value.trim();
         if (!content) return;
@@ -521,11 +583,17 @@
         await loadMe();
         document.getElementById('party-create-form')?.classList.toggle('hidden', isGuestUser);
         document.getElementById('party-guest-note')?.classList.toggle('hidden', !isGuestUser);
-        await Promise.all([loadPendingInvites(), loadParties()]);
+        await loadPendingInvites();
+        if (pageMode === 'manage') {
+            await loadCurrentPartyDetail();
+        } else {
+            await loadParties();
+        }
         document.getElementById('party-create-form')?.addEventListener('submit', (event) => createParty(event).catch((error) => Toast.error(error.data?.message || error.message)));
         readyBtn?.addEventListener('click', () => toggleReady().catch((error) => Toast.error(error.data?.message || error.message)));
         lineupBtn?.addEventListener('click', () => toggleLineupLock().catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('party-leave-btn')?.addEventListener('click', () => leaveParty().catch((error) => Toast.error(error.data?.message || error.message)));
+        closeBtn?.addEventListener('click', () => closeParty().catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('party-invite-form')?.addEventListener('submit', (event) => inviteUser(event).catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('party-invite-search-form')?.addEventListener('submit', (event) => searchInviteUsers(event).catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('party-invite-reset')?.addEventListener('click', () => resetInvitePicker());
@@ -534,6 +602,7 @@
         document.getElementById('party-kick-btn')?.addEventListener('click', () => kickMember().catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('party-battle-btn')?.addEventListener('click', () => createPartyBattle().catch((error) => Toast.error(error.data?.message || error.message)));
         document.getElementById('party-chat-form')?.addEventListener('submit', (event) => sendChat(event).catch((error) => Toast.error(error.data?.message || error.message)));
+        partyChatToggleBtn?.addEventListener('click', () => setChatPanelExpanded(partyChatPanelEl?.classList.contains('hidden')));
     }
 
     document.addEventListener('DOMContentLoaded', () => {

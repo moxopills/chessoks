@@ -1,30 +1,25 @@
 {% extends 'base.html' %}
 
-{% block title %}파티 - ChessOK{% endblock %}
+{% block title %}내 파티 관리 - ChessOK{% endblock %}
 
 {% block content %}
-<div class="community-page" id="party-page" data-view="browse">
+<div class="community-page" id="party-page" data-view="manage">
     <section class="community-hero community-hero--split">
         <div>
-            <h1>파티</h1>
-            <p>3인 라인업을 만들고 3:3 연승제 단체전을 준비합니다.</p>
+            <h1>내 파티 관리</h1>
+            <p>참가 중인 파티의 라인업, 초대, 멤버, 파티 채팅을 한 화면에서 관리합니다.</p>
         </div>
         <div class="community-hero-actions">
-            <a class="btn btn-secondary btn-sm" href="/parties/manage/">내 파티 관리</a>
+            <a class="btn btn-secondary btn-sm" href="/parties/">파티 둘러보기</a>
         </div>
     </section>
-    <div class="community-grid community-grid--three">
-        <section class="community-card">
+    <div class="community-grid community-grid--manage">
+        <section class="community-card community-card--sidebar">
             <div class="community-card-head">
-                <h2>파티 생성</h2>
-                <p>파티장 권한으로 초대, 슬롯 배정, 라인업 고정을 관리합니다.</p>
+                <h2>파티 안내</h2>
+                <p>초대를 받거나 파티를 만들면 이 페이지에서 현재 파티를 바로 관리할 수 있습니다.</p>
             </div>
             <div class="community-note" id="party-guest-note">게스트는 초대 수락 후 참가만 가능합니다.</div>
-            <form id="party-create-form" class="community-form">
-                <input class="form-input" name="title" placeholder="파티 이름" maxlength="60" required>
-                <textarea class="form-input" name="description" placeholder="파티 설명" rows="4"></textarea>
-                <button class="btn btn-primary" type="submit">파티 생성</button>
-            </form>
             <div class="community-divider"></div>
             <div class="community-card-head">
                 <h2>받은 초대</h2>
@@ -32,19 +27,12 @@
             </div>
             <div class="community-sublist" id="party-invite-list"></div>
         </section>
-        <section class="community-card community-card--list">
-            <div class="community-card-head">
-                <h2>파티 목록</h2>
-                <p>단체전 대기 중인 파티를 확인합니다.</p>
-            </div>
-            <div class="community-list" id="party-list"></div>
-        </section>
-        <section class="community-card community-card--detail">
+        <section class="community-card community-card--detail community-card--manage-detail">
             <div class="community-card-head">
                 <h2>파티 상세</h2>
-                <p id="party-detail-subtitle">파티를 선택하면 멤버, 준비 상태, 파티 채팅이 표시됩니다.</p>
+                <p id="party-detail-subtitle">참가 중인 파티가 있으면 멤버, 준비 상태, 파티 채팅을 바로 보여줍니다.</p>
             </div>
-            <div id="party-detail-empty" class="community-empty">아직 선택한 파티가 없습니다.</div>
+            <div id="party-detail-empty" class="community-empty">아직 참가 중인 파티가 없습니다.</div>
             <div id="party-detail-panel" class="community-detail hidden">
                 <div class="community-stack" id="party-summary"></div>
                 <div class="community-actions community-actions--wrap">

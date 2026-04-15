@@ -1582,9 +1582,13 @@
         min-height: 180px;
     }
 
-    .hero-control-card--users,
     .hero-control-card--chat {
         min-height: clamp(500px, 50vh, 590px);
+    }
+
+    .hero-control-card--users {
+        min-height: auto;
+        align-self: start;
     }
 
     .hero-control-card--users .section-header,
@@ -1603,6 +1607,10 @@
         min-height: 0;
     }
 
+    .hero-control-card--users .users-list {
+        flex: 0 1 auto;
+    }
+
     .chat-container {
         min-height: 360px;
     }
@@ -1614,7 +1622,7 @@
 
     .users-list {
         min-height: 0;
-        max-height: 364px;
+        max-height: 228px;
     }
 
     .lobby-content {

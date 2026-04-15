@@ -75,6 +75,18 @@ class GuildService:
         )
 
     @staticmethod
+    def get_current_guild(user) -> Guild | None:
+        membership = (
+            GuildMember.objects.filter(user=user, guild__is_active=True)
+            .select_related("guild", "guild__owner", "guild__owner__stats")
+            .order_by("-joined_at")
+            .first()
+        )
+        if not membership:
+            return None
+        return GuildService.get_guild(membership.guild_id)
+
+    @staticmethod
     @transaction.atomic
     def create_guild(
         user,

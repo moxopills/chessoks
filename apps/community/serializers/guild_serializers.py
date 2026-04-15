@@ -53,6 +53,7 @@ class GuildSerializer(serializers.ModelSerializer):
             "member_count",
             "created_at",
             "owner",
+            "pending_requests",
         ]
 
 
