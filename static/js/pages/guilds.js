@@ -58,6 +58,18 @@
         return ACHIEVEMENT_LABELS[key] || '';
     }
 
+    function formatNoticeTimestamp(value) {
+        if (!value) return '';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}/${month}/${day} ${hours}:${minutes}`;
+    }
+
     function setChatPanelExpanded(expanded) {
         if (!guildChatPanelEl || !guildChatToggleBtn) return;
         guildChatPanelEl.classList.toggle('hidden', !expanded);
@@ -177,9 +189,6 @@
                 </div>
             </div>
         `;
-        if (guildNoticeInput) {
-            guildNoticeInput.value = guild.notice || '';
-        }
         if (guildJoinBtn) {
             guildJoinBtn.disabled = Boolean(membership);
             guildJoinBtn.textContent = membership ? '가입 중' : '가입 신청';
@@ -317,7 +326,7 @@
             item.innerHTML = `
                 <div class="community-row">
                     <span class="community-item-title">${Utils.escapeHtml(notice.author?.nickname || '시스템 공지')}</span>
-                    <span class="community-item-meta">${Utils.formatDateTime ? Utils.formatDateTime(notice.created_at) : notice.created_at}</span>
+                    <span class="community-item-meta">${Utils.escapeHtml(formatNoticeTimestamp(notice.created_at))}</span>
                 </div>
                 <span class="community-item-copy community-item-copy--detail">${Utils.escapeHtml(notice.content || '')}</span>
             `;
@@ -440,8 +449,34 @@
     async function saveNotice(event) {
         event.preventDefault();
         if (!selectedGuildId) return;
-        await API.post(`/community/guilds/${selectedGuildId}/notice/`, { notice: guildNoticeInput.value.trim() });
+        const notice = guildNoticeInput.value.trim();
+        if (!notice) {
+            Toast.error('공지 내용을 입력하세요.');
+            return;
+        }
+        const data = await API.post(`/community/guilds/${selectedGuildId}/notice/`, { notice });
+        if (selectedGuild) {
+            selectedGuild.notice = data.notice || notice;
+            renderGuildSummary(selectedGuild);
+        }
+        renderNoticeHistory(data.results || []);
+        guildNoticeInput.value = '';
         Toast.success('길드 공지를 저장했습니다.');
+    }
+
+    async function updateAvatar(event) {
+        event.preventDefault();
+        if (!selectedGuildId) return;
+        const file = guildAvatarInput?.files?.[0];
+        if (!file) {
+            Toast.error('업로드할 이미지를 먼저 선택하세요.');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('avatar', file);
+        await API.patch(`/community/guilds/${selectedGuildId}/avatar/`, formData, true);
+        guildAvatarInput.value = '';
+        Toast.success('길드 프로필 사진을 업데이트했습니다.');
         await loadGuildDetail(selectedGuildId);
     }
 
@@ -495,22 +530,6 @@
         if (!content) return;
         await API.post(`/community/guilds/${selectedGuildId}/chat/`, { content });
         input.value = '';
-        await loadGuildDetail(selectedGuildId);
-    }
-
-    async function updateAvatar(event) {
-        event.preventDefault();
-        if (!selectedGuildId) return;
-        const file = guildAvatarInput?.files?.[0];
-        if (!file) {
-            Toast.error('업로드할 이미지를 먼저 선택하세요.');
-            return;
-        }
-        const formData = new FormData();
-        formData.append('avatar', file);
-        await API.patch(`/community/guilds/${selectedGuildId}/avatar/`, formData, true);
-        guildAvatarInput.value = '';
-        Toast.success('길드 프로필 사진을 업데이트했습니다.');
         await loadGuildDetail(selectedGuildId);
     }
 
