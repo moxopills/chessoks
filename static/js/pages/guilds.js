@@ -150,14 +150,20 @@
         items.forEach((guild) => {
             const item = document.createElement('button');
             item.type = 'button';
-            item.className = `community-item${guild.id === selectedGuildId ? ' is-active' : ''}`;
+            item.className = `community-item community-item--guild-list${guild.id === selectedGuildId ? ' is-active' : ''}`;
             item.innerHTML = `
-                <div class="community-guild-row">
+                <div class="community-guild-row community-guild-row--list">
                     ${renderGuildAvatar(guild.avatar_url, guild.name, true)}
-                    <div class="community-block">
-                        <span class="community-item-title">${Utils.escapeHtml(guild.name)}</span>
-                        <span class="community-item-meta">${Utils.escapeHtml(guild.join_policy === 'open' ? '자유 가입' : '승인제')} · 팀 레이팅 ${guild.team_rating} · 요청 ${guild.pending_requests || 0}</span>
-                        <span class="community-item-copy">${Utils.escapeHtml(guild.description || '길드 설명이 아직 없습니다.')}</span>
+                    <div class="community-block community-block--tight">
+                        <div class="community-row community-row--start">
+                            <span class="community-item-title">${Utils.escapeHtml(guild.name)}</span>
+                            <span class="community-badge">${Utils.escapeHtml(guild.join_policy === 'open' ? '자유 가입' : '승인제')}</span>
+                        </div>
+                        <div class="community-guild-list-meta">
+                            <span>팀 레이팅 ${guild.team_rating}</span>
+                            <span>요청 ${guild.pending_requests || 0}</span>
+                        </div>
+                        <span class="community-item-copy community-item-copy--clamp2">${Utils.escapeHtml(guild.description || '길드 설명이 아직 없습니다.')}</span>
                     </div>
                 </div>
             `;

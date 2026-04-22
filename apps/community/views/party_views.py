@@ -55,6 +55,7 @@ class MyActivePartyView(APIView):
                     "party_id": None,
                     "title": "",
                     "status": "",
+                    "member_count": 0,
                     "leader_id": None,
                     "is_leader": False,
                     "can_invite": False,

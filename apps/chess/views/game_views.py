@@ -7,7 +7,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.permissions import IsAuthenticatedOrGuest
-from apps.chess.serializers import GameDetailSerializer, MoveSerializer, PagedMoveSerializer
+from apps.chess.serializers import (
+    GameDetailSerializer,
+    GameSummarySerializer,
+    MoveSerializer,
+    PagedMoveSerializer,
+)
 from apps.chess.services import GameQueryService, GameService
 from apps.core.request import parse_pagination_query
 
@@ -64,6 +69,17 @@ class GameCapturedView(APIView):
     def get(self, request, game_id: int):
         captured = GameQueryService.captured_summary(game_id, request.user)
         return Response(captured)
+
+
+class GameSummaryView(APIView):
+    """게임 종료 요약 조회 (게스트 가능)"""
+
+    permission_classes = [IsAuthenticatedOrGuest]
+
+    @extend_schema(responses={200: GameSummarySerializer}, tags=["게임"])
+    def get(self, request, game_id: int):
+        summary = GameQueryService.get_summary(game_id, request.user)
+        return Response(summary)
 
 
 class GameRematchView(APIView):

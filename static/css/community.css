@@ -40,7 +40,7 @@
 }
 
 .community-grid--three {
-    grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1fr) minmax(360px, 1.15fr);
+    grid-template-columns: minmax(300px, 0.94fr) minmax(350px, 1.04fr) minmax(400px, 1.18fr);
 }
 
 .community-grid--manage {
@@ -82,6 +82,10 @@
 .community-card--manage-detail .community-detail {
     display: grid;
     gap: 1rem;
+}
+
+.community-card--detail .community-detail {
+    gap: 1.1rem;
 }
 
 .community-card-head {
@@ -327,6 +331,7 @@
 .community-actions {
     display: flex;
     gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .community-actions--wrap,
@@ -406,6 +411,10 @@
     align-items: center;
     gap: 0.85rem;
     width: 100%;
+}
+
+.community-guild-row--list {
+    align-items: start;
 }
 
 .community-guild-row--summary {
@@ -512,6 +521,12 @@
     gap: 0.6rem;
 }
 
+.community-row--start {
+    justify-content: flex-start;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
 .community-row-meta {
     display: flex;
     align-items: center;
@@ -574,17 +589,57 @@
     min-width: 0;
 }
 
+.community-block--tight {
+    gap: 0.34rem;
+}
+
+.community-guild-list-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    color: var(--color-text-secondary);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
 #guild-list .community-item-title,
 #guild-list .community-item-meta,
 #guild-list .community-item-copy {
     overflow-wrap: anywhere;
 }
 
-#guild-list .community-item-copy {
+#guild-list .community-item-copy,
+.community-item-copy--clamp2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+}
+
+#guild-list .community-item {
+    align-items: start;
+}
+
+#guild-list .community-item-title {
+    font-size: 0.98rem;
+    line-height: 1.25;
+}
+
+#guild-list .community-guild-avatar.is-compact {
+    width: 54px;
+    height: 54px;
+    flex-basis: 54px;
+    border-radius: 18px;
+    font-size: 1.08rem;
+}
+
+#guild-summary .community-item-copy {
+    line-height: 1.55;
+}
+
+#guild-members .community-member-card {
+    gap: 0.55rem;
 }
 
 .community-card-slim {

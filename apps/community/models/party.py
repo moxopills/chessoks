@@ -19,6 +19,7 @@ class Party(models.Model):
     description = models.CharField(max_length=200, blank=True, default="")
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.OPEN)
     max_members = models.PositiveSmallIntegerField(default=3)
+    member_count = models.PositiveSmallIntegerField(default=1)
     lineup_locked = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
