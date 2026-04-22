@@ -16,8 +16,18 @@
     let currentGuildId = null;
     let currentPartyId = null;
     let lastMessageCount = 0;
+    let guildSummaryCache = null;
+    let partySummaryCache = null;
+    let guildSummaryLoadedAt = 0;
+    let partySummaryLoadedAt = 0;
     let threadPoller = null;
     let lobbyChatMoved = false;
+    const SUMMARY_CACHE_TTL = 30000;
+    const messageRenderState = {
+        direct: { signature: '', ids: [] },
+        guild: { signature: '', ids: [] },
+        party: { signature: '', ids: [] },
+    };
     
     // DOM Elements
     const fabBtn = document.getElementById('global-dm-fab');
@@ -90,6 +100,10 @@
             startThreadPolling();
         } else {
             currentUser = null;
+            currentRoomUserId = null;
+            invalidateGroupChannel('guild');
+            invalidateGroupChannel('party');
+            messageRenderState.direct = { signature: '', ids: [] };
             fabBtn.style.display = 'none';
             document.body.classList.add('is-guest');
             stopPolling();
@@ -229,6 +243,7 @@
             try {
                 await API.post(`/community/guilds/${currentGuildId}/chat/`, { content });
                 guildInputEl.value = '';
+                messageRenderState.guild = { signature: '', ids: [] };
                 await loadGuildMessages(true);
             } catch (error) {
                 Toast.error(error.data?.detail || error.data?.message || '길드 채팅 전송에 실패했습니다.');
@@ -242,6 +257,7 @@
             try {
                 await API.post(`/community/parties/${currentPartyId}/chat/`, { content });
                 partyInputEl.value = '';
+                messageRenderState.party = { signature: '', ids: [] };
                 await loadPartyMessages(true);
             } catch (error) {
                 Toast.error(error.data?.detail || error.data?.message || '파티 채팅 전송에 실패했습니다.');
@@ -273,6 +289,7 @@
         panel.classList.add('hidden');
         fabBtn.classList.remove('is-active');
         fabBtn.classList.remove('is-panel-open');
+        stopRoomPolling();
         stopGroupPolling();
     }
 
@@ -283,6 +300,7 @@
         partyView?.classList.add('hidden');
         roomView.classList.add('hidden');
         currentRoomUserId = null;
+        stopRoomPolling();
         stopGroupPolling();
         setTabActive('direct');
         loadThreads();
@@ -300,6 +318,7 @@
         roomView.classList.add('hidden');
         lobbyView.classList.remove('hidden');
         currentRoomUserId = null;
+        stopRoomPolling();
         stopGroupPolling();
         setTabActive('lobby');
     }
@@ -313,7 +332,7 @@
         currentRoomUserId = null;
         setTabActive('guild');
         stopRoomPolling();
-        await loadGuildMessages(true);
+        await loadGuildMessages(true, { refreshSummary: true });
         startGroupPolling(() => loadGuildMessages(), () => Boolean(currentUser?.id && currentGuildId));
     }
 
@@ -326,7 +345,7 @@
         currentRoomUserId = null;
         setTabActive('party');
         stopRoomPolling();
-        await loadPartyMessages(true);
+        await loadPartyMessages(true, { refreshSummary: true });
         startGroupPolling(() => loadPartyMessages(), () => Boolean(currentUser?.id && currentPartyId));
     }
 
@@ -340,6 +359,8 @@
         partyView?.classList.add('hidden');
         roomView.classList.remove('hidden');
         currentRoomUserId = userId;
+        messageRenderState.direct = { signature: '', ids: [] };
+        lastMessageCount = 0;
         stopGroupPolling();
         setTabActive('direct');
         roomTitle.textContent = nickname;
@@ -483,6 +504,104 @@
         form?.querySelector('button[type="submit"]')?.toggleAttribute('disabled', false);
     }
 
+    function buildMessageSignature(items) {
+        return items.map((item) => `${item.id}:${item.created_at || ''}`).join('|');
+    }
+
+    function invalidateGroupChannel(type) {
+        if (type === 'guild') {
+            currentGuildId = null;
+            guildSummaryCache = null;
+            guildSummaryLoadedAt = 0;
+            messageRenderState.guild = { signature: '', ids: [] };
+            return;
+        }
+        currentPartyId = null;
+        partySummaryCache = null;
+        partySummaryLoadedAt = 0;
+        messageRenderState.party = { signature: '', ids: [] };
+    }
+
+    function syncMessageList(root, items, renderItem, forceScroll, emptyText, state) {
+        if (!root) return false;
+        const orderedItems = items.slice().reverse();
+
+        if (!orderedItems.length) {
+            if (state.signature !== 'empty') {
+                const empty = document.createElement('div');
+                empty.className = 'global-dm-empty';
+                empty.textContent = emptyText;
+                root.replaceChildren(empty);
+                state.signature = 'empty';
+                state.ids = [];
+            }
+            return false;
+        }
+
+        const nextIds = orderedItems.map((item) => String(item.id ?? ''));
+        const nextSignature = buildMessageSignature(orderedItems);
+        const shouldScroll = forceScroll || (root.scrollTop + root.clientHeight >= root.scrollHeight - 50);
+
+        if (nextSignature === state.signature) {
+            if (shouldScroll) {
+                ChatUI?.scrollToBottom(root);
+            }
+            return false;
+        }
+
+        const canAppendOnly =
+            state.ids.length > 0 &&
+            nextIds.length > state.ids.length &&
+            state.ids.every((id, index) => id === nextIds[index]);
+
+        if (canAppendOnly) {
+            const fragment = document.createDocumentFragment();
+            orderedItems.slice(state.ids.length).forEach((item) => {
+                fragment.appendChild(renderItem(item));
+            });
+            root.appendChild(fragment);
+        } else {
+            const fragment = document.createDocumentFragment();
+            orderedItems.forEach((item) => {
+                fragment.appendChild(renderItem(item));
+            });
+            root.replaceChildren(fragment);
+        }
+
+        state.signature = nextSignature;
+        state.ids = nextIds;
+
+        if (shouldScroll) {
+            ChatUI?.scrollToBottom(root);
+        }
+
+        return true;
+    }
+
+    async function loadGuildSummary(force = false) {
+        if (!currentUser) await ensureCurrentUser();
+        const now = Date.now();
+        if (!force && guildSummaryCache && now - guildSummaryLoadedAt < SUMMARY_CACHE_TTL) {
+            return guildSummaryCache;
+        }
+        const summary = await API.get('/community/guilds/me/current/').catch(() => null);
+        guildSummaryCache = summary;
+        guildSummaryLoadedAt = now;
+        return guildSummaryCache;
+    }
+
+    async function loadPartySummary(force = false) {
+        if (!currentUser) await ensureCurrentUser();
+        const now = Date.now();
+        if (!force && partySummaryCache && now - partySummaryLoadedAt < SUMMARY_CACHE_TTL) {
+            return partySummaryCache;
+        }
+        const summary = await API.get('/community/parties/me/active/').catch(() => null);
+        partySummaryCache = summary;
+        partySummaryLoadedAt = now;
+        return partySummaryCache;
+    }
+
     function renderGroupMessageItem(item) {
         const isMe = currentUser && item.user?.id === currentUser.id;
         const time = formatTimeOnly(item.created_at);
@@ -582,11 +701,11 @@
         }
     }
 
-    async function loadGuildMessages(forceScroll = false) {
+    async function loadGuildMessages(forceScroll = false, { refreshSummary = false } = {}) {
         if (!currentUser) await ensureCurrentUser();
-        const summary = await API.get('/community/guilds/me/current/');
+        const summary = await loadGuildSummary(refreshSummary || !currentGuildId);
         if (!summary?.id) {
-            currentGuildId = null;
+            invalidateGroupChannel('guild');
             setChannelEmpty(
                 guildMessagesEl,
                 guildTitle,
@@ -601,15 +720,27 @@
         guildTitle.textContent = summary.name || '길드 채팅';
         guildSubtitle.textContent = `길드장 ${summary.owner?.nickname || '-'} · 멤버 ${summary.member_count || 0}명`;
         setChannelReady(guildInputEl, '길드 채팅 입력...');
-        const data = await API.get(`/community/guilds/${currentGuildId}/chat/`).catch(() => ({ results: [] }));
-        renderGroupMessages(guildMessagesEl, data.results || [], forceScroll);
+        const data = await API.get(`/community/guilds/${currentGuildId}/chat/`).catch((error) => {
+            if (error?.status === 403 || error?.status === 404) {
+                invalidateGroupChannel('guild');
+            }
+            return { results: [] };
+        });
+        syncMessageList(
+            guildMessagesEl,
+            data.results || [],
+            renderGroupMessageItem,
+            forceScroll,
+            '아직 채팅이 없습니다.',
+            messageRenderState.guild
+        );
     }
 
-    async function loadPartyMessages(forceScroll = false) {
+    async function loadPartyMessages(forceScroll = false, { refreshSummary = false } = {}) {
         if (!currentUser) await ensureCurrentUser();
-        const summary = await API.get('/community/parties/me/active/');
+        const summary = await loadPartySummary(refreshSummary || !currentPartyId);
         if (!summary?.party_id) {
-            currentPartyId = null;
+            invalidateGroupChannel('party');
             setChannelEmpty(
                 partyMessagesEl,
                 partyTitle,
@@ -624,8 +755,20 @@
         partyTitle.textContent = summary.title || '파티 채팅';
         partySubtitle.textContent = `상태 ${summary.status || '-'} · ${summary.is_leader ? '파티장' : '참가자'}`;
         setChannelReady(partyInputEl, '파티 채팅 입력...');
-        const data = await API.get(`/community/parties/${currentPartyId}/chat/`).catch(() => ({ results: [] }));
-        renderGroupMessages(partyMessagesEl, data.results || [], forceScroll);
+        const data = await API.get(`/community/parties/${currentPartyId}/chat/`).catch((error) => {
+            if (error?.status === 403 || error?.status === 404) {
+                invalidateGroupChannel('party');
+            }
+            return { results: [] };
+        });
+        syncMessageList(
+            partyMessagesEl,
+            data.results || [],
+            renderGroupMessageItem,
+            forceScroll,
+            '아직 채팅이 없습니다.',
+            messageRenderState.party
+        );
     }
 
     async function loadMessages(forceScroll = false) {
@@ -639,23 +782,18 @@
             if (!items.length) {
                 setMessagesEmpty('아직 메시지가 없습니다.');
             } else {
-                const reversedItems = items.slice().reverse();
-                // To avoid flickering, check if we need a full re-render or just append. 
-                // A simple approach is just re-render but manage scroll smartly.
-                const shouldScroll = forceScroll || (messagesEl.scrollTop + messagesEl.clientHeight >= messagesEl.scrollHeight - 50);
-                
-                const fragment = document.createDocumentFragment();
-                reversedItems.forEach((item) => {
-                    fragment.appendChild(renderMessageItem(item));
-                });
-                messagesEl.replaceChildren(fragment);
-                
-                if (shouldScroll) {
-                    ChatUI?.scrollToBottom(messagesEl);
-                }
+                const didRender = syncMessageList(
+                    messagesEl,
+                    items,
+                    renderMessageItem,
+                    forceScroll,
+                    '아직 메시지가 없습니다.',
+                    messageRenderState.direct
+                );
+                const orderedItems = items.slice().reverse();
 
-                if (data.count > lastMessageCount && reversedItems.length) {
-                    const lastItem = reversedItems[reversedItems.length - 1];
+                if (didRender && data.count > lastMessageCount && orderedItems.length) {
+                    const lastItem = orderedItems[orderedItems.length - 1];
                     if (lastItem.sender?.id !== currentUser?.id) {
                         Utils?.Sounds?.chat?.();
                     }
@@ -673,29 +811,12 @@
         }
     }
 
-    function renderGroupMessages(root, items, forceScroll = false) {
-        if (!root) return;
-        if (!items.length) {
-            const empty = document.createElement('div');
-            empty.className = 'global-dm-empty';
-            empty.textContent = '아직 채팅이 없습니다.';
-            root.replaceChildren(empty);
-            return;
-        }
-        const shouldScroll = forceScroll || (root.scrollTop + root.clientHeight >= root.scrollHeight - 50);
-        const fragment = document.createDocumentFragment();
-        items.slice().reverse().forEach((item) => fragment.appendChild(renderGroupMessageItem(item)));
-        root.replaceChildren(fragment);
-        if (shouldScroll) {
-            ChatUI?.scrollToBottom(root);
-        }
-    }
-
     function setMessagesEmpty(message) {
         const empty = document.createElement('div');
         empty.className = 'global-dm-empty';
         empty.textContent = message;
         messagesEl.replaceChildren(empty);
+        messageRenderState.direct = { signature: 'empty', ids: [] };
     }
 
     function renderMessageItem(item) {

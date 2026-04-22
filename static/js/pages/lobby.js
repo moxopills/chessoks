@@ -99,8 +99,6 @@
     let quickMatchStartTime = null;
     let randomMatchTimerInterval = null;
     let randomMatchStartTime = null;
-    let quickMatchPollInterval = null;
-    let randomMatchPollInterval = null;
     let notificationEventBound = false;
     let notificationEventHandler = null;
     let hasShownLobbyOnboarding = false;
@@ -280,8 +278,9 @@
                 : (Array.isArray(data) ? data : []);
             const rooms = rawRooms.filter((room) => !isHiddenRoomType(room));
             const visibleRooms = rooms.slice(0, 5);
-            const signature = rooms
-                .map((room) => `${room.id}:${room.status}:${room.guest?.id || 0}:${room.current_game_id || 0}`)
+            const signature = visibleRooms
+                .map((room) => buildRoomSignature(room))
+                .concat(`more:${rooms.length > 5 ? 1 : 0}`)
                 .join('|');
             const isLoading = roomList && roomList.querySelector('.loading-placeholder');
             if (signature !== lastRoomsSignature || isLoading) {
@@ -305,7 +304,7 @@
 
     async function loadWaitingRoom() {
         if (!waitingRoomCard) return;
-        if (!currentUserId || isMatching || isRandomMatching) {
+        if ((!currentUserId && !isGuestUser) || isMatching || isRandomMatching) {
             waitingRoomCard.classList.add('hidden');
             return;
         }
@@ -348,7 +347,7 @@
 
     async function loadActiveGame() {
         if (!activeGameCard) return;
-        if (!currentUserId) {
+        if (!currentUserId && !isGuestUser) {
             activeGameCard.classList.add('hidden');
             return;
         }
@@ -362,6 +361,13 @@
             }
             if (activeRoomId !== room.id) {
                 activeRoomId = room.id;
+            }
+            if ((isMatching || isRandomMatching) && room.current_game_id) {
+                setMatchingState(false);
+                setRandomMatchingState(false);
+                showStatus('매칭되었습니다. 게임으로 이동합니다.', 'success', 1800);
+                window.location.href = `/games/${room.id}/`;
+                return;
             }
             activeGameCard.classList.remove('hidden');
             activeGameInfo.textContent = '';
@@ -441,38 +447,103 @@
         }).join('');
     }
 
+    function buildRoomSignature(room) {
+        return [
+            room?.id || 0,
+            room?.status || '',
+            room?.title || '',
+            room?.time_limit || 0,
+            room?.host?.id || 0,
+            room?.host?.nickname || '',
+            room?.host?.nickname_color || '',
+            room?.guest?.id || 0,
+            room?.guest?.nickname || '',
+            room?.player_count || 0,
+            room?.spectator_count || 0,
+            room?.current_game_id || 0,
+        ].join(':');
+    }
+
+    function createRoomEmptyState() {
+        const empty = document.createElement('div');
+        empty.className = 'room-empty';
+        empty.textContent = '대기 중인 방이 없습니다.';
+        return empty;
+    }
+
+    function bindRoomItemEvents(item) {
+        if (!item || item.dataset.bound === '1') return;
+        item.dataset.bound = '1';
+        item.addEventListener('click', () => {
+            handleRoomClick(item);
+        });
+    }
+
+    function createRoomElement(room) {
+        const item = document.createElement('div');
+        item.className = 'room-item';
+        item.dataset.roomId = String(room.id);
+        item.dataset.signature = buildRoomSignature(room);
+
+        const info = document.createElement('div');
+        info.className = 'room-info';
+
+        const title = document.createElement('div');
+        title.className = 'room-title';
+        title.textContent = room.title || '빠른 대전';
+
+        const meta = document.createElement('div');
+        meta.className = 'room-meta';
+
+        const host = document.createElement('span');
+        const hostColor = Utils.getNicknameColorValue(room.host?.nickname_color || '');
+        if (hostColor) host.style.color = hostColor;
+        host.textContent = room.host?.nickname || '호스트';
+
+        meta.appendChild(host);
+        meta.append(` · ${room.time_limit ? `${room.time_limit}분` : '무제한'}`);
+        if (room.spectator_count > 0) {
+            meta.append(` · 👁 ${room.spectator_count}`);
+        }
+
+        info.appendChild(title);
+        info.appendChild(meta);
+
+        const status = document.createElement('span');
+        status.className = `room-status ${room.status}`;
+        status.textContent = room.status === 'waiting' ? '대기 중' : '게임 중';
+
+        item.appendChild(info);
+        item.appendChild(status);
+        bindRoomItemEvents(item);
+        return item;
+    }
+
     /**
      * 방 목록 렌더링
      */
     function renderRooms(rooms) {
         const visibleRooms = (rooms || []).filter((room) => !isHiddenRoomType(room));
         if (!visibleRooms.length) {
-            roomList.innerHTML = '<div class="room-empty">대기 중인 방이 없습니다.</div>';
+            roomList.replaceChildren(createRoomEmptyState());
             return;
         }
 
-        roomList.innerHTML = visibleRooms.map(room => `
-            <div class="room-item" data-room-id="${room.id}">
-                <div class="room-info">
-                    <div class="room-title">${Utils.escapeHtml(room.title || '빠른 대전')}</div>
-                    <div class="room-meta">
-                        <span style="color:${Utils.getNicknameColorValue(room.host?.nickname_color || '')}">
-                            ${Utils.escapeHtml(room.host?.nickname || '호스트')}
-                        </span> ·
-                        ${room.time_limit ? `${room.time_limit}분` : '무제한'}
-                        ${room.spectator_count > 0 ? ` · 👁 ${room.spectator_count}` : ''}
-                    </div>
-                </div>
-                <span class="room-status ${room.status}">${room.status === 'waiting' ? '대기 중' : '게임 중'}</span>
-            </div>
-        `).join('');
-
-        // 방 클릭 이벤트
-        roomList.querySelectorAll('.room-item').forEach(item => {
-            item.addEventListener('click', () => {
-                handleRoomClick(item);
-            });
+        const existingMap = new Map(
+            Array.from(roomList.querySelectorAll('.room-item')).map((item) => [item.dataset.roomId, item])
+        );
+        const fragment = document.createDocumentFragment();
+        visibleRooms.forEach((room) => {
+            const key = String(room.id);
+            const signature = buildRoomSignature(room);
+            const existing = existingMap.get(key);
+            if (existing && existing.dataset.signature === signature) {
+                fragment.appendChild(existing);
+                return;
+            }
+            fragment.appendChild(createRoomElement(room));
         });
+        roomList.replaceChildren(fragment);
     }
 
     function startRoomAutoRefresh() {
@@ -838,9 +909,7 @@
                 showStatus('매칭되었습니다. 게임으로 이동합니다.', 'success', 1800);
                 window.location.href = `/games/${result.room_id}/`;
             } else if (result.status === 'waiting') {
-                // 대기 중 - 폴링 시작
                 showStatus('상대를 찾는 중입니다.', 'pending', 1500);
-                pollMatchStatus();
             }
         } catch (error) {
             setMatchingState(false);
@@ -859,7 +928,6 @@
                 window.location.href = `/games/${result.room_id}/`;
             } else if (result.status === 'waiting') {
                 showStatus('상대를 찾는 중입니다.', 'pending', 1500);
-                pollRandomMatchStatus();
             }
         } catch (error) {
             setRandomMatchingState(false);
@@ -891,67 +959,6 @@
     }
 
     /**
-     * 매칭 상태 폴링
-     */
-    function pollMatchStatus() {
-        if (!isMatching) return;
-        if (quickMatchPollInterval) clearInterval(quickMatchPollInterval);
-
-        quickMatchPollInterval = setInterval(async () => {
-            if (!isMatching) {
-                clearInterval(quickMatchPollInterval);
-                quickMatchPollInterval = null;
-                return;
-            }
-
-            try {
-                const result = await API.post('/chess/quick-match/');
-
-                if (result.status === 'matched') {
-                    clearInterval(quickMatchPollInterval);
-                    quickMatchPollInterval = null;
-                    showStatus('매칭되었습니다. 게임으로 이동합니다.', 'success', 1800);
-                    window.location.href = `/games/${result.room_id}/`;
-                }
-            } catch (error) {
-                clearInterval(quickMatchPollInterval);
-                quickMatchPollInterval = null;
-                setMatchingState(false);
-                showStatus('매칭 중 오류가 발생했습니다. 다시 시도해주세요.', 'error', 2200);
-            }
-        }, 2000);
-    }
-
-    function pollRandomMatchStatus() {
-        if (!isRandomMatching) return;
-        if (randomMatchPollInterval) clearInterval(randomMatchPollInterval);
-
-        randomMatchPollInterval = setInterval(async () => {
-            if (!isRandomMatching) {
-                clearInterval(randomMatchPollInterval);
-                randomMatchPollInterval = null;
-                return;
-            }
-
-            try {
-                const result = await API.post('/chess/random-match/');
-
-                if (result.status === 'matched') {
-                    clearInterval(randomMatchPollInterval);
-                    randomMatchPollInterval = null;
-                    showStatus('매칭되었습니다. 게임으로 이동합니다.', 'success', 1800);
-                    window.location.href = `/games/${result.room_id}/`;
-                }
-            } catch (error) {
-                clearInterval(randomMatchPollInterval);
-                randomMatchPollInterval = null;
-                setRandomMatchingState(false);
-                showStatus('매칭 중 오류가 발생했습니다. 다시 시도해주세요.', 'error', 2200);
-            }
-        }, 2000);
-    }
-
-    /**
      * 매칭 상태 UI 업데이트
      */
     function setMatchingState(matching) {
@@ -972,10 +979,6 @@
             quickMatchModal?.classList.add('hidden');
             hideMatchToast();
             stopMatchTimer('quick');
-            if (quickMatchPollInterval) {
-                clearInterval(quickMatchPollInterval);
-                quickMatchPollInterval = null;
-            }
         }
     }
 
@@ -997,10 +1000,6 @@
             randomMatchModal?.classList.add('hidden');
             hideMatchToast();
             stopMatchTimer('random');
-            if (randomMatchPollInterval) {
-                clearInterval(randomMatchPollInterval);
-                randomMatchPollInterval = null;
-            }
         }
     }
 
@@ -1208,6 +1207,14 @@
             const data = event.detail || {};
             const reason = data.payload?.reason || '';
             const handlers = {
+                match_found: () => {
+                    const roomId = data.payload?.room_id;
+                    if (!roomId) return;
+                    setMatchingState(false);
+                    setRandomMatchingState(false);
+                    showStatus(data.message || '매칭되었습니다. 게임으로 이동합니다.', 'success', 1800);
+                    window.location.href = `/games/${roomId}/`;
+                },
                 [NOTIFICATION_TYPES.CHAT_MUTE]: () => {
                     setChatMutedState(true, reason);
                     Toast.error(data.message || '채팅이 제한되었습니다.');
@@ -1452,27 +1459,65 @@
         return date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
     }
 
+    function createUsersEmptyState() {
+        const empty = document.createElement('div');
+        empty.className = 'users-empty';
+        empty.textContent = '접속자가 없습니다.';
+        return empty;
+    }
+
+    function buildUserSignature(user, presenceSource = null) {
+        const presence = getPresenceViewModel(presenceSource || user, !presenceSource);
+        const achievement = user?.featured_achievement || {};
+        return [
+            user?.id || 0,
+            user?.nickname || '',
+            user?.avatar_url || '',
+            user?.nickname_color || user?.stats?.nickname_color || '',
+            user?.profile_border || user?.stats?.profile_border || '',
+            user?.rating || user?.stats?.rating || '',
+            user?.featured_achievement_key || achievement?.key || '',
+            presence?.online ? 1 : 0,
+            presence?.status || '',
+            presence?.label || '',
+        ].join(':');
+    }
+
+    function syncUserRows(users, presenceMap = {}) {
+        userCount.textContent = users.length;
+        if (!users.length) {
+            usersList.replaceChildren(createUsersEmptyState());
+            return;
+        }
+
+        const existingMap = new Map(
+            Array.from(usersList.querySelectorAll('.user-item')).map((item) => [item.dataset.userId, item])
+        );
+        const fragment = document.createDocumentFragment();
+        users.forEach((user) => {
+            const key = String(user.id);
+            const presenceSource = presenceMap[user.id] || null;
+            const signature = buildUserSignature(user, presenceSource);
+            const existing = existingMap.get(key);
+            if (existing && existing.dataset.signature === signature) {
+                fragment.appendChild(existing);
+                return;
+            }
+            const row = createUserRowElement(user, presenceSource);
+            row.dataset.signature = signature;
+            bindUserItemEvents(row);
+            fragment.appendChild(row);
+        });
+        usersList.replaceChildren(fragment);
+    }
+
     /**
      * 접속자 목록 렌더링
      */
     function renderUsers() {
         if (isUserSearchMode) return;
         const users = Object.values(lobbyUsers);
-        userCount.textContent = users.length;
-
-        if (users.length === 0) {
-            usersList.innerHTML = '<div class="users-empty">접속자가 없습니다.</div>';
-            return;
-        }
-
-        usersList.textContent = '';
-        const fragment = document.createDocumentFragment();
-        users.forEach((user) => {
-            const row = createUserRowElement(user);
-            fragment.appendChild(row);
-        });
-        usersList.appendChild(fragment);
-        usersList.querySelectorAll('.user-item').forEach(bindUserItemEvents);
+        syncUserRows(users);
     }
 
     function setupUserContextMenu() {
@@ -1530,24 +1575,33 @@
 
     function addUserToList(user) {
         if (isUserSearchMode) return;
+        const signature = buildUserSignature(user);
         const existing = usersList.querySelector(`[data-user-id="${user.id}"]`);
-        if (existing) return;
-
-        const empty = usersList.querySelector('.users-empty');
-        if (empty) {
-            usersList.innerHTML = '';
+        if (existing && existing.dataset.signature === signature) {
+            userCount.textContent = Object.keys(lobbyUsers).length;
+            return;
         }
 
         const row = createUserRowElement(user);
-        usersList.appendChild(row);
-        const newItem = usersList.querySelector(`[data-user-id="${user.id}"]`);
-        if (newItem) bindUserItemEvents(newItem);
+        row.dataset.signature = signature;
+        bindUserItemEvents(row);
+        if (existing) {
+            existing.replaceWith(row);
+        } else {
+            const empty = usersList.querySelector('.users-empty');
+            if (empty) {
+                usersList.replaceChildren();
+            }
+            usersList.appendChild(row);
+        }
         userCount.textContent = Object.keys(lobbyUsers).length;
     }
 
     function bindUserItemEvents(item) {
         const userId = parseInt(item.dataset.userId, 10);
         if (!userId) return;
+        if (item.dataset.bound === '1') return;
+        item.dataset.bound = '1';
         if (isTouchDevice) {
             item.addEventListener('click', (event) => {
                 event.preventDefault();
@@ -1584,93 +1638,31 @@
         const remaining = Object.keys(lobbyUsers).length;
         userCount.textContent = remaining;
         if (remaining === 0) {
-            usersList.innerHTML = '<div class="users-empty">접속자가 없습니다.</div>';
+            usersList.replaceChildren(createUsersEmptyState());
         }
     }
 
     function getPresenceViewModel(source, onlineFallback = true) {
-        const isOnline = typeof source?.online === 'boolean' ? source.online : onlineFallback;
-        return {
-            online: isOnline,
-            status: source?.status || (isOnline ? 'online' : 'offline'),
-            label: source?.status_label || (isOnline ? '온라인' : '오프라인'),
+        return window.LobbyPresenceUI?.getPresenceViewModel(source, onlineFallback) || {
+            online: Boolean(onlineFallback),
+            status: onlineFallback ? 'online' : 'offline',
+            label: onlineFallback ? '온라인' : '오프라인',
         };
     }
 
     function getPresenceCssClass(status, online) {
-        if (!online) return 'offline';
-        const normalized = String(status || 'online');
-        const supported = new Set([
-            'online',
-            'lobby',
-            'room_waiting',
-            'playing',
-            'competitive',
-            'quick',
-            'ai_playing',
-            'spectating',
-            'puzzle',
-        ]);
-        return supported.has(normalized) ? normalized : 'online';
+        return window.LobbyPresenceUI?.getPresenceCssClass(status, online) || 'online';
     }
 
     function createAchievementLabel(achievement) {
-        if (!achievement?.title) return null;
-        const badge = document.createElement('div');
-        badge.className = `user-achievement user-achievement--${achievement.tone || 'info'}`;
-        badge.textContent = `${achievement.icon || '🏅'} ${achievement.title}`;
-        return badge;
+        return window.LobbyPresenceUI?.createAchievementLabel(achievement) || null;
     }
 
     function createUserRowElement(user, presenceSource = null) {
-        const presence = getPresenceViewModel(presenceSource || user, true);
-        const statusText = presence.label;
-        const statusClass = getPresenceCssClass(presence.status, presence.online);
-        const tier = user.rank_tier || user.stats?.rank_tier || 'Junior';
-        const tierIcon = Utils.getTierIcon(tier);
-        const nicknameColor = Utils.getNicknameColorValue(user.nickname_color || user.stats?.nickname_color || '');
-        const profileRing = Utils.getProfileBorderValue(user.profile_border || user.stats?.profile_border || '');
-        const row = document.createElement('div');
-        row.className = 'user-item';
-        row.dataset.userId = String(user.id);
-
-        const avatar = document.createElement('div');
-        avatar.className = 'user-avatar';
-        if (profileRing) avatar.style.boxShadow = profileRing;
-        Utils.setAvatar(avatar, {
-            url: user.avatar_url,
-            alt: user.nickname || '',
-            placeholder: '👤',
-            placeholderClass: 'avatar-placeholder',
-        });
-        row.appendChild(avatar);
-
-        const info = document.createElement('div');
-        info.className = 'user-info';
-
-        const nick = document.createElement('div');
-        nick.className = 'user-nickname';
-        if (nicknameColor) nick.style.color = nicknameColor;
-        nick.appendChild(document.createTextNode(user.nickname || ''));
-        nick.appendChild(document.createTextNode(' '));
-        const badge = document.createElement('span');
-        badge.className = 'user-tier-icon';
-        badge.title = tier;
-        badge.textContent = tierIcon;
-        nick.appendChild(badge);
-        info.appendChild(nick);
-
-        const achievement = createAchievementLabel(user.featured_achievement);
-        if (achievement) {
-            info.appendChild(achievement);
-        }
-
-        const status = document.createElement('div');
-        status.className = `user-status ${statusClass}`;
-        status.textContent = statusText;
-        info.appendChild(status);
-        row.appendChild(info);
-        return row;
+        return (
+            window.LobbyPresenceUI?.createUserRowElement(user, presenceSource)
+            || document.createElement('div')
+        );
     }
 
     function styledUserInline(user, fallback = '플레이어') {
@@ -1741,20 +1733,17 @@
             if (requestId !== userSearchRequestId) return;
             const results = data.results || [];
             isUserSearchMode = true;
-            userCount.textContent = results.length;
             if (!results.length) {
-                usersList.innerHTML = '<div class="users-empty">검색 결과가 없습니다.</div>';
+                userCount.textContent = 0;
+                const empty = document.createElement('div');
+                empty.className = 'users-empty';
+                empty.textContent = '검색 결과가 없습니다.';
+                usersList.replaceChildren(empty);
                 return;
             }
             const statusMap = await fetchOnlineStatusMap(results.map(user => user.id));
             if (requestId !== userSearchRequestId) return;
-            usersList.textContent = '';
-            const fragment = document.createDocumentFragment();
-            results.forEach((user) => {
-                fragment.appendChild(createUserRowElement(user, statusMap[user.id]));
-            });
-            usersList.appendChild(fragment);
-            usersList.querySelectorAll('.user-item').forEach(bindUserItemEvents);
+            syncUserRows(results, statusMap);
         } catch (error) {
             Toast.error(error.data?.message || '검색에 실패했습니다.');
         }

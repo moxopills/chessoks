@@ -2918,5 +2918,11 @@ body.competitive-room #rematch-modal {
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/components/game_moves_cache.js' %}"></script>
+<script src="{% static 'js/components/game_analysis_ui.js' %}"></script>
+<script src="{% static 'js/components/game_side_panels_ui.js' %}"></script>
+<script src="{% static 'js/components/game_action_ui.js' %}"></script>
+<script src="{% static 'js/components/game_chat_ui.js' %}"></script>
+<script src="{% static 'js/components/game_end_summary.js' %}"></script>
 <script src="{% static 'js/pages/game.js' %}?v=20260314-1"></script>
 {% endblock %}

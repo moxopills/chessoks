@@ -3,6 +3,8 @@
     let activeCategory = null;
     let activePostId = null;
     let currentUserId = null;
+    let postsCache = [];
+    let lastPostsSignature = '';
     let mineOnly = new URLSearchParams(window.location.search).get('mine') === '1';
     const initialPostId = Number(new URLSearchParams(window.location.search).get('post') || 0);
 
@@ -77,6 +79,58 @@
             ${isRecruit ? buildRecruitmentMeta(post) : ''}
             <span class="community-item-copy">${escape(previewText || '본문 미리보기가 없습니다.')}</span>
         `;
+    }
+
+    function buildPostsSignature(posts) {
+        return posts
+            .map((post) => [
+                post.id,
+                post.comment_count || 0,
+                post.view_count || 0,
+                post.title || '',
+                post.created_at || '',
+                (post.content || '').slice(0, 110),
+            ].join(':'))
+            .join('|');
+    }
+
+    function syncListActiveState() {
+        listEl.querySelectorAll('.community-item[data-post-id]').forEach((item) => {
+            const postId = Number(item.dataset.postId || 0);
+            item.classList.toggle('is-active', postId === activePostId);
+        });
+    }
+
+    function upsertCachedPost(post) {
+        const index = postsCache.findIndex((item) => item.id === post.id);
+        if (index >= 0) {
+            postsCache[index] = { ...postsCache[index], ...post };
+        } else {
+            postsCache.unshift(post);
+        }
+        lastPostsSignature = buildPostsSignature(postsCache);
+    }
+
+    function removeCachedPost(postId) {
+        postsCache = postsCache.filter((post) => post.id !== postId);
+        lastPostsSignature = buildPostsSignature(postsCache);
+    }
+
+    function createPostButton(post) {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'community-item';
+        item.dataset.postId = String(post.id);
+        item.innerHTML = buildPostListItem(post);
+        item.addEventListener('click', () => loadPost(post.id));
+        return item;
+    }
+
+    function patchPostListItem(post) {
+        const existing = listEl.querySelector(`[data-post-id="${post.id}"]`);
+        if (!existing) return;
+        existing.innerHTML = buildPostListItem(post);
+        existing.classList.toggle('is-active', post.id === activePostId);
     }
 
     function buildPostDetail(post) {
@@ -172,11 +226,8 @@
             return;
         }
         posts.forEach((post) => {
-            const item = document.createElement('button');
-            item.type = 'button';
-            item.className = `community-item${post.id === activePostId ? ' is-active' : ''}`;
-            item.innerHTML = buildPostListItem(post);
-            item.addEventListener('click', () => loadPost(post.id));
+            const item = createPostButton(post);
+            item.classList.toggle('is-active', post.id === activePostId);
             listEl.appendChild(item);
         });
     }
@@ -211,11 +262,25 @@
             params.mine = '1';
         }
         const data = await API.get('/community/boards/posts/', params);
-        renderPosts(data.results || []);
+        const posts = data.results || [];
+        const nextSignature = buildPostsSignature(posts);
+        postsCache = posts;
+        if (nextSignature !== lastPostsSignature) {
+            renderPosts(posts);
+            lastPostsSignature = nextSignature;
+        } else {
+            syncListActiveState();
+        }
+        if (activePostId && !posts.some((post) => post.id === activePostId)) {
+            activePostId = null;
+            detailPanelEl.classList.add('hidden');
+            detailEmptyEl.classList.remove('hidden');
+            detailActionsEl?.classList.add('hidden');
+        }
         updateScopeButtons();
     }
 
-    async function loadPost(postId, { incrementView = true } = {}) {
+    async function loadPost(postId, { incrementView = true, syncList = true } = {}) {
         activePostId = postId;
         const params = incrementView ? {} : { no_view: '1' };
         const post = await API.get(`/community/boards/posts/${postId}/`, params);
@@ -224,7 +289,12 @@
             renderCategories();
         }
         renderPost(post);
-        await loadPosts();
+        if (syncList) {
+            upsertCachedPost(post);
+            patchPostListItem(post);
+        }
+        syncListActiveState();
+        return post;
     }
 
     async function createComment(event) {
@@ -234,7 +304,7 @@
         if (!content) return;
         await API.post(`/community/boards/posts/${activePostId}/comments/`, { content });
         commentInputEl.value = '';
-        await loadPost(activePostId, { incrementView: false });
+        await loadPost(activePostId, { incrementView: false, syncList: true });
     }
 
     async function toggleCommentLike(commentId) {
@@ -244,7 +314,7 @@
         }
         await API.post(`/community/boards/comments/${commentId}/like/`, {});
         if (activePostId) {
-            await loadPost(activePostId, { incrementView: false });
+            await loadPost(activePostId, { incrementView: false, syncList: true });
         }
     }
 
@@ -254,7 +324,7 @@
         await API.delete(`/community/boards/comments/${commentId}/`);
         Toast.success('댓글을 삭제했습니다.');
         if (activePostId) {
-            await loadPost(activePostId, { incrementView: false });
+            await loadPost(activePostId, { incrementView: false, syncList: true });
         }
     }
 
@@ -263,13 +333,21 @@
         if (!window.confirm('이 게시글을 삭제할까요?')) return;
         await API.delete(`/community/boards/posts/${activePostId}/`);
         Toast.success('게시글을 삭제했습니다.');
+        const deletedPostId = activePostId;
         activePostId = null;
+        removeCachedPost(deletedPostId);
+        listEl.querySelector(`[data-post-id="${deletedPostId}"]`)?.remove();
         detailPanelEl.classList.add('hidden');
         detailEmptyEl.classList.remove('hidden');
         detailActionsEl?.classList.add('hidden');
-        await loadPosts();
-        const first = listEl.querySelector('.community-item');
-        if (first) first.click();
+        if (!postsCache.length) {
+            renderPosts([]);
+            return;
+        }
+        const nextPostId = postsCache[0]?.id;
+        if (nextPostId) {
+            await loadPost(nextPostId, { incrementView: false, syncList: false });
+        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {

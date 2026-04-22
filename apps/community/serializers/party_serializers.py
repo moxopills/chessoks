@@ -29,6 +29,7 @@ class PartySerializer(serializers.ModelSerializer):
             "description",
             "status",
             "max_members",
+            "member_count",
             "lineup_locked",
             "created_at",
             "leader",

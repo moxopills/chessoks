@@ -13,15 +13,6 @@
     // Constants
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-    const PIECE_VALUE = {
-        p: 1,
-        n: 3,
-        b: 3,
-        r: 5,
-        q: 9,
-        k: 0,
-    };
-
     // 접근성용 기물 이름
     const PIECE_NAMES = {
         'K': '백 킹', 'Q': '백 퀸', 'R': '백 룩', 'B': '백 비숍', 'N': '백 나이트', 'P': '백 폰',
@@ -157,8 +148,6 @@
     let wsReconnectAttempts = 0;
     const WS_MAX_RECONNECT_ATTEMPTS = 10;
     const WS_BASE_RECONNECT_DELAY = 1000;
-    let ratingPollAttempts = 0;
-    const RATING_POLL_MAX_ATTEMPTS = 30;
     let notificationEventBound = false;
     let notificationEventHandler = null;
     let selectedBoardSkinClass = 'skin-board-classic';
@@ -461,6 +450,7 @@
             if (game.move_count > 0) {
                 renderBoard({ animatePieceChanges: false });
                 updateTurn();
+                scheduleMoveCacheWarmup();
             }
             if (replayOnly && replayGameParamId) {
                 await openReplay(replayGameParamId);
@@ -538,7 +528,6 @@
         hasShownStartGuide = false;
         lastTurnColor = null;
         wsReconnectAttempts = 0;
-        ratingPollAttempts = 0;
 
         let fetched = null;
         for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -1484,16 +1473,6 @@
             }
 
             // 현재 턴의 시간 감소 (서버 기준 계산)
-            if (game.turn_started_at) {
-                const elapsed = (Date.now() - new Date(game.turn_started_at).getTime()) / 1000;
-                if (game.current_turn === 'white') {
-                    game.white_time_remaining = Math.max(0, game.white_time_remaining - elapsed);
-                } else {
-                    game.black_time_remaining = Math.max(0, game.black_time_remaining - elapsed);
-                }
-                game.turn_started_at = new Date().toISOString();
-            }
-
             updateTimerDisplay();
             checkTimeout();
         }, 1000);
@@ -1502,8 +1481,9 @@
     function checkTimeout() {
         if (timeoutHandled || !game || game.result !== 'playing') return;
 
-        const myTime = myColor === 'white' ? game.white_time_remaining : game.black_time_remaining;
-        const opponentTime = myColor === 'white' ? game.black_time_remaining : game.white_time_remaining;
+        const liveTimes = getLiveTimeSnapshot();
+        const myTime = myColor === 'white' ? liveTimes.white : liveTimes.black;
+        const opponentTime = myColor === 'white' ? liveTimes.black : liveTimes.white;
 
         if (myTime <= 0 && game.current_turn === myColor) {
             timeoutHandled = true;
@@ -1528,8 +1508,9 @@
         if (!game) return;
 
         const isFlipped = myColor === 'black';
-        const topTime = isFlipped ? game.white_time_remaining : game.black_time_remaining;
-        const bottomTime = isFlipped ? game.black_time_remaining : game.white_time_remaining;
+        const liveTimes = getLiveTimeSnapshot();
+        const topTime = isFlipped ? liveTimes.white : liveTimes.black;
+        const bottomTime = isFlipped ? liveTimes.black : liveTimes.white;
 
         const opponentTimerEl = opponentBar.querySelector('.player-bar-timer');
         const myTimerEl = myBar.querySelector('.player-bar-timer');
@@ -1542,6 +1523,26 @@
             myTimerEl.textContent = Utils.formatTime(bottomTime);
             myTimerEl.classList.toggle('low', bottomTime < 30);
         }
+    }
+
+    function getLiveTimeSnapshot() {
+        if (!game) {
+            return { white: 0, black: 0 };
+        }
+        let white = Number(game.white_time_remaining || 0);
+        let black = Number(game.black_time_remaining || 0);
+        if (game.result === 'playing' && game.turn_started_at) {
+            const startedAt = new Date(game.turn_started_at).getTime();
+            if (!Number.isNaN(startedAt)) {
+                const elapsed = Math.max(0, (Date.now() - startedAt) / 1000);
+                if (game.current_turn === 'white') {
+                    white = Math.max(0, white - elapsed);
+                } else {
+                    black = Math.max(0, black - elapsed);
+                }
+            }
+        }
+        return { white, black };
     }
 
     /**
@@ -1815,16 +1816,12 @@
     }
 
     function renderCapturedPieces() {
-        if (!capturedWhite || !capturedBlack) return;
-
-        // 백이 잡은 기물은 흑(소문자), 흑이 잡은 기물은 백(대문자)
-        capturedWhite.innerHTML = captured.white
-            .map((letter) => createCapturedPieceMarkup(letter.toLowerCase()))
-            .join('');
-
-        capturedBlack.innerHTML = captured.black
-            .map((letter) => createCapturedPieceMarkup(letter.toUpperCase()))
-            .join('');
+        window.GameSidePanelsUI?.renderCapturedPieces({
+            capturedWhite,
+            capturedBlack,
+            captured,
+            createCapturedPieceMarkup,
+        });
     }
 
     /**
@@ -1989,6 +1986,7 @@
                 if (data.last_move) {
                     Utils?.Sounds?.move?.();
                 }
+                window.GameMovesCache?.invalidate(game.id);
                 if (data.last_move) {
                     lastMove = data.last_move;
                     if (data.last_move.is_check && data.result === 'playing') {
@@ -2243,51 +2241,14 @@
      * 채팅 메시지 추가
      */
     function addChatMessage(data) {
-        const isMine = currentUser && data.user_id === currentUser.id;
-        const messageEl = document.createElement('div');
-        messageEl.className = `chat-message ${isMine ? 'mine' : 'others'}`;
-        if (data.message_id) {
-            messageEl.dataset.messageId = String(data.message_id);
-        }
-        if (!isMine) {
-            const avatarWrap = document.createElement('div');
-            avatarWrap.className = 'chat-avatar';
-            Utils.setAvatar(avatarWrap, {
-                url: data.avatar_url,
-                alt: data.nickname || '',
-                placeholder: '?',
-                placeholderClass: 'avatar-placeholder',
-            });
-            messageEl.appendChild(avatarWrap);
-        }
-
-        const contentEl = document.createElement('div');
-        contentEl.className = 'chat-content';
-
-        const nicknameEl = document.createElement('span');
-        nicknameEl.className = 'chat-nickname';
-        nicknameEl.textContent = data.nickname || '';
-        contentEl.appendChild(nicknameEl);
-
-        const bubbleEl = document.createElement('div');
-        bubbleEl.className = 'chat-bubble';
-        bubbleEl.textContent = data.message || '';
-        contentEl.appendChild(bubbleEl);
-
-        ChatReactions?.ensureReactionBar(contentEl, {
-            reactions: data.reactions || {},
-            myReactions: data.my_reactions || [],
-        });
-        messageEl.appendChild(contentEl);
-
-        chatMessages.appendChild(messageEl);
-        ChatUI?.scrollToBottom(chatMessages);
-        if (!isMine) Utils?.Sounds?.chat?.();
-        handleChatBadge(data);
-        ChatReactions?.bindReactionButtons(messageEl, {
-            onReact: ({ messageId, reaction, button }) => {
-                if (!socket || socket.readyState !== WebSocket.OPEN || !messageId || !reaction) return;
-                button?.classList.toggle('active');
+        window.GameChatUI?.addMessage({
+            chatMessages,
+            data,
+            currentUserId: currentUser?.id,
+            onBadge: handleChatBadge,
+            onSound: () => Utils?.Sounds?.chat?.(),
+            onReact: ({ messageId, reaction }) => {
+                if (!socket || socket.readyState !== WebSocket.OPEN) return;
                 socket.send(JSON.stringify({
                     action: 'reaction',
                     message_id: messageId,
@@ -2313,69 +2274,29 @@
     }
 
     function renderSpectatorList(users) {
-        if (!spectatorList) return;
-        if (!users.length) {
-            spectatorList.innerHTML = '<div class="spectator-empty">관전자가 없습니다.</div>';
-            return;
-        }
-        spectatorList.textContent = '';
-        users.forEach((user) => {
-            const item = document.createElement('div');
-            item.className = 'spectator-item';
-
-            const avatar = document.createElement('div');
-            avatar.className = 'avatar avatar-xs';
-            const ring = Utils.getProfileBorderValue(user.profile_border || '');
-            if (ring) avatar.style.boxShadow = ring;
-            Utils.setAvatar(avatar, {
-                url: user.avatar_url,
-                alt: user.nickname || '관전자',
-                placeholder: '?',
-                placeholderClass: 'avatar-placeholder',
-            });
-
-            const name = document.createElement('span');
-            const color = Utils.getNicknameColorValue(user.nickname_color || '');
-            if (color) name.style.color = color;
-            name.textContent = user.nickname || '관전자';
-
-            item.appendChild(avatar);
-            item.appendChild(name);
-            spectatorList.appendChild(item);
+        window.GameSidePanelsUI?.renderSpectatorList({
+            spectatorList,
+            users,
         });
     }
 
     function updateSpectatorState(users) {
-        if (!spectatorCount) return;
-        const nextUsers = Array.isArray(users) ? users : [];
-        currentSpectators = nextUsers;
-        spectatorCount.textContent = `${nextUsers.length}명`;
-        renderSpectatorList(nextUsers);
+        currentSpectators = window.GameSidePanelsUI?.updateSpectatorState({
+            spectatorCount,
+            spectatorList,
+            users,
+        }) || [];
     }
 
     function applySpectatorDelta(action, user, spectatorCountValue) {
-        if (!user?.id) {
-            if (typeof spectatorCountValue === 'number' && spectatorCount) {
-                spectatorCount.textContent = `${spectatorCountValue}명`;
-            }
-            return;
-        }
-        const nextUsers = Array.isArray(currentSpectators) ? [...currentSpectators] : [];
-        const existingIndex = nextUsers.findIndex((item) => item.id === user.id);
-        if (action === 'leave') {
-            if (existingIndex >= 0) {
-                nextUsers.splice(existingIndex, 1);
-            }
-        } else if (existingIndex >= 0) {
-            nextUsers.splice(existingIndex, 1, user);
-        } else {
-            nextUsers.push(user);
-        }
-        currentSpectators = nextUsers;
-        if (spectatorCount) {
-            spectatorCount.textContent = `${typeof spectatorCountValue === 'number' ? spectatorCountValue : nextUsers.length}명`;
-        }
-        renderSpectatorList(nextUsers);
+        currentSpectators = window.GameSidePanelsUI?.applySpectatorDelta({
+            currentSpectators,
+            action,
+            user,
+            spectatorCountValue,
+            spectatorCount,
+            spectatorList,
+        }) || currentSpectators;
     }
 
     function appendPgnMove(pgn, patch) {
@@ -2439,104 +2360,61 @@
 
     function resetChatBadge() {
         chatUnread = 0;
-        if (chatBadge) {
-            chatBadge.textContent = '0';
-            chatBadge.classList.add('hidden');
-        }
-        if (chatFabBadge) {
-            chatFabBadge.textContent = '0';
-            chatFabBadge.classList.add('hidden');
-        }
+        window.GameChatUI?.resetBadge(chatBadge, chatFabBadge);
     }
 
     /**
      * 채팅 알림 추가
      */
     function addChatNotice(text) {
-        const noticeEl = document.createElement('div');
-        noticeEl.className = 'chat-notice';
-        noticeEl.textContent = text;
-        chatMessages.appendChild(noticeEl);
-        ChatUI?.scrollToBottom(chatMessages);
+        window.GameChatUI?.addNotice(chatMessages, text);
     }
 
     /**
      * 액션 버튼 설정
      */
     function setupActions() {
-        if (!myColor || replayOnly) {
-            gameActions?.classList.add('hidden');
-            return;
-        }
-
-        // Move confirmation buttons
         const confirmOverlay = document.getElementById('move-confirm-overlay');
         const confirmYes = document.getElementById('move-confirm-yes');
         const confirmNo = document.getElementById('move-confirm-no');
 
-        confirmYes?.addEventListener('click', () => {
-            if (pendingConfirmedMove) {
+        window.GameActionUI?.bindPrimaryActions({
+            myColor,
+            replayOnly,
+            isAiRoom,
+            gameActions,
+            drawBtn,
+            resignBtn,
+            leaveBtn,
+            confirmOverlay,
+            confirmYes,
+            confirmNo,
+            onConfirmMove: () => {
+                if (!pendingConfirmedMove) return;
                 sendMove(pendingConfirmedMove.uci, pendingConfirmedMove.promotion);
                 pendingConfirmedMove = null;
-                confirmOverlay?.classList.add('hidden');
-            }
+            },
+            onCancelMove: () => {
+                pendingConfirmedMove = null;
+                renderBoard({ animatePieceChanges: false });
+            },
+            onAiLeave: () => {
+                sendAiResign();
+                window.location.href = '/';
+            },
+            onOfferDraw: () => {
+                socket.send(JSON.stringify({ action: 'draw', game_id: game.id }));
+                Toast.info('무승부를 제안했습니다.');
+            },
+            onResign: () => {
+                socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
+                showPendingEnd('기권 처리 중...');
+            },
+            onLeave: () => {
+                socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
+                showPendingEnd('나가기 처리 중...');
+            },
         });
-
-        confirmNo?.addEventListener('click', () => {
-            pendingConfirmedMove = null;
-            confirmOverlay?.classList.add('hidden');
-            renderBoard({ animatePieceChanges: false });
-        });
-
-        if (isAiRoom) {
-            gameActions?.classList.remove('hidden');
-            drawBtn?.remove();
-            resignBtn?.remove();
-            if (leaveBtn) {
-                leaveBtn.addEventListener('click', () => {
-                    sendAiResign();
-                    window.location.href = '/';
-                });
-            }
-            return;
-        }
-        drawBtn.addEventListener('click', async () => {
-            const confirmed = await Modal.confirm('무승부를 제안하시겠습니까?', {
-                title: '무승부 제안',
-                confirmText: '제안하기'
-            });
-            if (!confirmed) return;
-            socket.send(JSON.stringify({ action: 'draw', game_id: game.id }));
-            Toast.info('무승부를 제안했습니다.');
-        });
-
-        resignBtn.addEventListener('click', async () => {
-            const confirmed = await Modal.confirm('정말 기권하시겠습니까?', {
-                title: '기권',
-                confirmText: '기권하기',
-                danger: true
-            });
-            if (!confirmed) return;
-            socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
-            showPendingEnd('기권 처리 중...');
-        });
-
-        if (leaveBtn) {
-            leaveBtn.addEventListener('click', async () => {
-                if (myColor) {
-                    const confirmed = await Modal.confirm('나가면 기권 처리됩니다. 나가시겠습니까?', {
-                        title: '게임 나가기',
-                        confirmText: '나가기',
-                        danger: true
-                    });
-                    if (!confirmed) return;
-                    socket.send(JSON.stringify({ action: 'resign', game_id: game.id }));
-                    showPendingEnd('나가기 처리 중...');
-                } else {
-                    window.location.href = '/';
-                }
-            });
-        }
     }
 
     function setupGuideToggle() {
@@ -2646,64 +2524,45 @@
         const roomType = game?.room_type || game?.room?.room_type;
         const isCompetitive = roomType === 'quick' || roomType === 'competitive';
         const isAiRoom = roomType?.startsWith('ai_');
-        if (replayOnly) {
-            rematchBtn?.classList.add('hidden');
-            const lobbyBtn = document.getElementById('lobby-btn');
-            if (lobbyBtn) lobbyBtn.textContent = '전적 보기';
-        }
-        if (isCompetitive || isAiRoom) {
-            rematchBtn?.remove();
-            rematchModal?.remove();
-            document.getElementById('accept-rematch-btn')?.remove();
-            document.getElementById('decline-rematch-btn')?.remove();
-        }
         const historyBtn = document.getElementById('history-btn');
-        historyBtn?.addEventListener('click', () => {
-            window.location.href = '/history/';
-        });
-        // 리매치 버튼
-        if (!replayOnly && !isCompetitive && rematchBtn) {
-            rematchBtn.addEventListener('click', () => {
+        const lobbyBtn = document.getElementById('lobby-btn');
+        window.GameActionUI?.bindModalActions({
+            replayOnly,
+            isCompetitive,
+            isAiRoom,
+            rematchBtn,
+            rematchModal,
+            drawModal,
+            historyBtn,
+            lobbyBtn,
+            onHistory: () => {
+                window.location.href = '/history/';
+            },
+            onLobby: () => {
+                window.location.href = replayOnly ? '/history/' : '/';
+            },
+            onRematch: () => {
                 socket.send(JSON.stringify({ action: 'rematch', game_id: game.id }));
                 Toast.info('리매치를 요청했습니다.');
-            });
-        }
-
-        // 로비 버튼
-        document.getElementById('lobby-btn')?.addEventListener('click', () => {
-            window.location.href = replayOnly ? '/history/' : '/';
-        });
-
-        // 무승부 수락/거절
-        const acceptDrawBtn = document.getElementById('accept-draw-btn');
-        const declineDrawBtn = document.getElementById('decline-draw-btn');
-        if (drawModal && acceptDrawBtn && declineDrawBtn) {
-            acceptDrawBtn.addEventListener('click', () => {
+            },
+            onAcceptDraw: () => {
                 socket.send(JSON.stringify({ action: 'draw', game_id: game.id }));
                 drawModal.classList.add('hidden');
-            });
-
-            declineDrawBtn.addEventListener('click', () => {
+            },
+            onDeclineDraw: () => {
                 socket.send(JSON.stringify({ action: 'decline_draw', game_id: game.id }));
                 drawModal.classList.add('hidden');
                 Toast.info('무승부를 거절했습니다.');
-            });
-        }
-
-        // 리매치 수락/거절
-        if (!replayOnly && !isCompetitive) {
-            const acceptRematchBtn = document.getElementById('accept-rematch-btn');
-            const declineRematchBtn = document.getElementById('decline-rematch-btn');
-            acceptRematchBtn?.addEventListener('click', () => {
+            },
+            onAcceptRematch: () => {
                 socket.send(JSON.stringify({ action: 'rematch', game_id: game.id }));
                 rematchModal?.classList.add('hidden');
-            });
-
-            declineRematchBtn?.addEventListener('click', () => {
+            },
+            onDeclineRematch: () => {
                 socket.send(JSON.stringify({ action: 'decline_rematch', game_id: game.id }));
                 rematchModal?.classList.add('hidden');
-            });
-        }
+            },
+        });
     }
 
     function setupMovePagination() {
@@ -2743,14 +2602,26 @@
 
     async function loadLastMove() {
         try {
-            const offset = Math.max(0, (game.move_count || 0) - 1);
-            const data = await API.get(`/chess/games/${game.id}/moves/`, { limit: 1, offset });
-            const last = data.results?.[0];
+            const last = await window.GameMovesCache?.loadLast(game.id, game.move_count);
             if (last) {
                 lastMove = { from: last.from_square, to: last.to_square };
             }
         } catch (error) {
             console.error('Failed to load last move:', error);
+        }
+    }
+
+    function scheduleMoveCacheWarmup() {
+        if (!game?.id || !game?.move_count) return;
+        if (!replayOnly && game.result === 'playing') return;
+        const run = () => {
+            const promise = window.GameMovesCache?.loadPage(game.id, { limit: 300, offset: 0 });
+            promise?.catch(() => {});
+        };
+        if (typeof window.requestIdleCallback === 'function') {
+            window.requestIdleCallback(run, { timeout: 1500 });
+        } else {
+            setTimeout(run, 250);
         }
     }
 
@@ -2816,16 +2687,14 @@
         replayMoves = [];
         replayGameId = targetGameId || game?.id || null;
         try {
-            const data = await API.get(`/chess/games/${replayGameId}/moves/`, { limit: 200, offset: 0 });
-            replayMoves = data.results || [];
+            replayMoves = await window.GameMovesCache?.loadPage(replayGameId, { limit: 200, offset: 0 }) || [];
         } catch (error) {
             try {
                 const history = await API.get('/chess/games/history/', { limit: 20, no_count: 1 });
                 const matches = history.results || [];
                 const fallback = matches.find(item => item.room_id === roomId);
                 if (fallback?.id) {
-                    const data = await API.get(`/chess/games/${fallback.id}/moves/`, { limit: 200, offset: 0 });
-                    replayMoves = data.results || [];
+                    replayMoves = await window.GameMovesCache?.loadPage(fallback.id, { limit: 200, offset: 0 }) || [];
                     replayGameId = fallback.id;
                 } else {
                     throw error;
@@ -2913,40 +2782,23 @@
     }
 
     function updateReplayBoard() {
-        if (!replayMoves.length) {
-            if (replayStatus) replayStatus.textContent = '기보가 없습니다.';
-            replayPrev && (replayPrev.disabled = true);
-            replayNext && (replayNext.disabled = true);
-            replayPlay && (replayPlay.disabled = true);
-            replayPrevDock && (replayPrevDock.disabled = true);
-            replayNextDock && (replayNextDock.disabled = true);
-            replayPlayDock && (replayPlayDock.disabled = true);
-            return;
-        }
-        replayPrev && (replayPrev.disabled = false);
-        replayNext && (replayNext.disabled = false);
-        replayPlay && (replayPlay.disabled = false);
-        replayPrevDock && (replayPrevDock.disabled = false);
-        replayNextDock && (replayNextDock.disabled = false);
-        replayPlayDock && (replayPlayDock.disabled = false);
-
-        const total = replayMoves.length;
-        const statusText = replayIndex === 0
-            ? '시작 위치'
-            : `${replayIndex}/${total} 수`;
-        if (replayStatus) replayStatus.textContent = statusText;
-        if (replayStatusDock) replayStatusDock.textContent = statusText;
-
-        const fen = replayIndex === 0
-            ? 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-            : replayMoves[replayIndex - 1]?.fen_after_move;
-        if (fen) {
-            game.fen = fen;
-            lastMove = replayIndex === 0
-                ? null
-                : { from: replayMoves[replayIndex - 1].from_square, to: replayMoves[replayIndex - 1].to_square };
-            renderBoard({ animatePieceChanges: false });
-        }
+        window.GameReplayUI?.applyReplayPosition({
+            replayMoves,
+            replayIndex,
+            replayStatus,
+            replayStatusDock,
+            replayPrev,
+            replayNext,
+            replayPlay,
+            replayPrevDock,
+            replayNextDock,
+            replayPlayDock,
+            onApplyFen: ({ fen, lastMove: nextLastMove }) => {
+                game.fen = fen;
+                lastMove = nextLastMove;
+                renderBoard({ animatePieceChanges: false });
+            },
+        });
     }
 
     /**
@@ -3018,9 +2870,7 @@
         titleEl.textContent = title;
         resultEl.textContent = resultText;
 
-        ratingPollAttempts = 0;
-        loadRatingChange();
-        loadMoveTimeStats();
+        loadGameSummary();
 
         gameEndModal.classList.remove('hidden');
         gameEndModal.style.display = 'flex';
@@ -3033,16 +2883,12 @@
         const analysisLoading = document.getElementById('analysis-loading');
         const analysisContent = document.getElementById('analysis-content');
         try {
-            const data = await API.get(`/chess/games/${game.id}/moves/`, { limit: 300, offset: 0 });
-            const moves = data.results || [];
-            const series = buildEvalSeries(moves);
-            drawAnalysisGraph(series);
-            if (analysisSummary) {
-                const maxSwing = series.length > 1
-                    ? Math.max(...series.map((v, i) => i === 0 ? 0 : Math.abs(v - series[i - 1])))
-                    : 0;
-                analysisSummary.textContent = `평균 평가값: ${avg(series).toFixed(2)} · 최대 변동: ${maxSwing.toFixed(2)}`;
-            }
+            const moves = await window.GameMovesCache?.loadPage(game.id, { limit: 300, offset: 0 }) || [];
+            window.GameAnalysisUI?.render({
+                canvas: analysisCanvas,
+                summaryEl: analysisSummary,
+                moves,
+            });
             analysisLoading?.classList.add('hidden');
             analysisContent?.classList.remove('hidden');
         } catch (error) {
@@ -3050,66 +2896,6 @@
                 analysisLoading.textContent = '분석을 불러오지 못했습니다.';
             }
         }
-    }
-
-    function buildEvalSeries(moves) {
-        const series = [0];
-        for (const move of moves) {
-            const fen = move.fen_after_move;
-            if (!fen) {
-                series.push(series[series.length - 1]);
-                continue;
-            }
-            series.push(scoreFenMaterial(fen));
-        }
-        return series;
-    }
-
-    function scoreFenMaterial(fen) {
-        const board = fen.split(' ')[0];
-        let score = 0;
-        for (const ch of board) {
-            if (ch === '/' || /\d/.test(ch)) continue;
-            const value = PIECE_VALUE[ch.toLowerCase()] || 0;
-            score += ch === ch.toUpperCase() ? value : -value;
-        }
-        return score;
-    }
-
-    function drawAnalysisGraph(series) {
-        const ctx = analysisCanvas.getContext('2d');
-        const w = analysisCanvas.width;
-        const h = analysisCanvas.height;
-        ctx.clearRect(0, 0, w, h);
-        if (!series.length) return;
-        const maxAbs = Math.max(1, ...series.map((v) => Math.abs(v)));
-        const pad = 12;
-        const graphW = w - pad * 2;
-        const graphH = h - pad * 2;
-        const yMid = pad + graphH / 2;
-
-        ctx.strokeStyle = '#64748b';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(pad, yMid);
-        ctx.lineTo(w - pad, yMid);
-        ctx.stroke();
-
-        ctx.strokeStyle = '#22c55e';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        series.forEach((val, i) => {
-            const x = pad + (series.length === 1 ? 0 : (i / (series.length - 1)) * graphW);
-            const y = yMid - (val / maxAbs) * (graphH / 2 - 4);
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        });
-        ctx.stroke();
-    }
-
-    function avg(arr) {
-        if (!arr.length) return 0;
-        return arr.reduce((sum, x) => sum + x, 0) / arr.length;
     }
 
     function createPieceElement(piece) {
@@ -3285,49 +3071,23 @@
         document.head.appendChild(style);
     }
 
-    async function loadMoveTimeStats() {
-        if (!gameEndStats || !game) return;
-        gameEndStats.innerHTML = '';
-
+    async function loadGameSummary() {
+        if (!game) return;
+        const ratingEl = document.getElementById('game-end-rating');
+        if (gameEndStats) {
+            gameEndStats.innerHTML = '';
+        }
+        if (ratingEl) {
+            ratingEl.textContent = '';
+        }
         try {
-            const data = await API.get(`/chess/games/${game.id}/moves/`, { limit: 200, offset: 0 });
-            const moves = data.results || [];
-            if (!moves.length) return;
-
-            // 내 착수 시간 계산
-            const myMoves = moves.filter(m => m.color === myColor);
-            const opMoves = moves.filter(m => m.color !== myColor);
-
-            if (!myMoves.length) return;
-
-            const myTimes = myMoves.map(m => m.time_spent || 0).filter(t => t > 0);
-            const opTimes = opMoves.map(m => m.time_spent || 0).filter(t => t > 0);
-
-            if (!myTimes.length && !opTimes.length) return;
-
-            const avgTime = myTimes.length ? (myTimes.reduce((a, b) => a + b, 0) / myTimes.length).toFixed(1) : '--';
-            const maxTime = myTimes.length ? Math.max(...myTimes).toFixed(1) : '--';
-            const opAvgTime = opTimes.length ? (opTimes.reduce((a, b) => a + b, 0) / opTimes.length).toFixed(1) : '--';
-
-            [
-                ['평균 착수 시간', `${avgTime}초`],
-                ['최장 고민 시간', `${maxTime}초`],
-                ['상대 평균 착수', `${opAvgTime}초`],
-            ].forEach(([label, value]) => {
-                const row = document.createElement('div');
-                row.className = 'stats-row';
-                const labelEl = document.createElement('span');
-                labelEl.className = 'stats-label';
-                labelEl.textContent = label;
-                const valueEl = document.createElement('span');
-                valueEl.className = 'stats-value';
-                valueEl.textContent = value;
-                row.appendChild(labelEl);
-                row.appendChild(valueEl);
-                gameEndStats.appendChild(row);
+            const summary = await API.get(`/chess/games/${game.id}/summary/`);
+            window.GameEndSummary?.render(summary, {
+                statsRoot: gameEndStats,
+                ratingRoot: ratingEl,
             });
         } catch {
-            // 통계 로드 실패 시 무시
+            // 요약 로드 실패 시 무시
         }
     }
 
@@ -3373,64 +3133,14 @@
      * 무승부 제안 모달
      */
     function showDrawOfferModal() {
-        drawModal.classList.remove('hidden');
+        window.GameActionUI?.showDrawOfferModal(drawModal);
     }
 
     /**
      * 리매치 제안 모달
      */
     function showRematchOfferModal() {
-        rematchModal.classList.remove('hidden');
-    }
-
-    async function loadRatingChange() {
-        const ratingEl = document.getElementById('game-end-rating');
-        if (!ratingEl || !currentUser || !game) return;
-
-        // 빠른 대전/AI 대전은 레이팅 변화 없음
-        const roomType = game.room_type || game.room?.room_type;
-        if (roomType === 'random' || roomType?.startsWith('ai_')) {
-            ratingEl.textContent = '';
-            return;
-        }
-
-        try {
-            const data = await API.get('/notifications/', { limit: 10, offset: 0, no_count: 1 });
-            const items = data.results || [];
-            const target = items.find(
-                (item) =>
-                    item.type === 'rating_change' &&
-                    item.payload &&
-                    item.payload.game_id === game.id
-            );
-
-            if (!target) {
-                ratingPollAttempts += 1;
-                if (ratingPollAttempts >= RATING_POLL_MAX_ATTEMPTS) {
-                    ratingEl.textContent = '레이팅 정보를 불러오지 못했습니다.';
-                    return;
-                }
-                setTimeout(loadRatingChange, 1000);
-                return;
-            }
-
-            ratingPollAttempts = 0;
-            const before = target.payload.before;
-            const after = target.payload.after;
-            const delta = target.payload.delta ?? (after - before);
-            const deltaClass = delta >= 0 ? 'positive' : 'negative';
-            ratingEl.textContent = '';
-            const line = document.createElement('span');
-            line.textContent = `${before} → ${after}`;
-            const deltaEl = document.createElement('span');
-            deltaEl.className = deltaClass;
-            deltaEl.textContent = `(${delta >= 0 ? '+' : ''}${delta})`;
-            ratingEl.appendChild(line);
-            ratingEl.appendChild(document.createTextNode(' '));
-            ratingEl.appendChild(deltaEl);
-        } catch {
-            // ignore fetch errors
-        }
+        window.GameActionUI?.showRematchOfferModal(rematchModal);
     }
 
     /**
