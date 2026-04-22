@@ -128,6 +128,68 @@ class GameQueryService:
         return total, list(queryset[offset : offset + limit])
 
     @staticmethod
+    def get_summary(game_id: int, user) -> dict:
+        game = GameQueryService.get_game_for_user(game_id, user)
+        viewer_color = None
+        user_id = getattr(user, "id", None)
+        if user_id == game.white_player_id:
+            viewer_color = "white"
+        elif user_id == game.black_player_id:
+            viewer_color = "black"
+
+        move_rows = list(
+            Move.objects.filter(game=game)
+            .exclude(time_spent__isnull=True)
+            .exclude(time_spent__lte=0)
+            .values_list("player_color", "time_spent")
+        )
+
+        my_times: list[float] = []
+        opponent_times: list[float] = []
+        if viewer_color:
+            for color, time_spent in move_rows:
+                if color == viewer_color:
+                    my_times.append(float(time_spent))
+                else:
+                    opponent_times.append(float(time_spent))
+
+        room_type = getattr(game.room, "room_type", "") or ""
+        rating_change = None
+        if viewer_color and room_type != "random" and not room_type.startswith("ai_"):
+            from apps.notifications.models import Notification
+
+            recent_notifications = (
+                Notification.objects.filter(user=user, type="rating_change")
+                .only("payload", "created_at")
+                .order_by("-created_at")[:20]
+            )
+            for notification in recent_notifications:
+                payload = notification.payload or {}
+                if payload.get("game_id") != game.id:
+                    continue
+                before = payload.get("before")
+                after = payload.get("after")
+                delta = payload.get("delta")
+                if before is None or after is None:
+                    continue
+                rating_change = {
+                    "before": int(before),
+                    "after": int(after),
+                    "delta": int(delta if delta is not None else (after - before)),
+                }
+                break
+
+        return {
+            "viewer_color": viewer_color,
+            "average_move_time": round(sum(my_times) / len(my_times), 1) if my_times else None,
+            "max_move_time": round(max(my_times), 1) if my_times else None,
+            "opponent_average_move_time": (
+                round(sum(opponent_times) / len(opponent_times), 1) if opponent_times else None
+            ),
+            "rating_change": rating_change,
+        }
+
+    @staticmethod
     def list_legal_moves(game_id: int, user, from_square: str | None) -> list[str]:
         if not getattr(user, "is_authenticated", False):
             return []

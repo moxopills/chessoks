@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import F, Prefetch
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -24,6 +24,7 @@ class PartyService:
         "description",
         "status",
         "max_members",
+        "member_count",
         "lineup_locked",
         "created_at",
         "updated_at",
@@ -140,7 +141,12 @@ class PartyService:
         PartyService._ensure_registered_user(user)
         if PartyService._active_memberships_for_user(user).exists():
             raise ValidationError({"detail": ["이미 활성 파티에 속해 있습니다."]})
-        party = Party.objects.create(leader=user, title=title, description=description)
+        party = Party.objects.create(
+            leader=user,
+            title=title,
+            description=description,
+            member_count=1,
+        )
         PartyMember.objects.create(party=party, user=user, slot=1, is_ready=True)
         return party
 
@@ -177,6 +183,7 @@ class PartyService:
             "party_id": party.id,
             "title": party.title,
             "status": party.status,
+            "member_count": party.member_count,
             "leader_id": party.leader_id,
             "is_leader": is_leader,
             "can_invite": can_invite,
@@ -195,7 +202,7 @@ class PartyService:
             field_name="user_id",
             message="자기 자신은 초대할 수 없습니다.",
         )
-        if PartyMember.objects.filter(party=party).count() >= party.max_members:
+        if party.member_count >= party.max_members:
             raise ValidationError({"detail": ["파티 정원이 가득 찼습니다."]})
         target = get_object_or_404(User, pk=to_user_id)
         if PartyService._active_memberships_for_user(target).exists():
@@ -213,9 +220,13 @@ class PartyService:
         if accept:
             if PartyService._active_memberships_for_user(user).exists():
                 raise ValidationError({"detail": ["이미 다른 활성 파티에 속해 있습니다."]})
-            if PartyMember.objects.filter(party=invite.party).count() >= invite.party.max_members:
+            if invite.party.member_count >= invite.party.max_members:
                 raise ValidationError({"detail": ["파티 정원이 가득 찼습니다."]})
             PartyMember.objects.create(party=invite.party, user=user)
+            Party.objects.filter(pk=invite.party_id).update(
+                member_count=F("member_count") + 1,
+                updated_at=timezone.now(),
+            )
             invite.status = PartyInvite.Status.ACCEPTED
         else:
             invite.status = PartyInvite.Status.DECLINED
@@ -244,7 +255,12 @@ class PartyService:
         PartyService._require_leader(actor.id, party)
         if user_id == party.leader_id:
             raise ValidationError({"detail": ["파티장은 추방할 수 없습니다."]})
-        PartyMember.objects.filter(party=party, user_id=user_id).delete()
+        deleted, _ = PartyMember.objects.filter(party=party, user_id=user_id).delete()
+        if deleted:
+            Party.objects.filter(pk=party.id, member_count__gt=0).update(
+                member_count=F("member_count") - 1,
+                updated_at=timezone.now(),
+            )
         PartyInvite.objects.filter(
             party=party,
             to_user_id=user_id,
@@ -262,11 +278,16 @@ class PartyService:
         if not membership:
             raise ValidationError({"detail": ["이미 파티에서 나왔거나 접근 권한이 없습니다."]})
         membership.delete()
-        remaining = list(PartyMember.objects.filter(party=party).order_by("joined_at"))
-        if not remaining:
+        remaining_count = max(party.member_count - 1, 0)
+        Party.objects.filter(pk=party.id, member_count__gt=0).update(
+            member_count=F("member_count") - 1,
+            updated_at=timezone.now(),
+        )
+        if remaining_count == 0:
             party.status = Party.Status.CLOSED
+            party.member_count = 0
             party.lineup_locked = False
-            party.save(update_fields=["status", "lineup_locked", "updated_at"])
+            party.save(update_fields=["status", "member_count", "lineup_locked", "updated_at"])
             PartyInvite.objects.filter(
                 party=party,
                 status=PartyInvite.Status.PENDING,
@@ -275,6 +296,8 @@ class PartyService:
                 responded_at=timezone.now(),
             )
             return None
+        remaining = list(PartyMember.objects.filter(party=party).order_by("joined_at"))
+        party.member_count = remaining_count
         if party.leader_id == user.id:
             party.leader_id = remaining[0].user_id
             party.save(update_fields=["leader", "updated_at"])
@@ -289,8 +312,9 @@ class PartyService:
         if party.status in {Party.Status.QUEUED, Party.Status.BATTLING}:
             raise ValidationError({"detail": ["매칭 대기/대전 중인 파티는 삭제할 수 없습니다."]})
         party.status = Party.Status.CLOSED
+        party.member_count = 0
         party.lineup_locked = False
-        party.save(update_fields=["status", "lineup_locked", "updated_at"])
+        party.save(update_fields=["status", "member_count", "lineup_locked", "updated_at"])
         PartyInvite.objects.filter(
             party=party,
             status=PartyInvite.Status.PENDING,
@@ -334,8 +358,7 @@ class PartyService:
         PartyService._ensure_registered_user(actor)
         party = Party.objects.select_for_update().get(pk=party_id)
         PartyService._require_leader(actor.id, party)
-        member_count = PartyMember.objects.filter(party=party).count()
-        if member_count != party.max_members:
+        if party.member_count != party.max_members:
             raise ValidationError({"detail": ["3명이 모두 모여야 라인업을 고정할 수 있습니다."]})
         assigned_slots = PartyMember.objects.filter(party=party, slot__isnull=False).count()
         if assigned_slots != party.max_members:

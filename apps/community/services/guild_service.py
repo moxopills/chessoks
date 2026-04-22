@@ -2,7 +2,7 @@ import logging
 import uuid
 
 from django.db import transaction
-from django.db.models import Count, Prefetch, Q
+from django.db.models import Count, F, Prefetch, Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -86,6 +86,20 @@ class GuildService:
         "user__stats__rating",
         "user__stats__featured_achievement_key",
     )
+
+    @staticmethod
+    def _increment_member_count(guild_id: int) -> None:
+        Guild.objects.filter(pk=guild_id).update(
+            member_count=F("member_count") + 1,
+            updated_at=timezone.now(),
+        )
+
+    @staticmethod
+    def _decrement_member_count(guild_id: int) -> None:
+        Guild.objects.filter(pk=guild_id, member_count__gt=0).update(
+            member_count=F("member_count") - 1,
+            updated_at=timezone.now(),
+        )
 
     @staticmethod
     def _member_prefetch():
@@ -175,8 +189,7 @@ class GuildService:
             raise ValidationError({"detail": ["길드 가입 최소 레이팅을 충족하지 못했습니다."]})
         if guild.join_policy == Guild.JoinPolicy.OPEN:
             GuildMember.objects.create(guild=guild, user=user, role=GuildMember.Role.MEMBER)
-            guild.member_count = GuildMember.objects.filter(guild=guild).count()
-            guild.save(update_fields=["member_count", "updated_at"])
+            GuildService._increment_member_count(guild.id)
             return GuildJoinRequest.objects.create(
                 guild=guild,
                 user=user,
@@ -232,10 +245,7 @@ class GuildService:
                 role=GuildMember.Role.MEMBER,
             )
             join_request.status = GuildJoinRequest.Status.APPROVED
-            join_request.guild.member_count = GuildMember.objects.filter(
-                guild=join_request.guild
-            ).count()
-            join_request.guild.save(update_fields=["member_count", "updated_at"])
+            GuildService._increment_member_count(join_request.guild_id)
         else:
             join_request.status = GuildJoinRequest.Status.REJECTED
         join_request.save(update_fields=["status", "reviewed_by", "reviewed_at"])
@@ -363,8 +373,7 @@ class GuildService:
         if member.role == GuildMember.Role.LEADER:
             raise ValidationError({"detail": ["길드장은 추방할 수 없습니다."]})
         member.delete()
-        guild.member_count = GuildMember.objects.filter(guild=guild).count()
-        guild.save(update_fields=["member_count", "updated_at"])
+        GuildService._decrement_member_count(guild.id)
 
     @staticmethod
     @transaction.atomic
@@ -374,8 +383,7 @@ class GuildService:
         if member.role == GuildMember.Role.LEADER:
             raise ValidationError({"detail": ["길드장은 위임 후 탈퇴할 수 있습니다."]})
         member.delete()
-        guild.member_count = GuildMember.objects.filter(guild=guild).count()
-        guild.save(update_fields=["member_count", "updated_at"])
+        GuildService._decrement_member_count(guild.id)
 
     @staticmethod
     def list_chat_messages(actor, guild_id: int):

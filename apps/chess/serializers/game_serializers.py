@@ -110,6 +110,20 @@ class GameHistorySerializer(BaseGameSerializer):
     room_type = serializers.CharField(source="room.room_type", read_only=True)
 
 
+class GameRatingChangeSerializer(serializers.Serializer):
+    before = serializers.IntegerField(read_only=True)
+    after = serializers.IntegerField(read_only=True)
+    delta = serializers.IntegerField(read_only=True)
+
+
+class GameSummarySerializer(serializers.Serializer):
+    viewer_color = serializers.CharField(read_only=True, allow_null=True)
+    average_move_time = serializers.FloatField(read_only=True, allow_null=True)
+    max_move_time = serializers.FloatField(read_only=True, allow_null=True)
+    opponent_average_move_time = serializers.FloatField(read_only=True, allow_null=True)
+    rating_change = GameRatingChangeSerializer(read_only=True, allow_null=True)
+
+
 class PagedMoveSerializer(serializers.Serializer):
     count = serializers.IntegerField(read_only=True)
     results = MoveSerializer(many=True, read_only=True)
