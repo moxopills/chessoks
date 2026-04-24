@@ -231,6 +231,9 @@
         document.getElementById('guild-transfer-btn')?.toggleAttribute('disabled', !isLeader());
         document.getElementById('guild-kick-btn')?.toggleAttribute('disabled', !isManager());
         guildNoticeInput?.toggleAttribute('disabled', !isManager());
+        if (guildNoticeInput && document.activeElement !== guildNoticeInput) {
+            guildNoticeInput.value = guild.notice || '';
+        }
         renderMemberSelection();
         setChatPanelExpanded(window.innerWidth > 768);
     }
