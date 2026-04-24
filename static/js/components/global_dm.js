@@ -22,12 +22,22 @@
     let partySummaryLoadedAt = 0;
     let threadPoller = null;
     let lobbyChatMoved = false;
+    let hasLoadedThreads = false;
+    let hasLoadedGuildView = false;
+    let hasLoadedPartyView = false;
+    let lastThreadsSignature = '';
     const SUMMARY_CACHE_TTL = 30000;
+    const tabUnread = {
+        direct: 0,
+        guild: 0,
+        party: 0,
+    };
     const messageRenderState = {
         direct: { signature: '', ids: [] },
         guild: { signature: '', ids: [] },
         party: { signature: '', ids: [] },
     };
+    const dmUI = window.GlobalDMUI;
     
     // DOM Elements
     const fabBtn = document.getElementById('global-dm-fab');
@@ -61,6 +71,12 @@
     const tabDirectMirror = document.getElementById('global-dm-tab-direct-mirror');
     const tabGuildMirror = document.getElementById('global-dm-tab-guild-mirror');
     const tabPartyMirror = document.getElementById('global-dm-tab-party-mirror');
+    const tabDirectBadge = document.getElementById('global-dm-tab-direct-badge');
+    const tabGuildBadge = document.getElementById('global-dm-tab-guild-badge');
+    const tabPartyBadge = document.getElementById('global-dm-tab-party-badge');
+    const tabDirectBadgeMirror = document.getElementById('global-dm-tab-direct-badge-mirror');
+    const tabGuildBadgeMirror = document.getElementById('global-dm-tab-guild-badge-mirror');
+    const tabPartyBadgeMirror = document.getElementById('global-dm-tab-party-badge-mirror');
     
     const messagesEl = document.getElementById('global-dm-messages');
     const formEl = document.getElementById('global-dm-form');
@@ -280,7 +296,7 @@
         } else if (isMobileLobbyPage() && lobbyChatContainer && lobbySlot) {
             showLobbyView();
         } else {
-            showThreadsView();
+            showThreadsView({ force: !hasLoadedThreads });
         }
     }
 
@@ -293,7 +309,8 @@
         stopGroupPolling();
     }
 
-    function showThreadsView() {
+    function showThreadsView(options = {}) {
+        const { force = false } = options;
         threadsView.classList.remove('hidden');
         lobbyView?.classList.add('hidden');
         guildView?.classList.add('hidden');
@@ -303,7 +320,9 @@
         stopRoomPolling();
         stopGroupPolling();
         setTabActive('direct');
-        loadThreads();
+        if (force || !hasLoadedThreads) {
+            loadThreads({ force: true });
+        }
     }
 
     function showLobbyView() {
@@ -332,7 +351,8 @@
         currentRoomUserId = null;
         setTabActive('guild');
         stopRoomPolling();
-        await loadGuildMessages(true, { refreshSummary: true });
+        await loadGuildMessages(true, { refreshSummary: !hasLoadedGuildView });
+        hasLoadedGuildView = true;
         startGroupPolling(() => loadGuildMessages(), () => Boolean(currentUser?.id && currentGuildId));
     }
 
@@ -345,7 +365,8 @@
         currentRoomUserId = null;
         setTabActive('party');
         stopRoomPolling();
-        await loadPartyMessages(true, { refreshSummary: true });
+        await loadPartyMessages(true, { refreshSummary: !hasLoadedPartyView });
+        hasLoadedPartyView = true;
         startGroupPolling(() => loadPartyMessages(), () => Boolean(currentUser?.id && currentPartyId));
     }
 
@@ -386,6 +407,45 @@
         }
     }
 
+    function setBadgeValue(elements, count) {
+        elements.forEach((element) => {
+            if (!element) return;
+            if (count > 0) {
+                element.textContent = String(count);
+                element.classList.remove('hidden');
+            } else {
+                element.textContent = '0';
+                element.classList.add('hidden');
+            }
+        });
+    }
+
+    function syncTabBadges() {
+        setBadgeValue([tabDirectBadge, tabDirectBadgeMirror], tabUnread.direct);
+        setBadgeValue([tabGuildBadge, tabGuildBadgeMirror], tabUnread.guild);
+        setBadgeValue([tabPartyBadge, tabPartyBadgeMirror], tabUnread.party);
+    }
+
+    function buildThreadsSignature(threads, unreadMap) {
+        return threads.map((thread) => {
+            const userId = thread.other_user?.id || '';
+            const unread = unreadMap[userId] || 0;
+            return [
+                userId,
+                thread.last_message_at || '',
+                thread.last_message || '',
+                unread,
+            ].join(':');
+        }).join('|');
+    }
+
+    function buildGroupPreview(messages) {
+        const latest = messages?.[0];
+        if (!latest?.content) return '';
+        const nickname = latest.user?.nickname || '알 수 없음';
+        return `최근 · ${nickname}: ${latest.content}`;
+    }
+
     function setTabActive(type) {
         const states = {
             lobby: type === 'lobby',
@@ -421,7 +481,8 @@
     }
 
     // Thread List Logic
-    async function loadThreads() {
+    async function loadThreads(options = {}) {
+        const { force = false } = options;
         try {
             const [data, notifications] = await Promise.all([
                 API.get('/accounts/messages/threads/', { limit: 20, offset: 0, no_count: 1 }),
@@ -429,83 +490,33 @@
             ]);
             
             const threads = data.results || [];
-            const unreadMap = buildUnreadMap(notifications.results || []);
+            const unreadMap = dmUI.buildUnreadMap(notifications.results || []);
             
-            updateGlobalBadge(unreadMap);
+            dmUI.updateGlobalBadge(fabBadge, unreadMap);
+            tabUnread.direct = Object.values(unreadMap).reduce((acc, value) => acc + value, 0);
+            syncTabBadges();
 
             if (!threads.length) {
-                setThreadListEmpty('대화가 없습니다. 새로운 대화를 시작해보세요.');
+                hasLoadedThreads = true;
+                lastThreadsSignature = 'empty';
+                dmUI.setThreadListEmpty(threadListEl, '대화가 없습니다. 새로운 대화를 시작해보세요.');
                 return;
             }
 
-            const fragment = document.createDocumentFragment();
-            threads.forEach((thread) => {
-                fragment.appendChild(renderThreadItem(thread, unreadMap));
-            });
-            threadListEl.replaceChildren(fragment);
+            const nextSignature = buildThreadsSignature(threads, unreadMap);
+            if (force || nextSignature !== lastThreadsSignature) {
+                const fragment = document.createDocumentFragment();
+                threads.forEach((thread) => {
+                    fragment.appendChild(dmUI.renderThreadItem(thread, unreadMap, showRoomView));
+                });
+                threadListEl.replaceChildren(fragment);
+                lastThreadsSignature = nextSignature;
+            }
+            hasLoadedThreads = true;
 
         } catch (e) {
-            setThreadListEmpty('목록을 불러오지 못했습니다.');
+            dmUI.setThreadListEmpty(threadListEl, '목록을 불러오지 못했습니다.');
         }
-    }
-
-    function setThreadListEmpty(message) {
-        const empty = document.createElement('div');
-        empty.className = 'global-dm-empty';
-        empty.textContent = message;
-        threadListEl.replaceChildren(empty);
-    }
-
-    function buildUnreadMap(items) {
-        return items
-            .filter((item) => item.type === 'direct_message' && !item.is_read)
-            .reduce((acc, item) => {
-                const senderId = item.payload?.sender_id;
-                if (!senderId) return acc;
-                acc[senderId] = (acc[senderId] || 0) + 1;
-                return acc;
-            }, {});
-    }
-
-    function updateGlobalBadge(unreadMap) {
-        const totalUnread = Object.values(unreadMap).reduce((a, b) => a + b, 0);
-        if (totalUnread > 0) {
-            fabBadge.textContent = totalUnread;
-            fabBadge.classList.remove('hidden');
-        } else {
-            fabBadge.textContent = '0';
-            fabBadge.classList.add('hidden');
-        }
-    }
-
-    function setChannelEmpty(messagesRoot, titleRoot, subtitleRoot, inputRoot, text, title) {
-        if (titleRoot) titleRoot.textContent = title;
-        if (subtitleRoot) subtitleRoot.textContent = text;
-        if (messagesRoot) {
-            const empty = document.createElement('div');
-            empty.className = 'global-dm-empty';
-            empty.textContent = text;
-            messagesRoot.replaceChildren(empty);
-        }
-        if (inputRoot) {
-            inputRoot.value = '';
-            inputRoot.disabled = true;
-            inputRoot.placeholder = text;
-        }
-        const form = inputRoot?.closest('form');
-        form?.querySelector('button[type="submit"]')?.toggleAttribute('disabled', true);
-    }
-
-    function setChannelReady(inputRoot, placeholder) {
-        if (!inputRoot) return;
-        inputRoot.disabled = false;
-        inputRoot.placeholder = placeholder;
-        const form = inputRoot.closest('form');
-        form?.querySelector('button[type="submit"]')?.toggleAttribute('disabled', false);
-    }
-
-    function buildMessageSignature(items) {
-        return items.map((item) => `${item.id}:${item.created_at || ''}`).join('|');
     }
 
     function invalidateGroupChannel(type) {
@@ -513,69 +524,19 @@
             currentGuildId = null;
             guildSummaryCache = null;
             guildSummaryLoadedAt = 0;
+            hasLoadedGuildView = false;
+            tabUnread.guild = 0;
             messageRenderState.guild = { signature: '', ids: [] };
+            syncTabBadges();
             return;
         }
         currentPartyId = null;
         partySummaryCache = null;
         partySummaryLoadedAt = 0;
+        hasLoadedPartyView = false;
+        tabUnread.party = 0;
         messageRenderState.party = { signature: '', ids: [] };
-    }
-
-    function syncMessageList(root, items, renderItem, forceScroll, emptyText, state) {
-        if (!root) return false;
-        const orderedItems = items.slice().reverse();
-
-        if (!orderedItems.length) {
-            if (state.signature !== 'empty') {
-                const empty = document.createElement('div');
-                empty.className = 'global-dm-empty';
-                empty.textContent = emptyText;
-                root.replaceChildren(empty);
-                state.signature = 'empty';
-                state.ids = [];
-            }
-            return false;
-        }
-
-        const nextIds = orderedItems.map((item) => String(item.id ?? ''));
-        const nextSignature = buildMessageSignature(orderedItems);
-        const shouldScroll = forceScroll || (root.scrollTop + root.clientHeight >= root.scrollHeight - 50);
-
-        if (nextSignature === state.signature) {
-            if (shouldScroll) {
-                ChatUI?.scrollToBottom(root);
-            }
-            return false;
-        }
-
-        const canAppendOnly =
-            state.ids.length > 0 &&
-            nextIds.length > state.ids.length &&
-            state.ids.every((id, index) => id === nextIds[index]);
-
-        if (canAppendOnly) {
-            const fragment = document.createDocumentFragment();
-            orderedItems.slice(state.ids.length).forEach((item) => {
-                fragment.appendChild(renderItem(item));
-            });
-            root.appendChild(fragment);
-        } else {
-            const fragment = document.createDocumentFragment();
-            orderedItems.forEach((item) => {
-                fragment.appendChild(renderItem(item));
-            });
-            root.replaceChildren(fragment);
-        }
-
-        state.signature = nextSignature;
-        state.ids = nextIds;
-
-        if (shouldScroll) {
-            ChatUI?.scrollToBottom(root);
-        }
-
-        return true;
+        syncTabBadges();
     }
 
     async function loadGuildSummary(force = false) {
@@ -602,92 +563,6 @@
         return partySummaryCache;
     }
 
-    function renderGroupMessageItem(item) {
-        const isMe = currentUser && item.user?.id === currentUser.id;
-        const time = formatTimeOnly(item.created_at);
-        const messageText = item.content || '';
-        const emojiOnlyClass = isEmojiOnly(messageText) ? ' emoji-only' : '';
-        const row = document.createElement('div');
-        row.className = `global-dm-message ${isMe ? 'me' : 'other'}`;
-
-        if (!isMe) {
-            const avatarWrap = document.createElement('div');
-            avatarWrap.className = 'global-dm-message-avatar';
-            Utils.setAvatar(avatarWrap, {
-                url: item.user?.avatar_url || '',
-                alt: item.user?.nickname || '',
-                placeholder: '?',
-                placeholderClass: 'avatar-placeholder',
-            });
-            row.appendChild(avatarWrap);
-        }
-
-        const content = document.createElement('div');
-        content.className = 'global-dm-message-content';
-
-        const text = document.createElement('div');
-        text.className = `global-dm-message-text${emojiOnlyClass}`;
-        text.textContent = messageText;
-
-        const timeEl = document.createElement('div');
-        timeEl.className = 'global-dm-message-time';
-        timeEl.textContent = `${item.user?.nickname || ''} · ${time}`.trim();
-
-        content.append(text, timeEl);
-        row.appendChild(content);
-        return row;
-    }
-
-    function renderThreadItem(thread, unreadMap) {
-        const user = thread.other_user || {};
-        const nickname = user.nickname || '알 수 없음';
-        const time = thread.last_message_at ? formatRelativeTimeShort(thread.last_message_at) : '';
-        const message = thread.last_message || '대화를 시작해보세요.';
-        const unreadCount = unreadMap[user.id] || 0;
-        const row = document.createElement('div');
-        row.className = 'global-dm-thread';
-        row.dataset.userId = String(user.id || '');
-        row.dataset.nickname = nickname;
-        row.addEventListener('click', () => {
-            showRoomView(user.id, nickname);
-        });
-
-        const avatarWrap = document.createElement('div');
-        avatarWrap.className = 'global-dm-thread-avatar';
-        Utils.setAvatar(avatarWrap, {
-            url: user.avatar_url || '',
-            alt: nickname,
-            placeholder: '?',
-            placeholderClass: 'avatar-placeholder',
-        });
-
-        const info = document.createElement('div');
-        info.className = 'global-dm-thread-info';
-        const nameEl = document.createElement('div');
-        nameEl.className = 'global-dm-thread-name';
-        nameEl.textContent = nickname;
-        const msgEl = document.createElement('div');
-        msgEl.className = 'global-dm-thread-msg';
-        msgEl.textContent = message;
-        info.append(nameEl, msgEl);
-
-        const meta = document.createElement('div');
-        meta.className = 'global-dm-thread-meta';
-        const timeEl = document.createElement('div');
-        timeEl.className = 'global-dm-thread-time';
-        timeEl.textContent = time;
-        meta.appendChild(timeEl);
-        if (unreadCount) {
-            const badge = document.createElement('div');
-            badge.className = 'global-dm-thread-badge';
-            badge.textContent = String(unreadCount);
-            meta.appendChild(badge);
-        }
-
-        row.append(avatarWrap, info, meta);
-        return row;
-    }
-
     // Room Logic
     async function loadTargetInfo(userId) {
         try {
@@ -706,7 +581,7 @@
         const summary = await loadGuildSummary(refreshSummary || !currentGuildId);
         if (!summary?.id) {
             invalidateGroupChannel('guild');
-            setChannelEmpty(
+            dmUI.setChannelEmpty(
                 guildMessagesEl,
                 guildTitle,
                 guildSubtitle,
@@ -719,17 +594,21 @@
         currentGuildId = summary.id;
         guildTitle.textContent = summary.name || '길드 채팅';
         guildSubtitle.textContent = `길드장 ${summary.owner?.nickname || '-'} · 멤버 ${summary.member_count || 0}명`;
-        setChannelReady(guildInputEl, '길드 채팅 입력...');
+        dmUI.setChannelReady(guildInputEl, '길드 채팅 입력...');
         const data = await API.get(`/community/guilds/${currentGuildId}/chat/`).catch((error) => {
             if (error?.status === 403 || error?.status === 404) {
                 invalidateGroupChannel('guild');
             }
             return { results: [] };
         });
-        syncMessageList(
+        const preview = buildGroupPreview(data.results || []);
+        if (preview) {
+            guildSubtitle.textContent = preview;
+        }
+        dmUI.syncMessageList(
             guildMessagesEl,
             data.results || [],
-            renderGroupMessageItem,
+            (item) => dmUI.renderGroupMessageItem(item, currentUser),
             forceScroll,
             '아직 채팅이 없습니다.',
             messageRenderState.guild
@@ -741,7 +620,7 @@
         const summary = await loadPartySummary(refreshSummary || !currentPartyId);
         if (!summary?.party_id) {
             invalidateGroupChannel('party');
-            setChannelEmpty(
+            dmUI.setChannelEmpty(
                 partyMessagesEl,
                 partyTitle,
                 partySubtitle,
@@ -754,17 +633,21 @@
         currentPartyId = summary.party_id;
         partyTitle.textContent = summary.title || '파티 채팅';
         partySubtitle.textContent = `상태 ${summary.status || '-'} · ${summary.is_leader ? '파티장' : '참가자'}`;
-        setChannelReady(partyInputEl, '파티 채팅 입력...');
+        dmUI.setChannelReady(partyInputEl, '파티 채팅 입력...');
         const data = await API.get(`/community/parties/${currentPartyId}/chat/`).catch((error) => {
             if (error?.status === 403 || error?.status === 404) {
                 invalidateGroupChannel('party');
             }
             return { results: [] };
         });
-        syncMessageList(
+        const preview = buildGroupPreview(data.results || []);
+        if (preview) {
+            partySubtitle.textContent = preview;
+        }
+        dmUI.syncMessageList(
             partyMessagesEl,
             data.results || [],
-            renderGroupMessageItem,
+            (item) => dmUI.renderGroupMessageItem(item, currentUser),
             forceScroll,
             '아직 채팅이 없습니다.',
             messageRenderState.party
@@ -780,12 +663,12 @@
             const items = data.results || [];
             
             if (!items.length) {
-                setMessagesEmpty('아직 메시지가 없습니다.');
+                dmUI.setMessagesEmpty(messagesEl, messageRenderState.direct, '아직 메시지가 없습니다.');
             } else {
-                const didRender = syncMessageList(
+                const didRender = dmUI.syncMessageList(
                     messagesEl,
                     items,
-                    renderMessageItem,
+                    (item) => dmUI.renderDirectMessageItem(item, currentUser),
                     forceScroll,
                     '아직 메시지가 없습니다.',
                     messageRenderState.direct
@@ -807,63 +690,10 @@
             }
         } catch (e) {
             console.error('Failed to load messages:', e);
-            setMessagesEmpty('메시지를 불러오지 못했습니다.');
+            dmUI.setMessagesEmpty(messagesEl, messageRenderState.direct, '메시지를 불러오지 못했습니다.');
         }
     }
 
-    function setMessagesEmpty(message) {
-        const empty = document.createElement('div');
-        empty.className = 'global-dm-empty';
-        empty.textContent = message;
-        messagesEl.replaceChildren(empty);
-        messageRenderState.direct = { signature: 'empty', ids: [] };
-    }
-
-    function renderMessageItem(item) {
-        const isMe = currentUser && item.sender?.id === currentUser.id;
-        const time = formatTimeOnly(item.created_at);
-        const messageText = item.message || '';
-        const emojiOnlyClass = isEmojiOnly(item.message || '') ? ' emoji-only' : '';
-        const row = document.createElement('div');
-        row.className = `global-dm-message ${isMe ? 'me' : 'other'}`;
-
-        if (!isMe) {
-            const avatarWrap = document.createElement('div');
-            avatarWrap.className = 'global-dm-message-avatar';
-            Utils.setAvatar(avatarWrap, {
-                url: item.sender?.avatar_url || '',
-                alt: item.sender?.nickname || '',
-                placeholder: '?',
-                placeholderClass: 'avatar-placeholder',
-            });
-            row.appendChild(avatarWrap);
-        }
-
-        const content = document.createElement('div');
-        content.className = 'global-dm-message-content';
-
-        const text = document.createElement('div');
-        text.className = `global-dm-message-text${emojiOnlyClass}`;
-        text.textContent = messageText;
-
-        const timeEl = document.createElement('div');
-        timeEl.className = 'global-dm-message-time';
-        timeEl.textContent = time;
-
-        content.append(text, timeEl);
-        row.appendChild(content);
-        return row;
-    }
-
-    function isEmojiOnly(text) {
-        if (!text || typeof text !== 'string') return false;
-        try {
-            const compact = text.replace(/\s+/g, '');
-            return compact.length > 0 && /^[\p{Extended_Pictographic}\uFE0F\u200D]+$/u.test(compact);
-        } catch {
-            return false;
-        }
-    }
 
     async function markDirectMessageNotificationsRead(userId) {
         try {
@@ -933,32 +763,6 @@
         threadPoller = null;
         stopRoomPolling();
         stopGroupPolling();
-    }
-
-    // Formatters
-    function formatTimeOnly(value) {
-        if (!value) return '';
-        const d = new Date(value);
-        const hh = String(d.getHours()).padStart(2, '0');
-        const mm = String(d.getMinutes()).padStart(2, '0');
-        return `${hh}:${mm}`;
-    }
-
-    function formatRelativeTimeShort(dateString) {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffMs = now - date;
-        const diffSec = Math.floor(diffMs / 1000);
-        const diffMin = Math.floor(diffSec / 60);
-        const diffHour = Math.floor(diffMin / 60);
-
-        if (diffSec < 60) return '방금';
-        if (diffMin < 60) return `${diffMin}분`;
-        if (diffHour < 24) return `${diffHour}시간`;
-        
-        const mm = String(date.getMonth() + 1).padStart(2, '0');
-        const dd = String(date.getDate()).padStart(2, '0');
-        return `${mm}/${dd}`;
     }
 
     window.addEventListener('beforeunload', stopPolling);

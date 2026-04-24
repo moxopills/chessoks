@@ -15,6 +15,7 @@ from apps.community.models import (
 
 
 class BoardService:
+    COMMENTS_PAGE_SIZE = 20
     BOARD_SUMMARY_ONLY_FIELDS = (
         "id",
         "title",
@@ -64,6 +65,23 @@ class BoardService:
         "author__stats__featured_achievement_key",
         "post__author_id",
     )
+
+    @staticmethod
+    def _comment_queryset(*, viewer=None):
+        comments_queryset = (
+            BoardComment.objects.select_related("author", "author__stats", "post")
+            .only(*BoardService.BOARD_COMMENT_ONLY_FIELDS)
+            .filter(is_blinded=False)
+        )
+        if viewer and getattr(viewer, "is_authenticated", False):
+            comments_queryset = comments_queryset.prefetch_related(
+                Prefetch(
+                    "likes",
+                    queryset=BoardCommentLike.objects.filter(user=viewer).only("id", "comment_id"),
+                    to_attr="viewer_likes",
+                )
+            )
+        return comments_queryset
 
     @staticmethod
     def ensure_default_categories() -> None:
@@ -164,25 +182,33 @@ class BoardService:
     def get_post(post_id: int, *, increment_view: bool = False, viewer=None) -> BoardPost:
         if increment_view:
             BoardPost.objects.filter(pk=post_id).update(view_count=F("view_count") + 1)
-        comments_queryset = BoardComment.objects.select_related(
-            "author",
-            "author__stats",
-            "post",
-        ).only(*BoardService.BOARD_COMMENT_ONLY_FIELDS)
-        if viewer and getattr(viewer, "is_authenticated", False):
-            comments_queryset = comments_queryset.prefetch_related(
-                Prefetch(
-                    "likes",
-                    queryset=BoardCommentLike.objects.filter(user=viewer).only("id", "comment_id"),
-                    to_attr="viewer_likes",
-                )
-            )
         return get_object_or_404(
-            BoardPost.objects.select_related("author", "author__stats", "category")
-            .only(*BoardService.BOARD_DETAIL_ONLY_FIELDS)
-            .prefetch_related(Prefetch("comments", queryset=comments_queryset)),
+            BoardPost.objects.select_related("author", "author__stats", "category").only(
+                *BoardService.BOARD_DETAIL_ONLY_FIELDS
+            ),
             pk=post_id,
         )
+
+    @staticmethod
+    def list_comments(
+        post_id: int,
+        *,
+        viewer=None,
+        limit: int | None = None,
+        before_id: int | None = None,
+    ) -> tuple[list[BoardComment], bool, int | None]:
+        page_size = max(1, min(limit or BoardService.COMMENTS_PAGE_SIZE, 100))
+        queryset = BoardService._comment_queryset(viewer=viewer).filter(post_id=post_id)
+        if before_id:
+            queryset = queryset.filter(id__lt=before_id)
+
+        batch = list(queryset.order_by("-id")[: page_size + 1])
+        has_more = len(batch) > page_size
+        if has_more:
+            batch = batch[:page_size]
+        comments = list(reversed(batch))
+        next_before_id = batch[-1].id if has_more and batch else None
+        return comments, has_more, next_before_id
 
     @staticmethod
     @transaction.atomic

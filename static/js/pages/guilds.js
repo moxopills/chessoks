@@ -3,6 +3,11 @@
     let selectedGuildId = null;
     let selectedGuild = null;
     let selectedMemberId = null;
+    let lastGuildListSignature = '';
+    let lastGuildMembersSignature = '';
+    let lastGuildChatSignature = '';
+    let lastGuildRequestsSignature = '';
+    let lastGuildNoticeSignature = '';
     const pageEl = document.getElementById('guild-page');
     const pageMode = pageEl?.dataset.view || 'browse';
 
@@ -142,9 +147,18 @@
 
     function renderGuildList(items) {
         if (!guildListEl) return;
+        const nextSignature = `${selectedGuildId || 0}|${items.map((guild) => [
+            guild.id,
+            guild.name || '',
+            guild.team_rating || 0,
+            guild.pending_requests || 0,
+            guild.member_count || 0,
+        ].join(':')).join('|')}`;
+        if (nextSignature === lastGuildListSignature) return;
         guildListEl.innerHTML = '';
         if (!items.length) {
             guildListEl.innerHTML = '<div class="community-empty">아직 생성된 길드가 없습니다.</div>';
+            lastGuildListSignature = 'empty';
             return;
         }
         items.forEach((guild) => {
@@ -170,6 +184,7 @@
             item.addEventListener('click', () => loadGuildDetail(guild.id));
             guildListEl.appendChild(item);
         });
+        lastGuildListSignature = nextSignature;
     }
 
     function renderGuildSummary(guild) {
@@ -214,13 +229,22 @@
         document.getElementById('guild-kick-btn')?.toggleAttribute('disabled', !isManager());
         guildNoticeInput?.toggleAttribute('disabled', !isManager());
         renderMemberSelection();
-        setChatPanelExpanded(true);
+        setChatPanelExpanded(window.innerWidth > 768);
     }
 
     function renderMembers(guild) {
         if (!guildMembersEl) return;
+        const members = guild.members || [];
+        const nextSignature = `${selectedMemberId || 0}|${members.map((member) => [
+            member.user.id,
+            member.role,
+            member.user.rating ?? 1200,
+            member.user.featured_achievement_key || '',
+        ].join(':')).join('|')}`;
+        if (nextSignature === lastGuildMembersSignature) return;
         if (!(guild.members || []).length) {
             guildMembersEl.innerHTML = '<div class="community-empty">멤버가 없습니다.</div>';
+            lastGuildMembersSignature = 'empty';
             return;
         }
         guildMembersEl.innerHTML = (guild.members || []).map((member) => {
@@ -254,13 +278,17 @@
                 renderMemberSelection();
             });
         });
+        lastGuildMembersSignature = nextSignature;
     }
 
     function renderChat(items) {
         if (!guildChatLogEl) return;
+        const nextSignature = items.map((message) => [message.id, message.created_at || '', message.content || ''].join(':')).join('|');
+        if (nextSignature === lastGuildChatSignature) return;
         guildChatLogEl.innerHTML = '';
         if (!items.length) {
             guildChatLogEl.innerHTML = '<div class="community-empty">아직 채팅이 없습니다.</div>';
+            lastGuildChatSignature = 'empty';
             return;
         }
         items.slice().reverse().forEach((message) => {
@@ -273,17 +301,26 @@
             `;
             guildChatLogEl.appendChild(item);
         });
+        lastGuildChatSignature = nextSignature;
     }
 
     function renderRequests(items) {
         if (!guildRequestsEl) return;
+        const nextSignature = `${isManager() ? 1 : 0}|${items.map((requestItem) => [
+            requestItem.id,
+            requestItem.user.id,
+            requestItem.user.nickname || '',
+        ].join(':')).join('|')}`;
+        if (nextSignature === lastGuildRequestsSignature) return;
         guildRequestsEl.innerHTML = '';
         if (!isManager()) {
             guildRequestsEl.innerHTML = '<div class="community-empty">운영진만 가입 요청을 확인할 수 있습니다.</div>';
+            lastGuildRequestsSignature = 'locked';
             return;
         }
         if (!items.length) {
             guildRequestsEl.innerHTML = '<div class="community-empty">대기 중인 가입 요청이 없습니다.</div>';
+            lastGuildRequestsSignature = 'empty';
             return;
         }
         items.forEach((requestItem) => {
@@ -317,13 +354,17 @@
                 }
             });
         });
+        lastGuildRequestsSignature = nextSignature;
     }
 
     function renderNoticeHistory(items) {
         if (!guildNoticeHistoryEl) return;
+        const nextSignature = items.map((notice) => [notice.id, notice.created_at || '', notice.content || ''].join(':')).join('|');
+        if (nextSignature === lastGuildNoticeSignature) return;
         guildNoticeHistoryEl.innerHTML = '';
         if (!items.length) {
             guildNoticeHistoryEl.innerHTML = '<div class="community-empty">아직 작성된 길드 공지가 없습니다.</div>';
+            lastGuildNoticeSignature = 'empty';
             return;
         }
         items.forEach((notice) => {
@@ -338,6 +379,7 @@
             `;
             guildNoticeHistoryEl.appendChild(item);
         });
+        lastGuildNoticeSignature = nextSignature;
     }
 
     async function loadGuilds() {

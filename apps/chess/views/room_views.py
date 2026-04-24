@@ -18,6 +18,11 @@ from apps.chess.services import RoomFlowService, RoomQueryService
 from apps.core.request import parse_pagination_query
 
 
+def _serialize_room_for_user(room, user):
+    annotated_room = RoomQueryService.get_room(room.id, user)
+    return RoomSerializer(annotated_room).data
+
+
 class RoomListView(APIView):
     """방 목록 조회/생성 (게스트 가능)"""
 
@@ -64,7 +69,7 @@ class RoomListView(APIView):
             password=data.get("password", ""),
             allow_spectators=data.get("allow_spectators", True),
         )
-        return Response(RoomSerializer(room).data, status=201)
+        return Response(_serialize_room_for_user(room, request.user), status=201)
 
 
 class RoomDetailView(APIView):
@@ -165,7 +170,7 @@ class RoomJoinView(APIView):
         room = RoomFlowService.join_room(
             room_id, request.user, serializer.validated_data.get("password")
         )
-        return Response(RoomSerializer(room).data)
+        return Response(_serialize_room_for_user(room, request.user))
 
 
 class RoomLeaveView(APIView):
@@ -178,4 +183,4 @@ class RoomLeaveView(APIView):
         deleted, room = RoomFlowService.leave_room(room_id, request.user)
         if deleted:
             return Response({"deleted": True, "room_id": room_id})
-        return Response({"deleted": False, "room": RoomSerializer(room).data})
+        return Response({"deleted": False, "room": _serialize_room_for_user(room, request.user)})

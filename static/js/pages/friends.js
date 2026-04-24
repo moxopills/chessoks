@@ -45,6 +45,10 @@
     let outgoingRequestUserIds = new Set();
     let selectedUserId = null;
     let isRefreshing = false;
+    let lastFriendsSignature = '';
+    let lastIncomingSignature = '';
+    let lastOutgoingSignature = '';
+    let lastSearchSignature = '';
 
     init();
 
@@ -368,8 +372,18 @@
     }
 
     function renderFriends(friends) {
+        const nextSignature = friends.map((item) => [
+            item.friend.id,
+            item.friend.nickname || '',
+            item.friend.rating || '',
+            item.friend.rank_tier || '',
+        ].join(':')).join('|');
+        if (nextSignature === lastFriendsSignature) {
+            return;
+        }
         if (!friends.length) {
             friendListEl.innerHTML = '<div class="empty-state"><span class="empty-state-icon">👥</span><span class="empty-state-text">아직 친구가 없습니다</span><span class="empty-state-hint">닉네임으로 친구를 검색해보세요</span></div>';
+            lastFriendsSignature = 'empty';
             return;
         }
         const statusMap = JSON.parse(friendListEl.dataset.statusMap || '{}');
@@ -414,6 +428,7 @@
                 openContextMenu(event, userId, { isFriend: true });
             });
         });
+        lastFriendsSignature = nextSignature;
     }
 
     async function loadRequests(direction) {
@@ -438,10 +453,20 @@
     }
 
     function renderRequests(container, requests, direction) {
+        const nextSignature = requests.map((req) => {
+            const user = direction === 'incoming' ? req.from_user : req.to_user;
+            return [req.id, user.id, user.nickname || ''].join(':');
+        }).join('|');
+        const isIncoming = direction === 'incoming';
+        if ((isIncoming ? lastIncomingSignature : lastOutgoingSignature) === nextSignature) {
+            return;
+        }
         if (!requests.length) {
             const icon = direction === 'incoming' ? '📬' : '📤';
             const text = direction === 'incoming' ? '받은 요청이 없습니다' : '보낸 요청이 없습니다';
             container.innerHTML = `<div class="empty-state"><span class="empty-state-icon">${icon}</span><span class="empty-state-text">${text}</span></div>`;
+            if (isIncoming) lastIncomingSignature = 'empty';
+            else lastOutgoingSignature = 'empty';
             return;
         }
         container.innerHTML = requests.map((req) => {
@@ -505,6 +530,8 @@
                 openContextMenu(event, userId, { isFriend: false });
             });
         });
+        if (isIncoming) lastIncomingSignature = nextSignature;
+        else lastOutgoingSignature = nextSignature;
     }
 
     async function acceptRequest(requestId) {
@@ -582,8 +609,20 @@
     }
 
     function renderSearchResults(results, statusMap = {}) {
+        const nextSignature = results.map((user) => [
+            user.id,
+            user.nickname || '',
+            user.stats?.rating ?? '',
+            user.stats?.rank_tier ?? '',
+            friendIds.has(user.id) ? 1 : 0,
+            outgoingRequestUserIds.has(user.id) ? 1 : 0,
+        ].join(':')).join('|');
+        if (nextSignature === lastSearchSignature) {
+            return;
+        }
         if (!results.length) {
             searchResultsEl.innerHTML = '<div class="empty-state"><span class="empty-state-icon">🔍</span><span class="empty-state-text">검색 결과가 없습니다</span></div>';
+            lastSearchSignature = 'empty';
             return;
         }
         searchResultsEl.innerHTML = results.map((user) => {
@@ -652,6 +691,7 @@
                 openContextMenu(event, userId, { isFriend, isPending });
             });
         });
+        lastSearchSignature = nextSignature;
     }
 
     async function sendFriendRequestTo(userId) {

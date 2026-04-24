@@ -27,6 +27,8 @@
         ACCOUNT_SUSPENDED: 'account_suspended',
         ACCOUNT_UNSUSPENDED: 'account_unsuspended',
     });
+    const boardUI = window.GameBoardUI;
+    const socketClient = window.GameSocketClient;
 
     // DOM Elements
     const chessBoard = document.getElementById('chess-board');
@@ -152,8 +154,6 @@
     let notificationEventHandler = null;
     let selectedBoardSkinClass = 'skin-board-classic';
     let selectedPieceSkinClass = 'skin-piece-classic';
-    let lastParsedFen = null;
-    let lastParsedPosition = null;
     let lastMoveListSignature = null;
     let activeSidePanelSectionId = 'game-moves-section';
     const pieceSvgMarkupCache = new Map();
@@ -751,62 +751,38 @@
      * 보드 초기 설정
      */
     function setupBoard() {
-        // 스켈레톤 로딩 제거 및 빈 보드 생성
-        chessBoard.classList.remove('chess-board--loading');
-        chessBoard.innerHTML = '';
-        for (let rank = 0; rank < 8; rank++) {
-            for (let file = 0; file < 8; file++) {
-                const square = document.createElement('div');
-                const isLight = (rank + file) % 2 === 0;
-                const squareName = FILES[file] + RANKS[rank];
-
-                square.className = `square ${isLight ? 'light' : 'dark'}`;
-                square.dataset.square = squareName;
-                square.tabIndex = 0;
-                square.setAttribute('role', 'button');
-                square.setAttribute('aria-label', squareName);
-
-                square.addEventListener('click', () => {
+        boardUI?.setupBoard({
+            chessBoard,
+            files: FILES,
+            ranks: RANKS,
+            onSquareClick: (squareName) => {
+                clearDrawings();
+                handleSquareClick(squareName);
+            },
+            onSquareKeydown: handleSquareKeydown,
+            onRightMouseDown: (event, squareName) => {
+                if (event.button === 2) {
+                    rightClickStartSq = squareName;
+                } else if (event.button === 0) {
                     clearDrawings();
-                    handleSquareClick(squareName);
-                });
-                square.addEventListener('keydown', (e) => handleSquareKeydown(e, squareName));
-
-                // 우클릭 이벤트 (시각적 보조)
-                square.addEventListener('contextmenu', (e) => e.preventDefault());
-                square.addEventListener('mousedown', (e) => {
-                    if (e.button === 2) { // 우클릭
-                        rightClickStartSq = squareName;
-                    } else if (e.button === 0) { // 좌클릭 시 지우기
-                        clearDrawings();
+                }
+            },
+            onRightMouseUp: (event, squareName) => {
+                if (event.button === 2 && rightClickStartSq) {
+                    const endSq = squareName;
+                    if (rightClickStartSq === endSq) {
+                        toggleCircle(rightClickStartSq);
+                    } else {
+                        toggleArrow(rightClickStartSq, endSq);
                     }
-                });
-                square.addEventListener('mouseup', (e) => {
-                    if (e.button === 2 && rightClickStartSq) {
-                        const endSq = squareName;
-                        if (rightClickStartSq === endSq) {
-                            toggleCircle(rightClickStartSq);
-                        } else {
-                            toggleArrow(rightClickStartSq, endSq);
-                        }
-                        rightClickStartSq = null;
-                        renderDrawings();
-                    }
-                });
-                square.addEventListener('mouseleave', (e) => {
-                    // 드래그 중 밖으로 나갈 때의 처리는 복잡하므로, 일단 mouseup 기반으로 구현
-                });
-
-                // 터치 드래그 지원
-                square.addEventListener('touchstart', (e) => handleTouchStart(e, squareName), { passive: false });
-
-                chessBoard.appendChild(square);
-            }
-        }
-
-        // 터치 이벤트 (보드 레벨)
-        chessBoard.addEventListener('touchmove', handleTouchMove, { passive: false });
-        chessBoard.addEventListener('touchend', handleTouchEnd, { passive: false });
+                    rightClickStartSq = null;
+                    renderDrawings();
+                }
+            },
+            onTouchStart: handleTouchStart,
+            onTouchMove: handleTouchMove,
+            onTouchEnd: handleTouchEnd,
+        });
     }
 
     async function handleTouchStart(e, squareName) {
@@ -883,25 +859,7 @@
     }
 
     function getPieceAtSquare(squareName) {
-        if (!game || !game.fen) return null;
-        const fen = game.fen.split(' ')[0];
-        const ranks = fen.split('/');
-        const file = squareName.charCodeAt(0) - 97; // a=0, h=7
-        const rank = 8 - parseInt(squareName[1]); // 8=0, 1=7
-
-        if (rank < 0 || rank > 7 || file < 0 || file > 7) return null;
-
-        const rankStr = ranks[rank];
-        let currentFile = 0;
-        for (const char of rankStr) {
-            if (/\d/.test(char)) {
-                currentFile += parseInt(char);
-            } else {
-                if (currentFile === file) return char;
-                currentFile++;
-            }
-        }
-        return null;
+        return boardUI?.getPieceAtSquare({ game, squareName }) || null;
     }
 
     function handleTouchMove(e) {
@@ -965,45 +923,35 @@
 
     function createDragPiece(piece, x, y) {
         removeDragPiece();
-        dragPiece = document.createElement('div');
-        dragPiece.className = 'drag-piece';
-        dragPiece.innerHTML = getPieceSvgMarkup(piece);
-        dragPiece.classList.add(piece === piece.toUpperCase() ? 'white' : 'black');
-        dragPiece.classList.add(getPieceTypeClass(piece));
-        dragPiece.style.left = (x - 32) + 'px';
-        dragPiece.style.top = (y - 32) + 'px';
-        document.body.appendChild(dragPiece);
+        dragPiece = boardUI?.createDragPiece({
+            piece,
+            x,
+            y,
+            getPieceSvgMarkup,
+            getPieceTypeClass,
+        }) || null;
     }
 
     function removeDragPiece() {
-        if (dragPiece) {
-            dragPiece.remove();
-            dragPiece = null;
-        }
+        dragPiece = boardUI?.removeDragPiece(dragPiece) || null;
     }
 
     function getSquareFromPoint(x, y) {
-        const element = document.elementFromPoint(x, y);
-        if (element && element.classList.contains('square')) {
-            return element.dataset.square;
-        }
-        return null;
+        return boardUI?.getSquareFromPoint(x, y) || null;
     }
 
     function highlightDropTarget(squareName) {
-        clearDropHighlight();
-        if (squareName) {
-            // 디스플레이 좌표를 실제 좌표로 변환 후 비교
-            const actualSquare = toActualSquare(squareName);
-            if (validMoves.includes(actualSquare)) {
-                const square = getSquare(squareName);
-                if (square) square.classList.add('drop-target');
-            }
-        }
+        boardUI?.highlightDropTarget({
+            chessBoard,
+            squareName,
+            validMoves,
+            toActualSquare,
+            getSquare,
+        });
     }
 
     function clearDropHighlight() {
-        chessBoard.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+        boardUI?.clearDropHighlight(chessBoard);
     }
 
     function handleSquareKeydown(e, squareName) {
@@ -1179,120 +1127,19 @@
      * 보드 렌더링
      */
     function renderBoard(options = {}) {
-        if (!game || !game.fen) return;
-        const animatePieceChanges = options.animatePieceChanges === true;
-
-        const fen = game.fen;
-        const position = parseFEN(fen);
-        const isFlipped = myColor === 'black';
-
-        // 모든 칸의 하이라이트 클래스만 제거 (기물 제거 방지)
-        for (const sq of getAllSquareElements()) {
-            sq.classList.remove(
-                'selected',
-                'valid-move',
-                'valid-capture',
-                'last-move',
-                'check',
-                'check-king',
-                'checkmate-king'
-            );
-        }
-
-        // 기물 배치 및 aria-label 업데이트
-        for (let rank = 0; rank < 8; rank++) {
-            for (let file = 0; file < 8; file++) {
-                const actualFile = isFlipped ? 7 - file : file;
-                const actualRank = isFlipped ? 7 - rank : rank;
-                const actualSquareName = FILES[actualFile] + RANKS[actualRank];
-                const piece = position[rank][file];
-                const displayRank = isFlipped ? 7 - rank : rank;
-                const displayFile = isFlipped ? 7 - file : file;
-                const squareName = FILES[displayFile] + RANKS[displayRank];
-                const squareEl = getSquare(squareName);
-
-                if (squareEl) {
-                    const existingPieceEl = squareEl.querySelector('.piece');
-                    const existingPiece = existingPieceEl?.dataset.piece;
-
-                    if (piece) {
-                        const pieceName = PIECE_NAMES[piece] || piece;
-                        squareEl.setAttribute('aria-label', `${actualSquareName} ${pieceName}`);
-
-                        if (existingPiece !== piece) {
-                            // 기물이 바뀌었거나 새로 생성됨
-                            if (existingPieceEl) existingPieceEl.remove();
-
-                            const pieceEl = createPieceElement(piece);
-                            squareEl.appendChild(pieceEl);
-
-                            if (animatePieceChanges) {
-                                pieceEl.style.opacity = '0';
-                                pieceEl.style.transform = 'scale(0.6)';
-                                requestAnimationFrame(() => {
-                                    pieceEl.style.opacity = '1';
-                                    pieceEl.style.transform = 'scale(1)';
-                                });
-                            } else {
-                                pieceEl.style.opacity = '';
-                                pieceEl.style.transform = '';
-                            }
-
-                            pieceEl.addEventListener('dragstart', (e) => handleDragStart(e, squareName));
-                        }
-                    } else {
-                        // 빈 칸인데 기물이 남아있는 경우 정리
-                        if (existingPieceEl) {
-                            if (animatePieceChanges) {
-                                existingPieceEl.style.opacity = '0';
-                                existingPieceEl.style.transform = 'scale(0.6)';
-                                setTimeout(() => {
-                                    if (existingPieceEl.parentNode === squareEl) {
-                                        existingPieceEl.remove();
-                                    }
-                                }, 200);
-                            } else {
-                                existingPieceEl.remove();
-                            }
-                        }
-                        squareEl.setAttribute('aria-label', `${actualSquareName} 빈 칸`);
-                    }
-                }
-            }
-        }
-
-        applyLastMoveHighlight();
-        applyKingDangerHighlight(position);
-        updateBoardBrandState();
-    }
-
-    /**
-     * FEN 파싱
-     */
-    function parseFEN(fen) {
-        if (fen === lastParsedFen && lastParsedPosition) {
-            return lastParsedPosition;
-        }
-        const position = [];
-        const rows = fen.split(' ')[0].split('/');
-
-        for (const row of rows) {
-            const rank = [];
-            for (const char of row) {
-                if (isNaN(char)) {
-                    rank.push(char);
-                } else {
-                    for (let i = 0; i < parseInt(char); i++) {
-                        rank.push(null);
-                    }
-                }
-            }
-            position.push(rank);
-        }
-
-        lastParsedFen = fen;
-        lastParsedPosition = position;
-        return position;
+        boardUI?.renderBoard({
+            game,
+            myColor,
+            lastMove,
+            animatePieceChanges: options.animatePieceChanges === true,
+            files: FILES,
+            ranks: RANKS,
+            getAllSquareElements,
+            getSquare,
+            createPieceElement,
+            onPieceDragStart: handleDragStart,
+            updateBoardBrandState,
+        });
     }
 
     /**
@@ -1646,44 +1493,14 @@
         else drawings.arrows.splice(idx, 1);
     }
 
-    function getSquareCoords(sq) {
-        if (!sq || sq.length < 2) return { x: 0, y: 0 };
-        let fileIdx = FILES.indexOf(sq[0]);
-        let rankIdx = RANKS.indexOf(sq[1]);
-        if (myColor === 'black') {
-            fileIdx = 7 - fileIdx;
-            rankIdx = 7 - rankIdx;
-        }
-        return {
-            x: (fileIdx + 0.5) * 12.5,
-            y: (rankIdx + 0.5) * 12.5
-        };
-    }
-
     function renderDrawings() {
-        if (!arrowLayer) return;
-        
-        let html = `
-            <defs>
-                <marker id="arrowhead" markerWidth="4" markerHeight="4" refX="2.5" refY="2" orient="auto">
-                    <polygon points="0 0, 4 2, 0 4" fill="rgba(235, 97, 80, 0.85)" />
-                </marker>
-            </defs>
-        `;
-
-        drawings.circles.forEach(sq => {
-            const { x, y } = getSquareCoords(sq);
-            html += `<circle cx="${x}%" cy="${y}%" r="5.5%" fill="none" stroke="rgba(235, 97, 80, 0.85)" stroke-width="1%" />`;
+        boardUI?.renderDrawings({
+            arrowLayer,
+            drawings,
+            files: FILES,
+            ranks: RANKS,
+            isFlipped: myColor === 'black',
         });
-
-        drawings.arrows.forEach(arrow => {
-            const from = getSquareCoords(arrow.from);
-            const to = getSquareCoords(arrow.to);
-            // 화살표가 렌더링될 때 중심에서 중심까지 선을 그림
-            html += `<line x1="${from.x}%" y1="${from.y}%" x2="${to.x}%" y2="${to.y}%" stroke="rgba(235, 97, 80, 0.85)" stroke-width="1.8%" marker-end="url(#arrowhead)" opacity="0.9" stroke-linecap="round" />`;
-        });
-
-        arrowLayer.innerHTML = html;
     }
 
     /**
@@ -1741,59 +1558,6 @@
         } catch (error) {
             console.error('Failed to load legal moves:', error);
             return [];
-        }
-    }
-
-    function applyLastMoveHighlight() {
-        for (const sq of getAllSquareElements()) {
-            sq.classList.remove('last-move');
-        }
-        if (!lastMove) return;
-        const fromSquare = toDisplaySquare(lastMove.from);
-        const toSquare = toDisplaySquare(lastMove.to);
-        const fromEl = getSquare(fromSquare);
-        const toEl = getSquare(toSquare);
-        fromEl?.classList.add('last-move');
-        toEl?.classList.add('last-move');
-    }
-
-    function getDangerTargetColor() {
-        if (!game) return null;
-        if (lastMove?.is_checkmate) return game.current_turn;
-        if (lastMove?.is_check) return game.current_turn;
-        if (typeof game.result === 'string') {
-            if (game.result === 'checkmate_white') return 'black';
-            if (game.result === 'checkmate_black') return 'white';
-        }
-        return null;
-    }
-
-    function applyKingDangerHighlight(position) {
-        const targetColor = getDangerTargetColor();
-        if (!targetColor || !position) return;
-
-        const kingChar = targetColor === 'white' ? 'K' : 'k';
-        let actualKingSquare = null;
-
-        for (let rank = 0; rank < 8 && !actualKingSquare; rank++) {
-            for (let file = 0; file < 8; file++) {
-                if (position[rank]?.[file] === kingChar) {
-                    actualKingSquare = `${FILES[file]}${RANKS[rank]}`;
-                    break;
-                }
-            }
-        }
-
-        if (!actualKingSquare) return;
-
-        const displayKingSquare = toDisplaySquare(actualKingSquare);
-        const kingSquareEl = getSquare(displayKingSquare);
-        if (!kingSquareEl) return;
-
-        if (lastMove?.is_checkmate || game.result === 'checkmate_white' || game.result === 'checkmate_black') {
-            kingSquareEl.classList.add('checkmate-king');
-        } else {
-            kingSquareEl.classList.add('check-king');
         }
     }
 
@@ -1918,48 +1682,36 @@
      * WebSocket 연결
      */
     function connectWebSocket() {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        let wsUrl = `${protocol}//${window.location.host}/ws/chess/${roomId}/`;
-
-        // 게스트 토큰이 있으면 쿼리 파라미터로 추가
-        const guestToken = localStorage.getItem('guest_token');
-        if (guestToken) {
-            wsUrl += `?guest_token=${encodeURIComponent(guestToken)}`;
-        }
-
-        socket = new WebSocket(wsUrl);
-
-        socket.onopen = () => {
-            addChatNotice('연결되었습니다.');
-            wsReconnectAttempts = 0;
-            startHeartbeat();
-            refreshSpectatorList();
-            showStatus('게임 실시간 연결 완료', 'success', 1200);
-        };
-
-        socket.onmessage = (e) => {
-            const data = JSON.parse(e.data);
-            handleSocketMessage(data);
-        };
-
-        socket.onclose = () => {
-            addChatNotice('연결이 끊어졌습니다.');
-            stopHeartbeat();
-            if (wsReconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS) {
-                addChatNotice('재연결 시도 횟수를 초과했습니다. 페이지를 새로고침해 주세요.');
-                showStatus('연결 복구 실패. 새로고침해주세요.', 'error', 2600);
-                return;
-            }
-            wsReconnectAttempts += 1;
-            const delay = Math.min(WS_BASE_RECONNECT_DELAY * Math.pow(2, wsReconnectAttempts - 1), 30000);
-            addChatNotice(`${Math.round(delay / 1000)}초 후 재연결 시도 (${wsReconnectAttempts}/${WS_MAX_RECONNECT_ATTEMPTS})...`);
-            showStatus(`${Math.round(delay / 1000)}초 후 게임 연결 재시도`, 'pending', 1500);
-            setTimeout(connectWebSocket, delay);
-        };
-
-        socket.onerror = () => {
-            addChatNotice('연결 오류');
-        };
+        socket = socketClient?.connect({
+            roomId,
+            onOpen: () => {
+                addChatNotice('연결되었습니다.');
+                wsReconnectAttempts = 0;
+                startHeartbeat();
+                refreshSpectatorList();
+                showStatus('게임 실시간 연결 완료', 'success', 1200);
+            },
+            onMessage: (data) => {
+                handleSocketMessage(data);
+            },
+            onClose: () => {
+                addChatNotice('연결이 끊어졌습니다.');
+                stopHeartbeat();
+                if (wsReconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS) {
+                    addChatNotice('재연결 시도 횟수를 초과했습니다. 페이지를 새로고침해 주세요.');
+                    showStatus('연결 복구 실패. 새로고침해주세요.', 'error', 2600);
+                    return;
+                }
+                wsReconnectAttempts += 1;
+                const delay = Math.min(WS_BASE_RECONNECT_DELAY * Math.pow(2, wsReconnectAttempts - 1), 30000);
+                addChatNotice(`${Math.round(delay / 1000)}초 후 재연결 시도 (${wsReconnectAttempts}/${WS_MAX_RECONNECT_ATTEMPTS})...`);
+                showStatus(`${Math.round(delay / 1000)}초 후 게임 연결 재시도`, 'pending', 1500);
+                setTimeout(connectWebSocket, delay);
+            },
+            onError: () => {
+                addChatNotice('연결 오류');
+            },
+        }) || null;
     }
 
     /**

@@ -67,10 +67,15 @@ class BoardCommentSerializer(serializers.ModelSerializer):
         )
 
 
+class BoardCommentPageSerializer(serializers.Serializer):
+    has_more = serializers.BooleanField(read_only=True)
+    next_before_id = serializers.IntegerField(read_only=True, allow_null=True)
+    results = BoardCommentSerializer(many=True, read_only=True)
+
+
 class BoardPostSerializer(serializers.ModelSerializer):
     author = PlainUserSerializer(read_only=True)
     category = BoardCategorySerializer(read_only=True)
-    comments = serializers.SerializerMethodField()
     can_delete = serializers.SerializerMethodField()
 
     class Meta:
@@ -93,16 +98,8 @@ class BoardPostSerializer(serializers.ModelSerializer):
             "updated_at",
             "author",
             "category",
-            "comments",
             "can_delete",
         ]
-
-    def get_comments(self, obj):
-        return BoardCommentSerializer(
-            obj.comments.all(),
-            many=True,
-            context=self.context,
-        ).data
 
     def get_can_delete(self, obj):
         request = self.context.get("request")

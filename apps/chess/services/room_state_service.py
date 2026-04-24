@@ -14,4 +14,14 @@ class RoomStateService:
 
     @staticmethod
     def get_spectator_count(room) -> int:
-        return room.spectators.count()
+        annotated = getattr(room, "spectator_count_annotated", None)
+        if annotated is not None:
+            return annotated
+
+        cached = getattr(room, "_spectator_count_cache", None)
+        if cached is not None:
+            return cached
+
+        count = room.spectators.count()
+        room._spectator_count_cache = count
+        return count

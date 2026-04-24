@@ -24,15 +24,19 @@
     let currentPage = 1;
     const pageSize = 10;
     let totalCount = 0;
-    let refreshInterval = null;
+    let refreshPoller = null;
     let currentView = 'game'; // game | spectate
+    let lastRoomsSignature = '';
+    let lastPaginationSignature = '';
+    let hasLoadedRooms = false;
+    let roomsRequestSeq = 0;
 
     // Init
     init();
 
     async function init() {
         normalizeTabLabels();
-        await loadRooms();
+        await loadRooms({ showSkeleton: true });
         setupFilters();
         setupTabs();
         setupModal();
@@ -51,9 +55,13 @@
     /**
      * 방 목록 로드
      */
-    async function loadRooms() {
+    async function loadRooms(options = {}) {
+        const { showSkeleton = !hasLoadedRooms } = options;
+        const requestId = ++roomsRequestSeq;
         try {
-            renderRoomsSkeleton();
+            if (showSkeleton) {
+                renderRoomsSkeleton();
+            }
 
             const params = {
                 limit: pageSize,
@@ -65,6 +73,7 @@
             if (status) params.status = status;
 
             const data = await API.get('/chess/rooms/', params);
+            if (requestId !== roomsRequestSeq) return;
             let rooms = data.results || [];
             if (currentView === 'spectate') {
                 rooms = rooms.filter(room => room.allow_spectators && room.status === 'playing');
@@ -73,10 +82,12 @@
             }
             // no_count 사용 시 count는 현재 페이지 결과 수만 반환됨
             totalCount = currentView === 'spectate' ? rooms.length : (data.count || rooms.length);
+            hasLoadedRooms = true;
             renderRooms(rooms);
             renderPagination();
         } catch (error) {
             roomsList.innerHTML = '<div class="rooms-empty">방 목록을 불러올 수 없습니다.</div>';
+            hasLoadedRooms = true;
             console.error('Failed to load rooms:', error);
         }
     }
@@ -127,61 +138,110 @@
      */
     function renderRooms(rooms) {
         if (!rooms || rooms.length === 0) {
-            roomsList.innerHTML = currentView === 'spectate'
+            const emptyMarkup = currentView === 'spectate'
                 ? '<div class="rooms-empty">현재 관전 가능한 방이 없습니다.</div>'
                 : '<div class="rooms-empty">생성된 방이 없습니다. 새로운 방을 만들어보세요!</div>';
+            if (lastRoomsSignature !== emptyMarkup) {
+                roomsList.innerHTML = emptyMarkup;
+                lastRoomsSignature = emptyMarkup;
+            }
             return;
         }
 
-        roomsList.innerHTML = rooms.map(room => {
-            const isPlaying = room.status === 'playing';
-            const hasGame = !!room.current_game_id;
-            const isFull = room.guest !== null;
-            const statusText = {
-                'waiting': '대기 중',
-                'ready': '준비 완료',
-                'playing': '게임 중',
-                'finished': '종료'
-            }[room.status] || room.status;
-            const safeStatusText = isPlaying && !hasGame ? '게임 준비 중' : statusText;
+        const nextSignature = rooms.map(buildRoomSignature).join('|');
+        if (nextSignature === lastRoomsSignature) return;
 
-            return `
-                <div class="room-card ${isPlaying ? 'is-playing' : ''} ${isFull ? 'is-full' : ''}"
-                     data-room-id="${room.id}"
-                     data-game-id="${room.current_game_id || ''}">
-                    <div class="room-host">
-                        <div class="avatar">
-                            ${room.host?.avatar_url
-                                ? `<img src="${Utils.escapeHtml(room.host.avatar_url)}" alt="${Utils.escapeHtml(room.host?.nickname || '호스트')}">`
-                                : '<span class="avatar-placeholder">?</span>'}
-                        </div>
-                        <div class="room-host-name">${Utils.escapeHtml(room.host?.nickname || '호스트')}</div>
-                        <div class="room-host-rating">${room.host?.rating || 1500}</div>
-                    </div>
-                    <div class="room-info">
-                        <div class="room-title">
-                            ${room.is_private ? '<span class="icon-private">🔒</span>' : ''}
-                            ${Utils.escapeHtml(room.title || (room.room_type === 'random' ? '랜덤 대전' : '빠른 대전'))}
-                        </div>
-                        <div class="room-meta">
-                            <span class="room-meta-item">
-                                ⏱ ${room.time_limit ? room.time_limit + '분' : '무제한'}
-                            </span>
-                            <span class="room-meta-item">
-                                👥 ${room.player_count || 1}/2
-                            </span>
-                            ${room.allow_spectators ? `<span class="room-meta-item">👁 ${room.spectator_count || 0}명 관전</span>` : ''}
-                        </div>
-                    </div>
-                    <span class="room-status ${room.status}">${safeStatusText}</span>
-                </div>
-            `;
-        }).join('');
-
-        // 방 클릭 이벤트
-        roomsList.querySelectorAll('.room-card').forEach(card => {
-            card.addEventListener('click', () => handleRoomClick(card));
+        const existingMap = new Map(
+            Array.from(roomsList.querySelectorAll('.room-card[data-room-id]')).map((card) => [card.dataset.roomId, card])
+        );
+        const seenIds = new Set();
+        rooms.forEach((room) => {
+            const key = String(room.id);
+            const signature = buildRoomSignature(room);
+            seenIds.add(key);
+            const existing = existingMap.get(key);
+            if (existing && existing.dataset.signature === signature) {
+                return;
+            }
+            const nextCard = createRoomCard(room, signature);
+            if (existing) {
+                existing.replaceWith(nextCard);
+                existingMap.set(key, nextCard);
+                return;
+            }
+            roomsList.appendChild(nextCard);
         });
+
+        existingMap.forEach((card, roomId) => {
+            if (!seenIds.has(roomId)) {
+                card.remove();
+            }
+        });
+
+        const orderedCards = rooms
+            .map((room) => roomsList.querySelector(`.room-card[data-room-id="${room.id}"]`))
+            .filter(Boolean);
+        orderedCards.forEach((card) => roomsList.appendChild(card));
+        lastRoomsSignature = nextSignature;
+    }
+
+    function buildRoomSignature(room) {
+        return [
+            room.id,
+            room.status,
+            room.current_game_id || '',
+            room.guest?.id || '',
+            room.title || '',
+            room.time_limit || 0,
+            room.player_count || 1,
+            room.spectator_count || 0,
+            room.allow_spectators ? 1 : 0,
+            room.is_private ? 1 : 0,
+        ].join(':');
+    }
+
+    function createRoomCard(room, signature) {
+        const isPlaying = room.status === 'playing';
+        const hasGame = !!room.current_game_id;
+        const isFull = room.guest !== null;
+        const statusText = {
+            waiting: '대기 중',
+            ready: '준비 완료',
+            playing: '게임 중',
+            finished: '종료',
+        }[room.status] || room.status;
+        const safeStatusText = isPlaying && !hasGame ? '게임 준비 중' : statusText;
+
+        const card = document.createElement('div');
+        card.className = `room-card ${isPlaying ? 'is-playing' : ''} ${isFull ? 'is-full' : ''}`;
+        card.dataset.roomId = String(room.id);
+        card.dataset.gameId = String(room.current_game_id || '');
+        card.dataset.signature = signature;
+        card.innerHTML = `
+            <div class="room-host">
+                <div class="avatar">
+                    ${room.host?.avatar_url
+                        ? `<img src="${Utils.escapeHtml(room.host.avatar_url)}" alt="${Utils.escapeHtml(room.host?.nickname || '호스트')}">`
+                        : '<span class="avatar-placeholder">?</span>'}
+                </div>
+                <div class="room-host-name">${Utils.escapeHtml(room.host?.nickname || '호스트')}</div>
+                <div class="room-host-rating">${room.host?.rating || 1500}</div>
+            </div>
+            <div class="room-info">
+                <div class="room-title">
+                    ${room.is_private ? '<span class="icon-private">🔒</span>' : ''}
+                    ${Utils.escapeHtml(room.title || (room.room_type === 'random' ? '랜덤 대전' : '빠른 대전'))}
+                </div>
+                <div class="room-meta">
+                    <span class="room-meta-item">⏱ ${room.time_limit ? `${room.time_limit}분` : '무제한'}</span>
+                    <span class="room-meta-item">👥 ${room.player_count || 1}/2</span>
+                    ${room.allow_spectators ? `<span class="room-meta-item">👁 ${room.spectator_count || 0}명 관전</span>` : ''}
+                </div>
+            </div>
+            <span class="room-status ${room.status}">${safeStatusText}</span>
+        `;
+        card.addEventListener('click', () => handleRoomClick(card));
+        return card;
     }
 
     /**
@@ -190,7 +250,15 @@
     function renderPagination() {
         const totalPages = Math.ceil(totalCount / pageSize);
         if (totalPages <= 1) {
-            pagination.innerHTML = '';
+            if (lastPaginationSignature !== 'empty') {
+                pagination.innerHTML = '';
+                lastPaginationSignature = 'empty';
+            }
+            return;
+        }
+
+        const paginationSignature = [currentPage, totalPages, totalCount].join(':');
+        if (paginationSignature === lastPaginationSignature) {
             return;
         }
 
@@ -225,6 +293,7 @@
         html += `<button class="pagination-btn" ${currentPage === totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">&gt;</button>`;
 
         pagination.innerHTML = html;
+        lastPaginationSignature = paginationSignature;
 
         // 페이지 클릭 이벤트
         pagination.querySelectorAll('.pagination-btn').forEach(btn => {
@@ -244,12 +313,12 @@
     function setupFilters() {
         filterStatus.addEventListener('change', () => {
             currentPage = 1;
-            loadRooms();
+            loadRooms({ showSkeleton: true });
         });
 
         filterSort.addEventListener('change', () => {
             currentPage = 1;
-            loadRooms();
+            loadRooms({ showSkeleton: true });
         });
     }
 
@@ -270,18 +339,24 @@
                     filterStatus.disabled = false;
                 }
                 currentPage = 1;
-                loadRooms();
+                loadRooms({ showSkeleton: true });
             });
         });
     }
 
     function startAutoRefresh() {
-        refreshInterval = setInterval(() => {
-            loadRooms();
-        }, 5000);
+        refreshPoller?.stop?.();
+        refreshPoller = Utils.createAdaptivePoller({
+            callback: () => loadRooms({ showSkeleton: false }),
+            activeInterval: 5000,
+            hiddenInterval: 15000,
+            enabled: () => Boolean(roomsList),
+            immediate: false,
+        });
+        refreshPoller.start();
 
         window.addEventListener('beforeunload', () => {
-            if (refreshInterval) clearInterval(refreshInterval);
+            refreshPoller?.stop?.();
         });
     }
 
