@@ -92,11 +92,21 @@ urlpatterns = [
     path("friends/", TemplateView.as_view(template_name="social/friends.html"), name="friends"),
     path("guilds/", TemplateView.as_view(template_name="community/guilds.html"), name="guilds"),
     path(
+        "guilds/create/",
+        TemplateView.as_view(template_name="community/guilds_create.html"),
+        name="guilds-create",
+    ),
+    path(
         "guilds/manage/",
         TemplateView.as_view(template_name="community/guilds_manage.html"),
         name="guilds-manage",
     ),
     path("parties/", TemplateView.as_view(template_name="community/parties.html"), name="parties"),
+    path(
+        "parties/create/",
+        TemplateView.as_view(template_name="community/parties_create.html"),
+        name="parties-create",
+    ),
     path(
         "parties/manage/",
         TemplateView.as_view(template_name="community/parties_manage.html"),

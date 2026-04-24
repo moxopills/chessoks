@@ -15,6 +15,9 @@
     const detailEmptyEl = document.getElementById('guild-detail-empty');
     const detailPanelEl = document.getElementById('guild-detail-panel');
     const guildSummaryEl = document.getElementById('guild-summary');
+    const currentGuildEmptyEl = document.getElementById('guild-current-empty');
+    const currentGuildPanelEl = document.getElementById('guild-current-panel');
+    const currentGuildSummaryEl = document.getElementById('guild-current-summary');
     const guildMembersEl = document.getElementById('guild-members');
     const guildChatLogEl = document.getElementById('guild-chat-log');
     const guildChatPanelEl = document.getElementById('guild-chat-panel');
@@ -232,6 +235,34 @@
         setChatPanelExpanded(window.innerWidth > 768);
     }
 
+    function renderCurrentGuildCard(guild) {
+        if (!currentGuildSummaryEl || !currentGuildEmptyEl || !currentGuildPanelEl) return;
+        if (!guild?.id) {
+            currentGuildPanelEl.classList.add('hidden');
+            currentGuildEmptyEl.classList.remove('hidden');
+            return;
+        }
+        const membership = (guild.members || []).find((member) => member.user.id === me?.id) || null;
+        currentGuildEmptyEl.classList.add('hidden');
+        currentGuildPanelEl.classList.remove('hidden');
+        currentGuildSummaryEl.innerHTML = `
+            <div class="community-item community-item--detail">
+                <div class="community-guild-row community-guild-row--summary">
+                    ${renderGuildAvatar(guild.avatar_url, guild.name)}
+                    <div class="community-block">
+                        <span class="community-item-title">${Utils.escapeHtml(guild.name)}</span>
+                        <span class="community-item-meta">팀 레이팅 ${guild.team_rating} · 멤버 ${guild.member_count}명</span>
+                        <span class="community-item-copy">${Utils.escapeHtml(guild.notice || guild.description || '아직 공지가 없습니다.')}</span>
+                    </div>
+                </div>
+                <div class="community-row-meta">
+                    <span class="community-badge">${Utils.escapeHtml(guild.join_policy === 'open' ? '자유 가입' : '승인제')}</span>
+                    ${membership ? `<span class="community-badge is-ready">내 역할 · ${Utils.escapeHtml(membership.role)}</span>` : ''}
+                </div>
+            </div>
+        `;
+    }
+
     function renderMembers(guild) {
         if (!guildMembersEl) return;
         const members = guild.members || [];
@@ -422,6 +453,12 @@
         }
     }
 
+    async function loadCurrentGuildCard() {
+        if (!currentGuildSummaryEl) return;
+        const guild = await API.get('/community/guilds/me/current/').catch(() => ({ guild_id: null }));
+        renderCurrentGuildCard(guild);
+    }
+
     async function loadGuildDetail(guildId) {
         selectedGuildId = guildId;
         const [guild, guildList] = await Promise.all([
@@ -485,7 +522,7 @@
             window.location.href = '/guilds/';
             return;
         }
-        await loadGuilds();
+        await Promise.all([loadCurrentGuildCard(), loadGuilds()]);
     }
 
     async function createGuildBattle() {
@@ -497,6 +534,10 @@
     async function saveNotice(event) {
         event.preventDefault();
         if (!selectedGuildId) return;
+        if (!guildNoticeInput) {
+            Toast.error('공지 입력창을 찾지 못했습니다.');
+            return;
+        }
         const notice = guildNoticeInput.value.trim();
         if (!notice) {
             Toast.error('공지 내용을 입력하세요.');
@@ -515,6 +556,10 @@
     async function updateAvatar(event) {
         event.preventDefault();
         if (!selectedGuildId) return;
+        if (!guildAvatarInput) {
+            Toast.error('길드 이미지 입력창을 찾지 못했습니다.');
+            return;
+        }
         const file = guildAvatarInput?.files?.[0];
         if (!file) {
             Toast.error('업로드할 이미지를 먼저 선택하세요.');
@@ -586,8 +631,10 @@
         setupManageTabs();
         if (pageMode === 'manage') {
             await loadCurrentGuildDetail();
+        } else if (pageMode === 'create') {
+            // Creation page only needs the form bindings below.
         } else {
-            await loadGuilds();
+            await Promise.all([loadCurrentGuildCard(), loadGuilds()]);
         }
         document.getElementById('guild-create-form')?.addEventListener('submit', (event) => submitCreate(event).catch((error) => Toast.error(error.data?.message || error.message)));
         guildJoinBtn?.addEventListener('click', () => joinGuild().catch((error) => Toast.error(error.data?.message || error.message)));

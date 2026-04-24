@@ -179,6 +179,33 @@
     gap: 12px;
 }
 
+.customize-shop-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.customize-shop-tab {
+    border: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-bg-secondary) 90%, white);
+    color: var(--color-text-secondary);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.16s ease, color 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
+}
+
+.customize-shop-tab:hover,
+.customize-shop-tab.is-active {
+    border-color: color-mix(in srgb, var(--color-accent-primary) 38%, white);
+    color: var(--color-accent-primary);
+    background: color-mix(in srgb, var(--color-accent-primary) 8%, white);
+    transform: translateY(-1px);
+}
+
 .customize-option-card {
     margin: 0;
     padding: 16px;
@@ -186,6 +213,11 @@
     border: 1px solid var(--color-border);
     background: color-mix(in srgb, var(--color-bg-secondary) 84%, white);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    display: none;
+}
+
+.customize-option-card.is-active {
+    display: grid;
 }
 
 .customize-option-head {
@@ -230,6 +262,12 @@
 
 .customize-choice-grid--compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.customize-preview-card {
+    position: sticky;
+    top: calc(var(--navbar-height, 72px) + 16px);
+    align-self: start;
 }
 
 .customize-choice-card {
@@ -965,6 +1003,11 @@
         grid-template-columns: 1fr;
     }
 
+    .customize-preview-card {
+        position: static;
+        order: -1;
+    }
+
     .customize-preview-showroom {
         grid-template-columns: 1fr;
     }
@@ -995,6 +1038,22 @@
 
     .customize-card {
         padding: 18px;
+    }
+
+    .customize-shop-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        scrollbar-width: none;
+    }
+
+    .customize-shop-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .customize-shop-tab {
+        flex: 0 0 auto;
+        white-space: nowrap;
     }
 
     .customize-points-card {

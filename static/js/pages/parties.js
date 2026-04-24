@@ -20,6 +20,9 @@
     const detailEmptyEl = document.getElementById('party-detail-empty');
     const detailPanelEl = document.getElementById('party-detail-panel');
     const partySummaryEl = document.getElementById('party-summary');
+    const currentPartyEmptyEl = document.getElementById('party-current-empty');
+    const currentPartyPanelEl = document.getElementById('party-current-panel');
+    const currentPartySummaryEl = document.getElementById('party-current-summary');
     const partyMembersEl = document.getElementById('party-members');
     const partyChatLogEl = document.getElementById('party-chat-log');
     const partyInviteListEl = document.getElementById('party-invite-list');
@@ -363,6 +366,27 @@
         setChatPanelExpanded(window.innerWidth > 768);
     }
 
+    function renderCurrentPartyCard(summary) {
+        if (!currentPartySummaryEl || !currentPartyEmptyEl || !currentPartyPanelEl) return;
+        if (!summary?.party_id) {
+            currentPartyPanelEl.classList.add('hidden');
+            currentPartyEmptyEl.classList.remove('hidden');
+            return;
+        }
+        currentPartyEmptyEl.classList.add('hidden');
+        currentPartyPanelEl.classList.remove('hidden');
+        currentPartySummaryEl.innerHTML = `
+            <div class="community-item community-item--detail">
+                <span class="community-item-title">${Utils.escapeHtml(summary.title || '내 파티')}</span>
+                <span class="community-item-meta">상태 ${Utils.escapeHtml(summary.status || 'open')} · 멤버 ${summary.member_count || 0}명</span>
+                <div class="community-row-meta">
+                    ${summary.is_leader ? '<span class="community-badge is-ready">파티장</span>' : '<span class="community-badge">참가 중</span>'}
+                    ${summary.can_invite ? '<span class="community-badge is-info">초대 가능</span>' : ''}
+                </div>
+            </div>
+        `;
+    }
+
     function renderChat(items) {
         const nextSignature = items.map((message) => [message.id, message.created_at || '', message.content || ''].join(':')).join('|');
         if (nextSignature === lastPartyChatSignature) return;
@@ -420,7 +444,7 @@
                     if (pageMode === 'manage') {
                         await loadCurrentPartyDetail();
                     } else {
-                        await loadParties();
+                        await Promise.all([loadCurrentPartyCard(), loadParties()]);
                     }
                 } catch (error) {
                     Toast.error(error.data?.message || error.message);
@@ -464,6 +488,12 @@
             return;
         }
         await loadPartyDetail(summary.party_id);
+    }
+
+    async function loadCurrentPartyCard() {
+        if (!currentPartySummaryEl) return;
+        const summary = await API.get('/community/parties/me/active/').catch(() => ({ party_id: null }));
+        renderCurrentPartyCard(summary);
     }
 
     async function loadPartyDetail(partyId) {
@@ -524,7 +554,7 @@
             window.location.href = '/parties/';
             return;
         }
-        await Promise.all([loadParties(), loadPendingInvites()]);
+        await Promise.all([loadCurrentPartyCard(), loadParties(), loadPendingInvites()]);
     }
 
     async function closeParty() {
@@ -542,7 +572,7 @@
             window.location.href = '/parties/';
             return;
         }
-        await Promise.all([loadParties(), loadPendingInvites()]);
+        await Promise.all([loadCurrentPartyCard(), loadParties(), loadPendingInvites()]);
     }
 
     async function inviteUser(event) {
@@ -637,8 +667,10 @@
         await loadPendingInvites();
         if (pageMode === 'manage') {
             await loadCurrentPartyDetail();
+        } else if (pageMode === 'create') {
+            // Creation page only needs form bindings below.
         } else {
-            await loadParties();
+            await Promise.all([loadCurrentPartyCard(), loadParties()]);
         }
         document.getElementById('party-create-form')?.addEventListener('submit', (event) => createParty(event).catch((error) => Toast.error(error.data?.message || error.message)));
         readyBtn?.addEventListener('click', () => toggleReady().catch((error) => Toast.error(error.data?.message || error.message)));
