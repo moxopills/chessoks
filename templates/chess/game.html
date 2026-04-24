@@ -334,9 +334,9 @@
 /* Game Container */
 .game-container {
     display: grid;
-    grid-template-columns: minmax(700px, 760px) minmax(720px, 1fr);
+    grid-template-columns: minmax(620px, 720px) minmax(420px, 1fr);
     gap: var(--space-lg);
-    max-width: 1760px;
+    max-width: 1680px;
     width: 100%;
     margin: 0 auto;
     padding: var(--space-sm) var(--space-md);
@@ -1675,7 +1675,7 @@ html[data-theme="dark"] .piece.white {
 
 .panel-top-grid {
     display: grid;
-    grid-template-columns: minmax(320px, 360px) minmax(440px, 1fr);
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
     gap: clamp(0.75rem, 1.2vw, var(--space-md));
     align-items: start;
 }
@@ -1983,12 +1983,12 @@ html[data-theme="dark"] .piece.white {
 
 @media (max-width: 1500px) {
     .game-container {
-        grid-template-columns: minmax(640px, 720px) minmax(580px, 1fr);
-        max-width: 1480px;
+        grid-template-columns: minmax(560px, 680px) minmax(360px, 1fr);
+        max-width: 1440px;
     }
 
     .panel-top-grid {
-        grid-template-columns: minmax(300px, 336px) minmax(360px, 1fr);
+        grid-template-columns: minmax(200px, 228px) minmax(0, 1fr);
     }
 }
 
