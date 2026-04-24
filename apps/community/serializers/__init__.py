@@ -1,6 +1,7 @@
 from .board_serializers import (
     BoardCategorySerializer,
     BoardCommentCreateSerializer,
+    BoardCommentPageSerializer,
     BoardCommentSerializer,
     BoardPostCreateSerializer,
     BoardPostSerializer,
@@ -53,6 +54,7 @@ from .tournament_serializers import (
 __all__ = (
     "BoardCategorySerializer",
     "BoardCommentCreateSerializer",
+    "BoardCommentPageSerializer",
     "BoardCommentSerializer",
     "BoardPostCreateSerializer",
     "BoardPostSerializer",
