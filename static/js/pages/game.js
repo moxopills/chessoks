@@ -150,12 +150,15 @@
     let wsReconnectAttempts = 0;
     const WS_MAX_RECONNECT_ATTEMPTS = 10;
     const WS_BASE_RECONNECT_DELAY = 1000;
+    let wsReconnectTimer = null;
+    let resumeSyncInFlight = false;
+    let lastResumeSyncAt = 0;
     let notificationEventBound = false;
     let notificationEventHandler = null;
     let selectedBoardSkinClass = 'skin-board-classic';
     let selectedPieceSkinClass = 'skin-piece-classic';
     let lastMoveListSignature = null;
-    let activeSidePanelSectionId = 'game-moves-section';
+    let activeSidePanelSectionId = window.innerWidth <= 900 ? 'game-actions' : 'game-moves-section';
     const pieceSvgMarkupCache = new Map();
 
     function showStatus(message, type = 'info', duration = 1800) {
@@ -256,6 +259,49 @@
         if (replayDock.parentElement === sidePanel) return;
         const anchor = spectatorSection || chatSection || null;
         sidePanel.insertBefore(replayDock, anchor);
+    }
+
+    function clearReconnectTimer() {
+        if (!wsReconnectTimer) return;
+        clearTimeout(wsReconnectTimer);
+        wsReconnectTimer = null;
+    }
+
+    function teardownSocket({ silent = false } = {}) {
+        if (!socket) return;
+        if (silent) {
+            socket.onopen = null;
+            socket.onmessage = null;
+            socket.onclose = null;
+            socket.onerror = null;
+        }
+        try {
+            socket.close();
+        } catch {
+            // noop
+        }
+        socket = null;
+    }
+
+    function syncPerspectiveFromGame() {
+        myColor = null;
+        opponentUserId = null;
+
+        if (currentUser) {
+            if (game?.white_player?.id === currentUser.id) {
+                myColor = 'white';
+            } else if (game?.black_player?.id === currentUser.id) {
+                myColor = 'black';
+            }
+        }
+
+        if (currentUser && myColor === 'white') {
+            opponentUserId = game?.black_player?.id || null;
+        } else if (currentUser && myColor === 'black') {
+            opponentUserId = game?.white_player?.id || null;
+        }
+
+        isSpectator = !myColor;
     }
 
     /**
@@ -383,21 +429,7 @@
                 }
             }
 
-            // 내 색상 결정
-            if (currentUser) {
-                if (game.white_player?.id === currentUser.id) {
-                    myColor = 'white';
-                } else if (game.black_player?.id === currentUser.id) {
-                    myColor = 'black';
-                }
-            }
-            if (currentUser && myColor === 'white') {
-                opponentUserId = game.black_player?.id || null;
-            } else if (currentUser && myColor === 'black') {
-                opponentUserId = game.white_player?.id || null;
-            }
-
-            isSpectator = !myColor;
+            syncPerspectiveFromGame();
 
             if (!myColor || replayOnly) {
                 gameActions?.classList.add('hidden');
@@ -558,21 +590,7 @@
         }
         game = fetched;
 
-        if (currentUser) {
-            if (game.white_player?.id === currentUser.id) {
-                myColor = 'white';
-            } else if (game.black_player?.id === currentUser.id) {
-                myColor = 'black';
-            } else {
-                myColor = null;
-            }
-        }
-        opponentUserId = null;
-        if (currentUser && myColor === 'white') {
-            opponentUserId = game.black_player?.id || null;
-        } else if (currentUser && myColor === 'black') {
-            opponentUserId = game.white_player?.id || null;
-        }
+        syncPerspectiveFromGame();
 
         renderPlayerBars();
         renderBoard({ animatePieceChanges: false });
@@ -682,13 +700,13 @@
         if (!sidePanel) return;
         const sections = Array.from(sidePanel.querySelectorAll('.panel-section'));
         if (!sections.length) return;
-        const storageKey = 'game_side_panel_sections_v2';
+        const storageKey = 'game_side_panel_sections_v3';
         const defaultStates = {
             'game-actions': false,
-            'game-moves-section': false,
+            'game-moves-section': window.innerWidth <= 900,
             'captured-section': true,
             'spectator-section': true,
-            'game-chat-section': window.innerWidth <= 1360,
+            'game-chat-section': window.innerWidth <= 900,
         };
         const isNarrow = () => window.innerWidth <= 1360;
 
@@ -716,6 +734,10 @@
                 setCollapsed(section, collapsed);
                 header.dataset.accordionMode = narrow ? 'single' : 'multi';
             });
+            if (states[activeSidePanelSectionId]) {
+                activeSidePanelSectionId = narrow ? 'game-actions' : 'game-moves-section';
+            }
+            setActiveSidePanelTab(activeSidePanelSectionId);
             syncGameChatFabVisibility();
         };
 
@@ -1681,20 +1703,35 @@
     /**
      * WebSocket 연결
      */
-    function connectWebSocket() {
+    function connectWebSocket({ force = false, suppressStatus = false } = {}) {
+        if (replayOnly) return;
+        clearReconnectTimer();
+        if (socket && !force) {
+            if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+                return;
+            }
+        }
+        if (socket && force) {
+            teardownSocket({ silent: true });
+        }
         socket = socketClient?.connect({
             roomId,
             onOpen: () => {
-                addChatNotice('연결되었습니다.');
+                if (!suppressStatus) {
+                    addChatNotice('연결되었습니다.');
+                }
                 wsReconnectAttempts = 0;
                 startHeartbeat();
                 refreshSpectatorList();
-                showStatus('게임 실시간 연결 완료', 'success', 1200);
+                if (!suppressStatus) {
+                    showStatus('게임 실시간 연결 완료', 'success', 1200);
+                }
             },
             onMessage: (data) => {
                 handleSocketMessage(data);
             },
             onClose: () => {
+                socket = null;
                 addChatNotice('연결이 끊어졌습니다.');
                 stopHeartbeat();
                 if (wsReconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS) {
@@ -1706,12 +1743,64 @@
                 const delay = Math.min(WS_BASE_RECONNECT_DELAY * Math.pow(2, wsReconnectAttempts - 1), 30000);
                 addChatNotice(`${Math.round(delay / 1000)}초 후 재연결 시도 (${wsReconnectAttempts}/${WS_MAX_RECONNECT_ATTEMPTS})...`);
                 showStatus(`${Math.round(delay / 1000)}초 후 게임 연결 재시도`, 'pending', 1500);
-                setTimeout(connectWebSocket, delay);
+                wsReconnectTimer = setTimeout(() => {
+                    wsReconnectTimer = null;
+                    connectWebSocket({ suppressStatus: true });
+                }, delay);
             },
             onError: () => {
                 addChatNotice('연결 오류');
             },
         }) || null;
+    }
+
+    async function syncLiveGameStateOnResume({ forceReconnect = false } = {}) {
+        if (replayOnly || !game?.id) return;
+        const now = Date.now();
+        if (resumeSyncInFlight || now - lastResumeSyncAt < 900) return;
+        lastResumeSyncAt = now;
+        resumeSyncInFlight = true;
+
+        try {
+            if (forceReconnect || !socket || socket.readyState === WebSocket.CLOSED || socket.readyState === WebSocket.CLOSING) {
+                connectWebSocket({ force: forceReconnect, suppressStatus: true });
+            } else if (socket.readyState === WebSocket.OPEN) {
+                socketClient?.sendJson?.(socket, { action: 'heartbeat' });
+            }
+
+            const previousResult = game.result;
+            const latestGame = await API.get(`/chess/games/${game.id}/`);
+            if (game?.room_type && !latestGame.room_type) {
+                latestGame.room_type = game.room_type;
+            }
+            game = latestGame;
+
+            syncPerspectiveFromGame();
+
+            renderPlayerBars();
+            renderBoard({ animatePieceChanges: false });
+            renderMoveList();
+            updateTurn();
+
+            const syncTasks = [loadCapturedPieces(), refreshSpectatorList()];
+            if (game.move_count > 0) {
+                syncTasks.push(loadLastMove());
+            } else {
+                lastMove = null;
+            }
+            await Promise.allSettled(syncTasks);
+            renderCapturedPieces();
+            renderBoard({ animatePieceChanges: false });
+            updateTurn();
+
+            if (game.result !== 'playing' && previousResult === 'playing') {
+                showGameEndModal(game.result);
+            }
+        } catch (error) {
+            console.error('Failed to sync game after resume:', error);
+        } finally {
+            resumeSyncInFlight = false;
+        }
     }
 
     /**
@@ -2915,18 +3004,40 @@
 
     // 페이지 떠날 때 정리
     window.addEventListener('beforeunload', () => {
+        clearReconnectTimer();
         stopHeartbeat();
         if (timerInterval) clearInterval(timerInterval);
         if (isAiRoom) {
             sendAiResign();
         }
-        if (socket) socket.close();
+        teardownSocket({ silent: true });
     });
 
-    window.addEventListener('pagehide', () => {
+    window.addEventListener('pagehide', (event) => {
+        clearReconnectTimer();
+        stopHeartbeat();
+        if (event.persisted) {
+            teardownSocket({ silent: true });
+        }
         if (isAiRoom) {
             sendAiResign();
         }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            stopHeartbeat();
+            return;
+        }
+        syncLiveGameStateOnResume({ forceReconnect: true });
+    });
+
+    window.addEventListener('pageshow', () => {
+        syncLiveGameStateOnResume({ forceReconnect: true });
+    });
+
+    window.addEventListener('focus', () => {
+        syncLiveGameStateOnResume();
     });
 
     // 화면 회전 시 보드 크기 재계산

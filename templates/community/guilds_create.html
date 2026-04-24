@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}길드 생성 - ChessOK{% endblock %}
+
+{% block content %}
+<div class="community-page" id="guild-page" data-view="create">
+    <section class="community-hero community-hero--split">
+        <div>
+            <h1>길드 생성</h1>
+            <p>자유 가입 또는 승인제로 새 길드를 열고, 브랜딩과 소개를 바로 구성할 수 있습니다.</p>
+        </div>
+        <div class="community-hero-actions">
+            <a class="btn btn-secondary btn-sm" href="/guilds/">길드 둘러보기</a>
+            <a class="btn btn-secondary btn-sm" href="/guilds/manage/">내 길드 관리</a>
+        </div>
+    </section>
+
+    <div class="community-grid community-grid--write">
+        <section class="community-card">
+            <div class="community-card-head">
+                <h2>새 길드 만들기</h2>
+                <p>프로필 사진, 소개, 가입 방식과 활동 시간대를 정하면 길드원이 더 빠르게 들어올 수 있습니다.</p>
+            </div>
+            <form id="guild-create-form" class="community-form" enctype="multipart/form-data">
+                <label class="community-file-field">
+                    <span class="community-file-label">길드 프로필 사진</span>
+                    <input class="form-input" name="avatar" type="file" accept="image/*">
+                </label>
+                <input class="form-input" name="name" placeholder="길드명" maxlength="40" required>
+                <textarea class="form-input" name="description" placeholder="길드 설명" rows="4"></textarea>
+                <select class="form-input" name="join_policy">
+                    <option value="approval">승인제</option>
+                    <option value="open">자유 가입</option>
+                </select>
+                <input class="form-input" name="min_rating" type="number" min="0" max="4000" value="1200" placeholder="최소 레이팅">
+                <input class="form-input" name="active_hours" placeholder="활동 시간대 예: 평일 저녁">
+                <input class="form-input" name="contact_channel" placeholder="연락 수단 예: 오픈채팅">
+                <div class="community-actions community-actions--wrap">
+                    <button class="btn btn-primary" type="submit">길드 생성</button>
+                    <a class="btn btn-secondary" href="/guilds/">둘러보기로 돌아가기</a>
+                </div>
+            </form>
+        </section>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="/static/css/community.css">
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/pages/guilds.js"></script>
+{% endblock %}

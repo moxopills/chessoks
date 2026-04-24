@@ -39,6 +39,8 @@
     const summaryFrameState = document.getElementById('customize-summary-frame-state');
     const purchaseBtn = document.getElementById('customize-purchase');
     const saveBtn = document.getElementById('customize-save');
+    const shopTabButtons = Array.from(document.querySelectorAll('[data-customize-tab]'));
+    const shopPanes = Array.from(document.querySelectorAll('[data-customize-pane]'));
     const boardOptions = document.getElementById('customize-board-options');
     const pieceOptions = document.getElementById('customize-piece-options');
     const colorOptions = document.getElementById('customize-color-options');
@@ -263,6 +265,7 @@
     }
 
     function bindEvents() {
+        setupShopTabs();
         boardSkinSelect?.addEventListener('change', renderPreview);
         pieceSkinSelect?.addEventListener('change', renderPreview);
         nicknameColorSelect?.addEventListener('change', renderPreview);
@@ -271,6 +274,22 @@
         profileCardFrameSelect?.addEventListener('change', renderPreview);
         purchaseBtn?.addEventListener('click', handlePurchase);
         saveBtn?.addEventListener('click', handleApply);
+    }
+
+    function setupShopTabs() {
+        if (!shopTabButtons.length || !shopPanes.length) return;
+        const activate = (key) => {
+            shopTabButtons.forEach((button) => {
+                button.classList.toggle('is-active', button.dataset.customizeTab === key);
+            });
+            shopPanes.forEach((pane) => {
+                pane.classList.toggle('is-active', pane.dataset.customizePane === key);
+            });
+        };
+        shopTabButtons.forEach((button) => {
+            button.addEventListener('click', () => activate(button.dataset.customizeTab));
+        });
+        activate(shopTabButtons[0].dataset.customizeTab);
     }
 
     async function loadSkinCatalog() {
