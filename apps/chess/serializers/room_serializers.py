@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.chess.serializers.game_serializers import PlayerSerializer
+from apps.chess.services.room_state_service import RoomStateService
 
 
 class RoomSerializer(serializers.Serializer):
@@ -37,10 +38,7 @@ class RoomSerializer(serializers.Serializer):
         return None
 
     def get_spectator_count(self, room):
-        annotated = getattr(room, "spectator_count_annotated", None)
-        if annotated is not None:
-            return annotated
-        return room.spectators.count()
+        return RoomStateService.get_spectator_count(room)
 
 
 class PagedRoomSerializer(serializers.Serializer):

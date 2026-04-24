@@ -53,34 +53,54 @@
             <button class="side-panel-tab" type="button" data-panel-target="spectator-section">관전자</button>
             <button class="side-panel-tab" type="button" data-panel-target="game-chat-section">채팅</button>
         </div>
-        <!-- Game Actions -->
-        <div class="panel-section game-actions-panel" id="game-actions">
-            <div class="panel-header">
-                <div class="panel-title-wrap">
-                    <h3 class="panel-title">대전 메뉴</h3>
-                    <p class="panel-copy">대국 관련 액션은 여기서 처리합니다.</p>
+        <div class="panel-top-grid">
+            <!-- Game Actions -->
+            <div class="panel-section game-actions-panel" id="game-actions">
+                <div class="panel-header">
+                    <div class="panel-title-wrap">
+                        <h3 class="panel-title">대전 메뉴</h3>
+                        <p class="panel-copy">대국 관련 액션은 여기서 처리합니다.</p>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <label class="guide-toggle" title="착수 전 확인 버튼을 띄웁니다.">
+                            <input type="checkbox" id="move-confirm-toggle" style="width: 14px; height: 14px; cursor: pointer;">
+                            <span style="font-size: 11px;">수 확인</span>
+                        </label>
+                        <button class="shortcut-help-btn" id="shortcut-help-btn" title="키보드 단축키" aria-label="키보드 단축키">⌨️</button>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <label class="guide-toggle" title="착수 전 확인 버튼을 띄웁니다.">
-                        <input type="checkbox" id="move-confirm-toggle" style="width: 14px; height: 14px; cursor: pointer;">
-                        <span style="font-size: 11px;">수 확인</span>
-                    </label>
-                    <button class="shortcut-help-btn" id="shortcut-help-btn" title="키보드 단축키" aria-label="키보드 단축키">⌨️</button>
+                <div class="action-grid">
+                    <button class="btn btn-secondary btn-sm" id="draw-btn" title="무승부 제안">
+                        🤝 무승부
+                    </button>
+                    <button class="btn btn-danger btn-sm" id="resign-btn" title="기권">
+                        🏳️ 기권
+                    </button>
+                    <button class="btn btn-secondary btn-sm" id="leave-btn" title="나가기">
+                        🚪 나가기
+                    </button>
+                    <button class="btn btn-secondary btn-sm" id="report-btn" title="신고하기">
+                        🚨 신고
+                    </button>
                 </div>
             </div>
-            <div class="action-grid">
-                <button class="btn btn-secondary btn-sm" id="draw-btn" title="무승부 제안">
-                    🤝 무승부
-                </button>
-                <button class="btn btn-danger btn-sm" id="resign-btn" title="기권">
-                    🏳️ 기권
-                </button>
-                <button class="btn btn-secondary btn-sm" id="leave-btn" title="나가기">
-                    🚪 나가기
-                </button>
-                <button class="btn btn-secondary btn-sm" id="report-btn" title="신고하기">
-                    🚨 신고
-                </button>
+
+            <!-- Chat -->
+            <div class="panel-section game-chat-section" id="game-chat-section">
+                <div class="panel-header">
+                    <div class="panel-title-wrap">
+                        <h3 class="panel-title">채팅</h3>
+                        <p class="panel-copy">플레이어 또는 관전자 전용 채팅입니다.</p>
+                    </div>
+                    <button class="chat-close-btn hidden" id="chat-close-btn" type="button" aria-label="채팅 닫기">✕</button>
+                </div>
+                <div class="game-chat chat-shell-body">
+                    <div class="chat-messages" id="chat-messages"></div>
+                    <form class="chat-form" id="chat-form">
+                        <input type="text" class="chat-input" id="chat-input" placeholder="메시지..." maxlength="500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                        <button type="submit" class="btn btn-primary btn-sm">전송</button>
+                    </form>
+                </div>
             </div>
         </div>
 
@@ -138,24 +158,6 @@
             </div>
             <div class="spectator-list" id="spectator-list">
                 <div class="spectator-empty">관전자가 없습니다.</div>
-            </div>
-        </div>
-
-        <!-- Chat -->
-        <div class="panel-section game-chat-section" id="game-chat-section">
-            <div class="panel-header">
-                <div class="panel-title-wrap">
-                    <h3 class="panel-title">채팅</h3>
-                    <p class="panel-copy">플레이어 또는 관전자 전용 채팅입니다.</p>
-                </div>
-                <button class="chat-close-btn hidden" id="chat-close-btn" type="button" aria-label="채팅 닫기">✕</button>
-            </div>
-            <div class="game-chat chat-shell-body">
-                <div class="chat-messages" id="chat-messages"></div>
-                <form class="chat-form" id="chat-form">
-                    <input type="text" class="chat-input" id="chat-input" placeholder="메시지..." maxlength="500" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-                    <button type="submit" class="btn btn-primary btn-sm">전송</button>
-                </form>
             </div>
         </div>
     </div>
@@ -1653,6 +1655,13 @@ html[data-theme="dark"] .piece.white {
     min-height: 0;
 }
 
+.panel-top-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    gap: clamp(0.75rem, 1.2vw, var(--space-md));
+    align-items: start;
+}
+
 .game-side-panel.is-accordion .panel-header.is-clickable {
     cursor: pointer;
 }
@@ -1925,6 +1934,16 @@ html[data-theme="dark"] .piece.white {
     max-height: 320px;
 }
 
+.panel-top-grid .game-chat {
+    min-height: 0;
+    height: 100%;
+}
+
+.panel-top-grid .game-chat .chat-messages {
+    min-height: 210px;
+    max-height: 300px;
+}
+
 @media (max-width: 768px) {
     .game-chat-section.is-floating {
         right: 12px;
@@ -1935,6 +1954,12 @@ html[data-theme="dark"] .piece.white {
 
     .side-panel-nav {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1360px) {
+    .panel-top-grid {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -2663,6 +2688,11 @@ body.competitive-room #rematch-modal {
         position: static;
         align-items: start;
     }
+
+    .side-panel-nav,
+    .panel-top-grid {
+        grid-column: 1 / -1;
+    }
 }
 
 @media (max-width: 900px) {
@@ -2677,6 +2707,11 @@ body.competitive-room #rematch-modal {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: var(--space-sm);
+    }
+
+    .side-panel-nav,
+    .panel-top-grid {
+        grid-column: 1 / -1;
     }
 }
 
@@ -2918,6 +2953,8 @@ body.competitive-room #rematch-modal {
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'js/components/game_board_ui.js' %}"></script>
+<script src="{% static 'js/components/game_socket_client.js' %}"></script>
 <script src="{% static 'js/components/game_moves_cache.js' %}"></script>
 <script src="{% static 'js/components/game_analysis_ui.js' %}"></script>
 <script src="{% static 'js/components/game_side_panels_ui.js' %}"></script>

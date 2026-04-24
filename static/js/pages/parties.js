@@ -8,6 +8,11 @@
     let selectedInviteUserId = null;
     let onlineInviteUsers = [];
     let inviteSearchResults = [];
+    let lastPartyListSignature = '';
+    let lastPartyChatSignature = '';
+    let lastPartyInvitesSignature = '';
+    let lastInviteSuggestionSignature = '';
+    let lastInviteSearchSignature = '';
     const pageEl = document.getElementById('party-page');
     const pageMode = pageEl?.dataset.view || 'browse';
 
@@ -139,8 +144,20 @@
 
     function renderInviteCandidates(container, users, emptyText) {
         if (!container) return;
+        const nextSignature = `${selectedInviteUserId || 0}|${users.map((user) => [
+            user.id,
+            user.nickname || '',
+            user.status_label || '',
+            user.stats?.rating ?? user.rating ?? '',
+        ].join(':')).join('|')}`;
+        const isOnlineContainer = container === onlineSuggestionsEl;
+        if ((isOnlineContainer ? lastInviteSuggestionSignature : lastInviteSearchSignature) === nextSignature) {
+            return;
+        }
         if (!users.length) {
             container.innerHTML = `<div class="community-empty">${emptyText}</div>`;
+            if (isOnlineContainer) lastInviteSuggestionSignature = 'empty';
+            else lastInviteSearchSignature = 'empty';
             return;
         }
         container.innerHTML = users.map((user) => {
@@ -172,6 +189,8 @@
                 renderInviteCandidates(inviteResultsEl, inviteSearchResults, '검색 결과가 없습니다.');
             });
         });
+        if (isOnlineContainer) lastInviteSuggestionSignature = nextSignature;
+        else lastInviteSearchSignature = nextSignature;
     }
 
     async function loadOnlineInviteSuggestions() {
@@ -245,9 +264,17 @@
 
     function renderPartyList(items) {
         if (!partyListEl) return;
+        const nextSignature = `${selectedPartyId || 0}|${items.map((party) => [
+            party.id,
+            party.title || '',
+            party.status || '',
+            party.leader?.id || '',
+        ].join(':')).join('|')}`;
+        if (nextSignature === lastPartyListSignature) return;
         partyListEl.innerHTML = '';
         if (!items.length) {
             partyListEl.innerHTML = '<div class="community-empty">활성 파티가 없습니다.</div>';
+            lastPartyListSignature = 'empty';
             return;
         }
         items.forEach((party) => {
@@ -262,6 +289,7 @@
             item.addEventListener('click', () => loadPartyDetail(party.id));
             partyListEl.appendChild(item);
         });
+        lastPartyListSignature = nextSignature;
     }
 
     function renderPartyDetail(party) {
@@ -332,13 +360,16 @@
         loadOnlineInviteSuggestions().catch(() => {
             renderInviteCandidates(onlineSuggestionsEl, [], '접속자 목록을 불러오지 못했습니다.');
         });
-        setChatPanelExpanded(true);
+        setChatPanelExpanded(window.innerWidth > 768);
     }
 
     function renderChat(items) {
+        const nextSignature = items.map((message) => [message.id, message.created_at || '', message.content || ''].join(':')).join('|');
+        if (nextSignature === lastPartyChatSignature) return;
         partyChatLogEl.innerHTML = '';
         if (!items.length) {
             partyChatLogEl.innerHTML = '<div class="community-empty">아직 채팅이 없습니다.</div>';
+            lastPartyChatSignature = 'empty';
             return;
         }
         items.slice().reverse().forEach((message) => {
@@ -351,13 +382,17 @@
             `;
             partyChatLogEl.appendChild(item);
         });
+        lastPartyChatSignature = nextSignature;
     }
 
     function renderInvites(items) {
         if (!partyInviteListEl) return;
+        const nextSignature = items.map((invite) => [invite.id, invite.party_id || '', invite.from_user?.id || ''].join(':')).join('|');
+        if (nextSignature === lastPartyInvitesSignature) return;
         partyInviteListEl.innerHTML = '';
         if (!items.length) {
             partyInviteListEl.innerHTML = '<div class="community-empty">대기 중인 파티 초대가 없습니다.</div>';
+            lastPartyInvitesSignature = 'empty';
             return;
         }
         items.forEach((invite) => {
@@ -392,6 +427,7 @@
                 }
             });
         });
+        lastPartyInvitesSignature = nextSignature;
     }
 
     async function loadPendingInvites() {

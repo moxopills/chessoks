@@ -5,6 +5,7 @@ from rest_framework.views import APIView
 from apps.community.serializers import (
     BoardCategorySerializer,
     BoardCommentCreateSerializer,
+    BoardCommentPageSerializer,
     BoardCommentSerializer,
     BoardPostCreateSerializer,
     BoardPostSerializer,
@@ -91,7 +92,35 @@ class BoardDetailView(APIView):
 
 
 class BoardCommentCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        return [AllowAny()] if self.request.method == "GET" else [IsAuthenticated()]
+
+    def get(self, request, post_id: int):
+        try:
+            limit = int(request.query_params.get("limit", "0") or 0)
+        except ValueError:
+            limit = 0
+        try:
+            before_id = int(request.query_params.get("before_id", "0") or 0)
+        except ValueError:
+            before_id = 0
+
+        comments, has_more, next_before_id = BoardService.list_comments(
+            post_id,
+            viewer=request.user,
+            limit=limit or None,
+            before_id=before_id or None,
+        )
+        payload = {
+            "has_more": has_more,
+            "next_before_id": next_before_id,
+            "results": BoardCommentSerializer(
+                comments,
+                many=True,
+                context={"request": request},
+            ).data,
+        }
+        return Response(BoardCommentPageSerializer(payload).data)
 
     def post(self, request, post_id: int):
         serializer = BoardCommentCreateSerializer(data=request.data)

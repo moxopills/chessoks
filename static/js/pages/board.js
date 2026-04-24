@@ -6,6 +6,9 @@
     let postsCache = [];
     let lastPostsSignature = '';
     let mineOnly = new URLSearchParams(window.location.search).get('mine') === '1';
+    let commentsBeforeId = null;
+    let commentsHasMore = false;
+    const COMMENT_PAGE_SIZE = 20;
     const initialPostId = Number(new URLSearchParams(window.location.search).get('post') || 0);
 
     const tabsEl = document.getElementById('board-tabs');
@@ -176,6 +179,61 @@
         `;
     }
 
+    function createEmptyState(message) {
+        const empty = document.createElement('div');
+        empty.className = 'community-empty';
+        empty.textContent = message;
+        return empty;
+    }
+
+    function createCommentElement(comment) {
+        const item = document.createElement('div');
+        item.className = 'community-item community-comment-item';
+        item.dataset.commentId = String(comment.id);
+        item.innerHTML = buildCommentItem(comment);
+        return item;
+    }
+
+    function updateCommentsLoadMore() {
+        commentsEl?.querySelector('[data-board-comments-more]')?.remove();
+        if (!commentsHasMore || !activePostId || !commentsEl) return;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'btn btn-secondary btn-sm';
+        button.dataset.boardCommentsMore = '1';
+        button.textContent = '이전 댓글 더보기';
+        commentsEl.prepend(button);
+    }
+
+    function renderCommentsPage(comments, { reset = false } = {}) {
+        if (!commentsEl) return;
+        if (reset) {
+            commentsEl.replaceChildren();
+        }
+
+        commentsEl.querySelector('.community-empty')?.remove();
+        commentsEl.querySelector('[data-board-comments-more]')?.remove();
+
+        if (!comments.length && !commentsEl.querySelector('[data-comment-id]')) {
+            commentsEl.replaceChildren(createEmptyState('아직 댓글이 없습니다.'));
+            commentsHasMore = false;
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        comments.forEach((comment) => {
+            fragment.appendChild(createCommentElement(comment));
+        });
+
+        if (reset || !commentsEl.firstChild) {
+            commentsEl.appendChild(fragment);
+        } else {
+            commentsEl.prepend(fragment);
+        }
+
+        updateCommentsLoadMore();
+    }
+
     function updateScopeButtons() {
         const canUseMine = Boolean(currentUserId);
         mineToggleBtn?.classList.toggle('hidden', !canUseMine);
@@ -240,7 +298,6 @@
         if (deleteBtn) {
             deleteBtn.dataset.postId = String(post.id);
         }
-        commentsEl.innerHTML = (post.comments || []).map(buildCommentItem).join('') || '<div class="community-empty">아직 댓글이 없습니다.</div>';
         if (commentInputEl) {
             commentInputEl.disabled = !currentUserId;
             commentInputEl.placeholder = currentUserId ? '댓글 입력...' : '로그인 후 댓글을 작성할 수 있습니다.';
@@ -248,6 +305,17 @@
         if (commentFormEl?.querySelector('button[type="submit"]')) {
             commentFormEl.querySelector('button[type="submit"]').disabled = !currentUserId;
         }
+    }
+
+    async function loadComments(postId, { reset = false, beforeId = null } = {}) {
+        const params = { limit: String(COMMENT_PAGE_SIZE) };
+        if (beforeId) {
+            params.before_id = String(beforeId);
+        }
+        const data = await API.get(`/community/boards/posts/${postId}/comments/`, params);
+        commentsBeforeId = data.next_before_id || null;
+        commentsHasMore = Boolean(data.has_more);
+        renderCommentsPage(data.results || [], { reset });
     }
 
     async function loadCategories() {
@@ -280,7 +348,7 @@
         updateScopeButtons();
     }
 
-    async function loadPost(postId, { incrementView = true, syncList = true } = {}) {
+    async function loadPost(postId, { incrementView = true, syncList = true, loadCommentsAfter = true } = {}) {
         activePostId = postId;
         const params = incrementView ? {} : { no_view: '1' };
         const post = await API.get(`/community/boards/posts/${postId}/`, params);
@@ -289,6 +357,9 @@
             renderCategories();
         }
         renderPost(post);
+        if (loadCommentsAfter) {
+            await loadComments(post.id, { reset: true });
+        }
         if (syncList) {
             upsertCachedPost(post);
             patchPostListItem(post);
@@ -304,7 +375,8 @@
         if (!content) return;
         await API.post(`/community/boards/posts/${activePostId}/comments/`, { content });
         commentInputEl.value = '';
-        await loadPost(activePostId, { incrementView: false, syncList: true });
+        await loadPost(activePostId, { incrementView: false, syncList: true, loadCommentsAfter: false });
+        await loadComments(activePostId, { reset: true });
     }
 
     async function toggleCommentLike(commentId) {
@@ -314,7 +386,7 @@
         }
         await API.post(`/community/boards/comments/${commentId}/like/`, {});
         if (activePostId) {
-            await loadPost(activePostId, { incrementView: false, syncList: true });
+            await loadComments(activePostId, { reset: true });
         }
     }
 
@@ -324,7 +396,8 @@
         await API.delete(`/community/boards/comments/${commentId}/`);
         Toast.success('댓글을 삭제했습니다.');
         if (activePostId) {
-            await loadPost(activePostId, { incrementView: false, syncList: true });
+            await loadPost(activePostId, { incrementView: false, syncList: true, loadCommentsAfter: false });
+            await loadComments(activePostId, { reset: true });
         }
     }
 
@@ -368,6 +441,12 @@
         });
 
         commentsEl?.addEventListener('click', (event) => {
+            const moreButton = event.target.closest('[data-board-comments-more]');
+            if (moreButton) {
+                if (!activePostId || !commentsBeforeId) return;
+                loadComments(activePostId, { beforeId: commentsBeforeId }).catch((error) => Toast.error(error.data?.message || error.message));
+                return;
+            }
             const deleteButton = event.target.closest('[data-comment-delete]');
             if (deleteButton) {
                 const commentId = Number(deleteButton.dataset.commentDelete || 0);
