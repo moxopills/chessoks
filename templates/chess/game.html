@@ -334,9 +334,9 @@
 /* Game Container */
 .game-container {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(340px, 408px);
+    grid-template-columns: minmax(0, 1fr) minmax(600px, 660px);
     gap: var(--space-lg);
-    max-width: 1380px;
+    max-width: 1640px;
     width: 100%;
     margin: 0 auto;
     padding: var(--space-sm) var(--space-md);
@@ -1657,7 +1657,7 @@ html[data-theme="dark"] .piece.white {
 
 .panel-top-grid {
     display: grid;
-    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    grid-template-columns: minmax(212px, 228px) minmax(388px, 1fr);
     gap: clamp(0.75rem, 1.2vw, var(--space-md));
     align-items: start;
 }
@@ -1935,13 +1935,13 @@ html[data-theme="dark"] .piece.white {
 }
 
 .panel-top-grid .game-chat {
-    min-height: 0;
-    height: 100%;
+    min-height: 320px;
+    height: auto;
 }
 
 .panel-top-grid .game-chat .chat-messages {
-    min-height: 210px;
-    max-height: 300px;
+    min-height: 240px;
+    max-height: 360px;
 }
 
 @media (max-width: 768px) {
