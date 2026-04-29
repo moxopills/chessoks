@@ -22,6 +22,13 @@ class RoomStateService:
         if cached is not None:
             return cached
 
+        prefetched = getattr(room, "_prefetched_objects_cache", None) or {}
+        spectators = prefetched.get("spectators")
+        if spectators is not None:
+            count = len(spectators)
+            room._spectator_count_cache = count
+            return count
+
         count = room.spectators.count()
         room._spectator_count_cache = count
         return count

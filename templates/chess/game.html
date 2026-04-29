@@ -371,6 +371,8 @@
 .main-content:has(.game-container) {
     padding-top: calc(var(--navbar-height) + var(--space-sm));
     padding-bottom: var(--space-sm);
+    width: min(100%, 1760px);
+    max-width: none;
 }
 
 @media (max-width: 768px) {
@@ -378,6 +380,7 @@
         padding: var(--space-xs);
         padding-top: calc(var(--navbar-height) + var(--space-xs));
         padding-bottom: 70px;
+        width: 100%;
     }
 }
 
@@ -1983,12 +1986,12 @@ html[data-theme="dark"] .piece.white {
 
 @media (max-width: 1500px) {
     .game-container {
-        grid-template-columns: minmax(560px, 680px) minmax(360px, 1fr);
-        max-width: 1440px;
+        grid-template-columns: minmax(600px, 700px) minmax(400px, 1fr);
+        max-width: 1560px;
     }
 
     .panel-top-grid {
-        grid-template-columns: minmax(200px, 228px) minmax(0, 1fr);
+        grid-template-columns: minmax(220px, 250px) minmax(0, 1fr);
     }
 }
 
@@ -2997,6 +3000,7 @@ body.competitive-room #rematch-modal {
 {% block extra_js %}
 <script src="{% static 'js/components/game_board_ui.js' %}"></script>
 <script src="{% static 'js/components/game_socket_client.js' %}"></script>
+<script src="{% static 'js/components/game_status_ui.js' %}"></script>
 <script src="{% static 'js/components/game_moves_cache.js' %}"></script>
 <script src="{% static 'js/components/game_analysis_ui.js' %}"></script>
 <script src="{% static 'js/components/game_side_panels_ui.js' %}"></script>
