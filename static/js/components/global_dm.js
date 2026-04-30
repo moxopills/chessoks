@@ -32,6 +32,7 @@
         guild: 0,
         party: 0,
     };
+    let directUnreadMap = {};
     const messageRenderState = {
         direct: { signature: '', ids: [] },
         guild: { signature: '', ids: [] },
@@ -388,7 +389,11 @@
         roomSubtitle.textContent = '';
         
         loadTargetInfo(userId);
-        loadMessages(true);
+        await loadMessages(true);
+        if (directUnreadMap[userId]) {
+            await markDirectMessageNotificationsRead(userId);
+            directUnreadMap[userId] = 0;
+        }
         startRoomPolling();
     }
 
@@ -491,6 +496,7 @@
             
             const threads = data.results || [];
             const unreadMap = dmUI.buildUnreadMap(notifications.results || []);
+            directUnreadMap = unreadMap;
             
             dmUI.updateGlobalBadge(fabBadge, unreadMap);
             tabUnread.direct = Object.values(unreadMap).reduce((acc, value) => acc + value, 0);
@@ -679,15 +685,12 @@
                     const lastItem = orderedItems[orderedItems.length - 1];
                     if (lastItem.sender?.id !== currentUser?.id) {
                         Utils?.Sounds?.chat?.();
+                        await markDirectMessageNotificationsRead(currentRoomUserId);
+                        directUnreadMap[currentRoomUserId] = 0;
                     }
                 }
             }
             lastMessageCount = data.count || 0;
-            
-            // Mark read if panel is open and focused
-            if (!panel.classList.contains('hidden')) {
-                markDirectMessageNotificationsRead(currentRoomUserId);
-            }
         } catch (e) {
             console.error('Failed to load messages:', e);
             dmUI.setMessagesEmpty(messagesEl, messageRenderState.direct, '메시지를 불러오지 못했습니다.');

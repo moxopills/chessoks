@@ -106,6 +106,7 @@
 .community-card-head {
     display: grid;
     gap: 0.25rem;
+    min-width: 0;
 }
 
 .community-card--board-detail .community-card-head {
@@ -348,6 +349,7 @@
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+    min-width: 0;
 }
 
 .community-actions--wrap,
@@ -355,6 +357,7 @@
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+    min-width: 0;
 }
 
 .community-inline-form--end {
@@ -556,6 +559,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.6rem;
+    min-width: 0;
 }
 
 .community-row--start {
@@ -624,6 +628,18 @@
     display: grid;
     gap: 0.5rem;
     min-width: 0;
+}
+
+.community-detail,
+.community-hero-actions,
+.community-item-head {
+    min-width: 0;
+}
+
+.community-actions .btn,
+.community-inline-form .btn,
+.community-hero-actions .btn {
+    max-width: 100%;
 }
 
 .community-block--tight {
@@ -831,6 +847,10 @@
         gap: 0.85rem;
     }
 
+    .community-hero {
+        padding-top: 1rem;
+    }
+
     .community-hero--split {
         flex-direction: column;
         align-items: start;
@@ -865,6 +885,11 @@
         gap: 0.82rem;
     }
 
+    .community-actions,
+    .community-inline-form {
+        gap: 0.45rem;
+    }
+
     .community-guild-row,
     #guild-list .community-guild-row--list,
     .community-member-main {
@@ -892,9 +917,12 @@
 
     .community-inline-form .btn,
     .community-actions--wrap .btn,
-    .community-form-compact .btn {
+    .community-form-compact .btn,
+    .community-actions .btn,
+    .community-hero-actions .btn {
         width: 100%;
         justify-content: center;
+        min-height: 42px;
     }
 
     .community-selection-bar,
@@ -920,6 +948,14 @@
         align-items: flex-start;
         flex-wrap: wrap;
     }
+
+    .community-row-meta,
+    .community-guild-list-meta,
+    .community-item-meta,
+    .community-item-copy,
+    .community-note {
+        overflow-wrap: anywhere;
+    }
 }
 
 @media (max-width: 640px) {
@@ -938,6 +974,10 @@
 
     .community-card {
         padding: 0.85rem;
+    }
+
+    .community-file-field .form-input[type='file'] {
+        font-size: 0.9rem;
     }
 
     .community-card-head p,
