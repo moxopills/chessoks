@@ -50,6 +50,8 @@
     const forceDeleteBtn = document.getElementById('force-delete-btn');
 
     let selectedUser = null;
+    let opsPoller = null;
+    let lastOpsSignature = '';
 
     init();
 
@@ -58,10 +60,10 @@
         await loadUsers();
         await loadReports();
         await loadAiSettings();
-        await loadOpsReport();
         setupActions();
         setupMobileTabs();
-        window.setInterval(loadOpsReport, 30000);
+        await loadOpsReport({ force: true, showLoading: true });
+        startOpsPolling();
     }
 
     async function loadStats() {
@@ -356,7 +358,7 @@
         });
 
         opsRefreshBtn?.addEventListener('click', async () => {
-            await loadOpsReport();
+            await loadOpsReport({ force: true, showLoading: true });
             Toast.success('운영 리포트를 새로고침했습니다.');
         });
     }
@@ -426,21 +428,35 @@
                 tab.classList.add('active');
                 document.body.classList.remove('admin-tab-users', 'admin-tab-reports', 'admin-tab-ops');
                 document.body.classList.add(`admin-tab-${target || 'users'}`);
+                if ((target || 'users') === 'ops') {
+                    opsPoller?.trigger?.();
+                }
             });
         });
     }
 
-    async function loadOpsReport() {
+    async function loadOpsReport(options = {}) {
+        const { force = false, showLoading = false } = options;
         if (!opsOverallStatus || !opsComponentGrid || !opsMetricGrid) return;
 
-        opsOverallStatus.textContent = '로딩 중';
-        opsOverallStatus.className = 'ops-status-badge is-loading';
+        if (showLoading) {
+            opsOverallStatus.textContent = '로딩 중';
+            opsOverallStatus.className = 'ops-status-badge is-loading';
+        }
 
         try {
             const data = await API.get('/admin/ops/');
+            const nextSignature = JSON.stringify({
+                status: data.status || 'unknown',
+                components: data.components || {},
+                metrics: data.metrics || {},
+            });
             renderOpsSummary(data);
-            renderOpsComponents(data.components || {});
-            renderOpsMetrics(data.metrics || {});
+            if (force || nextSignature !== lastOpsSignature) {
+                renderOpsComponents(data.components || {});
+                renderOpsMetrics(data.metrics || {});
+                lastOpsSignature = nextSignature;
+            }
         } catch (error) {
             opsOverallStatus.textContent = '오류';
             opsOverallStatus.className = 'ops-status-badge is-error';
@@ -448,6 +464,25 @@
             opsComponentGrid.innerHTML = '<div class="admin-section-note">운영 상태를 불러오지 못했습니다.</div>';
             opsMetricGrid.innerHTML = '<div class="admin-section-note">운영 메트릭을 불러오지 못했습니다.</div>';
         }
+    }
+
+    function isOpsPanelVisible() {
+        const isMobile = window.innerWidth <= 768 && adminTabs.length > 0;
+        if (!isMobile) return true;
+        return document.body.classList.contains('admin-tab-ops');
+    }
+
+    function startOpsPolling() {
+        if (!opsOverallStatus || !window.Utils?.createAdaptivePoller) return;
+        opsPoller?.stop?.();
+        opsPoller = Utils.createAdaptivePoller({
+            callback: () => loadOpsReport(),
+            activeInterval: 30000,
+            hiddenInterval: 90000,
+            enabled: () => isOpsPanelVisible(),
+            immediate: false,
+        });
+        opsPoller.start();
     }
 
     function renderOpsSummary(data) {
@@ -558,4 +593,19 @@
         };
         return labels[value] || value.replace(/_/g, ' ');
     }
+
+    window.addEventListener('beforeunload', () => {
+        opsPoller?.stop?.();
+        opsPoller = null;
+    });
+    window.addEventListener('focus', () => {
+        if (!document.hidden && isOpsPanelVisible()) {
+            opsPoller?.trigger?.();
+        }
+    });
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && isOpsPanelVisible()) {
+            opsPoller?.trigger?.();
+        }
+    });
 })();
