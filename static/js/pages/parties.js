@@ -1,4 +1,5 @@
 (function () {
+    const patchList = window.DomPatchList?.patchList;
     let me = null;
     let selectedPartyId = null;
     let selectedParty = null;
@@ -274,23 +275,36 @@
             party.leader?.id || '',
         ].join(':')).join('|')}`;
         if (nextSignature === lastPartyListSignature) return;
-        partyListEl.innerHTML = '';
         if (!items.length) {
             partyListEl.innerHTML = '<div class="community-empty">활성 파티가 없습니다.</div>';
             lastPartyListSignature = 'empty';
             return;
         }
-        items.forEach((party) => {
-            const item = document.createElement('button');
-            item.type = 'button';
-            item.className = `community-item${party.id === selectedPartyId ? ' is-active' : ''}`;
-            item.innerHTML = `
-                <span class="community-item-title">${Utils.escapeHtml(party.title)}</span>
-                <span class="community-item-meta">${Utils.escapeHtml(party.status)} · 파티장 ${Utils.escapeHtml(party.leader.nickname)}</span>
-                <span class="community-item-copy">${Utils.escapeHtml(party.description || '파티 설명이 아직 없습니다.')}</span>
-            `;
-            item.addEventListener('click', () => loadPartyDetail(party.id));
-            partyListEl.appendChild(item);
+        patchList?.({
+            container: partyListEl,
+            items,
+            getKey: (party) => party.id,
+            getSignature: (party) => [
+                party.id,
+                party.title || '',
+                party.status || '',
+                party.description || '',
+                party.leader?.id || '',
+                party.leader?.nickname || '',
+                party.id === selectedPartyId ? 1 : 0,
+            ].join(':'),
+            renderItem: (party) => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = `community-item${party.id === selectedPartyId ? ' is-active' : ''}`;
+                item.innerHTML = `
+                    <span class="community-item-title">${Utils.escapeHtml(party.title)}</span>
+                    <span class="community-item-meta">${Utils.escapeHtml(party.status)} · 파티장 ${Utils.escapeHtml(party.leader.nickname)}</span>
+                    <span class="community-item-copy">${Utils.escapeHtml(party.description || '파티 설명이 아직 없습니다.')}</span>
+                `;
+                item.addEventListener('click', () => loadPartyDetail(party.id));
+                return item;
+            },
         });
         lastPartyListSignature = nextSignature;
     }
@@ -390,21 +404,26 @@
     function renderChat(items) {
         const nextSignature = items.map((message) => [message.id, message.created_at || '', message.content || ''].join(':')).join('|');
         if (nextSignature === lastPartyChatSignature) return;
-        partyChatLogEl.innerHTML = '';
         if (!items.length) {
             partyChatLogEl.innerHTML = '<div class="community-empty">아직 채팅이 없습니다.</div>';
             lastPartyChatSignature = 'empty';
             return;
         }
-        items.slice().reverse().forEach((message) => {
-            const item = document.createElement('div');
-            item.className = 'community-chat-message';
-            item.innerHTML = `
-                <span class="community-chat-user">${Utils.escapeHtml(message.user.nickname)}</span>
-                <span class="community-chat-body">${Utils.escapeHtml(message.content)}</span>
-                <span class="community-chat-time">${Utils.formatDateTime ? Utils.formatDateTime(message.created_at) : message.created_at}</span>
-            `;
-            partyChatLogEl.appendChild(item);
+        patchList?.({
+            container: partyChatLogEl,
+            items: items.slice().reverse(),
+            getKey: (message) => message.id,
+            getSignature: (message) => [message.id, message.created_at || '', message.content || '', message.user?.nickname || ''].join(':'),
+            renderItem: (message) => {
+                const item = document.createElement('div');
+                item.className = 'community-chat-message';
+                item.innerHTML = `
+                    <span class="community-chat-user">${Utils.escapeHtml(message.user.nickname)}</span>
+                    <span class="community-chat-body">${Utils.escapeHtml(message.content)}</span>
+                    <span class="community-chat-time">${Utils.formatDateTime ? Utils.formatDateTime(message.created_at) : message.created_at}</span>
+                `;
+                return item;
+            },
         });
         lastPartyChatSignature = nextSignature;
     }
@@ -413,24 +432,29 @@
         if (!partyInviteListEl) return;
         const nextSignature = items.map((invite) => [invite.id, invite.party_id || '', invite.from_user?.id || ''].join(':')).join('|');
         if (nextSignature === lastPartyInvitesSignature) return;
-        partyInviteListEl.innerHTML = '';
         if (!items.length) {
             partyInviteListEl.innerHTML = '<div class="community-empty">대기 중인 파티 초대가 없습니다.</div>';
             lastPartyInvitesSignature = 'empty';
             return;
         }
-        items.forEach((invite) => {
-            const item = document.createElement('div');
-            item.className = 'community-item';
-            item.innerHTML = `
-                <span class="community-item-title">${Utils.escapeHtml(invite.party_title || `파티 #${invite.party_id || invite.id}`)}</span>
-                <span class="community-item-meta">초대한 사람 ${Utils.escapeHtml(invite.from_user.nickname)}</span>
-                <div class="community-actions">
-                    <button class="btn btn-secondary btn-sm" data-action="accept" data-id="${invite.id}" type="button">수락</button>
-                    <button class="btn btn-danger btn-sm" data-action="decline" data-id="${invite.id}" type="button">거절</button>
-                </div>
-            `;
-            partyInviteListEl.appendChild(item);
+        patchList?.({
+            container: partyInviteListEl,
+            items,
+            getKey: (invite) => invite.id,
+            getSignature: (invite) => [invite.id, invite.party_id || '', invite.party_title || '', invite.from_user?.id || '', invite.from_user?.nickname || ''].join(':'),
+            renderItem: (invite) => {
+                const item = document.createElement('div');
+                item.className = 'community-item';
+                item.innerHTML = `
+                    <span class="community-item-title">${Utils.escapeHtml(invite.party_title || `파티 #${invite.party_id || invite.id}`)}</span>
+                    <span class="community-item-meta">초대한 사람 ${Utils.escapeHtml(invite.from_user.nickname)}</span>
+                    <div class="community-actions">
+                        <button class="btn btn-secondary btn-sm" data-action="accept" data-id="${invite.id}" type="button">수락</button>
+                        <button class="btn btn-danger btn-sm" data-action="decline" data-id="${invite.id}" type="button">거절</button>
+                    </div>
+                `;
+                return item;
+            },
         });
         partyInviteListEl.querySelectorAll('button[data-action]').forEach((button) => {
             button.addEventListener('click', async () => {
@@ -466,7 +490,7 @@
 
     async function loadParties() {
         if (!partyListEl) return;
-        const data = await API.get('/community/parties/');
+        const data = await API.get('/community/parties/', { no_count: 1 });
         const items = data.results || [];
         renderPartyList(items);
         if (selectedPartyId && !items.some((party) => party.id === selectedPartyId)) {
@@ -501,7 +525,7 @@
         const party = await API.get(`/community/parties/${partyId}/`);
         renderPartyDetail(party);
         if (partyListEl) {
-            const parties = await API.get('/community/parties/');
+            const parties = await API.get('/community/parties/', { no_count: 1 });
             renderPartyList(parties.results || []);
         }
         const isMember = Boolean((party.members || []).some((member) => member.user.id === me?.id));

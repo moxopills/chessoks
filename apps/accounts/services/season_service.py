@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import calendar
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
@@ -14,9 +13,10 @@ from rest_framework.exceptions import ValidationError
 
 from apps.accounts.models import Season, SeasonReward, SeasonStat, UserSeasonReward, UserStats
 from apps.accounts.services.achievement_service import AchievementService
+from apps.accounts.services.season_lifecycle_mixin import SeasonLifecycleMixin
+from apps.accounts.services.season_reward_mixin import SeasonRewardMixin
 from apps.accounts.services.season_stat_service import SeasonStatService
 from apps.accounts.services.user_stats_service import UserStatsService
-from apps.chess.models import Game
 from apps.chess.services.rating_service import RatingService
 from apps.notifications.services import NotificationService
 
@@ -31,7 +31,7 @@ class SeasonPage:
     results: list[dict]
 
 
-class SeasonService:
+class SeasonService(SeasonLifecycleMixin, SeasonRewardMixin):
     """시즌 래더 서비스."""
 
     BASE_RATING = 1200
@@ -65,193 +65,6 @@ class SeasonService:
         (31, 60, SeasonReward.TYPE_POINTS, "400"),
         (61, 100, SeasonReward.TYPE_POINTS, "200"),
     )
-
-    @staticmethod
-    def _month_range(today: date) -> tuple[date, date]:
-        _, last_day = calendar.monthrange(today.year, today.month)
-        return date(today.year, today.month, 1), date(today.year, today.month, last_day)
-
-    @staticmethod
-    def _season_name(target: date) -> str:
-        return f"{target.year}년 {target.month:02d}월 시즌"
-
-    @classmethod
-    def get_cache_version(cls) -> int:
-        current = cache.get(cls.CACHE_VERSION_KEY)
-        if current is None:
-            cache.set(cls.CACHE_VERSION_KEY, 1, None)
-            return 1
-        return int(current)
-
-    @classmethod
-    def invalidate_leaderboard_cache(cls) -> None:
-        try:
-            cache.incr(cls.CACHE_VERSION_KEY)
-        except ValueError:
-            cache.set(cls.CACHE_VERSION_KEY, 1, None)
-
-    @classmethod
-    def _finalize_ended_seasons_locked(cls, today: date) -> int:
-        ended = (
-            Season.objects.select_for_update()
-            .filter(is_active=True, is_finalized=False, end_date__lt=today)
-            .order_by("start_date")
-        )
-        finalized_count = 0
-        for season in ended:
-            finalized_count += cls.finalize_season(season)
-        return finalized_count
-
-    @classmethod
-    def _get_or_create_current_season_locked(cls, today: date) -> Season:
-        today = today or timezone.localdate()
-        active_list = list(
-            Season.objects.select_for_update()
-            .filter(is_active=True, start_date__lte=today, end_date__gte=today)
-            .order_by("id")
-        )
-        active = active_list[0] if active_list else None
-        if len(active_list) > 1:
-            Season.objects.filter(id__in=[item.id for item in active_list[1:]]).update(
-                is_active=False
-            )
-        if active:
-            if not active.rewards.exists():
-                cls._ensure_default_rewards(active)
-            return active
-
-        start_date, end_date = cls._month_range(today)
-        season, created = Season.objects.select_for_update().get_or_create(
-            start_date=start_date,
-            defaults={
-                "name": cls._season_name(start_date),
-                "end_date": end_date,
-                "is_active": True,
-                "is_finalized": False,
-            },
-        )
-        if created:
-            cls._ensure_default_rewards(season)
-        elif not season.is_active:
-            Season.objects.filter(is_active=True).update(is_active=False)
-            season.is_active = True
-            season.is_finalized = False
-            season.save(update_fields=["is_active", "is_finalized"])
-            if not season.rewards.exists():
-                cls._ensure_default_rewards(season)
-        return season
-
-    @classmethod
-    @transaction.atomic
-    def get_or_create_current_season(cls, today: date | None = None) -> Season:
-        today = today or timezone.localdate()
-        cls._finalize_ended_seasons_locked(today)
-        return cls._get_or_create_current_season_locked(today)
-
-    @classmethod
-    def _ensure_default_rewards(cls, season: Season) -> None:
-        if season.rewards.exists():
-            return
-        SeasonReward.objects.bulk_create(
-            [
-                SeasonReward(
-                    season=season,
-                    rank_min=rank_min,
-                    rank_max=rank_max,
-                    reward_type=reward_type,
-                    reward_value=value,
-                )
-                for rank_min, rank_max, reward_type, value in cls.DEFAULT_REWARDS
-            ]
-        )
-
-    @staticmethod
-    def _resolve_reward_value(season: Season, reward: SeasonReward) -> str:
-        value = reward.reward_value or ""
-        if "{season}" in value:
-            return value.replace("{season}", season.name)
-        return value
-
-    @classmethod
-    def get_reward_raw_value(cls, *, season: Season, reward: SeasonReward) -> str:
-        return cls._resolve_reward_value(season, reward)
-
-    @staticmethod
-    def _append_unique(items: list[str], value: str) -> list[str]:
-        if not value:
-            return items
-        if value in items:
-            return items
-        return [*items, value]
-
-    @classmethod
-    def _apply_reward_to_stats(
-        cls,
-        *,
-        season: Season,
-        stats: UserStats,
-        reward: SeasonReward,
-    ) -> str | None:
-        value = cls._resolve_reward_value(season, reward)
-        if reward.reward_type == SeasonReward.TYPE_POINTS:
-            try:
-                points = int(value)
-            except (TypeError, ValueError):
-                return None
-            if points <= 0:
-                return None
-            stats.style_points += points
-            return f"포인트 +{points}"
-
-        if reward.reward_type == SeasonReward.TYPE_TITLE:
-            titles = list(stats.owned_season_titles or [])
-            stats.owned_season_titles = cls._append_unique(titles, value)
-            stats.season_title = value
-            return f"칭호 {value}"
-
-        if reward.reward_type == SeasonReward.TYPE_BORDER:
-            frames = list(stats.owned_profile_card_frames or [])
-            stats.owned_profile_card_frames = cls._append_unique(frames, value)
-            stats.profile_card_frame = value
-            return f"프레임 {value}"
-
-        return None
-
-    @classmethod
-    def get_reward_display_value(cls, *, season: Season, reward: SeasonReward) -> str:
-        value = cls._resolve_reward_value(season, reward)
-        if reward.reward_type == SeasonReward.TYPE_POINTS:
-            try:
-                return f"{int(value):,}P"
-            except (TypeError, ValueError):
-                return str(value)
-        if reward.reward_type == SeasonReward.TYPE_BORDER:
-            return cls.FRAME_LABELS.get(value, value)
-        return value
-
-    @classmethod
-    def get_reward_summary_payload(cls, *, season: Season, reward: SeasonReward) -> dict:
-        return {
-            "id": reward.id,
-            "rank_min": reward.rank_min,
-            "rank_max": reward.rank_max,
-            "reward_type": reward.reward_type,
-            "reward_type_label": reward.get_reward_type_display(),
-            "reward_value": cls.get_reward_display_value(season=season, reward=reward),
-            "reward_key": cls._resolve_reward_value(season, reward),
-        }
-
-    @classmethod
-    def _result_tuple(cls, game_result: str) -> tuple[str, str, float, float]:
-        if game_result in [Game.Status.WHITE_WIN, Game.Status.CHECKMATE_WHITE]:
-            return "win", "loss", 1.0, 0.0
-        if game_result in [Game.Status.BLACK_WIN, Game.Status.CHECKMATE_BLACK]:
-            return "loss", "win", 0.0, 1.0
-        if game_result in [Game.Status.TIMEOUT_BLACK, Game.Status.RESIGNATION_BLACK]:
-            return "win", "loss", 1.0, 0.0
-        if game_result in [Game.Status.TIMEOUT_WHITE, Game.Status.RESIGNATION_WHITE]:
-            return "loss", "win", 0.0, 1.0
-        return "draw", "draw", 0.5, 0.5
 
     @classmethod
     @transaction.atomic
@@ -309,7 +122,6 @@ class SeasonService:
 
     @classmethod
     def _cache_ttl(cls, *, page: int, page_size: int, no_count: bool) -> int:
-        # 첫 페이지는 갱신을 빠르게, 나머지 페이지는 캐시를 길게 유지
         if no_count:
             return 20 if page == 1 else 90
         return 15 if page == 1 and page_size <= 20 else 60

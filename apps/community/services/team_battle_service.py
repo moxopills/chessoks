@@ -1,5 +1,5 @@
 from django.db import models, transaction
-from django.db.models import Prefetch
+from django.db.models import Count, Max, Prefetch, Q
 from django.utils import timezone
 
 from rest_framework.exceptions import ValidationError
@@ -284,11 +284,15 @@ class TeamBattleService:
             match.save(update_fields=["status", "winner_side", "ended_at"])
             TeamBattleService._restore_party_statuses(match)
             return
-        if TeamBattleRound.objects.filter(match=match, status=TeamBattleRound.Status.LIVE).exists():
+        round_stats = TeamBattleRound.objects.filter(match=match).aggregate(
+            live_count=Count("id", filter=Q(status=TeamBattleRound.Status.LIVE)),
+            max_round_number=Max("round_number"),
+        )
+        if round_stats["live_count"]:
             return
         round_obj = TeamBattleRound.objects.create(
             match=match,
-            round_number=TeamBattleRound.objects.filter(match=match).count() + 1,
+            round_number=(round_stats["max_round_number"] or 0) + 1,
             host_participant=next_host,
             guest_participant=next_guest,
             status=TeamBattleRound.Status.LIVE,
@@ -298,16 +302,15 @@ class TeamBattleService:
 
     @staticmethod
     def _refresh_remaining(match: TeamBattleMatch) -> None:
-        match.host_remaining = TeamBattleParticipant.objects.filter(
+        remaining = TeamBattleParticipant.objects.filter(
             match=match,
-            side=TeamBattleParticipant.Side.HOST,
             is_eliminated=False,
-        ).count()
-        match.guest_remaining = TeamBattleParticipant.objects.filter(
-            match=match,
-            side=TeamBattleParticipant.Side.GUEST,
-            is_eliminated=False,
-        ).count()
+        ).aggregate(
+            host_remaining=Count("id", filter=Q(side=TeamBattleParticipant.Side.HOST)),
+            guest_remaining=Count("id", filter=Q(side=TeamBattleParticipant.Side.GUEST)),
+        )
+        match.host_remaining = remaining["host_remaining"] or 0
+        match.guest_remaining = remaining["guest_remaining"] or 0
         match.save(update_fields=["host_remaining", "guest_remaining"])
 
     @staticmethod

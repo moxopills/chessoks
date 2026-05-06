@@ -56,13 +56,15 @@
     init();
 
     async function init() {
-        await loadStats();
-        await loadUsers();
-        await loadReports();
-        await loadAiSettings();
         setupActions();
         setupMobileTabs();
-        await loadOpsReport({ force: true, showLoading: true });
+        await Promise.allSettled([
+            loadStats(),
+            loadUsers(),
+            loadReports(),
+            loadAiSettings(),
+            loadOpsReport({ force: true, showLoading: true }),
+        ]);
         startOpsPolling();
     }
 

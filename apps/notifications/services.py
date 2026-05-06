@@ -73,6 +73,8 @@ class NotificationService:
 
     @staticmethod
     def count_unread(user) -> int:
+        # unread count는 외부 raw update(QuerySet.update)에도 즉시 맞아야 해서
+        # list cache와 달리 매 요청 시 실제 값을 계산한다.
         return Notification.objects.filter(user=user, is_read=False).count()
 
     @staticmethod

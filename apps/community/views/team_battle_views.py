@@ -9,6 +9,7 @@ from apps.community.serializers import (
     TeamBattleRoundResultSerializer,
 )
 from apps.community.services import TeamBattleService
+from apps.core.request import parse_bool_query
 
 
 class TeamBattleListCreateView(APIView):
@@ -16,10 +17,12 @@ class TeamBattleListCreateView(APIView):
 
     def get(self, request):
         matches = TeamBattleService.list_matches()
+        no_count = parse_bool_query(request.query_params.get("no_count"))
+        results = TeamBattleMatchDetailSerializer(matches, many=True).data
         return Response(
             {
-                "count": matches.count(),
-                "results": TeamBattleMatchDetailSerializer(matches, many=True).data,
+                "count": len(results) if no_count else matches.count(),
+                "results": results,
             }
         )
 

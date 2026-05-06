@@ -7,6 +7,7 @@ from apps.community.serializers import (
     TournamentSerializer,
 )
 from apps.community.services import TournamentService
+from apps.core.request import parse_bool_query
 
 
 class TournamentListCreateView(APIView):
@@ -15,14 +16,16 @@ class TournamentListCreateView(APIView):
 
     def get(self, request):
         tournaments = TournamentService.list_tournaments(request.user)
+        no_count = parse_bool_query(request.query_params.get("no_count"))
+        results = TournamentSerializer(
+            tournaments,
+            many=True,
+            context={"request": request},
+        ).data
         return Response(
             {
-                "count": tournaments.count(),
-                "results": TournamentSerializer(
-                    tournaments,
-                    many=True,
-                    context={"request": request},
-                ).data,
+                "count": len(results) if no_count else tournaments.count(),
+                "results": results,
             }
         )
 

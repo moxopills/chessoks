@@ -29,7 +29,9 @@
     });
     const boardUI = window.GameBoardUI;
     const socketClient = window.GameSocketClient;
+    const socketHandlers = window.GameSocketHandlers;
     const statusUI = window.GameStatusUI;
+    const overlayUI = window.GameOverlayUI;
 
     // DOM Elements
     const chessBoard = document.getElementById('chess-board');
@@ -197,7 +199,12 @@
 
         guideEnabled = Utils.Storage.get('guide_enabled', true);
         setupGuideToggle();
-        mountReplayDock();
+        overlayUI?.mountReplayDock({
+            replayDock,
+            sidePanel,
+            spectatorSection,
+            chatSection,
+        });
 
         const savedMoveConfirm = localStorage.getItem('move_confirm_enabled');
         if (savedMoveConfirm === null) {
@@ -256,13 +263,6 @@
             currentUser = null;
         }
         return currentUser;
-    }
-
-    function mountReplayDock() {
-        if (!replayDock || !sidePanel || !capturedWhite) return;
-        if (replayDock.parentElement === sidePanel) return;
-        const anchor = spectatorSection || chatSection || null;
-        sidePanel.insertBefore(replayDock, anchor);
     }
 
     function clearReconnectTimer() {
@@ -1498,36 +1498,20 @@
      * 프로모션 모달 표시
      */
     function showPromotionModal() {
-        promotionModal.classList.remove('hidden');
-
-        document.querySelectorAll('.promotion-piece').forEach(btn => {
-            const piece = btn.dataset.piece;
-            const pieceChar = myColor === 'white' ? piece.toUpperCase() : piece.toLowerCase();
-            btn.innerHTML = getPieceSvgMarkup(pieceChar);
-            btn.classList.remove(
-                'piece-type-p',
-                'piece-type-r',
-                'piece-type-n',
-                'piece-type-b',
-                'piece-type-q',
-                'piece-type-k',
-                'white',
-                'black',
-            );
-            btn.classList.add(getPieceTypeClass(pieceChar));
-            btn.classList.add(myColor === 'white' ? 'white' : 'black');
-            
-            btn.onclick = () => {
-                const uci = pendingPromotion.from + pendingPromotion.to;
-                if (moveConfirmEnabled) {
-                    pendingConfirmedMove = { uci, promotion: piece };
-                    document.getElementById('move-confirm-overlay')?.classList.remove('hidden');
-                } else {
-                    sendMove(uci, piece);
-                }
-                promotionModal.classList.add('hidden');
+        overlayUI?.showPromotionModal({
+            promotionModal,
+            pendingPromotion,
+            myColor,
+            moveConfirmEnabled,
+            getPieceSvgMarkup,
+            getPieceTypeClass,
+            onPendingConfirmedMove: (move) => {
+                pendingConfirmedMove = move;
+            },
+            onSendMove: sendMove,
+            onPromotionResolved: () => {
                 pendingPromotion = null;
-            };
+            },
         });
     }
 
@@ -1638,128 +1622,37 @@
      * WebSocket 메시지 처리
      */
     async function handleSocketMessage(data) {
-        switch (data.type) {
-            case 'move':
-                if (data.last_move && !replayActive) {
-                    await animateIncomingMove(data.last_move);
-                }
-                // 게임 상태 업데이트
-                game.fen = data.fen;
-                if (data.pgn_append) {
-                    game.pgn = appendPgnMove(game.pgn, data.pgn_append);
-                } else if (typeof data.pgn === 'string') {
-                    game.pgn = data.pgn;
-                }
-                game.current_turn = data.current_turn;
-                game.result = data.result;
-                game.white_time_remaining = data.white_time_remaining;
-                game.black_time_remaining = data.black_time_remaining;
-                game.turn_started_at = data.turn_started_at;
-                if (data.last_move) {
-                    Utils?.Sounds?.move?.();
-                }
-                window.GameMovesCache?.invalidate(game.id);
-                if (data.last_move) {
-                    lastMove = data.last_move;
-                    if (data.last_move.is_check && data.result === 'playing') {
-                        if (myColor && myColor === data.current_turn) {
-                            showStatusModal('체크입니다. 왕을 보호하세요.');
-                            showGuideMessage('체크 상태입니다. 왕을 지키는 수만 가능합니다.', 'warning');
-                        }
-                    }
-                    if (data.last_move.is_checkmate) {
-                        showStatusModal('체크메이트입니다.');
-                    }
-                }
-
-                renderBoard({ animatePieceChanges: false });
-                renderMoveList();
-                updateCapturedFromMove(data);
-                renderCapturedPieces();
-                updateTurn();
-                clearSelection();
-
-                if (data.last_move?.is_checkmate && data.result !== 'playing') {
-                    showStatusModal('체크메이트입니다!', 1200);
-                    setTimeout(() => showGameEndModal(data.result), 1200);
-                } else if (data.result !== 'playing') {
-                    showGameEndModal(data.result);
-                }
-
-                if (data.commentary && data.commentary_color === myColor) {
-                    showGuideMessage(data.commentary, data.commentary_level || 'info');
-                }
-                break;
-
-            case 'game_end':
-                game.result = data.result;
-                showGameEndModal(data.result);
-                break;
-
-            case 'draw_offer':
-                if (data.from !== myColor) {
-                    showDrawOfferModal();
-                }
-                break;
-
-            case 'draw_declined':
-                Toast.info('상대가 무승부를 거절했습니다.');
-                break;
-
-            case 'rematch_offer':
-                if (data.from !== myColor) {
-                    showRematchOfferModal();
-                }
-                break;
-
-            case 'rematch_declined':
-                Toast.info('상대가 리매치를 거절했습니다.');
-                break;
-
-            case 'rematch_created':
-                await handleRematchCreated(data);
-                break;
-
-            case 'chat':
-                addChatMessage(data);
-                break;
-
-            case 'reaction_update':
-                applyReactionUpdate(data.message_id, data.reactions || {}, data.my_reactions);
-                break;
-
-            case 'recent_messages':
-                (data.messages || []).forEach((msg) => addChatMessage(msg));
-                break;
-
-            case 'spectator_event': {
-                const nickname = data.user?.nickname || '관전자';
-                const isSelf = currentUser && data.user?.id === currentUser.id;
-                if (!isSelf) {
-                    const actionText = data.action === 'leave' ? '퇴장' : '입장';
-                    Toast.info(`${nickname}님이 관전에 ${actionText}했습니다.`);
-                    addChatNotice(`${nickname}님이 관전에 ${actionText}했습니다.`);
-                }
-                applySpectatorDelta(data.action, data.user, data.spectator_count);
-                break;
-            }
-
-            case 'room_update':
-                if (typeof data.room?.spectator_count === 'number' && spectatorCount) {
-                    spectatorCount.textContent = `${data.room.spectator_count}명`;
-                }
-                break;
-
-            case 'error':
-                Toast.error(data.message);
-                if (data.message && data.message.includes('허용되지 않는 수')) {
-                    showStatusModal('허용되지 않는 수입니다. 체크 상태라면 체크를 해제하는 수만 가능합니다.', 2000);
-                }
-                break;
-
-            case 'heartbeat_ack':
-                break;
-        }
+        await socketHandlers?.handle(data, {
+            game,
+            replayActive,
+            myColor,
+            currentUser,
+            spectatorCount,
+            animateIncomingMove,
+            appendPgnMove,
+            setLastMove: (move) => {
+                lastMove = move;
+            },
+            renderBoard,
+            renderMoveList,
+            updateCapturedFromMove,
+            renderCapturedPieces,
+            updateTurn,
+            clearSelection,
+            showStatusModal,
+            showGuideMessage,
+            showGameEndModal,
+            showDrawOfferModal,
+            showRematchOfferModal,
+            handleRematchCreated,
+            addChatMessage,
+            applyReactionUpdate,
+            addChatNotice,
+            applySpectatorDelta,
+            toastInfo: (message) => Toast.info(message),
+            toastError: (message) => Toast.error(message),
+            onMoveSound: () => Utils?.Sounds?.move?.(),
+        });
     }
 
     async function animateIncomingMove(lastMove) {
@@ -2255,21 +2148,19 @@
     }
 
     function setupStatusModal() {
-        if (!statusModalOk) return;
-        statusModalOk.addEventListener('click', () => {
-            statusModal.classList.add('hidden');
+        overlayUI?.bindStatusModal({
+            statusModal,
+            statusModalOk,
         });
     }
 
     function showStatusModal(message, autoCloseMs = null) {
-        if (!statusModal || !statusModalMessage) return;
-        statusModalMessage.textContent = message;
-        statusModal.classList.remove('hidden');
-        if (autoCloseMs) {
-            setTimeout(() => {
-                statusModal.classList.add('hidden');
-            }, autoCloseMs);
-        }
+        overlayUI?.showStatusModal({
+            statusModal,
+            statusModalMessage,
+            message,
+            autoCloseMs,
+        });
     }
 
     async function loadLastMove() {
@@ -2477,77 +2368,27 @@
      * 게임 종료 모달 표시
      */
     function showGameEndModal(result) {
-        if (timerInterval) {
-            clearInterval(timerInterval);
-        }
         pendingEnd = false;
-        gameEndModal.classList.remove('outcome-win', 'outcome-loss', 'outcome-draw');
-
-        const iconEl = document.getElementById('game-end-icon');
-        const titleEl = document.getElementById('game-end-title');
-        const resultEl = document.getElementById('game-end-result');
-
-        // 분석 UI 초기화
-        const analysisLoading = document.getElementById('analysis-loading');
-        const analysisContent = document.getElementById('analysis-content');
-        if (analysisLoading) analysisLoading.classList.remove('hidden');
-        if (analysisContent) analysisContent.classList.add('hidden');
-        if (analysisSummary) analysisSummary.textContent = '';
-
-        let icon = '🎮';
-        let title = '게임 종료';
-        let resultText = result;
-
-        // 결과에 따른 표시
-        const outcome = getOutcome(result, myColor);
-        const isWin = outcome === 'win';
-
-        if (result.includes('checkmate')) {
-            icon = isWin ? '👑' : '💀';
-            title = isWin ? '승리!' : '패배';
-            resultText = '체크메이트';
-        } else if (result.includes('resignation')) {
-            if (outcome === 'win') {
-                icon = '🏆';
-                title = '승리!';
-                resultText = '상대 기권';
-            } else if (outcome === 'loss') {
-                icon = '🏳️';
-                title = '패배';
-                resultText = '내 기권';
-            } else {
-                icon = '🏳️';
-                title = '패배';
-                resultText = '기권';
-            }
-        } else if (result.includes('timeout')) {
-            icon = isWin ? '⏰' : '⏱️';
-            title = isWin ? '승리!' : '패배';
-            resultText = '시간 초과';
-        } else if (result.includes('draw') || result === 'stalemate') {
-            icon = '🤝';
-            title = '무승부';
-            resultText = result === 'stalemate' ? '스테일메이트' : '합의 무승부';
-        }
-
-        if (outcome === 'win') {
-            gameEndModal.classList.add('outcome-win');
-        } else if (outcome === 'loss') {
-            gameEndModal.classList.add('outcome-loss');
-        } else if (outcome === 'draw') {
-            gameEndModal.classList.add('outcome-draw');
-        }
-
-        iconEl.textContent = icon;
-        titleEl.textContent = title;
-        resultEl.textContent = resultText;
-
-        loadGameSummary();
-
-        gameEndModal.classList.remove('hidden');
-        gameEndModal.style.display = 'flex';
-        updateGameStatusStrip();
-        loadGameAnalysis();
+        overlayUI?.showGameEndModal({
+            result,
+            myColor,
+            clearTimer: () => {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                }
+            },
+            gameEndModal,
+            iconEl: document.getElementById('game-end-icon'),
+            titleEl: document.getElementById('game-end-title'),
+            resultEl: document.getElementById('game-end-result'),
+            analysisLoading: document.getElementById('analysis-loading'),
+            analysisContent: document.getElementById('analysis-content'),
+            analysisSummary,
+            getOutcome,
+            onLoadSummary: loadGameSummary,
+            onLoadAnalysis: loadGameAnalysis,
+            onUpdateStatusStrip: updateGameStatusStrip,
+        });
     }
 
     async function loadGameAnalysis() {
