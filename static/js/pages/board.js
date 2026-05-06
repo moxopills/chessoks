@@ -325,7 +325,7 @@
     }
 
     async function loadPosts() {
-        const params = activeCategory ? { category: activeCategory } : {};
+        const params = activeCategory ? { category: activeCategory, no_count: 1 } : { no_count: 1 };
         if (mineOnly && currentUserId) {
             params.mine = '1';
         }

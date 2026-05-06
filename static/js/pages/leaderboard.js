@@ -40,6 +40,9 @@
     let selectedUserId = null;
     let friendIds = new Set();
     let isLoadingLeaderboard = false;
+    let lastLeaderboardSignature = '';
+    let lastPaginationSignature = '';
+    let lastMyRankSignature = '';
 
     init();
 
@@ -138,7 +141,7 @@
         currentPage = page;
         setRefreshLoading(true);
         try {
-            renderLeaderboardSkeleton();
+            renderLeaderboardSkeletonIfNeeded();
             const data = await API.get('/accounts/leaderboard/', { page, page_size: 9 });
             totalPages = data.total_pages || 1;
             renderRows(data.results || [], data.my_rank);
@@ -191,9 +194,31 @@
         `).join('');
     }
 
+    function renderLeaderboardSkeletonIfNeeded() {
+        if (lastLeaderboardSignature) return;
+        renderLeaderboardSkeleton();
+    }
+
     function renderRows(rows, myRank) {
+        const nextSignature = rows.map((row) => [
+            row.id,
+            row.rank,
+            row.rating,
+            row.games_won,
+            row.games_lost,
+            row.games_draw,
+            row.nickname || '',
+            row.rank_tier || '',
+            row.avatar_url || '',
+            row.nickname_color || '',
+            row.profile_border || '',
+        ].join(':')).join('|') + `::me:${myRank?.id || currentUserId || 0}`;
+        if (nextSignature === lastLeaderboardSignature) {
+            return;
+        }
         if (!rows.length) {
             leaderboardBody.innerHTML = '<tr><td colspan="5" class="table-empty"><span class="empty-state"><span class="empty-state-icon">🏆</span><span class="empty-state-text">표시할 랭킹이 없습니다</span></span></td></tr>';
+            lastLeaderboardSignature = 'empty';
             return;
         }
 
@@ -244,13 +269,20 @@
                 openContextMenu(event, userId);
             });
         });
-
+        lastLeaderboardSignature = nextSignature;
     }
 
     function renderPagination() {
         if (!paginationEl) return;
+        const nextSignature = `${currentPage}:${totalPages}`;
+        if (nextSignature === lastPaginationSignature) {
+            return;
+        }
         paginationEl.innerHTML = '';
-        if (totalPages <= 1) return;
+        if (totalPages <= 1) {
+            lastPaginationSignature = nextSignature;
+            return;
+        }
 
         const prevBtn = createPageButton('이전', currentPage > 1, () => loadLeaderboard(currentPage - 1));
         paginationEl.appendChild(prevBtn);
@@ -262,6 +294,7 @@
 
         const nextBtn = createPageButton('다음', currentPage < totalPages, () => loadLeaderboard(currentPage + 1));
         paginationEl.appendChild(nextBtn);
+        lastPaginationSignature = nextSignature;
     }
 
     function createPageButton(label, enabled, handler) {
@@ -275,8 +308,23 @@
 
     function renderMyRank(myRank) {
         if (!myRankBody) return;
+        const nextSignature = myRank
+            ? [
+                myRank.id,
+                myRank.rank,
+                myRank.nickname || '',
+                myRank.rating,
+                myRank.games_won,
+                myRank.games_lost,
+                myRank.games_draw,
+            ].join(':')
+            : 'guest';
+        if (nextSignature === lastMyRankSignature) {
+            return;
+        }
         if (!myRank) {
             myRankBody.textContent = '로그인 시 가능합니다.';
+            lastMyRankSignature = nextSignature;
             return;
         }
         myRankBody.innerHTML = `
@@ -284,6 +332,7 @@
             <div>${Utils.escapeHtml(myRank.nickname)} (${myRank.rating})</div>
             <div>${myRank.games_won}승 ${myRank.games_lost}패 ${myRank.games_draw}무</div>
         `;
+        lastMyRankSignature = nextSignature;
     }
 
     async function openProfileDrawer(userId) {

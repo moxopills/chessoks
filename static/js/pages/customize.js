@@ -52,6 +52,8 @@
     let skinCatalog = null;
     let statsSnapshot = null;
     const transientSelections = Object.create(null);
+    let lastPreviewProfileSignature = '';
+    let lastPreviewBoardSignature = '';
 
     const SKIN_META = {
         board: {
@@ -433,11 +435,104 @@
                 transientSelections[selectEl.id] = card.dataset.value || '';
                 window.setTimeout(() => {
                     delete transientSelections[selectEl.id];
+                    syncChoiceCardsForSelect(selectEl);
                 }, 260);
                 selectEl.value = card.dataset.value || '';
                 renderPreview();
             });
         });
+    }
+
+    function getProfileSourceForSelect(selectEl) {
+        if (selectEl === nicknameColorSelect) {
+            return statsSnapshot?.unlocked_nickname_colors || [];
+        }
+        if (selectEl === profileBorderSelect) {
+            return statsSnapshot?.unlocked_profile_borders || [];
+        }
+        if (selectEl === seasonTitleSelect) {
+            return statsSnapshot?.available_season_titles || [];
+        }
+        if (selectEl === profileCardFrameSelect) {
+            return statsSnapshot?.available_profile_card_frames || [];
+        }
+        return [];
+    }
+
+    function getNormalizerForSelect(selectEl) {
+        if (selectEl === nicknameColorSelect) return normalizeNicknameColorKey;
+        if (selectEl === profileBorderSelect) return normalizeProfileBorderKey;
+        return (value) => value;
+    }
+
+    function syncSkinChoiceCards(selectEl) {
+        const container = getSkinContainer(selectEl);
+        if (!container) return;
+        const skins = selectEl === boardSkinSelect ? (skinCatalog?.board || []) : (skinCatalog?.pieces || []);
+        const selectedId = String(selectEl.value || '');
+        const justSelectedValue = transientSelections[selectEl.id];
+
+        container.querySelectorAll('[data-target]').forEach((card) => {
+            const value = String(card.dataset.value || '');
+            const skin = skins.find((item) => String(item.id) === value);
+            const selected = value === selectedId;
+            const justSelected = justSelectedValue === value;
+            card.classList.toggle('is-selected', selected);
+            card.classList.toggle('is-just-selected', justSelected);
+
+            const stateEl = card.querySelector('.customize-choice-state');
+            if (stateEl && skin) {
+                stateEl.textContent = skin.selected
+                    ? '착용중'
+                    : (skin.owned || skin.is_default ? (skin.is_default ? '기본 제공' : '보유중') : `${skin.price}P`);
+            }
+        });
+    }
+
+    function syncProfileChoiceCards(selectEl) {
+        const container = getProfileContainer(selectEl);
+        if (!container) return;
+        const options = getProfileSourceForSelect(selectEl);
+        const selectedValue = String(selectEl.value || '');
+        const normalize = getNormalizerForSelect(selectEl);
+        const normalizedSelected = normalize(selectedValue);
+        const justSelectedValue = transientSelections[selectEl.id];
+
+        container.querySelectorAll('[data-target]').forEach((card) => {
+            const value = String(card.dataset.value || '');
+            const option = findProfileOption(options, value, normalize);
+            const selected = normalize(value) === normalizedSelected;
+            const justSelected = justSelectedValue === value;
+            card.classList.toggle('is-selected', selected);
+            card.classList.toggle('is-just-selected', justSelected);
+
+            const stateEl = card.querySelector('.customize-choice-state');
+            if (stateEl && option) {
+                stateEl.textContent = selected
+                    ? '착용중'
+                    : (option.owned || option.cost === 0 ? (option.cost === 0 ? '기본 제공' : '보유중') : `${option.cost}P`);
+            }
+        });
+    }
+
+    function syncChoiceCardsForSelect(selectEl) {
+        if (!selectEl) return;
+        if (selectEl === boardSkinSelect || selectEl === pieceSkinSelect) {
+            syncSkinChoiceCards(selectEl);
+            return;
+        }
+        syncProfileChoiceCards(selectEl);
+    }
+
+    function syncAllChoiceCards() {
+        [
+            boardSkinSelect,
+            pieceSkinSelect,
+            nicknameColorSelect,
+            profileBorderSelect,
+            seasonTitleSelect,
+            profileCardFrameSelect,
+        ].forEach(syncChoiceCardsForSelect);
     }
 
     function findProfileOption(options, selectedKey, normalizer = (value) => value) {
@@ -599,27 +694,38 @@
         const ring = Utils.getProfileBorderValue(profileBorderSelect?.value || '');
         const seasonTitle = seasonTitleSelect?.value || '';
         const profileCardFrame = profileCardFrameSelect?.value || '';
+        const profileSignature = [
+            nickname,
+            avatarUrl,
+            color,
+            ring,
+            seasonTitle,
+            profileCardFrame,
+        ].join('|');
 
-        previewNickname.textContent = nickname;
-        previewNickname.style.color = color;
-        previewAvatar.style.boxShadow = ring;
-        if (previewSeasonTitle) {
-            previewSeasonTitle.textContent = seasonTitle || '시즌 칭호 없음';
-            previewSeasonTitle.classList.toggle('is-empty', !seasonTitle);
-        }
-        if (previewCardShell) {
-            PROFILE_CARD_FRAME_CLASSES.forEach((className) => previewCardShell.classList.remove(className));
-            const frameClass = Utils.getProfileCardFrameClass(profileCardFrame);
-            if (frameClass) {
-                previewCardShell.classList.add(frameClass);
+        if (profileSignature !== lastPreviewProfileSignature) {
+            previewNickname.textContent = nickname;
+            previewNickname.style.color = color;
+            previewAvatar.style.boxShadow = ring;
+            if (previewSeasonTitle) {
+                previewSeasonTitle.textContent = seasonTitle || '시즌 칭호 없음';
+                previewSeasonTitle.classList.toggle('is-empty', !seasonTitle);
             }
+            if (previewCardShell) {
+                PROFILE_CARD_FRAME_CLASSES.forEach((className) => previewCardShell.classList.remove(className));
+                const frameClass = Utils.getProfileCardFrameClass(profileCardFrame);
+                if (frameClass) {
+                    previewCardShell.classList.add(frameClass);
+                }
+            }
+            Utils.setAvatar(previewAvatar, {
+                url: avatarUrl,
+                alt: nickname,
+                placeholder: '👤',
+                placeholderClass: 'customize-avatar-placeholder',
+            });
+            lastPreviewProfileSignature = profileSignature;
         }
-        Utils.setAvatar(previewAvatar, {
-            url: avatarUrl,
-            alt: nickname,
-            placeholder: '👤',
-            placeholderClass: 'customize-avatar-placeholder',
-        });
 
         const boardSkinId = parseInt(boardSkinSelect?.value || '0', 10);
         const pieceSkinId = parseInt(pieceSkinSelect?.value || '0', 10);
@@ -639,22 +745,21 @@
             profileBorderSelect?.value || '',
             normalizeProfileBorderKey
         );
-        renderSkinCards(boardSkinSelect, skinCatalog?.board || []);
-        renderSkinCards(pieceSkinSelect, skinCatalog?.pieces || []);
-        renderProfileCards(nicknameColorSelect, nicknameOptions);
-        renderProfileCards(profileBorderSelect, borderOptions);
-        renderProfileCards(seasonTitleSelect, titleOptionsList);
-        renderProfileCards(profileCardFrameSelect, frameOptionsList);
+        syncAllChoiceCards();
         const boardClass = getSkinCssClassById(skinCatalog?.board || [], boardSkinId, 'skin-board-classic');
         const pieceClass = getSkinCssClassById(skinCatalog?.pieces || [], pieceSkinId, 'skin-piece-classic');
-        previewBoard.className = `customize-skin-preview-board ${boardClass} ${pieceClass}`;
         const boardMeta = SKIN_META.board[boardClass] || { name: boardSkin?.name || '클래식', desc: '보드 스타일' };
         const pieceMeta = SKIN_META.piece[pieceClass] || { name: pieceSkin?.name || '클래식 아케이드', desc: '기물 스타일' };
-        renderPreviewPieces(pieceClass);
-        if (previewBoardTitle) previewBoardTitle.textContent = `보드: ${boardMeta.name}`;
-        if (previewBoardDesc) previewBoardDesc.textContent = boardMeta.desc;
-        if (previewPieceTitle) previewPieceTitle.textContent = `기물: ${pieceMeta.name}`;
-        if (previewPieceDesc) previewPieceDesc.textContent = pieceMeta.desc;
+        const boardSignature = `${boardClass}|${pieceClass}`;
+        if (boardSignature !== lastPreviewBoardSignature) {
+            previewBoard.className = `customize-skin-preview-board ${boardClass} ${pieceClass}`;
+            renderPreviewPieces(pieceClass);
+            if (previewBoardTitle) previewBoardTitle.textContent = `보드: ${boardMeta.name}`;
+            if (previewBoardDesc) previewBoardDesc.textContent = boardMeta.desc;
+            if (previewPieceTitle) previewPieceTitle.textContent = `기물: ${pieceMeta.name}`;
+            if (previewPieceDesc) previewPieceDesc.textContent = pieceMeta.desc;
+            lastPreviewBoardSignature = boardSignature;
+        }
         renderComboSpotlight(boardClass, pieceClass);
         renderSelectionSummary(boardSkin, pieceSkin, nicknameOption, borderOption);
         updateActionState();

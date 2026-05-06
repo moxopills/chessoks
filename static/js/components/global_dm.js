@@ -26,7 +26,6 @@
     let hasLoadedGuildView = false;
     let hasLoadedPartyView = false;
     let lastThreadsSignature = '';
-    const SUMMARY_CACHE_TTL = 30000;
     const tabUnread = {
         direct: 0,
         guild: 0,
@@ -39,6 +38,7 @@
         party: { signature: '', ids: [] },
     };
     const dmUI = window.GlobalDMUI;
+    const channels = window.GlobalDMChannels;
     
     // DOM Elements
     const fabBtn = document.getElementById('global-dm-fab');
@@ -242,8 +242,7 @@
                 await API.post(`/accounts/messages/${currentRoomUserId}/`, { message });
                 inputEl.value = '';
                 await loadMessages(true);
-                // Also trigger thread refresh
-                loadThreads();
+                threadPoller?.trigger?.();
             } catch (error) {
                 Toast.error(error.data?.detail || error.data?.message || '메시지 전송에 실패했습니다.');
             }
@@ -292,6 +291,7 @@
         fabBtn.classList.add('is-active');
         fabBtn.classList.add('is-panel-open');
         syncLobbyTabsVisibility();
+        threadPoller?.trigger?.();
         if (currentRoomUserId) {
             showRoomView(currentRoomUserId);
         } else if (isMobileLobbyPage() && lobbyChatContainer && lobbySlot) {
@@ -432,23 +432,7 @@
     }
 
     function buildThreadsSignature(threads, unreadMap) {
-        return threads.map((thread) => {
-            const userId = thread.other_user?.id || '';
-            const unread = unreadMap[userId] || 0;
-            return [
-                userId,
-                thread.last_message_at || '',
-                thread.last_message || '',
-                unread,
-            ].join(':');
-        }).join('|');
-    }
-
-    function buildGroupPreview(messages) {
-        const latest = messages?.[0];
-        if (!latest?.content) return '';
-        const nickname = latest.user?.nickname || '알 수 없음';
-        return `최근 · ${nickname}: ${latest.content}`;
+        return channels?.buildThreadsSignature(threads, unreadMap) || '';
     }
 
     function setTabActive(type) {
@@ -546,179 +530,103 @@
     }
 
     async function loadGuildSummary(force = false) {
-        if (!currentUser) await ensureCurrentUser();
-        const now = Date.now();
-        if (!force && guildSummaryCache && now - guildSummaryLoadedAt < SUMMARY_CACHE_TTL) {
-            return guildSummaryCache;
-        }
-        const summary = await API.get('/community/guilds/me/current/').catch(() => null);
-        guildSummaryCache = summary;
-        guildSummaryLoadedAt = now;
+        const result = await channels?.loadGroupSummary({
+            ensureCurrentUser,
+            cache: guildSummaryCache,
+            loadedAt: guildSummaryLoadedAt,
+            endpoint: '/community/guilds/me/current/',
+            force,
+        });
+        guildSummaryCache = result?.summary || null;
+        guildSummaryLoadedAt = result?.loadedAt || guildSummaryLoadedAt;
         return guildSummaryCache;
     }
 
     async function loadPartySummary(force = false) {
-        if (!currentUser) await ensureCurrentUser();
-        const now = Date.now();
-        if (!force && partySummaryCache && now - partySummaryLoadedAt < SUMMARY_CACHE_TTL) {
-            return partySummaryCache;
-        }
-        const summary = await API.get('/community/parties/me/active/').catch(() => null);
-        partySummaryCache = summary;
-        partySummaryLoadedAt = now;
+        const result = await channels?.loadGroupSummary({
+            ensureCurrentUser,
+            cache: partySummaryCache,
+            loadedAt: partySummaryLoadedAt,
+            endpoint: '/community/parties/me/active/',
+            force,
+        });
+        partySummaryCache = result?.summary || null;
+        partySummaryLoadedAt = result?.loadedAt || partySummaryLoadedAt;
         return partySummaryCache;
     }
 
     // Room Logic
     async function loadTargetInfo(userId) {
-        try {
-            const data = await API.get(`/accounts/users/${userId}/profile/`);
-            const nickname = data?.nickname || data?.user?.nickname || '상대';
-            const tier = data.stats?.rank_tier ?? data.user?.stats?.rank_tier ?? '-';
-            roomTitle.textContent = nickname;
-            roomSubtitle.textContent = tier;
-        } catch {
-            // ignore
-        }
+        await channels?.loadTargetInfo({ userId, roomTitle, roomSubtitle });
     }
 
     async function loadGuildMessages(forceScroll = false, { refreshSummary = false } = {}) {
-        if (!currentUser) await ensureCurrentUser();
         const summary = await loadGuildSummary(refreshSummary || !currentGuildId);
-        if (!summary?.id) {
-            invalidateGroupChannel('guild');
-            dmUI.setChannelEmpty(
-                guildMessagesEl,
-                guildTitle,
-                guildSubtitle,
-                guildInputEl,
-                summary?.message || '가입 중인 길드가 없습니다.',
-                '길드 채팅'
-            );
-            return;
-        }
-        currentGuildId = summary.id;
-        guildTitle.textContent = summary.name || '길드 채팅';
-        guildSubtitle.textContent = `길드장 ${summary.owner?.nickname || '-'} · 멤버 ${summary.member_count || 0}명`;
-        dmUI.setChannelReady(guildInputEl, '길드 채팅 입력...');
-        const data = await API.get(`/community/guilds/${currentGuildId}/chat/`).catch((error) => {
-            if (error?.status === 403 || error?.status === 404) {
-                invalidateGroupChannel('guild');
-            }
-            return { results: [] };
-        });
-        const preview = buildGroupPreview(data.results || []);
-        if (preview) {
-            guildSubtitle.textContent = preview;
-        }
-        dmUI.syncMessageList(
+        const result = await channels?.loadGuildMessages({
+            ensureCurrentUser,
+            summary,
+            invalidate: () => invalidateGroupChannel('guild'),
+            guildTitle,
+            guildSubtitle,
+            guildInputEl,
             guildMessagesEl,
-            data.results || [],
-            (item) => dmUI.renderGroupMessageItem(item, currentUser),
+            currentUser,
             forceScroll,
-            '아직 채팅이 없습니다.',
-            messageRenderState.guild
-        );
+            messageRenderState: messageRenderState.guild,
+        });
+        currentGuildId = result?.currentGuildId || null;
     }
 
     async function loadPartyMessages(forceScroll = false, { refreshSummary = false } = {}) {
-        if (!currentUser) await ensureCurrentUser();
         const summary = await loadPartySummary(refreshSummary || !currentPartyId);
-        if (!summary?.party_id) {
-            invalidateGroupChannel('party');
-            dmUI.setChannelEmpty(
-                partyMessagesEl,
-                partyTitle,
-                partySubtitle,
-                partyInputEl,
-                summary?.message || '참가 중인 파티가 없습니다.',
-                '파티 채팅'
-            );
-            return;
-        }
-        currentPartyId = summary.party_id;
-        partyTitle.textContent = summary.title || '파티 채팅';
-        partySubtitle.textContent = `상태 ${summary.status || '-'} · ${summary.is_leader ? '파티장' : '참가자'}`;
-        dmUI.setChannelReady(partyInputEl, '파티 채팅 입력...');
-        const data = await API.get(`/community/parties/${currentPartyId}/chat/`).catch((error) => {
-            if (error?.status === 403 || error?.status === 404) {
-                invalidateGroupChannel('party');
-            }
-            return { results: [] };
-        });
-        const preview = buildGroupPreview(data.results || []);
-        if (preview) {
-            partySubtitle.textContent = preview;
-        }
-        dmUI.syncMessageList(
+        const result = await channels?.loadPartyMessages({
+            ensureCurrentUser,
+            summary,
+            invalidate: () => invalidateGroupChannel('party'),
+            partyTitle,
+            partySubtitle,
+            partyInputEl,
             partyMessagesEl,
-            data.results || [],
-            (item) => dmUI.renderGroupMessageItem(item, currentUser),
+            currentUser,
             forceScroll,
-            '아직 채팅이 없습니다.',
-            messageRenderState.party
-        );
+            messageRenderState: messageRenderState.party,
+        });
+        currentPartyId = result?.currentPartyId || null;
     }
 
     async function loadMessages(forceScroll = false) {
-        if (!currentRoomUserId) return;
-        if (!currentUser) await ensureCurrentUser();
-
-        try {
-            const data = await API.get(`/accounts/messages/${currentRoomUserId}/`, { limit: 100, offset: 0, no_count: 1 });
-            const items = data.results || [];
-            
-            if (!items.length) {
-                dmUI.setMessagesEmpty(messagesEl, messageRenderState.direct, '아직 메시지가 없습니다.');
-            } else {
-                const didRender = dmUI.syncMessageList(
-                    messagesEl,
-                    items,
-                    (item) => dmUI.renderDirectMessageItem(item, currentUser),
-                    forceScroll,
-                    '아직 메시지가 없습니다.',
-                    messageRenderState.direct
-                );
-                const orderedItems = items.slice().reverse();
-
-                if (didRender && data.count > lastMessageCount && orderedItems.length) {
-                    const lastItem = orderedItems[orderedItems.length - 1];
-                    if (lastItem.sender?.id !== currentUser?.id) {
-                        Utils?.Sounds?.chat?.();
-                        await markDirectMessageNotificationsRead(currentRoomUserId);
-                        directUnreadMap[currentRoomUserId] = 0;
-                    }
-                }
-            }
-            lastMessageCount = data.count || 0;
-        } catch (e) {
-            console.error('Failed to load messages:', e);
-            dmUI.setMessagesEmpty(messagesEl, messageRenderState.direct, '메시지를 불러오지 못했습니다.');
-        }
+        const result = await channels?.loadDirectMessages({
+            ensureCurrentUser,
+            currentRoomUserId,
+            currentUser,
+            messagesEl,
+            forceScroll,
+            messageRenderState: messageRenderState.direct,
+            lastMessageCount,
+            onNewIncomingMessage: async () => {
+                await markDirectMessageNotificationsRead(currentRoomUserId);
+                directUnreadMap[currentRoomUserId] = 0;
+            },
+        });
+        lastMessageCount = result?.lastMessageCount ?? lastMessageCount;
     }
 
 
     async function markDirectMessageNotificationsRead(userId) {
-        try {
-            const data = await API.get('/notifications/', { limit: 50, offset: 0, no_count: 1 });
-            const ids = (data.results || [])
-                .filter((item) => item.type === 'direct_message' && !item.is_read)
-                .filter((item) => item.payload?.sender_id == userId)
-                .map((item) => item.id);
-            if (ids.length) {
-                await API.post('/notifications/read/', { ids });
-                loadThreads(); // update badge
-            }
-        } catch {
-            // ignore
-        }
+        await channels?.markDirectMessageNotificationsRead({
+            userId,
+            onAfterMark: () => loadThreads(),
+        });
     }
 
     // Polling
     function startThreadPolling() {
         threadPoller?.stop?.();
         threadPoller = Utils.createAdaptivePoller({
-            callback: () => loadThreads(),
+            callback: () => {
+                if (panel.classList.contains('hidden')) return;
+                return loadThreads();
+            },
             activeInterval: 10000,
             hiddenInterval: 30000,
             enabled: () => Boolean(currentUser?.id),
@@ -780,7 +688,9 @@
     });
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden && currentUser) {
-            threadPoller?.trigger?.();
+            if (!panel.classList.contains('hidden')) {
+                threadPoller?.trigger?.();
+            }
             if (currentRoomUserId) roomPoller?.trigger?.();
             groupPoller?.trigger?.();
         }
