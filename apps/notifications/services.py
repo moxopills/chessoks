@@ -20,7 +20,6 @@ class NotificationService:
     LIST_CACHE_TTL = 30
     CACHE_VERSION_PREFIX = "notifications_version:"
     LIST_CACHE_PREFIX = "notifications:list:"
-    UNREAD_COUNT_CACHE_PREFIX = "notifications:unread:"
 
     @classmethod
     def _version_key(cls, user_id: int) -> str:
@@ -35,11 +34,6 @@ class NotificationService:
     def _get_cache_version(cls, user_id: int) -> int:
         version = cache.get(cls._version_key(user_id))
         return version if version is not None else 0
-
-    @classmethod
-    def _unread_count_cache_key(cls, user_id: int) -> str:
-        version = cls._get_cache_version(user_id)
-        return f"{cls.UNREAD_COUNT_CACHE_PREFIX}{user_id}:v{version}"
 
     @classmethod
     def _invalidate_user_cache(cls, user_id: int) -> None:
@@ -79,14 +73,9 @@ class NotificationService:
 
     @staticmethod
     def count_unread(user) -> int:
-        cache_key = NotificationService._unread_count_cache_key(user.id)
-        cached = cache.get(cache_key)
-        if cached is not None:
-            return cached
-
-        count = Notification.objects.filter(user=user, is_read=False).count()
-        cache.set(cache_key, count, NotificationService.LIST_CACHE_TTL)
-        return count
+        # unread count는 외부 raw update(QuerySet.update)에도 즉시 맞아야 해서
+        # list cache와 달리 매 요청 시 실제 값을 계산한다.
+        return Notification.objects.filter(user=user, is_read=False).count()
 
     @staticmethod
     def mark_read(user, ids: list[int]) -> int:
