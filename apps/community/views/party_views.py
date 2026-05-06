@@ -17,6 +17,7 @@ from apps.community.serializers import (
     PartySlotSerializer,
 )
 from apps.community.services import PartyService
+from apps.core.request import parse_bool_query
 
 
 class PartyListCreateView(APIView):
@@ -25,8 +26,10 @@ class PartyListCreateView(APIView):
 
     def get(self, request):
         parties = PartyService.list_parties()
+        no_count = parse_bool_query(request.query_params.get("no_count"))
+        results = PartySerializer(parties, many=True).data
         return Response(
-            {"count": parties.count(), "results": PartySerializer(parties, many=True).data}
+            {"count": len(results) if no_count else parties.count(), "results": results}
         )
 
     def post(self, request):
@@ -96,8 +99,10 @@ class PartyInviteListView(APIView):
 
     def get(self, request):
         invites = PartyService.list_pending_invites(request.user)
+        no_count = parse_bool_query(request.query_params.get("no_count"))
+        results = PartyInviteSerializer(invites, many=True).data
         return Response(
-            {"count": invites.count(), "results": PartyInviteSerializer(invites, many=True).data}
+            {"count": len(results) if no_count else invites.count(), "results": results}
         )
 
 

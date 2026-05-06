@@ -13,6 +13,7 @@ from apps.community.serializers import (
     BoardReportCreateSerializer,
 )
 from apps.community.services import BoardService
+from apps.core.request import parse_bool_query
 
 
 class BoardCategoryListView(APIView):
@@ -20,10 +21,12 @@ class BoardCategoryListView(APIView):
 
     def get(self, request):
         categories = BoardService.list_categories()
+        no_count = parse_bool_query(request.query_params.get("no_count"))
+        results = BoardCategorySerializer(categories, many=True).data
         return Response(
             {
-                "count": categories.count(),
-                "results": BoardCategorySerializer(categories, many=True).data,
+                "count": len(results) if no_count else categories.count(),
+                "results": results,
             }
         )
 
@@ -35,6 +38,7 @@ class BoardListCreateView(APIView):
     def get(self, request):
         category_code = request.query_params.get("category")
         mine_only = request.query_params.get("mine") == "1"
+        no_count = parse_bool_query(request.query_params.get("no_count"))
         try:
             limit = int(request.query_params.get("limit", "0") or 0)
         except ValueError:
@@ -53,12 +57,13 @@ class BoardListCreateView(APIView):
             results = list(posts)
             count = len(results)
         else:
-            count = posts.count()
             results = posts
+            count = 0 if no_count else posts.count()
+        serialized = BoardPostSummarySerializer(results, many=True).data
         return Response(
             {
-                "count": count,
-                "results": BoardPostSummarySerializer(results, many=True).data,
+                "count": len(serialized) if no_count else count,
+                "results": serialized,
             }
         )
 

@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from channels.layers import get_channel_layer
@@ -157,22 +157,28 @@ def collect_runtime_metrics() -> dict[str, Any]:
     metrics: dict[str, Any] = {"queues": {"celery": check_celery_broker()}}
 
     try:
-        games_queryset = Game.objects.all()
+        games_counts = Game.objects.aggregate(
+            playing=Count("id", filter=Q(result=Game.Status.PLAYING)),
+            finished_today=Count(
+                "id",
+                filter=~Q(result=Game.Status.PLAYING) & Q(finished_at__date=timezone.localdate()),
+            ),
+        )
         metrics["games"] = {
-            "playing": games_queryset.filter(result=Game.Status.PLAYING).count(),
-            "finished_today": games_queryset.filter(
-                ~Q(result=Game.Status.PLAYING),
-                finished_at__date=timezone.localdate(),
-            ).count(),
+            "playing": games_counts["playing"] or 0,
+            "finished_today": games_counts["finished_today"] or 0,
         }
     except Exception as exc:
         metrics["games"] = {"status": "error", "reason": str(exc)}
 
     try:
-        rooms_queryset = Room.objects.all()
+        room_counts = Room.objects.aggregate(
+            waiting=Count("id", filter=Q(status="waiting")),
+            playing=Count("id", filter=Q(status="playing")),
+        )
         metrics["rooms"] = {
-            "waiting": rooms_queryset.filter(status="waiting").count(),
-            "playing": rooms_queryset.filter(status="playing").count(),
+            "waiting": room_counts["waiting"] or 0,
+            "playing": room_counts["playing"] or 0,
         }
     except Exception as exc:
         metrics["rooms"] = {"status": "error", "reason": str(exc)}

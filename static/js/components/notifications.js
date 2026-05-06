@@ -8,6 +8,7 @@
         socket: null,
         noticeSoundReadyAt: 0,
         seenKeys: new Map(),
+        lastVisibleSignature: '',
     };
 
     const SEEN_TTL_MS = 5 * 60 * 1000;
@@ -108,17 +109,32 @@
     function renderList(listEl, countEl) {
         if (!listEl || !countEl) return;
         const visibleItems = state.items.filter((item) => item.type !== 'direct_message');
+        const visibleSignature = visibleItems
+            .map((item) => [
+                item.id,
+                item.type || '',
+                item.is_read ? 1 : 0,
+                item.title || '',
+                item.message || '',
+                item.created_at || '',
+            ].join(':'))
+            .join('|');
         const unreadCount = visibleItems.filter((item) => !item.is_read).length;
         state.unreadCount = unreadCount;
         countEl.textContent = unreadCount;
         countEl.classList.toggle('hidden', unreadCount === 0);
         updateMessageBadge(document.getElementById('message-count'));
 
+        if (visibleSignature === state.lastVisibleSignature) {
+            return;
+        }
+
         if (!visibleItems.length) {
             const empty = document.createElement('div');
             empty.className = 'notification-empty';
             empty.textContent = '새 알림이 없습니다';
             listEl.replaceChildren(empty);
+            state.lastVisibleSignature = 'empty';
             return;
         }
 
@@ -147,6 +163,7 @@
             fragment.appendChild(itemEl);
         });
         listEl.replaceChildren(fragment);
+        state.lastVisibleSignature = visibleSignature;
     }
 
     async function handleNotificationClick(item, listEl, countEl) {

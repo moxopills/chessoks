@@ -17,6 +17,7 @@ from apps.community.serializers import (
     GuildSerializer,
 )
 from apps.community.services import GuildService
+from apps.core.request import parse_bool_query
 
 
 class GuildListCreateView(APIView):
@@ -27,9 +28,9 @@ class GuildListCreateView(APIView):
 
     def get(self, request):
         guilds = GuildService.list_guilds()
-        return Response(
-            {"count": guilds.count(), "results": GuildSerializer(guilds, many=True).data}
-        )
+        no_count = parse_bool_query(request.query_params.get("no_count"))
+        results = GuildSerializer(guilds, many=True).data
+        return Response({"count": len(results) if no_count else guilds.count(), "results": results})
 
     def post(self, request):
         serializer = GuildCreateSerializer(data=request.data)
@@ -66,10 +67,12 @@ class GuildJoinRequestView(APIView):
 
     def get(self, request, guild_id: int):
         join_requests = GuildService.list_join_requests(request.user, guild_id)
+        no_count = parse_bool_query(request.query_params.get("no_count"))
+        results = GuildJoinRequestSerializer(join_requests, many=True).data
         return Response(
             {
-                "count": join_requests.count(),
-                "results": GuildJoinRequestSerializer(join_requests, many=True).data,
+                "count": len(results) if no_count else join_requests.count(),
+                "results": results,
             }
         )
 

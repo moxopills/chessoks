@@ -2,6 +2,7 @@
     'use strict';
 
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const patchList = window.DomPatchList?.patchList;
 
     const friendListEl = document.getElementById('friend-list');
     const incomingListEl = document.getElementById('incoming-list');
@@ -210,9 +211,7 @@
                 outgoingListEl.innerHTML = '<div class="table-empty">로그인 후 사용할 수 있습니다.</div>';
                 return;
             }
-            renderFriendsSkeleton();
-            renderRequestsSkeleton(incomingListEl);
-            renderRequestsSkeleton(outgoingListEl);
+            renderLoadingStatesIfNeeded();
             await Promise.all([loadFriends(), loadRequests('incoming'), loadRequests('outgoing')]);
         } finally {
             isRefreshing = false;
@@ -258,6 +257,22 @@
                 </div>
             </div>
         `).join('');
+    }
+
+    function hasRenderableContent(signature) {
+        return Boolean(signature && signature !== 'empty');
+    }
+
+    function renderLoadingStatesIfNeeded() {
+        if (!hasRenderableContent(lastFriendsSignature)) {
+            renderFriendsSkeleton();
+        }
+        if (!hasRenderableContent(lastIncomingSignature)) {
+            renderRequestsSkeleton(incomingListEl);
+        }
+        if (!hasRenderableContent(lastOutgoingSignature)) {
+            renderRequestsSkeleton(outgoingListEl);
+        }
     }
 
     async function loadFriends() {
@@ -387,14 +402,35 @@
             return;
         }
         const statusMap = JSON.parse(friendListEl.dataset.statusMap || '{}');
-        friendListEl.innerHTML = friends.map((item) => {
-            const friend = item.friend;
-            const presence = statusMap[friend.id] || { online: false, status_label: '오프라인' };
-            const statusClass = getPresenceCssClass(presence);
-            const nicknameColor = Utils.getNicknameColorValue(friend.nickname_color || friend.stats?.nickname_color || '');
-            const profileRing = Utils.getProfileBorderValue(friend.profile_border || friend.stats?.profile_border || '');
-            return `
-                <div class="friend-item" data-user-id="${friend.id}">
+        patchList?.({
+            container: friendListEl,
+            items: friends,
+            getKey: (item) => item.friend.id,
+            getSignature: (item) => {
+                const friend = item.friend;
+                const presence = statusMap[friend.id] || { online: false, status_label: '오프라인' };
+                return [
+                    friend.id,
+                    friend.nickname || '',
+                    friend.avatar_url || '',
+                    friend.rating || '',
+                    friend.rank_tier || '',
+                    friend.nickname_color || friend.stats?.nickname_color || '',
+                    friend.profile_border || friend.stats?.profile_border || '',
+                    presence.online ? 1 : 0,
+                    presence.status_label || '',
+                ].join(':');
+            },
+            renderItem: (item) => {
+                const friend = item.friend;
+                const presence = statusMap[friend.id] || { online: false, status_label: '오프라인' };
+                const statusClass = getPresenceCssClass(presence);
+                const nicknameColor = Utils.getNicknameColorValue(friend.nickname_color || friend.stats?.nickname_color || '');
+                const profileRing = Utils.getProfileBorderValue(friend.profile_border || friend.stats?.profile_border || '');
+                const element = document.createElement('div');
+                element.className = 'friend-item';
+                element.dataset.userId = String(friend.id);
+                element.innerHTML = `
                     <div class="friend-meta">
                         <div class="avatar avatar-sm" style="box-shadow:${profileRing}">${friend.avatar_url ? `<img src="${friend.avatar_url}" alt="${Utils.escapeHtml(friend.nickname)}">` : '<span class="avatar-placeholder">?</span>'}</div>
                         <div class="friend-name">
@@ -403,9 +439,10 @@
                         </div>
                     </div>
                     <div class="status-dot ${presence.online ? 'online' : ''}"></div>
-                </div>
-            `;
-        }).join('');
+                `;
+                return element;
+            },
+        });
 
         friendListEl.querySelectorAll('.friend-item').forEach((item) => {
             const userId = parseInt(item.dataset.userId, 10);
@@ -469,24 +506,41 @@
             else lastOutgoingSignature = 'empty';
             return;
         }
-        container.innerHTML = requests.map((req) => {
-            const user = direction === 'incoming' ? req.from_user : req.to_user;
-            const nicknameColor = Utils.getNicknameColorValue(user.nickname_color || user.stats?.nickname_color || '');
-            const profileRing = Utils.getProfileBorderValue(user.profile_border || user.stats?.profile_border || '');
-            const actions = direction === 'incoming'
-                ? `
-                    <div class="request-actions">
-                        <button class="btn btn-success btn-sm" data-action="accept" data-request-id="${req.id}">수락</button>
-                        <button class="btn btn-secondary btn-sm" data-action="reject" data-request-id="${req.id}">거절</button>
-                    </div>
-                `
-                : `
-                    <div class="request-actions">
-                        <button class="btn btn-secondary btn-sm" data-action="cancel" data-request-id="${req.id}">요청 취소</button>
-                    </div>
-                `;
-            return `
-                <div class="request-item">
+        patchList?.({
+            container,
+            items: requests,
+            getKey: (req) => req.id,
+            getSignature: (req) => {
+                const user = direction === 'incoming' ? req.from_user : req.to_user;
+                return [
+                    req.id,
+                    user.id,
+                    user.nickname || '',
+                    user.avatar_url || '',
+                    user.rating || '',
+                    user.rank_tier || '',
+                    direction,
+                ].join(':');
+            },
+            renderItem: (req) => {
+                const user = direction === 'incoming' ? req.from_user : req.to_user;
+                const nicknameColor = Utils.getNicknameColorValue(user.nickname_color || user.stats?.nickname_color || '');
+                const profileRing = Utils.getProfileBorderValue(user.profile_border || user.stats?.profile_border || '');
+                const actions = direction === 'incoming'
+                    ? `
+                        <div class="request-actions">
+                            <button class="btn btn-success btn-sm" data-action="accept" data-request-id="${req.id}">수락</button>
+                            <button class="btn btn-secondary btn-sm" data-action="reject" data-request-id="${req.id}">거절</button>
+                        </div>
+                    `
+                    : `
+                        <div class="request-actions">
+                            <button class="btn btn-secondary btn-sm" data-action="cancel" data-request-id="${req.id}">요청 취소</button>
+                        </div>
+                    `;
+                const element = document.createElement('div');
+                element.className = 'request-item';
+                element.innerHTML = `
                     <div class="friend-meta" data-user-id="${user.id}">
                         <div class="avatar avatar-sm" style="box-shadow:${profileRing}">${user.avatar_url ? `<img src="${user.avatar_url}" alt="${Utils.escapeHtml(user.nickname)}">` : '<span class="avatar-placeholder">?</span>'}</div>
                         <div class="friend-name">
@@ -495,9 +549,10 @@
                         </div>
                     </div>
                     ${actions}
-                </div>
-            `;
-        }).join('');
+                `;
+                return element;
+            },
+        });
 
         container.querySelectorAll('[data-action]').forEach((btn) => {
             btn.addEventListener('click', async () => {

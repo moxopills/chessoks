@@ -1,4 +1,5 @@
 (function () {
+    const patchList = window.DomPatchList?.patchList;
     let me = null;
     let selectedGuildId = null;
     let selectedGuild = null;
@@ -158,34 +159,49 @@
             guild.member_count || 0,
         ].join(':')).join('|')}`;
         if (nextSignature === lastGuildListSignature) return;
-        guildListEl.innerHTML = '';
         if (!items.length) {
             guildListEl.innerHTML = '<div class="community-empty">아직 생성된 길드가 없습니다.</div>';
             lastGuildListSignature = 'empty';
             return;
         }
-        items.forEach((guild) => {
-            const item = document.createElement('button');
-            item.type = 'button';
-            item.className = `community-item community-item--guild-list${guild.id === selectedGuildId ? ' is-active' : ''}`;
-            item.innerHTML = `
-                <div class="community-guild-row community-guild-row--list">
-                    ${renderGuildAvatar(guild.avatar_url, guild.name, true)}
-                    <div class="community-block community-block--tight">
-                        <div class="community-row community-row--start">
-                            <span class="community-item-title">${Utils.escapeHtml(guild.name)}</span>
-                            <span class="community-badge">${Utils.escapeHtml(guild.join_policy === 'open' ? '자유 가입' : '승인제')}</span>
+        patchList?.({
+            container: guildListEl,
+            items,
+            getKey: (guild) => guild.id,
+            getSignature: (guild) => [
+                guild.id,
+                guild.name || '',
+                guild.avatar_url || '',
+                guild.team_rating || 0,
+                guild.pending_requests || 0,
+                guild.member_count || 0,
+                guild.description || '',
+                guild.join_policy || '',
+                guild.id === selectedGuildId ? 1 : 0,
+            ].join(':'),
+            renderItem: (guild) => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = `community-item community-item--guild-list${guild.id === selectedGuildId ? ' is-active' : ''}`;
+                item.innerHTML = `
+                    <div class="community-guild-row community-guild-row--list">
+                        ${renderGuildAvatar(guild.avatar_url, guild.name, true)}
+                        <div class="community-block community-block--tight">
+                            <div class="community-row community-row--start">
+                                <span class="community-item-title">${Utils.escapeHtml(guild.name)}</span>
+                                <span class="community-badge">${Utils.escapeHtml(guild.join_policy === 'open' ? '자유 가입' : '승인제')}</span>
+                            </div>
+                            <div class="community-guild-list-meta">
+                                <span>팀 레이팅 ${guild.team_rating}</span>
+                                <span>요청 ${guild.pending_requests || 0}</span>
+                            </div>
+                            <span class="community-item-copy community-item-copy--clamp2">${Utils.escapeHtml(guild.description || '길드 설명이 아직 없습니다.')}</span>
                         </div>
-                        <div class="community-guild-list-meta">
-                            <span>팀 레이팅 ${guild.team_rating}</span>
-                            <span>요청 ${guild.pending_requests || 0}</span>
-                        </div>
-                        <span class="community-item-copy community-item-copy--clamp2">${Utils.escapeHtml(guild.description || '길드 설명이 아직 없습니다.')}</span>
                     </div>
-                </div>
-            `;
-            item.addEventListener('click', () => loadGuildDetail(guild.id));
-            guildListEl.appendChild(item);
+                `;
+                item.addEventListener('click', () => loadGuildDetail(guild.id));
+                return item;
+            },
         });
         lastGuildListSignature = nextSignature;
     }
@@ -319,21 +335,26 @@
         if (!guildChatLogEl) return;
         const nextSignature = items.map((message) => [message.id, message.created_at || '', message.content || ''].join(':')).join('|');
         if (nextSignature === lastGuildChatSignature) return;
-        guildChatLogEl.innerHTML = '';
         if (!items.length) {
             guildChatLogEl.innerHTML = '<div class="community-empty">아직 채팅이 없습니다.</div>';
             lastGuildChatSignature = 'empty';
             return;
         }
-        items.slice().reverse().forEach((message) => {
-            const item = document.createElement('div');
-            item.className = 'community-chat-message';
-            item.innerHTML = `
-                <span class="community-chat-user">${Utils.escapeHtml(message.user.nickname)}</span>
-                <span class="community-chat-body">${Utils.escapeHtml(message.content)}</span>
-                <span class="community-chat-time">${Utils.formatDateTime ? Utils.formatDateTime(message.created_at) : message.created_at}</span>
-            `;
-            guildChatLogEl.appendChild(item);
+        patchList?.({
+            container: guildChatLogEl,
+            items: items.slice().reverse(),
+            getKey: (message) => message.id,
+            getSignature: (message) => [message.id, message.created_at || '', message.content || '', message.user?.nickname || ''].join(':'),
+            renderItem: (message) => {
+                const item = document.createElement('div');
+                item.className = 'community-chat-message';
+                item.innerHTML = `
+                    <span class="community-chat-user">${Utils.escapeHtml(message.user.nickname)}</span>
+                    <span class="community-chat-body">${Utils.escapeHtml(message.content)}</span>
+                    <span class="community-chat-time">${Utils.formatDateTime ? Utils.formatDateTime(message.created_at) : message.created_at}</span>
+                `;
+                return item;
+            },
         });
         lastGuildChatSignature = nextSignature;
     }
@@ -346,7 +367,6 @@
             requestItem.user.nickname || '',
         ].join(':')).join('|')}`;
         if (nextSignature === lastGuildRequestsSignature) return;
-        guildRequestsEl.innerHTML = '';
         if (!isManager()) {
             guildRequestsEl.innerHTML = '<div class="community-empty">운영진만 가입 요청을 확인할 수 있습니다.</div>';
             lastGuildRequestsSignature = 'locked';
@@ -357,23 +377,29 @@
             lastGuildRequestsSignature = 'empty';
             return;
         }
-        items.forEach((requestItem) => {
-            const item = document.createElement('div');
-            item.className = 'community-item';
-            item.innerHTML = `
-                <div class="community-row">
-                    <span class="community-item-title">${Utils.escapeHtml(requestItem.user.nickname)}</span>
-                    <div class="community-row-meta">
-                        <span class="community-badge">ID ${requestItem.user.id}</span>
+        patchList?.({
+            container: guildRequestsEl,
+            items,
+            getKey: (requestItem) => requestItem.id,
+            getSignature: (requestItem) => [requestItem.id, requestItem.user.id, requestItem.user.nickname || '', requestItem.message || ''].join(':'),
+            renderItem: (requestItem) => {
+                const item = document.createElement('div');
+                item.className = 'community-item';
+                item.innerHTML = `
+                    <div class="community-row">
+                        <span class="community-item-title">${Utils.escapeHtml(requestItem.user.nickname)}</span>
+                        <div class="community-row-meta">
+                            <span class="community-badge">ID ${requestItem.user.id}</span>
+                        </div>
                     </div>
-                </div>
-                <span class="community-item-copy">${Utils.escapeHtml(requestItem.message || '가입 메시지가 없습니다.')}</span>
-                <div class="community-actions">
-                    <button class="btn btn-secondary btn-sm" data-action="approve" data-id="${requestItem.id}" type="button">승인</button>
-                    <button class="btn btn-danger btn-sm" data-action="reject" data-id="${requestItem.id}" type="button">거절</button>
-                </div>
-            `;
-            guildRequestsEl.appendChild(item);
+                    <span class="community-item-copy">${Utils.escapeHtml(requestItem.message || '가입 메시지가 없습니다.')}</span>
+                    <div class="community-actions">
+                        <button class="btn btn-secondary btn-sm" data-action="approve" data-id="${requestItem.id}" type="button">승인</button>
+                        <button class="btn btn-danger btn-sm" data-action="reject" data-id="${requestItem.id}" type="button">거절</button>
+                    </div>
+                `;
+                return item;
+            },
         });
         guildRequestsEl.querySelectorAll('button[data-action]').forEach((button) => {
             button.addEventListener('click', async () => {
@@ -395,30 +421,35 @@
         if (!guildNoticeHistoryEl) return;
         const nextSignature = items.map((notice) => [notice.id, notice.created_at || '', notice.content || ''].join(':')).join('|');
         if (nextSignature === lastGuildNoticeSignature) return;
-        guildNoticeHistoryEl.innerHTML = '';
         if (!items.length) {
             guildNoticeHistoryEl.innerHTML = '<div class="community-empty">아직 작성된 길드 공지가 없습니다.</div>';
             lastGuildNoticeSignature = 'empty';
             return;
         }
-        items.forEach((notice) => {
-            const item = document.createElement('div');
-            item.className = 'community-item community-item--detail';
-            item.innerHTML = `
-                <div class="community-row">
-                    <span class="community-item-title">${Utils.escapeHtml(notice.author?.nickname || '시스템 공지')}</span>
-                    <span class="community-item-meta">${Utils.escapeHtml(formatNoticeTimestamp(notice.created_at))}</span>
-                </div>
-                <span class="community-item-copy community-item-copy--detail">${Utils.escapeHtml(notice.content || '')}</span>
-            `;
-            guildNoticeHistoryEl.appendChild(item);
+        patchList?.({
+            container: guildNoticeHistoryEl,
+            items,
+            getKey: (notice) => notice.id,
+            getSignature: (notice) => [notice.id, notice.created_at || '', notice.content || '', notice.author?.nickname || ''].join(':'),
+            renderItem: (notice) => {
+                const item = document.createElement('div');
+                item.className = 'community-item community-item--detail';
+                item.innerHTML = `
+                    <div class="community-row">
+                        <span class="community-item-title">${Utils.escapeHtml(notice.author?.nickname || '시스템 공지')}</span>
+                        <span class="community-item-meta">${Utils.escapeHtml(formatNoticeTimestamp(notice.created_at))}</span>
+                    </div>
+                    <span class="community-item-copy community-item-copy--detail">${Utils.escapeHtml(notice.content || '')}</span>
+                `;
+                return item;
+            },
         });
         lastGuildNoticeSignature = nextSignature;
     }
 
     async function loadGuilds() {
         if (!guildListEl) return;
-        const data = await API.get('/community/guilds/');
+        const data = await API.get('/community/guilds/', { no_count: 1 });
         const items = data.results || [];
         renderGuildList(items);
         if (selectedGuildId && !items.some((guild) => guild.id === selectedGuildId)) {
@@ -466,7 +497,7 @@
         selectedGuildId = guildId;
         const [guild, guildList] = await Promise.all([
             API.get(`/community/guilds/${guildId}/`),
-            API.get('/community/guilds/'),
+            API.get('/community/guilds/', { no_count: 1 }),
         ]);
         detailEmptyEl.classList.add('hidden');
         detailPanelEl.classList.remove('hidden');
