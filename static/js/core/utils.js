@@ -102,15 +102,16 @@ const Utils = (function() {
     function sanitizeUrl(url, fallback = '') {
         const raw = String(url || '').trim();
         if (!raw) return fallback;
-        try {
-            const parsed = new URL(raw, window.location.origin);
-            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-                return parsed.href;
-            }
-            return fallback;
-        } catch {
-            return fallback;
+
+        // signed URL은 직렬화 과정에서 query/path 인코딩이 바뀌면 깨질 수 있어서
+        // 허용 가능한 패턴만 검사하고 원본 문자열은 그대로 유지한다.
+        if (/^https?:\/\//i.test(raw) || /^\/\//.test(raw)) {
+            return raw;
         }
+        if (raw.startsWith('/') || raw.startsWith('./') || raw.startsWith('../')) {
+            return raw;
+        }
+        return fallback;
     }
 
     /**
